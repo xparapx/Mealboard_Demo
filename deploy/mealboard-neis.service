@@ -1,0 +1,8 @@
+[Unit]
+Description=Mealboard NEIS 급식 갱신 (1회 실행)
+
+[Service]
+Type=oneshot
+User=__USER__
+WorkingDirectory=/opt/mealboard
+ExecStart=/opt/mealboard/.venv/bin/python -m jobs.fetch_neis

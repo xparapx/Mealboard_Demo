@@ -1,0 +1,7 @@
+# /etc/cloudflared/config.yml  — <TUNNEL_ID>, <USER>, 도메인을 실제 값으로
+tunnel: <TUNNEL_ID>
+credentials-file: /home/<USER>/.cloudflared/<TUNNEL_ID>.json
+ingress:
+  - hostname: meal.example.com          # Cloudflare 에 등록한 내 도메인의 서브도메인
+    service: http://127.0.0.1:8100      # Pi 안의 FastAPI (API_PORT 와 같게)
+  - service: http_status:404            # 그 외 요청은 거부

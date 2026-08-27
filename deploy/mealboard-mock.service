@@ -1,0 +1,13 @@
+[Unit]
+Description=Mealboard mock feed (vision 대역 — 카메라 없는 Pi 전용)
+After=network.target
+Conflicts=mealboard-vision.service
+
+[Service]
+User=__USER__
+WorkingDirectory=/opt/mealboard
+ExecStart=/opt/mealboard/.venv/bin/python -m jobs.mock_feed --speed 30
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

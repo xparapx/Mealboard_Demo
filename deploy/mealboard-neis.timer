@@ -1,0 +1,9 @@
+[Unit]
+Description=매일 05:40 NEIS 급식 갱신 (Plant 의 06:00 촬영과 겹치지 않게)
+
+[Timer]
+OnCalendar=*-*-* 05:40:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
