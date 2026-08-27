@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mealboard 대시보드 레이아웃 도면</title>
+<style>
+:root{
+  --bg:#E9EEF2;        /* 스테인리스 식판 톤 */
+  --paper:#FFFFFF;
+  --ink:#10202B;       /* 남색 잉크 */
+  --mute:#5B6B78;
+  --line:#C9D3DB;
+  --blue:#1F3A5F;      /* 구조색 */
+  --ok:#2E7D5B; --ok-bg:#DFF1E8;
+  --mid:#B8791A; --mid-bg:#FBEFD6;
+  --bad:#C24B3A; --bad-bg:#F8DEDA;
+  --off:#7B8794; --off-bg:#E6EAEE;
+  --note:#D94F2B;      /* 도면 주석 */
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;line-height:1.6;word-break:keep-all;font-variant-numeric:tabular-nums}
+main{max-width:1180px;margin:0 auto;padding:48px 32px 120px}
+h1{font-size:30px;letter-spacing:-.02em;margin:0 0 6px}
+.lead{color:var(--mute);max-width:760px;margin:0 0 40px}
+h2{font-size:20px;letter-spacing:-.01em;margin:56px 0 6px;display:flex;align-items:baseline;gap:12px}
+h2 small{font-size:12px;letter-spacing:.14em;color:var(--note);font-weight:700}
+.sub{color:var(--mute);margin:0 0 20px;max-width:760px}
+code{font-family:"D2Coding","Cascadia Code",ui-monospace,monospace;background:#fff;border:1px solid var(--line);padding:0 .35em;border-radius:4px;font-size:.9em}
+
+/* ── 우선순위 표 ── */
+.prio{display:grid;grid-template-columns:56px 1fr 1fr 1fr;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--paper);font-size:14px}
+.prio>div{padding:12px 14px;border-bottom:1px solid var(--line)}
+.prio>div:nth-child(-n+4){background:#F3F6F8;font-weight:700;font-size:12px;letter-spacing:.06em;color:var(--mute)}
+.prio>div:nth-last-child(-n+4){border-bottom:0}
+.prio .n{font-weight:800;color:var(--blue);font-size:18px}
+
+/* ── 도면 캔버스 ── */
+.board{display:grid;grid-template-columns:420px 1fr;gap:32px;align-items:start}
+.phone{width:390px;background:var(--paper);border-radius:36px;border:6px solid var(--ink);padding:14px 14px 20px;position:relative;box-shadow:0 20px 40px rgba(16,32,43,.12)}
+.phone .statusbar{height:18px;display:flex;justify-content:space-between;font-size:11px;color:var(--mute);padding:0 8px}
+.dim{position:absolute;font-size:10px;color:var(--note);font-family:ui-monospace,monospace}
+.dim.w{left:0;right:0;top:-24px;text-align:center}
+.dim.w::before,.dim.w::after{content:"";position:absolute;top:50%;width:44%;border-top:1px solid var(--note)}
+.dim.w::before{left:0}.dim.w::after{right:0}
+
+.tag{position:absolute;width:22px;height:22px;border-radius:50%;background:var(--note);color:#fff;font-size:12px;font-weight:800;display:grid;place-items:center;box-shadow:0 0 0 3px #fff;z-index:2}
+
+/* 카드 공통 */
+.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-top:10px;position:relative}
+.eyebrow{font-size:11px;letter-spacing:.1em;color:var(--mute);font-weight:700}
+
+/* ① 식권 모티브 히어로 */
+.ticket{border:0;background:var(--ok-bg);padding:18px 18px 14px;margin-top:12px;position:relative}
+.ticket::after{content:"";position:absolute;left:14px;right:14px;bottom:52px;border-top:2px dashed rgba(16,32,43,.18)}
+.ticket .big{display:flex;align-items:baseline;gap:6px;margin-top:2px}
+.ticket .num{font-size:88px;font-weight:800;line-height:.9;letter-spacing:-.04em;color:var(--ink)}
+.ticket .unit{font-size:22px;font-weight:600;color:var(--ink)}
+.ticket .verdict{display:inline-block;margin-top:10px;padding:4px 12px;border-radius:999px;background:var(--ok);color:#fff;font-weight:700;font-size:14px}
+.ticket .foot{display:flex;justify-content:space-between;margin-top:20px;padding-top:12px;font-size:13px;color:var(--ink)}
+.ticket .foot b{font-size:16px}
+.ticket .foot span{color:var(--mute)}
+.ticket.mid{background:var(--mid-bg)} .ticket.mid .verdict{background:var(--mid)}
+.ticket.bad{background:var(--bad-bg)} .ticket.bad .verdict{background:var(--bad)}
+.ticket.off{background:var(--off-bg)} .ticket.off .verdict{background:var(--off)}
+.ticket.off .num{color:var(--off)}
+
+/* ② 갱신줄 */
+.meta{position:relative;display:flex;justify-content:space-between;font-size:11px;color:var(--mute);padding:6px 4px 0}
+
+/* ③ 추이 */
+.spark{height:72px;margin-top:8px;position:relative;border-bottom:1px solid var(--line)}
+.spark svg{width:100%;height:100%}
+.spark .now{position:absolute;right:0;top:0;bottom:0;border-left:1px dashed var(--note)}
+.spark .lab{position:absolute;left:0;bottom:-16px;font-size:10px;color:var(--mute)}
+.spark .lab.r{left:auto;right:0}
+
+/* ④ 오늘 메뉴 */
+.menu{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:8px;font-size:14px;list-style:none;padding:0}
+.menu li{padding-left:12px;position:relative}
+.menu li::before{content:"";position:absolute;left:0;top:.7em;width:5px;height:5px;border-radius:50%;background:var(--blue)}
+.menu li.main{grid-column:1/-1;font-weight:700;font-size:15px}
+
+/* ⑤ 영양 요약 3칸 */
+.kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.kpi>div{background:#F3F6F8;border-radius:10px;padding:8px 10px}
+.kpi b{display:block;font-size:20px;font-weight:800;letter-spacing:-.02em}
+.kpi span{font-size:11px;color:var(--mute)}
+.kpi .ok{color:var(--ok)} .kpi .bad{color:var(--bad)}
+
+/* ⑥ 영양소 막대 (접힘) */
+details summary{position:relative;cursor:pointer;font-size:13px;color:var(--blue);font-weight:700;margin-top:10px;list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+.bars{margin-top:8px}
+.bar{display:grid;grid-template-columns:96px 1fr 44px;gap:8px;align-items:center;font-size:12px;margin:5px 0}
+.track{position:relative;height:8px;background:#E6EAEE;border-radius:4px}
+.track i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--ok)}
+.track i.bad{background:var(--bad)} .track i.mid{background:var(--mid)}
+.track::after{content:"";position:absolute;left:66.7%;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+.bar b{text-align:right;font-weight:700}
+
+/* ⑦ 바닥 */
+.foot-note{position:relative;font-size:10.5px;color:var(--mute);margin-top:14px;line-height:1.5}
+
+/* 주석 패널 */
+.notes{display:grid;gap:10px}
+.note{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--note);border-radius:10px;padding:10px 14px;font-size:13.5px}
+.note b{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--note);color:#fff;font-size:12px;margin-right:8px;vertical-align:middle}
+.note .api{display:block;margin-top:4px;color:var(--mute);font-size:12px}
+
+/* 상태 변형 */
+.variants{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.variants .phone-mini{background:var(--paper);border-radius:20px;border:4px solid var(--ink);padding:10px}
+.variants .ticket{margin-top:0;padding:14px 14px 10px}
+.variants .num{font-size:56px}
+.variants .unit{font-size:16px}
+.variants .verdict{font-size:12px;padding:3px 10px}
+.variants .foot{margin-top:12px;font-size:11px}
+.variants .foot b{font-size:13px}
+.variants .ticket::after{bottom:40px}
+.variants .cap{font-size:12px;color:var(--mute);margin-top:8px;line-height:1.45}
+.variants .cap b{color:var(--ink)}
+
+/* 키오스크 */
+.kiosk{background:var(--paper);border:6px solid var(--ink);border-radius:14px;aspect-ratio:16/9;padding:28px 32px;display:grid;grid-template-columns:1.1fr 1fr;grid-template-rows:auto 1fr auto;gap:18px 32px;position:relative;box-shadow:0 20px 40px rgba(16,32,43,.12)}
+.kiosk .k-title{grid-column:1/-1;display:flex;justify-content:space-between;align-items:baseline;font-size:18px;font-weight:700}
+.kiosk .k-title span{font-size:14px;color:var(--mute);font-weight:400}
+.kiosk .k-hero{background:var(--ok-bg);border-radius:20px;padding:24px 28px;display:flex;flex-direction:column;justify-content:center}
+.kiosk .k-hero .num{font-size:150px;font-weight:800;line-height:.9;letter-spacing:-.05em}
+.kiosk .k-hero .unit{font-size:36px;font-weight:600;margin-left:8px}
+.kiosk .k-hero .verdict{font-size:22px;padding:6px 18px;margin-top:14px;align-self:flex-start}
+.kiosk .k-hero .foot{font-size:18px;margin-top:22px}
+.kiosk .ticket::after{bottom:74px}
+.kiosk .k-menu{display:flex;flex-direction:column}
+.kiosk .k-menu .menu{font-size:20px;gap:8px 20px;flex:1}
+.kiosk .k-menu .menu li.main{font-size:24px}
+.kiosk .k-menu .kpi b{font-size:28px}
+.kiosk .k-foot{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--mute)}
+.kiosk .qr{width:64px;height:64px;background:repeating-conic-gradient(var(--ink) 0 25%,#fff 0 50%) 0 0/16px 16px;border:4px solid #fff;outline:1px solid var(--line)}
+
+/* 스펙 표 */
+table{border-collapse:collapse;width:100%;font-size:13.5px;background:var(--paper);border-radius:12px;overflow:hidden}
+th,td{border-bottom:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+th{background:#F3F6F8;font-size:12px;letter-spacing:.06em;color:var(--mute)}
+tr:last-child td{border-bottom:0}
+
+.tokens{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tok{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12.5px}
+.tok i{display:block;height:28px;border-radius:6px;margin-bottom:6px}
+.tok code{border:0;background:transparent;padding:0;color:var(--mute)}
+
+@media (max-width:900px){.board{grid-template-columns:1fr}.variants{grid-template-columns:1fr 1fr}.prio{grid-template-columns:40px 1fr}.prio>div:nth-child(4n+3),.prio>div:nth-child(4n+4){display:none}}
+</style>
+</head>
+<body>
+<main>
+<h1>Mealboard 대시보드 — 레이아웃 도면</h1>
+<p class="lead">학생이 교실에서 급식실로 걸어가며 <strong>2초 안에 "지금 갈까, 조금 있다 갈까"</strong>를 정하는 화면입니다. 첫 화면은 그 결정 하나에 전부 씁니다. 메뉴와 영양은 그다음 스크롤이고, 영양 세부는 교사·영양교사를 위한 접힌 영역입니다. 모바일이 기준이고, 급식실 입구 디스플레이용 가로 도면을 뒤에 둡니다.</p>
+
+<h2>정보 우선순위 <small>왜 이 순서인가</small></h2>
+<p class="sub">위에 있을수록 크고, 아래로 갈수록 작아지며 접힙니다. 이 표가 곧 화면의 세로 순서입니다.</p>
+<div class="prio">
+  <div>순위</div><div>사용자가 알고 싶은 것</div><div>화면 요소</div><div>데이터</div>
+  <div class="n">1</div><div>지금 서면 몇 분?</div><div>식권 카드 — 88px 숫자 + 판정 칩(여유/보통/혼잡)</div><div><code>/api/status</code> wait_min, state</div>
+  <div class="n">2</div><div>왜? (줄 길이, 빠지는 속도)</div><div>식권 하단 두 수치</div><div>queue_len, rate_per_min</div>
+  <div class="n">3</div><div>지금이 피크인가, 곧 풀리나</div><div>최근 2시간 스파크라인</div><div><code>/api/history</code></div>
+  <div class="n">4</div><div>오늘 뭐 나와?</div><div>메뉴 2열, 주요리 강조</div><div><code>/api/meal</code> today.menu</div>
+  <div class="n">5</div><div>오늘 급식은 괜찮은 한 끼인가</div><div>영양 요약 3칸</div><div>assess.energy_pct · macro_ratio_ok · mar</div>
+  <div class="n">6</div><div>(교사) 어느 영양소가 부족한가</div><div>접힌 영양소 막대 6개</div><div>assess.micro[]</div>
+</div>
+
+<h2>모바일 도면 <small>390 × 844 · 세로 1스크롤</small></h2>
+<p class="sub">번호 ①~⑦ 은 오른쪽 주석과 대응합니다. 색은 실제 팔레트를 적용한 상태입니다.</p>
+<div class="board">
+  <div class="phone">
+    <div class="dim w">390px · 좌우 여백 16px · 카드 간격 10px</div>
+    <div class="statusbar"><span>12:07</span><span>●●●</span></div>
+
+    <div class="card ticket"><span class="tag" style="left:-11px;top:-11px">1</span>
+      <div class="eyebrow">지금 줄을 서면</div>
+      <div class="big"><span class="num">4</span><span class="unit">분</span></div>
+      <span class="verdict">여유 · 바로 가세요</span>
+      <div class="foot"><div><b>38</b>명 <span>대기 중</span></div><div><b>9.5</b>명/분 <span>배식 속도</span></div></div>
+    </div>
+    <div class="meta"><span class="tag" style="left:-27px;top:-2px">2</span><span>12:07:10 갱신 · 30초마다</span><span>추정치 · 배식 초반 오차 큼</span></div>
+
+    <div class="card"><span class="tag" style="left:-11px;top:-11px">3</span>
+      <div class="eyebrow">최근 2시간 예상 대기</div>
+      <div class="spark">
+        <svg viewBox="0 0 340 72" preserveAspectRatio="none"><path d="M0 68 L30 66 L60 58 L80 40 L100 18 L120 12 L140 22 L160 38 L185 48 L210 44 L235 30 L260 34 L285 46 L310 58 L340 60" fill="none" stroke="#1F3A5F" stroke-width="2"/><path d="M0 68 L30 66 L60 58 L80 40 L100 18 L120 12 L140 22 L160 38 L185 48 L210 44 L235 30 L260 34 L285 46 L310 58 L340 60 L340 72 L0 72Z" fill="#1F3A5F" opacity=".08"/></svg>
+        <div class="now"></div><div class="lab">10:07</div><div class="lab r">지금</div>
+      </div>
+      <div style="height:14px"></div>
+    </div>
+
+    <div class="card"><span class="tag" style="left:-11px;top:-11px">4</span>
+      <div class="eyebrow">오늘 중식 · 8/26 (수)</div>
+      <ul class="menu">
+        <li class="main">돼지고기 김치찌개</li>
+        <li>현미밥</li><li>계란말이</li><li>시금치나물</li><li>깍두기</li><li>사과</li><li>우유</li>
+      </ul>
+      <span class="tag" style="left:-11px;top:118px">5</span>
+      <div class="kpi">
+        <div><b>94<small>%</small></b><span>에너지 충족</span></div>
+        <div><b class="ok">적정</b><span>탄·단·지 비율</span></div>
+        <div><b class="bad">86<small>%</small></b><span>미량영양소</span></div>
+      </div>
+      <details><summary>영양소별 보기<span class="tag" style="left:-27px;top:-1px">6</span></summary>
+        <div class="bars">
+          <div class="bar"><span>비타민A</span><div class="track"><i class="bad" style="width:45%"></i></div><b>67%</b></div>
+          <div class="bar"><span>티아민</span><div class="track"><i style="width:93%"></i></div><b>139%</b></div>
+          <div class="bar"><span>리보플라빈</span><div class="track"><i style="width:64%"></i></div><b>96%</b></div>
+          <div class="bar"><span>비타민C</span><div class="track"><i class="bad" style="width:37%"></i></div><b>55%</b></div>
+          <div class="bar"><span>칼슘</span><div class="track"><i style="width:69%"></i></div><b>103%</b></div>
+          <div class="bar"><span>철</span><div class="track"><i style="width:69%"></i></div><b>104%</b></div>
+        </div>
+      </details>
+      <div class="foot-note"><span class="tag" style="left:-27px;top:-2px">7</span>기준: 고등학생 남 1식 · 학교급식법 시행규칙 [별표 3] · 세로선 = 권장섭취량 · 영양교사 산출값 기준 참고 지표</div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="note"><b>1</b><strong>식권(食券) 카드.</strong> 급식 줄의 실물 은유. 숫자 88px/800, 판정 칩이 색과 문장으로 같은 뜻을 두 번 말합니다(색약 대응). 배경색이 상태색이라 화면을 켜는 순간 색만으로 판단됩니다.<span class="api">wait_min → 숫자 · state+wait_min → 칩 문구/색 (여유 ≤5분 · 보통 5~12 · 혼잡 &gt;12, 임계값은 .env)</span></div>
+    <div class="note"><b>2</b><strong>갱신 메타.</strong> 카드 밖 11px. "추정치" 문구는 지우지 않습니다 — Little's law 가 배식 초반에 과대추정되는 한계를 사용자에게 알리는 유일한 자리.<span class="api">updated_at · stale</span></div>
+    <div class="note"><b>3</b><strong>스파크라인.</strong> 축·눈금 없음, 오른쪽 끝이 "지금". 학생이 보는 건 "지금이 봉우리 앞인가 뒤인가"이지 수치가 아닙니다. 데이터가 2점 미만이면 카드 자체를 숨깁니다.<span class="api">/api/history?minutes=120 · wait_min 만</span></div>
+    <div class="note"><b>4</b><strong>메뉴.</strong> 첫 항목(주요리)만 굵게, 나머지 2열. NEIS 순서를 그대로 쓰되 알레르기 번호 "(5.9.10)" 는 탭하면 보이게 접습니다.<span class="api">today.menu[]</span></div>
+    <div class="note"><b>5</b><strong>영양 요약 3칸.</strong> 법정 기준의 구조(양·비율·충족)를 그대로 3칸으로. 숫자 하나가 아니라 세 질문에 세 답.<span class="api">energy_pct · macro_ratio_ok · mar</span></div>
+    <div class="note"><b>6</b><strong>접힌 상세.</strong> 기본은 닫힘. 교사·영양교사용. 막대의 세로선이 권장섭취량(100%), 트랙 끝이 150%.<span class="api">micro[].pct · band</span></div>
+    <div class="note"><b>7</b><strong>기준 출처.</strong> 판정 표현("미달")을 쓰지 않고 "참고 지표"로 남기는 문장. 학교와의 신뢰를 지키는 장치.<span class="api">std.group · std.source</span></div>
+  </div>
+</div>
+
+<h2>상태 변형 <small>식권 카드는 4가지 얼굴을 가진다</small></h2>
+<p class="sub">API 의 <code>state</code> 와 <code>wait_min</code> 조합으로 결정됩니다. 숫자가 없을 때 빈 숫자 대신 <em>무엇을 해야 하는지</em>를 씁니다.</p>
+<div class="variants">
+  <div class="phone-mini">
+    <div class="card ticket"><div class="eyebrow">지금 줄을 서면</div><div class="big"><span class="num">4</span><span class="unit">분</span></div><span class="verdict">여유 · 바로 가세요</span><div class="foot"><div><b>38</b>명</div><div><b>9.5</b>/분</div></div></div>
+    <div class="cap"><b>ok · ≤5분</b><br>초록. 가장 흔한 상태.</div>
+  </div>
+  <div class="phone-mini">
+    <div class="card ticket bad"><div class="eyebrow">지금 줄을 서면</div><div class="big"><span class="num">15</span><span class="unit">분</span></div><span class="verdict">혼잡 · 10분 뒤 추천</span><div class="foot"><div><b>140</b>명</div><div><b>9.2</b>/분</div></div></div>
+    <div class="cap"><b>ok · &gt;12분</b><br>빨강. "10분 뒤"는 history 의 하강 추세에서 계산. 없으면 "잠시 후".</div>
+  </div>
+  <div class="phone-mini">
+    <div class="card ticket mid"><div class="eyebrow">지금 줄을 서면</div><div class="big"><span class="num" style="font-size:34px;line-height:1.2">계산 중</span></div><span class="verdict">배식 시작 대기</span><div class="foot"><div><b>22</b>명</div><div><b>0.3</b>/분</div></div></div>
+    <div class="cap"><b>insufficient_rate</b><br>노랑. λ 가 하한 미만 — 배식 직전. 대기 인원은 그대로 보여준다.</div>
+  </div>
+  <div class="phone-mini">
+    <div class="card ticket off"><div class="eyebrow">지금 줄을 서면</div><div class="big"><span class="num" style="font-size:34px;line-height:1.2">—</span></div><span class="verdict">정보 없음</span><div class="foot"><div>마지막 12:03</div><div>점심 11:30~14:00</div></div></div>
+    <div class="cap"><b>no_data / stale</b><br>회색. 카메라 정지 또는 점심시간 외. 마지막 시각을 남겨 "언제부터" 를 알린다.</div>
+  </div>
+</div>
+
+<h2>급식실 입구 디스플레이 <small>1920 × 1080 · 3m 거리에서 읽힘</small></h2>
+<p class="sub">선택 사항. 같은 API, 같은 HTML 에 <code>?kiosk=1</code> 로 레이아웃만 바꿉니다. 스크롤·터치 없음, 상세 접기 없음. 숫자는 150px — 급식실 문 앞 3m 에서 읽는 크기입니다.</p>
+<div class="kiosk">
+  <div class="k-title">급식실 대기 안내 <span>12:07 · 공주고 · 30초 갱신</span></div>
+  <div class="k-hero card ticket"><div class="eyebrow" style="font-size:16px">지금 줄을 서면</div><div class="big"><span class="num">4</span><span class="unit">분</span></div><span class="verdict">여유 · 바로 들어오세요</span><div class="foot"><div><b>38</b>명 <span>대기</span></div><div><b>9.5</b>명/분 <span>배식 속도</span></div></div></div>
+  <div class="k-menu">
+    <div class="eyebrow" style="font-size:14px">오늘 중식</div>
+    <ul class="menu"><li class="main">돼지고기 김치찌개</li><li>현미밥</li><li>계란말이</li><li>시금치나물</li><li>깍두기</li><li>사과</li><li>우유</li></ul>
+    <div class="kpi"><div><b>94%</b><span>에너지 충족</span></div><div><b class="ok">적정</b><span>탄·단·지</span></div><div><b class="bad">86%</b><span>미량영양소</span></div></div>
+  </div>
+  <div class="k-foot"><span>휴대폰으로 보기 → QR</span><div class="qr"></div></div>
+</div>
+
+<h2>디자인 토큰 <small>static/css 에 그대로 옮길 값</small></h2>
+<div class="tokens">
+  <div class="tok"><i style="background:#E9EEF2"></i>배경 <code>--bg #E9EEF2</code><br>스테인리스 식판 톤. 카드가 뜨는 바탕</div>
+  <div class="tok"><i style="background:#10202B"></i>잉크 <code>--ink #10202B</code><br>본문·숫자</div>
+  <div class="tok"><i style="background:#1F3A5F"></i>구조 <code>--blue #1F3A5F</code><br>그래프선·불릿·접기 라벨</div>
+  <div class="tok"><i style="background:#2E7D5B"></i>여유 <code>--ok #2E7D5B / bg #DFF1E8</code></div>
+  <div class="tok"><i style="background:#B8791A"></i>보통·대기 <code>--mid #B8791A / bg #FBEFD6</code></div>
+  <div class="tok"><i style="background:#C24B3A"></i>혼잡·부족 <code>--bad #C24B3A / bg #F8DEDA</code></div>
+  <div class="tok"><i style="background:#7B8794"></i>정보 없음 <code>--off #7B8794 / bg #E6EAEE</code></div>
+  <div class="tok"><i style="background:linear-gradient(90deg,#10202B 0 30%,#5B6B78 30% 60%,#C9D3DB 60%)"></i>글자 <code>Pretendard → system-ui</code><br>웹폰트 없음(Pi 로컬 서빙). 숫자는 <code>tabular-nums</code></div>
+</div>
+
+<h2>컴포넌트 스펙 <small>구현 시 그대로 참조</small></h2>
+<table>
+<tr><th>요소</th><th>크기·타이포</th><th>동작</th><th>비고</th></tr>
+<tr><td>식권 숫자</td><td>88px / 800 / letter-spacing −0.04em / line-height .9</td><td>값 바뀔 때 0.2s 페이드(reduced-motion 시 즉시)</td><td>3자리(100분+)면 72px 로 축소</td></tr>
+<tr><td>판정 칩</td><td>14px / 700 / 999px radius</td><td>문구 + 색 동시 변경</td><td>임계 5·12분은 학교마다 다를 수 있어 .env</td></tr>
+<tr><td>하단 두 수치</td><td>16px 숫자 + 13px 라벨</td><td>—</td><td>점선 위 = 판단, 아래 = 근거</td></tr>
+<tr><td>스파크라인</td><td>높이 72px, 선 2px, 면 8% 채움</td><td>데이터 &lt;2점이면 카드 숨김</td><td>축·범례 없음</td></tr>
+<tr><td>메뉴</td><td>15px 주요리 / 14px 2열</td><td>알레르기 번호는 항목 탭 시 표시</td><td>7개 넘으면 2열 유지, 카드가 길어짐</td></tr>
+<tr><td>영양 3칸</td><td>20px / 800 숫자 + 11px 라벨</td><td>—</td><td>비율 칸은 숫자 대신 "적정/범위 밖"</td></tr>
+<tr><td>영양소 막대</td><td>트랙 8px, 세로선 66.7% = 100%</td><td>기본 접힘</td><td>부족 빨강 · 적정 초록 · 과다 노랑</td></tr>
+<tr><td>카드</td><td>radius 16px, 1px 선, 여백 14×16px</td><td>—</td><td>그림자 없음 — 배경색 차이로만 구분</td></tr>
+<tr><td>터치 영역</td><td>최소 44×44px</td><td>접기 summary 전체가 탭 대상</td><td>—</td></tr>
+</table>
+
+<h2>의도적으로 뺀 것 <small>넣고 싶어질 때 다시 읽을 목록</small></h2>
+<table>
+<tr><th>뺀 것</th><th>이유</th></tr>
+<tr><td>급식실 실사·히트맵</td><td>공개 화면에는 개인정보 원칙상 빈 평면도 위 히트맵만 허용(CLAUDE.md). 그것도 이 화면의 2초 결정에는 기여하지 않아 v1 에서 제외. 필요하면 스파크라인 아래 별도 카드</td></tr>
+<tr><td>주간 식단표</td><td>학생은 오늘만 본다. 주간은 <code>/api/meal</code> 의 week 를 쓰는 별도 페이지 <code>/week</code></td></tr>
+<tr><td>코사인 유사도 "밸런스 점수"</td><td>단위 스케일에 지배되어 해석이 안 됨. 3칸 요약으로 대체</td></tr>
+<tr><td>로고·학교 이름 헤더</td><td>QR 로 들어온 사람은 어디인지 안다. 첫 화면 세로 공간은 전부 숫자에</td></tr>
+<tr><td>다크 모드</td><td>상태색 4종이 배경색이라 다크에서 대비가 무너짐. 급식실은 밝다</td></tr>
+</table>
+</main>
+</body>
+</html>

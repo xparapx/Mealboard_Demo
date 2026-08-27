@@ -1,0 +1,1409 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mealboard 구축 매뉴얼 — 카메라 없이 홈 Pi 에 세우기</title>
+<style>
+:root{--bg:#F2F4F0;--paper:#FFFFFF;--ink:#17231C;--mute:#5E6B63;--line:#D9DFDA;--acc:#2E6B4C;--acc2:#E4EFE8;--warn:#B8651B;--code:#1D2620;--codeink:#E6EDE8;--codemute:#8FA396}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;font-size:16px;line-height:1.65;word-break:keep-all}
+code,pre,kbd{font-family:"D2Coding","Cascadia Code","JetBrains Mono",ui-monospace,Menlo,monospace}
+p code,li code,td code,dd code{background:var(--acc2);padding:.05em .35em;border-radius:4px;font-size:.92em}
+.wrap{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+nav{position:sticky;top:0;height:100vh;overflow:auto;padding:28px 16px;border-right:1px solid var(--line);background:var(--paper)}
+nav h1{font-size:15px;letter-spacing:-.01em;margin:0 0 4px}
+nav .sub{font-size:12px;color:var(--mute);margin:0 0 20px}
+nav a{display:grid;grid-template-columns:28px 1fr;align-items:baseline;gap:2px 8px;padding:8px 8px;border-radius:8px;color:var(--ink);text-decoration:none;font-size:13.5px}
+nav a small{grid-column:2;font-size:11px;color:var(--mute)}
+nav a .n{font-weight:700;color:var(--acc);font-variant-numeric:tabular-nums}
+nav a:hover,nav a.cur{background:var(--acc2)}
+main{padding:40px 56px 120px;max-width:980px}
+.hero{margin-bottom:48px;padding-bottom:32px;border-bottom:2px solid var(--ink)}
+.hero .eyebrow{font-size:12px;letter-spacing:.14em;color:var(--acc);font-weight:700}
+.hero h1{font-size:34px;letter-spacing:-.02em;line-height:1.2;margin:8px 0 12px}
+.hero p{max-width:720px;color:var(--mute);margin:0}
+.step{margin-bottom:72px;scroll-margin-top:24px}
+.step header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.stepnum{font-size:12px;letter-spacing:.14em;font-weight:700;color:var(--acc)}
+.step h2{font-size:26px;letter-spacing:-.02em;margin:0;flex:1 1 auto}
+.layer{font-size:12px;color:var(--mute);border:1px solid var(--line);border-radius:999px;padding:2px 10px}
+.step h3{font-size:17px;margin:32px 0 8px;letter-spacing:-.01em}
+.goal{background:var(--acc2);border-left:4px solid var(--acc);padding:12px 16px;border-radius:0 8px 8px 0;margin:0 0 20px}
+.sysmap{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:0 0 24px;font-size:12px}
+.lane{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 0;border-bottom:1px dashed var(--line)}
+.lane:last-child{border-bottom:0}
+.lane em{font-style:normal;width:84px;flex:none;color:var(--mute);font-size:11px;letter-spacing:.04em}
+.lane i{font-style:normal;color:var(--mute);font-size:11px}
+.node{display:inline-flex;flex-direction:column;padding:4px 9px;border-radius:7px;border:1px solid var(--line);background:#FAFBFA;color:var(--mute);line-height:1.25;opacity:.55}
+.node b{font-size:12.5px;color:var(--ink)}
+.node span{font-size:10.5px}
+.node.on{opacity:1;background:var(--acc2);border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+.node.on b{color:var(--acc)}
+figure.code{margin:12px 0 18px;border-radius:10px;overflow:hidden;background:var(--code);color:var(--codeink)}
+figure.code figcaption{display:flex;align-items:center;gap:10px;padding:7px 12px;background:#141B17;font-size:12px;color:var(--codemute)}
+figure.code .path{font-family:inherit;color:var(--codeink)}
+figure.code .lang{margin-left:auto;text-transform:uppercase;letter-spacing:.08em;font-size:10px}
+figure.code .copy{margin-left:8px;background:transparent;color:var(--codeink);border:1px solid #3B4A41;border-radius:6px;padding:2px 10px;font-size:12px;cursor:pointer}
+figure.code .copy:hover{background:#2A352F}
+figure.code .copy.done{border-color:var(--acc);color:#9FD3B4}
+figure.code .lang+.copy{margin-left:8px}
+figure.code figcaption:not(:has(.lang)) .copy{margin-left:auto}
+pre{margin:0;padding:14px 16px;overflow:auto;font-size:13px;line-height:1.55;tab-size:4}
+dl.term{display:grid;grid-template-columns:110px 1fr;gap:4px 14px;margin:14px 0;padding:10px 14px;background:var(--paper);border:1px solid var(--line);border-radius:10px;font-size:14px}
+dl.term dt{font-weight:700;color:var(--acc)}
+dl.term dt::before{content:"용어";display:block;font-size:10px;letter-spacing:.12em;color:var(--mute);font-weight:400}
+dl.term dd{margin:0;color:#2F3D35}
+table.tbl{border-collapse:collapse;width:100%;font-size:14px;margin:10px 0}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+table.tbl th{background:var(--acc2)}
+ul,ol{padding-left:22px}
+li{margin:4px 0}
+strong{color:var(--ink)}
+@media (max-width:860px){.wrap{grid-template-columns:1fr}nav{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}main{padding:24px 18px 80px}.hero h1{font-size:26px}.lane em{width:100%}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+<h1>Mealboard 구축 매뉴얼</h1>
+<p class="sub">홈 Pi 5 · 카메라 제외 · 2026-08</p>
+<a href="#s0"><span class="n">0</span><span>시작하기 전에</span><small>읽기</small></a><a href="#s1"><span class="n">1</span><span>Pi 기본 설정 — 시각, 계정, 원격 접속</span><small>Pi</small></a><a href="#s2"><span class="n">2</span><span>저장소 뼈대 — GitHub 에 프로젝트 만들기</span><small>저장소</small></a><a href="#s3"><span class="n">3</span><span>설치 스크립트와 systemd 유닛</span><small>Pi · 저장소</small></a><a href="#s4"><span class="n">4</span><span>대기시간 계산 — 순수 로직과 테스트</span><small>앱</small></a><a href="#s5"><span class="n">5</span><span>데이터베이스와 API</span><small>앱</small></a><a href="#s6"><span class="n">6</span><span>mock_feed — 카메라 대역</span><small>앱</small></a><a href="#s7"><span class="n">7</span><span>대시보드 화면</span><small>앱</small></a><a href="#s8"><span class="n">8</span><span>NEIS 급식 정보와 영양 지표</span><small>데이터</small></a><a href="#s9"><span class="n">9</span><span>외부 공개 — Cloudflare Tunnel, PWA, QR</span><small>공개</small></a><a href="#s10"><span class="n">10</span><span>검증 체크리스트, 진단 순서, 이식</span><small>운영</small></a>
+</nav>
+<main>
+<div class="hero">
+<div class="eyebrow">MEALBOARD DEMO · STAGING WITHOUT CAMERA</div>
+<h1>급식실 대기시간 대시보드를<br>카메라 없이 홈 Pi 에 세우는 열 단계</h1>
+<p>각 단계는 "무엇을 만드는가 → 시스템의 어디인가 → 명령과 코드 → 어떻게 확인하는가 → 왜 그렇게 하는가" 순서입니다. 모든 코드는 복사 버튼으로 그대로 쓸 수 있고, 처음 나오는 용어는 그 자리에서 설명합니다. 코드는 개발 PC 에서 쓰고 git 으로 Pi 에 보냅니다.</p>
+</div>
+<section id="s0" class="step">
+<header><span class="stepnum">STEP 0</span><h2>시작하기 전에</h2><span class="layer">읽기</span></header>
+
+
+<h3>이 데모가 만드는 것</h3>
+<p>급식실 앞에 줄이 얼마나 길고, 지금 서면 몇 분을 기다리는지, 오늘 급식은 무엇이고 영양 기준에 얼마나 맞는지를 학생·교사가 휴대폰으로 보는 화면입니다. 원래 설계는 급식실 카메라(라즈베리파이 + YOLO)가 사람 수를 세지만, <strong>이 매뉴얼은 카메라 없이 나머지 전부</strong>를 홈 Pi 에서 세워 보는 절차입니다. 카메라 자리에는 <code>mock_feed</code> 라는 가짜 데이터 생성기를 둡니다.</p>
+<p>왜 카메라 없이 먼저 하나 — 카메라는 프로젝트에서 가장 불확실한 부분입니다. 나머지(DB, API, 화면, 급식 정보, 외부 공개, 자동 실행)를 먼저 완성해 두면, 나중에 카메라가 안 될 때 "카메라만 의심하면 되는" 상태가 됩니다. 이 원칙은 Plant 프로젝트에서 "노드 없이 먼저 검증"으로 실증한 것과 같습니다.</p>
+
+<h3>전체 구조 — 이 지도가 매 단계 위에 반복됩니다</h3>
+<p>각 단계 머리에 이 지도가 다시 나오고, 그 단계에서 만드는 부품이 진하게 표시됩니다. 지금은 전부 켜져 있습니다.</p>
+<div class="sysmap" aria-label="시스템 지도">
+  <div class="lane"><em>개발 흐름</em><div class="node on" data-k="pc"><b>개발 PC</b><span>코드 작성 · Claude Code 실행 · git push</span></div><i>git push →</i><div class="node on" data-k="gh"><b>GitHub</b><span>저장소 원본 (팀 공용)</span></div><i>git pull →</i><div class="node on" data-k="pi"><b>홈 Pi 5</b><span>실제로 서비스가 도는 곳</span></div></div>
+  <div class="lane"><em>Pi 안 · 데이터</em><div class="node on" data-k="mock"><b>mock_feed</b><span>가짜 대기 인원 생성 (vision 대역)</span></div><i>또는</i><div class="node on" data-k="vision"><b>vision</b><span>카메라 카운팅 — 학교 Pi 에서만</span></div><i>쓰기 →</i><div class="node on" data-k="db"><b>queue.db</b><span>SQLite · 숫자만 저장</span></div><i>← 읽기</i><div class="node on" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div></div>
+  <div class="lane"><em>Pi 안 · 급식</em><div class="node on" data-k="neis"><b>fetch_neis</b><span>NEIS 급식 API → 영양 지표</span></div><i>하루 1회 →</i><div class="node on" data-k="meal"><b>meal.json</b><span>오늘·이번 주 급식 캐시</span></div><i>← 읽기</i><div class="node on" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div><i>→</i><div class="node on" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div></div>
+  <div class="lane"><em>공개</em><div class="node on" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div><i>→</i><div class="node on" data-k="cf"><b>cloudflared</b><span>학교망 밖으로 내보내는 터널</span></div><i>→ 인터넷 →</i><div class="node on" data-k="user"><b>학생·교사</b><span>QR → 휴대폰</span></div><i>· 전부</i><div class="node on" data-k="sysd"><b>systemd</b><span>부팅 시 자동 실행 · 재시작</span></div><i>가 관리</i></div>
+</div>
+<p>읽는 요령: 왼쪽에서 오른쪽으로 데이터가 흐릅니다. 사람 수(또는 mock)가 <code>queue.db</code> 에 숫자로 쌓이고, FastAPI 가 그 숫자를 읽어 대시보드에 주고, cloudflared 가 그 화면을 인터넷으로 내보냅니다. 급식 정보는 별도 경로로 하루 한 번 <code>meal.json</code> 에 저장됩니다. <strong>모든 것은 홈 Pi 한 대 안에서 돕니다.</strong></p>
+
+<h3>준비물</h3>
+<ul>
+<li>Raspberry Pi 5, Raspberry Pi OS 64비트(Debian 13 Trixie, Python 3.13), SSH 접속 가능 — 현재 상태. 학교 Pi 도 같은 OS 로 설치한다</li>
+<li>NEIS 인증키(개발계정) + 학교코드 — 발급 완료 (공주고 <code>8140036</code>, 교육청 <code>N10</code>)</li>
+<li>GitHub 계정 (저장소 <code>xparapx/Mealboard_Demo</code>)</li>
+<li>Cloudflare 계정 + 본인 소유 도메인 1개 — 9단계에서만 필요. 없어도 8단계까지는 전부 됩니다</li>
+<li>개발 PC (Windows). 코드는 PC 에서 쓰고 Pi 로는 git 으로 보냅니다. Git for Windows 설치 필수</li>
+<li>Claude Code (PC) — 3단계부터 작업을 위임. 네이티브 설치(<code>irm https://claude.ai/install.ps1 | iex</code>), Node.js 불필요. Pro/Max 계정 필요</li>
+</ul>
+
+<h3>한 가지 약속 — Pi 위 폴더는 손으로 편집하지 않는다</h3>
+<p>이 매뉴얼에서 코드는 전부 <strong>개발 PC 의 저장소 클론</strong>에서 쓰고 커밋·push 합니다. Pi 에서는 <code>git pull</code> 과 서비스 재시작만 합니다. 팀원 여럿이 Pi 의 같은 폴더를 편집하면 충돌과 DB 락이 생기고, 무엇보다 "어느 파일이 진짜인가"를 잃습니다. Plant 프로젝트의 systemd 유닛이 새 Pi 로 따라오지 못했던 이유가 바로 이것(Pi 에서 직접 만들어 git 밖에 있었음)입니다.</p>
+
+<dl class="term"><dt>SSH</dt><dd>다른 컴퓨터의 터미널을 원격으로 쓰는 통로. <code>ssh 사용자@주소</code>. 이 매뉴얼의 'Pi 터미널' 명령은 전부 SSH 로 들어가서 칩니다.</dd></dl>
+<dl class="term"><dt>systemd</dt><dd>리눅스가 부팅될 때 프로그램을 자동으로 켜고, 죽으면 다시 살리는 관리자. 우리 서비스는 전부 이것에 등록합니다. 설정 파일 하나가 '유닛'이고 이름이 <code>*.service</code>, <code>*.timer</code> 입니다.</dd></dl>
+<dl class="term"><dt>uv</dt><dd>파이썬 패키지·가상환경 관리 도구. <code>pip</code> 보다 빠르고, 어떤 버전을 썼는지 <code>uv.lock</code> 에 고정해 다른 Pi 에서 똑같이 재현합니다.</dd></dl>
+
+</section><section id="s1" class="step">
+<header><span class="stepnum">STEP 1</span><h2>Pi 기본 설정 — 시각, 계정, 원격 접속</h2><span class="layer">Pi</span></header>
+<div class="sysmap" aria-label="시스템 지도">
+  <div class="lane"><em>개발 흐름</em><div class="node" data-k="pc"><b>개발 PC</b><span>코드 작성 · Claude Code 실행 · git push</span></div><i>git push →</i><div class="node" data-k="gh"><b>GitHub</b><span>저장소 원본 (팀 공용)</span></div><i>git pull →</i><div class="node on" data-k="pi"><b>홈 Pi 5</b><span>실제로 서비스가 도는 곳</span></div></div>
+  <div class="lane"><em>Pi 안 · 데이터</em><div class="node" data-k="mock"><b>mock_feed</b><span>가짜 대기 인원 생성 (vision 대역)</span></div><i>또는</i><div class="node" data-k="vision"><b>vision</b><span>카메라 카운팅 — 학교 Pi 에서만</span></div><i>쓰기 →</i><div class="node" data-k="db"><b>queue.db</b><span>SQLite · 숫자만 저장</span></div><i>← 읽기</i><div class="node" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div></div>
+  <div class="lane"><em>Pi 안 · 급식</em><div class="node" data-k="neis"><b>fetch_neis</b><span>NEIS 급식 API → 영양 지표</span></div><i>하루 1회 →</i><div class="node" data-k="meal"><b>meal.json</b><span>오늘·이번 주 급식 캐시</span></div><i>← 읽기</i><div class="node" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div><i>→</i><div class="node" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div></div>
+  <div class="lane"><em>공개</em><div class="node" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div><i>→</i><div class="node" data-k="cf"><b>cloudflared</b><span>학교망 밖으로 내보내는 터널</span></div><i>→ 인터넷 →</i><div class="node" data-k="user"><b>학생·교사</b><span>QR → 휴대폰</span></div><i>· 전부</i><div class="node" data-k="sysd"><b>systemd</b><span>부팅 시 자동 실행 · 재시작</span></div><i>가 관리</i></div>
+</div>
+
+<p class="goal">목표: 팀원 누구나 자기 계정으로 Pi 에 SSH 로 들어올 수 있고, Pi 의 시계가 한국 시각이며, 집 공유기를 건드리지 않고도 밖에서 접속되는 상태.<br><b>현재 Pi 상태(2026-08-27):</b> 타임존 KST · Tailscale 설치됨(100.103.201.77) · Plant 유닛 disabled · <code>mealboard</code> 그룹 생성됨. 데모 단계에서는 메인 계정(xparapx) 하나로 진행하고 팀원 계정·SSH 키·비밀번호 로그인 차단은 추후.</p>
+
+<h3>1-1. 현재 상태 확인</h3>
+<p>먼저 손대기 전에 무엇이 돌고 있는지 봅니다. Plant 프로젝트가 같은 Pi 에 있으므로 특히 포트와 타임존을 봐야 합니다.</p>
+<figure class="code">
+<figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">timedatectl | grep -i zone           # 타임존 (UTC 면 아래 1-2 에서 바꾼다)
+ss -tlnp                              # 지금 열려 있는 포트 — 8501(Streamlit)·1883(mosquitto) 가 보일 수 있음
+systemctl list-units &#x27;plant*&#x27; --all   # Plant 서비스 상태 (inactive 여야 정상)
+systemctl is-enabled planthub plantdash plantsnap.timer
+python3 --version                     # 3.13.x (Trixie 기본). 학교 Pi 와 같아야 한다</code></pre>
+</figure>
+<p>Plant 서비스가 <code>enabled</code> 로 나오면 재부팅 때 다시 올라옵니다. 당분간 안 쓴다면 끄고 잠급니다:</p>
+<figure class="code">
+<figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">sudo systemctl disable --now planthub plantdash plantsnap.timer</code></pre>
+</figure>
+
+<h3>1-2. 타임존</h3>
+<p>Plant 의 촬영 타이머가 꺼져 있는 지금이 바꿀 적기입니다(켜져 있었다면 06:00 촬영이 9시간 밀립니다).</p>
+<figure class="code">
+<figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">sudo timedatectl set-timezone Asia/Seoul &amp;&amp; date</code></pre>
+</figure>
+
+<h3>1-3. 팀 그룹과 계정</h3>
+<p>공용 계정 하나를 나눠 쓰지 않습니다. 누가 무엇을 했는지 로그에 남고, 나간 사람 키만 지울 수 있기 때문입니다. <code>mealboard</code> 그룹이 <code>/opt/mealboard</code> 폴더의 소유 그룹이 됩니다.</p>
+<figure class="code">
+<figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">sudo groupadd mealboard
+sudo usermod -aG mealboard &quot;$USER&quot;
+
+# 팀원 1명당 반복 (이름은 예시)
+sudo adduser --gecos &quot;&quot; minsu
+sudo usermod -aG mealboard,sudo minsu      # sudo 는 서비스 재시작에 필요</code></pre>
+</figure>
+
+<h3>1-4. SSH 키 로그인</h3>
+<p>각자 PC 에서 키를 만들고 공개키를 Pi 의 자기 계정에 넣습니다. 비밀번호 로그인은 키가 전부 확인된 뒤 끕니다.</p>
+<figure class="code">
+<figcaption><span class="path">각 팀원 PC</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">ssh-keygen -t ed25519 -C &quot;minsu@laptop&quot;          # 엔터 3번. ~/.ssh/id_ed25519.pub 이 공개키
+type $env:USERPROFILE\.ssh\id_ed25519.pub        # Windows PowerShell 에서 내용 보기 (mac/리눅스: cat ~/.ssh/id_ed25519.pub)</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">Pi, 해당 팀원 계정으로</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">mkdir -p ~/.ssh &amp;&amp; chmod 700 ~/.ssh
+echo &quot;ssh-ed25519 AAAA... minsu@laptop&quot; &gt;&gt; ~/.ssh/authorized_keys   # 위에서 본 공개키 한 줄
+chmod 600 ~/.ssh/authorized_keys</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">Pi — 모든 팀원의 키 로그인이 되는 것을 확인한 뒤에만</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">sudo sed -i &#x27;s/^#\?PasswordAuthentication .*/PasswordAuthentication no/&#x27; /etc/ssh/sshd_config
+sudo systemctl restart ssh</code></pre>
+</figure>
+
+<h3>1-5. Tailscale — 밖에서 들어오는 길</h3>
+<p>집 공유기의 포트포워딩은 열지 않습니다(학교망에서 금지한 것과 같은 이유 — 인터넷 전체에 SSH 를 노출하게 됨). Tailscale 은 각자 PC 와 Pi 를 같은 사설망에 묶어 주어, 공유기 설정 없이 Pi 가 <code>100.x.x.x</code> 주소로 보입니다.</p>
+<figure class="code">
+<figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up          # 나오는 링크를 브라우저에서 열어 로그인
+tailscale ip -4            # 이 주소가 팀원이 쓸 PI_HOST</code></pre>
+</figure>
+<p>팀원은 각자 PC 에 Tailscale 을 설치하고 같은 계정(또는 초대받은 계정)으로 로그인하면 <code>ssh minsu@100.x.x.x</code> 가 됩니다.</p>
+
+<h3>확인</h3>
+<ul>
+<li>팀원 PC 에서 <code>ssh 이름@100.x.x.x</code> 가 비밀번호 없이 열린다</li>
+<li><code>date</code> 가 한국 시각, <code>groups</code> 에 <code>mealboard</code> 가 있다</li>
+</ul>
+<dl class="term"><dt>Tailscale</dt><dd>여러 기기를 하나의 사설망(VPN)으로 묶는 서비스. 무료 플랜으로 충분. 9단계의 Cloudflare Tunnel 과는 용도가 다릅니다 — Tailscale 은 <em>팀 개발자</em>가 Pi 에 들어가는 길, Cloudflare 는 <em>학생 누구나</em> 대시보드를 보는 길.</dd></dl>
+
+</section><section id="s2" class="step">
+<header><span class="stepnum">STEP 2</span><h2>저장소 뼈대 — GitHub 에 프로젝트 만들기</h2><span class="layer">저장소</span></header>
+<div class="sysmap" aria-label="시스템 지도">
+  <div class="lane"><em>개발 흐름</em><div class="node on" data-k="pc"><b>개발 PC</b><span>코드 작성 · Claude Code 실행 · git push</span></div><i>git push →</i><div class="node on" data-k="gh"><b>GitHub</b><span>저장소 원본 (팀 공용)</span></div><i>git pull →</i><div class="node" data-k="pi"><b>홈 Pi 5</b><span>실제로 서비스가 도는 곳</span></div></div>
+  <div class="lane"><em>Pi 안 · 데이터</em><div class="node" data-k="mock"><b>mock_feed</b><span>가짜 대기 인원 생성 (vision 대역)</span></div><i>또는</i><div class="node" data-k="vision"><b>vision</b><span>카메라 카운팅 — 학교 Pi 에서만</span></div><i>쓰기 →</i><div class="node" data-k="db"><b>queue.db</b><span>SQLite · 숫자만 저장</span></div><i>← 읽기</i><div class="node" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div></div>
+  <div class="lane"><em>Pi 안 · 급식</em><div class="node" data-k="neis"><b>fetch_neis</b><span>NEIS 급식 API → 영양 지표</span></div><i>하루 1회 →</i><div class="node" data-k="meal"><b>meal.json</b><span>오늘·이번 주 급식 캐시</span></div><i>← 읽기</i><div class="node" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div><i>→</i><div class="node" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div></div>
+  <div class="lane"><em>공개</em><div class="node" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div><i>→</i><div class="node" data-k="cf"><b>cloudflared</b><span>학교망 밖으로 내보내는 터널</span></div><i>→ 인터넷 →</i><div class="node" data-k="user"><b>학생·교사</b><span>QR → 휴대폰</span></div><i>· 전부</i><div class="node" data-k="sysd"><b>systemd</b><span>부팅 시 자동 실행 · 재시작</span></div><i>가 관리</i></div>
+</div>
+
+<p class="goal">목표: 폴더 구조, 의존성, 무엇을 git 에서 제외할지가 정해진 빈 저장소가 GitHub 에 있고, PC 에 클론되어 있는 상태.</p>
+
+<h3>2-1. GitHub 에서 저장소 생성</h3>
+<p>GitHub 웹에서 <strong>New repository</strong> → 이름 <code>Mealboard_Demo</code>, Public, README 없이(빈 상태로) 만듭니다. 그다음 PC 에서:</p>
+<figure class="code">
+<figcaption><span class="path">개발 PC (PowerShell)</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">git clone https://github.com/xparapx/Mealboard_Demo.git
+cd Mealboard_Demo
+mkdir app, app\routers, vision, jobs, static, static\icons, data, deploy, tests, docs
+# 파이썬이 폴더를 &#x27;패키지&#x27;로 인식하게 하는 빈 파일들
+New-Item app\__init__.py, app\routers\__init__.py, vision\__init__.py, jobs\__init__.py -ItemType File
+tree /f</code></pre>
+</figure>
+
+<h3>2-2. 네 개의 기본 파일</h3>
+<p><code>pyproject.toml</code> 은 "이 프로젝트가 무엇을 쓰는가", <code>.gitignore</code> 는 "무엇을 절대 올리지 않는가", <code>.env.example</code> 은 "어떤 비밀값이 필요한가(값은 빼고)", <code>.gitattributes</code> 는 "파일을 어떻게 다루는가(줄바꿈)" 입니다.</p>
+<figure class="code">
+<figcaption><span class="path">pyproject.toml</span><span class="lang">toml</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-toml">[project]
+name = &quot;mealboard&quot;
+version = &quot;0.1.0&quot;
+description = &quot;학교 급식실 대기시간 + 급식 영양 대시보드&quot;
+requires-python = &quot;&gt;=3.11&quot;
+dependencies = [
+    &quot;fastapi&quot;,
+    &quot;uvicorn[standard]&quot;,
+    &quot;python-dotenv&quot;,
+]
+
+[dependency-groups]
+dev = [&quot;pytest&quot;]
+
+[tool.pytest.ini_options]
+pythonpath = [&quot;.&quot;]</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">.gitignore</span><span class="lang">text</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-text"># 데이터·비밀은 절대 커밋하지 않는다 (예외 두 파일만 포함)
+data/*
+!data/plan_bg.png
+!data/nutrition_std.json
+.env
+.venv/
+__pycache__/
+*.db
+*.db-*</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">.env.example</span><span class="lang">text</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-text"># 실제 값은 .env 에 적는다 (.env 는 git 제외). 이 파일은 &quot;어떤 키가 필요한가&quot;만 알려준다.
+# 주의: 값 뒤에 주석을 달지 말 것 — systemd 의 EnvironmentFile 은 줄 끝 주석을 값의 일부로 읽는다.
+NEIS_KEY=
+# 충청남도교육청
+NEIS_ATPT_CODE=N10
+# 공주고등학교 (schoolInfo API 로 조회한 값)
+NEIS_SCHOOL_CODE=8140036
+# 8000 은 Plant 프로젝트 setup_camera.py 가 쓰므로 피한다
+API_PORT=8100
+LUNCH_START=11:30
+LUNCH_END=14:00</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">.gitattributes</span><span class="lang">text</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-text"># 모든 텍스트 파일은 저장소·체크아웃 모두 LF. Windows 에서 만든 sh·service 가 Pi 에서 깨지지 않게
+* text=auto eol=lf
+*.png binary</code></pre>
+</figure>
+<p>네 파일 모두 <strong>VS Code 로 만드세요.</strong> 메모장은 <code>.gitignore.txt</code> 처럼 확장자를 붙이거나 인코딩을 바꿉니다. 점으로 시작하는 파일은 "도구에게 주는 설정"이라는 유닉스 관례이고, 점 뒤가 이름 전체입니다.</p>
+<p><code>.gitattributes</code> 는 Windows 에서만 필요한 안전장치입니다. Windows 는 줄 끝을 CRLF 로, 리눅스는 LF 로 쓰는데, CRLF 가 섞인 <code>setup_pi.sh</code> 는 Pi 에서 "bash 를 찾을 수 없음" 으로 죽고 systemd 유닛도 값 끝에 보이지 않는 문자가 붙어 오동작합니다. "모든 텍스트는 LF" 규칙을 <strong>첫 커밋에</strong> 넣어야 이후 파일 전부에 적용됩니다.</p>
+<p><code>data/*</code> 를 통째로 제외하고 두 파일만 예외로 두는 이유: DB 와 급식 캐시는 Pi 마다 다른 '상태'이고, 평면도와 영양 기준은 코드와 함께 다녀야 하는 '설정'이기 때문입니다.</p>
+
+<h3>2-3. CLAUDE.md 보강</h3>
+<p>기존 CLAUDE.md 에 아래 절을 추가합니다. Claude Code 가 세션마다 이 파일을 읽으므로, 지금 환경(카메라 없음, Plant 동거)을 여기에 적지 않으면 매번 SSH 로 vision 을 찾거나 Plant 폴더를 건드리려 할 수 있습니다.</p>
+<figure class="code">
+<figcaption><span class="path">CLAUDE.md 에 추가</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">## 0. 현재 상태 (2026-08)
+- 홈 Pi 5 = 스테이징. 카메라 없음 → `mealboard-vision` 미설치, `mealboard-mock` 이 대역.
+  로드맵 ④는 개발 PC 웹캠·동영상 파일로, ⑤의 calibrate 는 학교 Pi 이전 시.
+- PI_HOST 는 Tailscale 주소 (.env 참조). 공용 체크아웃 `/opt/mealboard` — Pi 에서 직접 편집 금지, `git pull` 만.
+- 같은 Pi 에 Plant 프로젝트(`~/plant/`, planthub·plantdash·plantsnap 유닛) 가 정지 상태로 공존.
+  `~/plant/` 와 그 DB 에는 어떤 이유로도 접근·수정하지 않는다. 포트 8000·8501·1883 은 Plant 소유.
+- API 포트는 8100 (.env `API_PORT`). NEIS 갱신은 systemd timer 05:40.
+- 영양 지표는 코사인 유사도가 아니라 에너지 충족률 · 에너지 적정비율 · MAR 세 가지 (`jobs/fetch_neis.py` 참조).
+- vision 프레임 소스는 `webcam|file|picamera` 로 추상화. 홈 Pi 에서는 picamera 를 쓰지 않는다 (Plant 카메라 타이머와 배타 자원).</code></pre>
+</figure>
+
+<h3>2-4. 첫 커밋</h3>
+<p>PC 에서 처음 커밋한다면 git 에 "누구인지"를 먼저 알려줘야 합니다(없으면 커밋 자체가 거부되고, 이어서 push 가 <code>src refspec main does not match any</code> 로 실패합니다).</p>
+<figure class="code">
+<figcaption><span class="path">개발 PC</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">git config --global user.name &quot;xparapx&quot;
+git config --global user.email &quot;GitHub 에 등록한 이메일&quot;
+git config --global core.autocrlf false      # 줄바꿈 변환은 .gitattributes 가 맡는다
+git add -A
+git status                                   # 초록 목록에 .env, data/ 가 없어야 한다 — 매 커밋 전 습관
+git commit -m &quot;저장소 뼈대: 폴더 구조·pyproject·gitignore·env.example·CLAUDE.md·gitattributes&quot;
+git push -u origin main                      # -u 는 첫 push 에만. 이후는 git push</code></pre>
+</figure>
+<p>빈 저장소라 첫 push 가 <code>main</code> 브랜치를 만듭니다. 기대 출력은 <code>* [new branch] main -&gt; main</code>.</p>
+<p><strong>여기서부터 Claude Code 를 씁니다.</strong> CLAUDE.md 가 저장소에 들어간 뒤가 정상 출발점입니다 — 그 전에 시키면 규칙 없이 일합니다. 저장소 루트에서 <code>claude</code> 를 실행하고, 먼저 "CLAUDE.md 를 읽고 금지 사항 5가지와 §0 을 요약해라, 파일은 만들지 마" 로 로드 여부를 확인한 뒤 "docs/manual.html 의 STEP 3 을 수행해라, push 는 하지 마" 처럼 단계 단위로 위임합니다. push 는 커밋 내용을 눈으로 본 뒤 직접.</p>
+
+<dl class="term"><dt>pyproject.toml</dt><dd>파이썬 프로젝트의 설명서. uv 가 이걸 읽어 <code>.venv</code> 를 만들고 패키지를 넣습니다. <code>requires-python</code> 이 Pi 의 3.13 을 포함해야 합니다.</dd></dl>
+<dl class="term"><dt>.env</dt><dd>비밀값(API 키 등)을 넣는 파일. git 에 올라가지 않으므로 Pi 마다 손으로 채웁니다. <code>.env.example</code> 은 그 '빈 양식'입니다.</dd></dl>
+
+</section><section id="s3" class="step">
+<header><span class="stepnum">STEP 3</span><h2>설치 스크립트와 systemd 유닛</h2><span class="layer">Pi · 저장소</span></header>
+<div class="sysmap" aria-label="시스템 지도">
+  <div class="lane"><em>개발 흐름</em><div class="node" data-k="pc"><b>개발 PC</b><span>코드 작성 · Claude Code 실행 · git push</span></div><i>git push →</i><div class="node on" data-k="gh"><b>GitHub</b><span>저장소 원본 (팀 공용)</span></div><i>git pull →</i><div class="node on" data-k="pi"><b>홈 Pi 5</b><span>실제로 서비스가 도는 곳</span></div></div>
+  <div class="lane"><em>Pi 안 · 데이터</em><div class="node" data-k="mock"><b>mock_feed</b><span>가짜 대기 인원 생성 (vision 대역)</span></div><i>또는</i><div class="node" data-k="vision"><b>vision</b><span>카메라 카운팅 — 학교 Pi 에서만</span></div><i>쓰기 →</i><div class="node" data-k="db"><b>queue.db</b><span>SQLite · 숫자만 저장</span></div><i>← 읽기</i><div class="node" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div></div>
+  <div class="lane"><em>Pi 안 · 급식</em><div class="node" data-k="neis"><b>fetch_neis</b><span>NEIS 급식 API → 영양 지표</span></div><i>하루 1회 →</i><div class="node" data-k="meal"><b>meal.json</b><span>오늘·이번 주 급식 캐시</span></div><i>← 읽기</i><div class="node" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div><i>→</i><div class="node" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div></div>
+  <div class="lane"><em>공개</em><div class="node" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div><i>→</i><div class="node" data-k="cf"><b>cloudflared</b><span>학교망 밖으로 내보내는 터널</span></div><i>→ 인터넷 →</i><div class="node" data-k="user"><b>학생·교사</b><span>QR → 휴대폰</span></div><i>· 전부</i><div class="node on" data-k="sysd"><b>systemd</b><span>부팅 시 자동 실행 · 재시작</span></div><i>가 관리</i></div>
+</div>
+
+<p class="goal">목표: <code>setup_pi.sh</code> 한 번으로 Pi 에 저장소가 클론되고, 가상환경이 만들어지고, 서비스 4개가 systemd 에 등록되는 상태. 학교 Pi 로 갈 때도 이 스크립트를 그대로 씁니다.</p>
+
+<h3>3-1. 유닛 파일 4개 — <code>deploy/</code></h3>
+<p>유닛 파일을 저장소 안에 두는 것이 이 프로젝트와 Plant 의 결정적 차이입니다. 코드와 같은 커밋 이력에 있으므로 새 Pi 에 clone 하면 따라옵니다. <code>__USER__</code> 는 설치 스크립트가 실제 사용자명으로 바꿔 넣습니다.</p>
+<figure class="code">
+<figcaption><span class="path">deploy/mealboard-api.service</span><span class="lang">ini</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-ini">[Unit]
+Description=Mealboard API (FastAPI + 정적 대시보드)
+After=network.target
+
+[Service]
+User=__USER__
+WorkingDirectory=/opt/mealboard
+EnvironmentFile=/opt/mealboard/.env
+ExecStart=/opt/mealboard/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port ${API_PORT}
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">deploy/mealboard-mock.service</span><span class="lang">ini</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-ini">[Unit]
+Description=Mealboard mock feed (vision 대역 — 카메라 없는 Pi 전용)
+After=network.target
+Conflicts=mealboard-vision.service
+
+[Service]
+User=__USER__
+WorkingDirectory=/opt/mealboard
+ExecStart=/opt/mealboard/.venv/bin/python -m jobs.mock_feed --speed 30
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+</figure>
+<p><code>Conflicts=mealboard-vision.service</code> 한 줄이 "mock 과 vision 은 동시에 켜질 수 없다"를 systemd 수준에서 보장합니다. 한쪽을 켜면 다른 쪽이 자동으로 꺼집니다 — SQLite 쓰기 주체를 하나로 유지하는 규칙을 사람이 기억할 필요가 없어집니다.</p>
+<figure class="code">
+<figcaption><span class="path">deploy/mealboard-neis.service</span><span class="lang">ini</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-ini">[Unit]
+Description=Mealboard NEIS 급식 갱신 (1회 실행)
+
+[Service]
+Type=oneshot
+User=__USER__
+WorkingDirectory=/opt/mealboard
+ExecStart=/opt/mealboard/.venv/bin/python -m jobs.fetch_neis</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">deploy/mealboard-neis.timer</span><span class="lang">ini</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-ini">[Unit]
+Description=매일 05:40 NEIS 급식 갱신 (Plant 의 06:00 촬영과 겹치지 않게)
+
+[Timer]
+OnCalendar=*-*-* 05:40:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target</code></pre>
+</figure>
+<p>NEIS 갱신은 cron 대신 timer 로 둡니다. 실패해도 <code>journalctl -u mealboard-neis</code> 에 남아 10단계의 진단 순서와 맞습니다. <code>Persistent=true</code> 는 05:40 에 Pi 가 꺼져 있었다면 켜지자마자 한 번 실행한다는 뜻입니다.</p>
+
+<h3>3-2. 설치 스크립트 — <code>setup_pi.sh</code></h3>
+<figure class="code">
+<figcaption><span class="path">setup_pi.sh</span><span class="lang">bash</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">#!/usr/bin/env bash
+# Pi 에서 최초 1회 (그리고 유닛/의존성이 바뀔 때마다) 실행. 몇 번 실행해도 안전하게 설계.
+set -euo pipefail
+APP=/opt/mealboard
+REPO=https://github.com/xparapx/Mealboard_Demo.git
+
+echo &quot;== 1. 시스템&quot;
+sudo timedatectl set-timezone Asia/Seoul
+sudo apt update
+sudo apt install -y git python3-picamera2 sqlite3 curl
+getent group mealboard &gt;/dev/null || sudo groupadd mealboard
+sudo usermod -aG mealboard &quot;$USER&quot;
+
+echo &quot;== 2. uv&quot;
+command -v uv &gt;/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH=&quot;$HOME/.local/bin:$PATH&quot;
+
+echo &quot;== 3. 코드 (팀 공용 체크아웃)&quot;
+sudo mkdir -p &quot;$APP&quot;
+sudo chown &quot;$USER&quot;:mealboard &quot;$APP&quot;
+sudo chmod 2775 &quot;$APP&quot;                    # setgid: 이후 생기는 파일도 그룹 소유
+[ -d &quot;$APP/.git&quot; ] || git clone &quot;$REPO&quot; &quot;$APP&quot;
+cd &quot;$APP&quot;
+
+echo &quot;== 4. venv — 반드시 이 순서 (picamera2 는 시스템 것을 빌려 씀)&quot;
+[ -d .venv ] || uv venv --system-site-packages
+uv sync
+
+echo &quot;== 5. 설정&quot;
+[ -f .env ] || { cp .env.example .env; echo &quot;&gt;&gt; $APP/.env 값을 채우세요 (NEIS_KEY 등)&quot;; }
+mkdir -p data static/icons
+
+echo &quot;== 6. systemd 유닛 (저장소 deploy/ → /etc/systemd/system/)&quot;
+for u in deploy/*.service deploy/*.timer; do
+  [ -f &quot;$u&quot; ] || continue
+  tmp=$(mktemp)
+  sed &quot;s/__USER__/$USER/g&quot; &quot;$u&quot; &gt; &quot;$tmp&quot;
+  sudo install -m 644 -C -v &quot;$tmp&quot; &quot;/etc/systemd/system/$(basename &quot;$u&quot;)&quot;
+  rm -f &quot;$tmp&quot;
+done
+sudo systemctl daemon-reload
+sudo systemctl enable --now mealboard-api mealboard-mock mealboard-neis.timer
+echo &quot;&gt;&gt; 카메라 있는 Pi 에서만:  sudo systemctl disable --now mealboard-mock &amp;&amp; sudo systemctl enable --now mealboard-vision&quot;
+
+echo &quot;== 완료. 확인:  curl -s localhost:\${API_PORT:-8100}/api/status&quot;</code></pre>
+</figure>
+<p>꼭 봐야 할 줄 두 개:</p>
+<ul>
+<li><strong>4번, <code>uv venv --system-site-packages</code> 가 <code>uv sync</code> 보다 먼저.</strong> 카메라 라이브러리 picamera2 는 pip 이 아니라 apt 로 설치되는 시스템 패키지라, 가상환경이 시스템 것을 '빌려 쓰게' 만들어야 합니다. 순서가 뒤집히면 venv 를 다시 만들면서 설치분이 날아갑니다 — Plant 에서 실제로 겪은 함정. 홈 Pi 엔 카메라가 없지만, 학교 Pi 와 환경을 똑같이 맞추기 위해 지금부터 이 순서로 합니다.</li>
+<li><strong>6번, <code>install -C -v</code>.</strong> 내용이 같으면 건너뛰고 바뀐 파일만 출력합니다. 두 번째 실행부터 "무엇이 갱신됐나"가 바로 보입니다. Plant 의 유닛은 이름이 달라 건드리지 않습니다.</li>
+</ul>
+<figure class="code">
+<figcaption><span class="path">개발 PC</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">git add deploy setup_pi.sh
+git commit -m &quot;deploy: systemd 유닛 4종 + setup_pi.sh&quot;
+git push</code></pre>
+</figure>
+
+<h3>3-3. Pi 에서 실행</h3>
+<p>아직 <code>app/</code> 코드가 없으므로 api 서비스는 실패 상태로 남습니다. 정상입니다 — 5단계에서 코드가 들어오면 살아납니다. 지금은 클론·venv·유닛 등록까지가 목표입니다.</p>
+<figure class="code">
+<figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">curl -fsSL https://raw.githubusercontent.com/xparapx/Mealboard_Demo/main/setup_pi.sh -o setup_pi.sh
+bash setup_pi.sh
+nano /opt/mealboard/.env          # NEIS_KEY 채우기 (저장: Ctrl+O, 종료: Ctrl+X)
+newgrp mealboard                  # 그룹 추가를 현재 세션에 반영 (또는 재로그인)</code></pre>
+</figure>
+
+<h3>확인</h3>
+<figure class="code">
+<figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">ls /opt/mealboard/.venv/bin/uvicorn         # 있으면 venv 정상
+systemctl list-unit-files &#x27;mealboard*&#x27;      # 4개가 보이고 enabled
+systemctl list-timers &#x27;mealboard*&#x27;          # neis 타이머 다음 실행 시각 = 내일 05:40</code></pre>
+</figure>
+
+<dl class="term"><dt>가상환경(venv)</dt><dd>프로젝트마다 따로 두는 파이썬 패키지 상자. Plant 는 <code>~/plant/.venv</code>, 우리는 <code>/opt/mealboard/.venv</code>. 서로 영향을 주지 않습니다.</dd></dl>
+<dl class="term"><dt>setgid (chmod 2775)</dt><dd>폴더에 붙이면 그 안에 새로 생기는 파일이 자동으로 폴더의 그룹(mealboard)을 물려받습니다. 팀원이 pull 한 파일을 다른 팀원도 다룰 수 있게 합니다.</dd></dl>
+
+</section><section id="s4" class="step">
+<header><span class="stepnum">STEP 4</span><h2>대기시간 계산 — 순수 로직과 테스트</h2><span class="layer">앱</span></header>
+<div class="sysmap" aria-label="시스템 지도">
+  <div class="lane"><em>개발 흐름</em><div class="node on" data-k="pc"><b>개발 PC</b><span>코드 작성 · Claude Code 실행 · git push</span></div><i>git push →</i><div class="node" data-k="gh"><b>GitHub</b><span>저장소 원본 (팀 공용)</span></div><i>git pull →</i><div class="node" data-k="pi"><b>홈 Pi 5</b><span>실제로 서비스가 도는 곳</span></div></div>
+  <div class="lane"><em>Pi 안 · 데이터</em><div class="node on" data-k="mock"><b>mock_feed</b><span>가짜 대기 인원 생성 (vision 대역)</span></div><i>또는</i><div class="node on" data-k="vision"><b>vision</b><span>카메라 카운팅 — 학교 Pi 에서만</span></div><i>쓰기 →</i><div class="node" data-k="db"><b>queue.db</b><span>SQLite · 숫자만 저장</span></div><i>← 읽기</i><div class="node" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div></div>
+  <div class="lane"><em>Pi 안 · 급식</em><div class="node" data-k="neis"><b>fetch_neis</b><span>NEIS 급식 API → 영양 지표</span></div><i>하루 1회 →</i><div class="node" data-k="meal"><b>meal.json</b><span>오늘·이번 주 급식 캐시</span></div><i>← 읽기</i><div class="node" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div><i>→</i><div class="node" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div></div>
+  <div class="lane"><em>공개</em><div class="node" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div><i>→</i><div class="node" data-k="cf"><b>cloudflared</b><span>학교망 밖으로 내보내는 터널</span></div><i>→ 인터넷 →</i><div class="node" data-k="user"><b>학생·교사</b><span>QR → 휴대폰</span></div><i>· 전부</i><div class="node" data-k="sysd"><b>systemd</b><span>부팅 시 자동 실행 · 재시작</span></div><i>가 관리</i></div>
+</div>
+
+<p class="goal">목표: "대기 인원 L 과 처리율 λ 에서 대기시간 W 를 내는" 함수 하나가 있고, 그 함수가 PC 에서 자동 테스트를 통과하는 상태. 카메라와 DB 를 전혀 모르는 함수라 나중에 vision 과 mock 이 똑같이 씁니다.</p>
+
+<h3>4-1. 원리 — Little's law</h3>
+<p>줄 서는 시스템이 안정 상태에 있으면 <em>평균 대기 인원 = 도착률 × 평균 대기시간</em>, 즉 <strong>W = L / λ</strong> 가 성립합니다. 우리는 L 을 "배식 구역(ROI) 안에 있는 사람 수", λ 를 "배식대 가상선을 최근 5분간 통과한 사람 수 ÷ 5" 로 잽니다.</p>
+<p>두 가지를 알고 써야 합니다. 첫째, <strong>L 과 λ 는 같은 경계를 봐야 합니다</strong> — ROI 의 출구변이 곧 λ 를 재는 선이어야 합니다. 둘째, 점심 시작 직후처럼 안정 상태가 아닐 때(줄은 빠르게 느는데 5분 평균 λ 는 아직 낮음)는 과대추정됩니다. 그래서 대시보드에 "배식 초반 오차 큼"을 적고, λ 가 너무 낮을 땐 숫자를 내지 않습니다.</p>
+
+<h3>4-2. 코드</h3>
+<figure class="code">
+<figcaption><span class="path">vision/waittime.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">&quot;&quot;&quot;대기시간 추정 — Little&#x27;s law  W = L / λ
+순수 함수만 둔다. 카메라·DB 를 모르므로 PC 에서도 그대로 테스트된다.&quot;&quot;&quot;
+
+MIN_RATE = 0.5   # 명/분. 이보다 낮으면 나눗셈이 폭주하므로 &#x27;산출 불가&#x27;로 처리
+
+
+def estimate_wait(queue_len, rate_per_min):
+    &quot;&quot;&quot;(예상 대기 분, 상태) 를 돌려준다.
+    상태: ok | no_data | insufficient_rate
+    &quot;&quot;&quot;
+    if queue_len is None or rate_per_min is None:
+        return None, &quot;no_data&quot;
+    if queue_len &lt;= 0:
+        return 0.0, &quot;ok&quot;
+    if rate_per_min &lt; MIN_RATE:
+        return None, &quot;insufficient_rate&quot;
+    return round(queue_len / rate_per_min, 1), &quot;ok&quot;</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">tests/test_waittime.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">from vision.waittime import estimate_wait
+
+
+def test_basic():
+    # 30명 대기, 분당 10명 처리 → 3분
+    assert estimate_wait(30, 10) == (3.0, &quot;ok&quot;)
+
+
+def test_empty_queue():
+    assert estimate_wait(0, 0) == (0.0, &quot;ok&quot;)
+
+
+def test_rate_too_low():
+    # 배식이 아직 시작 안 됨 → 숫자를 내지 않는다
+    assert estimate_wait(30, 0.1) == (None, &quot;insufficient_rate&quot;)
+
+
+def test_no_data():
+    assert estimate_wait(None, 5) == (None, &quot;no_data&quot;)</code></pre>
+</figure>
+
+<h3>4-3. PC 에서 실행</h3>
+<figure class="code">
+<figcaption><span class="path">개발 PC, 저장소 루트</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">uv venv                     # PC 는 --system-site-packages 불필요 (카메라 없음)
+uv sync
+uv run pytest -q            # 4 passed 가 나와야 함
+git add vision tests &amp;&amp; git commit -m &quot;vision: Little&#x27;s law 대기시간 함수 + 테스트&quot; &amp;&amp; git push</code></pre>
+</figure>
+
+<dl class="term"><dt>ROI</dt><dd>Region of Interest. 화면에서 '이 안의 사람만 센다'고 정한 다각형. 좌표는 나중에 <code>data/zones.json</code> 에 저장됩니다.</dd></dl>
+<dl class="term"><dt>pytest</dt><dd>테스트 자동 실행기. <code>test_</code> 로 시작하는 함수를 찾아 돌리고 <code>assert</code> 가 틀리면 알려줍니다. 카메라 없이도 계산이 맞는지 보증하는 도구.</dd></dl>
+
+</section><section id="s5" class="step">
+<header><span class="stepnum">STEP 5</span><h2>데이터베이스와 API</h2><span class="layer">앱</span></header>
+<div class="sysmap" aria-label="시스템 지도">
+  <div class="lane"><em>개발 흐름</em><div class="node" data-k="pc"><b>개발 PC</b><span>코드 작성 · Claude Code 실행 · git push</span></div><i>git push →</i><div class="node" data-k="gh"><b>GitHub</b><span>저장소 원본 (팀 공용)</span></div><i>git pull →</i><div class="node" data-k="pi"><b>홈 Pi 5</b><span>실제로 서비스가 도는 곳</span></div></div>
+  <div class="lane"><em>Pi 안 · 데이터</em><div class="node" data-k="mock"><b>mock_feed</b><span>가짜 대기 인원 생성 (vision 대역)</span></div><i>또는</i><div class="node" data-k="vision"><b>vision</b><span>카메라 카운팅 — 학교 Pi 에서만</span></div><i>쓰기 →</i><div class="node on" data-k="db"><b>queue.db</b><span>SQLite · 숫자만 저장</span></div><i>← 읽기</i><div class="node on" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div></div>
+  <div class="lane"><em>Pi 안 · 급식</em><div class="node" data-k="neis"><b>fetch_neis</b><span>NEIS 급식 API → 영양 지표</span></div><i>하루 1회 →</i><div class="node" data-k="meal"><b>meal.json</b><span>오늘·이번 주 급식 캐시</span></div><i>← 읽기</i><div class="node on" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div><i>→</i><div class="node" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div></div>
+  <div class="lane"><em>공개</em><div class="node" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div><i>→</i><div class="node" data-k="cf"><b>cloudflared</b><span>학교망 밖으로 내보내는 터널</span></div><i>→ 인터넷 →</i><div class="node" data-k="user"><b>학생·교사</b><span>QR → 휴대폰</span></div><i>· 전부</i><div class="node" data-k="sysd"><b>systemd</b><span>부팅 시 자동 실행 · 재시작</span></div><i>가 관리</i></div>
+</div>
+
+<p class="goal">목표: <code>queue.db</code> 의 표 구조가 정해지고, FastAPI 가 <code>/api/status</code>, <code>/api/history</code>, <code>/api/meal</code> 세 주소로 그 내용을 JSON 으로 내주는 상태.</p>
+
+<h3>5-1. 설정과 DB</h3>
+<figure class="code">
+<figcaption><span class="path">app/config.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">&quot;&quot;&quot;설정의 단일 출처. 경로와 .env 값은 여기서만 읽는다.&quot;&quot;&quot;
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+BASE = Path(__file__).resolve().parent.parent      # 저장소 루트
+load_dotenv(BASE / &quot;.env&quot;)
+
+DATA = BASE / &quot;data&quot;
+DATA.mkdir(exist_ok=True)
+DB_PATH = DATA / &quot;queue.db&quot;
+MEAL_JSON = DATA / &quot;meal.json&quot;
+
+API_PORT = int(os.getenv(&quot;API_PORT&quot;, &quot;8100&quot;))
+LUNCH_START = os.getenv(&quot;LUNCH_START&quot;, &quot;11:30&quot;)
+LUNCH_END = os.getenv(&quot;LUNCH_END&quot;, &quot;14:00&quot;)</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">app/db.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">&quot;&quot;&quot;SQLite 연결. 쓰기는 mock_feed(또는 vision) 하나뿐, app 은 SELECT 만 한다.&quot;&quot;&quot;
+import sqlite3
+from .config import DB_PATH
+
+SCHEMA = &quot;&quot;&quot;
+CREATE TABLE IF NOT EXISTS samples (
+  ts           TEXT PRIMARY KEY,   -- ISO 8601 로컬시각
+  queue_len    INTEGER,            -- L : 대기 인원
+  rate_per_min REAL,               -- λ : 배식대 통과율 (5분 이동평균, 명/분)
+  wait_min     REAL,               -- W = L / λ  (산출 불가면 NULL)
+  state        TEXT NOT NULL       -- ok | no_data | insufficient_rate
+);
+&quot;&quot;&quot;
+
+
+def connect():
+    con = sqlite3.connect(DB_PATH, timeout=5)
+    con.execute(&quot;PRAGMA journal_mode=WAL&quot;)   # 읽기와 쓰기가 서로 막지 않게
+    con.executescript(SCHEMA)                # 없으면 만들고, 있으면 그대로
+    con.row_factory = sqlite3.Row
+    return con</code></pre>
+</figure>
+<p>표는 하나입니다. 한 행이 한 번의 측정이고, 카메라가 있든 mock 이든 이 다섯 열만 씁니다. <strong>프레임 이미지는 어디에도 저장되지 않는다</strong>는 설계의 물리적 근거가 이 스키마입니다 — 이미지를 넣을 열 자체가 없습니다.</p>
+
+<h3>5-2. API 세 개</h3>
+<figure class="code">
+<figcaption><span class="path">app/routers/status.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">import datetime as dt
+from fastapi import APIRouter
+from ..db import connect
+
+router = APIRouter()
+STALE_SEC = 120   # 이 시간 넘게 새 행이 없으면 &#x27;데이터 없음&#x27;으로 본다
+
+
+@router.get(&quot;/api/status&quot;)
+def status():
+    con = connect()
+    row = con.execute(&quot;SELECT * FROM samples ORDER BY ts DESC LIMIT 1&quot;).fetchone()
+    con.close()
+    if row is None:
+        return {&quot;state&quot;: &quot;no_data&quot;, &quot;updated_at&quot;: None,
+                &quot;queue_len&quot;: None, &quot;rate_per_min&quot;: None, &quot;wait_min&quot;: None}
+    age = (dt.datetime.now() - dt.datetime.fromisoformat(row[&quot;ts&quot;])).total_seconds()
+    state = &quot;no_data&quot; if age &gt; STALE_SEC else row[&quot;state&quot;]
+    return {&quot;state&quot;: state, &quot;updated_at&quot;: row[&quot;ts&quot;], &quot;stale&quot;: age &gt; STALE_SEC,
+            &quot;queue_len&quot;: row[&quot;queue_len&quot;], &quot;rate_per_min&quot;: row[&quot;rate_per_min&quot;],
+            &quot;wait_min&quot;: row[&quot;wait_min&quot;]}</code></pre>
+</figure>
+<p><code>STALE_SEC</code>: 2분 넘게 새 행이 없으면 마지막 값을 보여주는 대신 "데이터 없음"으로 바꿉니다. 카메라가 죽었는데 화면엔 "3분"이 계속 떠 있는 상황을 막는 장치입니다.</p>
+<figure class="code">
+<figcaption><span class="path">app/routers/history.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">import datetime as dt
+from fastapi import APIRouter, Query
+from ..db import connect
+
+router = APIRouter()
+
+
+@router.get(&quot;/api/history&quot;)
+def history(minutes: int = Query(120, ge=1, le=1440)):
+    since = (dt.datetime.now() - dt.timedelta(minutes=minutes)).isoformat(timespec=&quot;seconds&quot;)
+    con = connect()
+    rows = con.execute(
+        &quot;SELECT ts, queue_len, rate_per_min, wait_min, state &quot;
+        &quot;FROM samples WHERE ts &gt;= ? ORDER BY ts&quot;, (since,)).fetchall()
+    con.close()
+    return {&quot;minutes&quot;: minutes, &quot;rows&quot;: [dict(r) for r in rows]}</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">app/routers/meal.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">import json
+from fastapi import APIRouter
+from ..config import MEAL_JSON
+
+router = APIRouter()
+
+
+@router.get(&quot;/api/meal&quot;)
+def meal():
+    if not MEAL_JSON.exists():
+        return {&quot;state&quot;: &quot;no_data&quot;, &quot;message&quot;: &quot;fetch_neis.py 가 아직 실행되지 않았습니다&quot;}
+    return json.loads(MEAL_JSON.read_text(encoding=&quot;utf-8&quot;))</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">app/main.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from .config import BASE
+from .routers import status, history, meal
+
+app = FastAPI(title=&quot;Mealboard&quot;)
+app.include_router(status.router)
+app.include_router(history.router)
+app.include_router(meal.router)
+# 정적 파일은 마지막에 mount — /api/* 가 먼저 잡히도록
+app.mount(&quot;/&quot;, StaticFiles(directory=BASE / &quot;static&quot;, html=True), name=&quot;static&quot;)</code></pre>
+</figure>
+
+<h3>5-3. 스키마 계약</h3>
+<p>프론트·mock·문서가 전부 이 모양을 전제합니다. 바꿀 때는 같은 커밋에서 셋을 함께 고칩니다(CLAUDE.md §4).</p>
+<figure class="code">
+<figcaption><span class="path">API 응답 형식</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">GET /api/status
+{ &quot;state&quot;: &quot;ok | no_data | insufficient_rate&quot;,
+  &quot;updated_at&quot;: &quot;2026-08-26T12:03:10.512&quot;, &quot;stale&quot;: false,
+  &quot;queue_len&quot;: 34, &quot;rate_per_min&quot;: 18.6, &quot;wait_min&quot;: 1.8 }
+
+GET /api/history?minutes=120
+{ &quot;minutes&quot;: 120, &quot;rows&quot;: [ {&quot;ts&quot;,&quot;queue_len&quot;,&quot;rate_per_min&quot;,&quot;wait_min&quot;,&quot;state&quot;}, ... ] }
+
+GET /api/meal      → 8단계 fetch_neis 가 만든 meal.json 그대로</code></pre>
+</figure>
+
+<h3>5-4. PC 에서 띄워 보기</h3>
+<figure class="code">
+<figcaption><span class="path">개발 PC</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">uv run uvicorn app.main:app --port 8100 --reload
+# 브라우저: http://localhost:8100/api/status  → {&quot;state&quot;:&quot;no_data&quot;, ...}  (아직 데이터 없음, 정상)
+# 브라우저: http://localhost:8100/docs        → FastAPI 가 자동으로 만든 API 설명 화면</code></pre>
+</figure>
+<p>정적 파일 폴더가 비어 있으면 <code>/</code> 는 404 입니다. 7단계에서 채웁니다.</p>
+<figure class="code">
+<figcaption><span class="path">개발 PC</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">git add app &amp;&amp; git commit -m &quot;app: SQLite 스키마 + /api/status,history,meal&quot; &amp;&amp; git push</code></pre>
+</figure>
+
+<dl class="term"><dt>FastAPI</dt><dd>파이썬으로 웹 API 를 만드는 라이브러리. 함수에 <code>@router.get(&quot;/api/status&quot;)</code> 를 붙이면 그 주소로 온 요청에 함수의 반환값을 JSON 으로 보냅니다.</dd></dl>
+<dl class="term"><dt>uvicorn</dt><dd>FastAPI 앱을 실제로 실행하는 서버 프로그램. systemd 유닛의 <code>ExecStart</code> 가 이것을 켭니다.</dd></dl>
+<dl class="term"><dt>WAL 모드</dt><dd>SQLite 의 기록 방식 중 하나. 한쪽이 쓰는 동안 다른 쪽이 읽어도 서로 막히지 않게 합니다. mock 이 쓰고 api 가 읽는 우리 구조에 필요.</dd></dl>
+
+</section><section id="s6" class="step">
+<header><span class="stepnum">STEP 6</span><h2>mock_feed — 카메라 대역</h2><span class="layer">앱</span></header>
+<div class="sysmap" aria-label="시스템 지도">
+  <div class="lane"><em>개발 흐름</em><div class="node" data-k="pc"><b>개발 PC</b><span>코드 작성 · Claude Code 실행 · git push</span></div><i>git push →</i><div class="node" data-k="gh"><b>GitHub</b><span>저장소 원본 (팀 공용)</span></div><i>git pull →</i><div class="node" data-k="pi"><b>홈 Pi 5</b><span>실제로 서비스가 도는 곳</span></div></div>
+  <div class="lane"><em>Pi 안 · 데이터</em><div class="node on" data-k="mock"><b>mock_feed</b><span>가짜 대기 인원 생성 (vision 대역)</span></div><i>또는</i><div class="node" data-k="vision"><b>vision</b><span>카메라 카운팅 — 학교 Pi 에서만</span></div><i>쓰기 →</i><div class="node on" data-k="db"><b>queue.db</b><span>SQLite · 숫자만 저장</span></div><i>← 읽기</i><div class="node" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div></div>
+  <div class="lane"><em>Pi 안 · 급식</em><div class="node" data-k="neis"><b>fetch_neis</b><span>NEIS 급식 API → 영양 지표</span></div><i>하루 1회 →</i><div class="node" data-k="meal"><b>meal.json</b><span>오늘·이번 주 급식 캐시</span></div><i>← 읽기</i><div class="node" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div><i>→</i><div class="node" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div></div>
+  <div class="lane"><em>공개</em><div class="node" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div><i>→</i><div class="node" data-k="cf"><b>cloudflared</b><span>학교망 밖으로 내보내는 터널</span></div><i>→ 인터넷 →</i><div class="node" data-k="user"><b>학생·교사</b><span>QR → 휴대폰</span></div><i>· 전부</i><div class="node" data-k="sysd"><b>systemd</b><span>부팅 시 자동 실행 · 재시작</span></div><i>가 관리</i></div>
+</div>
+
+<p class="goal">목표: 점심시간처럼 늘었다 줄어드는 가짜 대기 인원이 <code>queue.db</code> 에 계속 쌓이고, <code>/api/status</code> 가 살아 움직이는 상태.</p>
+
+<h3>6-1. 무엇을 흉내내나</h3>
+<p>단순 난수가 아니라 <em>점심시간 곡선</em>입니다. 11:20 에 0명에서 시작해 두 번 몰리고(학년별 시간차 배식) 14:10 에 비는 170분을 한 사이클로 반복합니다. 도착률이 배식 처리 능력(분당 20명)을 넘는 구간에서 줄이 쌓이고, λ 는 실제 vision 과 똑같이 "최근 5분 처리 인원 ÷ 5" 로 계산합니다. 시간은 압축됩니다 — <code>--speed 30</code> 이면 실제 1초가 시뮬레이션 30초라 한 사이클이 약 6분입니다.</p>
+<p><code>--scenario</code> 두 개는 프론트가 예외 상태를 제대로 보여주는지 확인하려고 있습니다. <code>stall</code> 은 배식이 멈춰 λ 가 0 이 되는 상황, <code>gap</code> 은 카메라가 죽어 데이터가 끊기는 상황.</p>
+
+<figure class="code">
+<figcaption><span class="path">jobs/mock_feed.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">&quot;&quot;&quot;vision/counter.py 의 대역.
+점심시간 인파 곡선을 흉내내어 samples 테이블에 쓴다.
+실제 vision 과 동시에 켜지 말 것 — SQLite 쓰기 주체는 항상 하나.
+
+실행:  uv run python -m jobs.mock_feed --speed 30
+       --scenario stall : 45~55분 배식 중단 (insufficient_rate 상태 확인용)
+       --scenario gap   : 80~90분 데이터 끊김 (no_data 상태 확인용)
+&quot;&quot;&quot;
+import argparse
+import datetime as dt
+import math
+import random
+import time
+from collections import deque
+
+from app.db import connect
+from vision.waittime import estimate_wait
+
+TICK = 10           # 시뮬레이션 1틱 = 10초
+CAPACITY = 20.0     # 배식대 처리 능력 (명/분)
+CYCLE_MIN = 170     # 11:20 ~ 14:10 을 한 사이클로 보고 반복
+
+
+def arrival_rate(m):
+    &quot;&quot;&quot;경과 분 m → 도착률(명/분). 학년별 시간차 배식을 흉내낸 두 봉우리&quot;&quot;&quot;
+    return 25 * math.exp(-((m - 25) / 12) ** 2) + 18 * math.exp(-((m - 70) / 15) ** 2)
+
+
+def noisy(mu):
+    &quot;&quot;&quot;평균 mu 근처의 정수 난수 (음수 방지)&quot;&quot;&quot;
+    return max(0, round(random.gauss(mu, max(mu, 1) ** 0.5)))
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument(&quot;--speed&quot;, type=float, default=30, help=&quot;실제 1초당 시뮬레이션 초&quot;)
+    ap.add_argument(&quot;--scenario&quot;, choices=[&quot;normal&quot;, &quot;stall&quot;, &quot;gap&quot;], default=&quot;normal&quot;)
+    a = ap.parse_args()
+
+    con = connect()
+    served_log = deque()        # (sim_sec, 처리 인원) — 5분 이동평균 계산용
+    queue, sim = 0, 0.0
+    print(f&quot;mock_feed 시작  speed={a.speed}  scenario={a.scenario}&quot;)
+
+    while True:
+        m = sim / 60
+        cap = 0 if (a.scenario == &quot;stall&quot; and 45 &lt;= m &lt; 55) else CAPACITY
+
+        queue += noisy(arrival_rate(m) * TICK / 60)          # 줄에 합류
+        served = min(queue, noisy(cap * TICK / 60))          # 배식대 통과
+        queue -= served
+
+        served_log.append((sim, served))
+        while served_log and served_log[0][0] &lt; sim - 300:    # 최근 5분만 유지
+            served_log.popleft()
+        rate = sum(n for _, n in served_log) / 5.0            # λ (명/분)
+        wait, state = estimate_wait(queue, rate)              # W = L / λ
+
+        if not (a.scenario == &quot;gap&quot; and 80 &lt;= m &lt; 90):
+            con.execute(&quot;INSERT OR REPLACE INTO samples VALUES (?,?,?,?,?)&quot;,
+                        (dt.datetime.now().isoformat(timespec=&quot;milliseconds&quot;),
+                         queue, round(rate, 2), wait, state))
+            con.commit()
+        print(f&quot;{m:6.1f}분  대기 {queue:3d}명  처리 {rate:5.1f}/분  예상 {wait}분  {state}&quot;)
+
+        sim += TICK
+        if sim &gt;= CYCLE_MIN * 60:                             # 한 사이클 끝 → 처음부터
+            sim, queue = 0.0, 0
+            served_log.clear()
+        time.sleep(TICK / a.speed)
+
+
+if __name__ == &quot;__main__&quot;:
+    main()</code></pre>
+</figure>
+
+<h3>6-2. PC 에서 두 창으로</h3>
+<figure class="code">
+<figcaption><span class="path">개발 PC</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash"># 창 1
+uv run python -m jobs.mock_feed --speed 60
+# 창 2
+uv run uvicorn app.main:app --port 8100
+# 브라우저 http://localhost:8100/api/status 를 새로고침하면 숫자가 바뀐다</code></pre>
+</figure>
+<p><code>python -m jobs.mock_feed</code> 처럼 <code>-m</code> 으로 실행하는 이유: 저장소 루트를 기준으로 <code>app</code>, <code>vision</code> 을 import 하기 위해서입니다. <code>python jobs/mock_feed.py</code> 로 직접 실행하면 import 에 실패합니다.</p>
+<figure class="code">
+<figcaption><span class="path">개발 PC</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">git add jobs &amp;&amp; git commit -m &quot;jobs: mock_feed 점심 곡선 시뮬레이터 (stall/gap 시나리오)&quot; &amp;&amp; git push</code></pre>
+</figure>
+
+<h3>6-3. Pi 에 반영 — 첫 배포</h3>
+<p>3단계에서 등록해 둔 유닛이 이제 살아납니다. 이 네 줄이 앞으로 매번 반복하는 "배포"이고, Claude Code 의 <code>/deploy</code> 커맨드가 될 절차입니다.</p>
+<figure class="code">
+<figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">cd /opt/mealboard &amp;&amp; git pull
+uv sync                                           # 의존성이 바뀌었을 때만 실제로 뭔가 함
+sudo systemctl restart mealboard-api mealboard-mock
+curl -s localhost:8100/api/status                 # {&quot;state&quot;:&quot;ok&quot;, ...} 가 나오면 성공</code></pre>
+</figure>
+
+<h3>확인</h3>
+<figure class="code">
+<figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">journalctl -u mealboard-mock -n 5           # &#x27;대기 NN명 처리 NN/분&#x27; 줄이 계속 찍히나
+sqlite3 /opt/mealboard/data/queue.db &quot;select ts, queue_len, wait_min, state from samples order by ts desc limit 3&quot;
+systemctl status mealboard-api --no-pager</code></pre>
+</figure>
+
+</section><section id="s7" class="step">
+<header><span class="stepnum">STEP 7</span><h2>대시보드 화면</h2><span class="layer">앱</span></header>
+<div class="sysmap" aria-label="시스템 지도">
+  <div class="lane"><em>개발 흐름</em><div class="node" data-k="pc"><b>개발 PC</b><span>코드 작성 · Claude Code 실행 · git push</span></div><i>git push →</i><div class="node" data-k="gh"><b>GitHub</b><span>저장소 원본 (팀 공용)</span></div><i>git pull →</i><div class="node" data-k="pi"><b>홈 Pi 5</b><span>실제로 서비스가 도는 곳</span></div></div>
+  <div class="lane"><em>Pi 안 · 데이터</em><div class="node" data-k="mock"><b>mock_feed</b><span>가짜 대기 인원 생성 (vision 대역)</span></div><i>또는</i><div class="node" data-k="vision"><b>vision</b><span>카메라 카운팅 — 학교 Pi 에서만</span></div><i>쓰기 →</i><div class="node" data-k="db"><b>queue.db</b><span>SQLite · 숫자만 저장</span></div><i>← 읽기</i><div class="node on" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div></div>
+  <div class="lane"><em>Pi 안 · 급식</em><div class="node" data-k="neis"><b>fetch_neis</b><span>NEIS 급식 API → 영양 지표</span></div><i>하루 1회 →</i><div class="node" data-k="meal"><b>meal.json</b><span>오늘·이번 주 급식 캐시</span></div><i>← 읽기</i><div class="node on" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div><i>→</i><div class="node on" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div></div>
+  <div class="lane"><em>공개</em><div class="node on" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div><i>→</i><div class="node" data-k="cf"><b>cloudflared</b><span>학교망 밖으로 내보내는 터널</span></div><i>→ 인터넷 →</i><div class="node" data-k="user"><b>학생·교사</b><span>QR → 휴대폰</span></div><i>· 전부</i><div class="node" data-k="sysd"><b>systemd</b><span>부팅 시 자동 실행 · 재시작</span></div><i>가 관리</i></div>
+</div>
+
+<p class="goal">목표: 휴대폰 브라우저에서 예상 대기시간·대기 인원·최근 2시간 그래프·오늘 급식이 보이고, 30초마다 스스로 갱신되는 화면.</p>
+
+<h3>7-1. 설계 선택</h3>
+<p>React 같은 프레임워크 없이 HTML 파일 하나입니다. Pi 에 Node.js 를 깔지 않는다는 결정(CLAUDE.md §2)의 결과이고, 이 규모에는 충분합니다. 30초 폴링(주기적으로 <code>/api/status</code> 를 다시 읽음)은 실시간 통신보다 단순하고 학교망 프록시를 잘 통과합니다.</p>
+<figure class="code">
+<figcaption><span class="path">static/index.html</span><span class="lang">html</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-html">&lt;!doctype html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;title&gt;급식실 대기 안내&lt;/title&gt;
+&lt;link rel=&quot;manifest&quot; href=&quot;/manifest.json&quot;&gt;
+&lt;style&gt;
+  /* 팔레트: docs/ 레이아웃 도면 v3 — 네이비·크림·코랄, 그라데이션·그림자 없음 */
+  :root { --navy:#22304D; --cream:#F4EFE6; --cream2:#FBF8F3; --coral:#F26D6D;
+          --ink:#1B2133; --mute:#7A8299; --soft:#DCD5C8; --off:#B9BCC9; }
+  body { font-family: &quot;Pretendard&quot;, system-ui, sans-serif; margin: 0; background: var(--cream); color: var(--ink);
+         font-variant-numeric: tabular-nums; }
+  main { max-width: 640px; margin: 0 auto; padding: 16px; }
+  .card { background: var(--cream2); border: 1.5px solid var(--navy); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
+  .eyebrow { font-size: 10.5px; letter-spacing: .2em; color: var(--mute); font-weight: 800; }
+  /* 히어로: 평소 네이비, 혼잡이면 코랄, 정보 없음이면 점선 */
+  .hero { background: var(--navy); color: var(--cream); position: relative; }
+  .hero .eyebrow { color: var(--cream); opacity: .8; }
+  .hero[data-level=&quot;busy&quot;] { background: var(--coral); color: #fff; }
+  .hero[data-level=&quot;off&quot;] { background: var(--cream2); color: var(--ink); border-style: dashed; }
+  .hero[data-level=&quot;off&quot;] .eyebrow { color: var(--mute); opacity: 1; }
+  .wait { font-size: 92px; font-weight: 800; line-height: .9; letter-spacing: -.04em; color: #fff; }
+  .hero[data-level=&quot;off&quot;] .wait { color: var(--off); }
+  .wait small { font-size: 22px; font-weight: 600; margin-left: 4px; opacity: .9; }
+  #state { display: inline-block; margin-top: 14px; padding: 6px 14px; border-radius: 999px; font-size: 13px;
+           font-weight: 800; border: 1.5px solid var(--cream); background: var(--cream); color: var(--navy); }
+  .hero[data-level=&quot;wait&quot;] #state { background: transparent; color: var(--coral); border-color: var(--coral); }
+  .hero[data-level=&quot;busy&quot;] #state { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .hero[data-level=&quot;off&quot;] #state { background: transparent; color: var(--mute); border-color: var(--off); }
+  .dot { position: absolute; right: 18px; top: 18px; width: 14px; height: 14px; border-radius: 50%; background: var(--coral); }
+  .hero[data-level=&quot;busy&quot;] .dot { background: var(--navy); }
+  .hero[data-level=&quot;off&quot;] .dot { background: var(--off); }
+  .row { display: flex; justify-content: space-between; margin-top: 18px; padding-top: 12px; font-size: 13px; }
+  .hero .row { border-top: 1px dashed rgba(244,239,230,.4); }
+  .hero[data-level=&quot;off&quot;] .row { border-top-color: var(--soft); }
+  .row b { font-size: 16px; font-weight: 800; }
+  .muted { color: var(--mute); font-size: 11px; }
+  canvas { width: 100%; height: 72px; display: block; border-bottom: 1.5px solid var(--navy); margin-top: 8px; }
+  ul { margin: 8px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 14px; }
+  li { padding-left: 14px; position: relative; }
+  li::before { content: &quot;&quot;; position: absolute; left: 0; top: .6em; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--navy); }
+  li:first-child { grid-column: 1 / -1; font-weight: 800; font-size: 15px; }
+  li:first-child::before { background: var(--coral); border-color: var(--coral); }
+  .kpi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; counter-reset: k; }
+  .kpi &gt; div { border: 1.5px solid var(--navy); border-radius: 12px; padding: 8px 10px; counter-increment: k; }
+  .kpi &gt; div::before { content: &quot;0&quot; counter(k); font-size: 10px; font-weight: 800; letter-spacing: .1em; color: var(--coral); display: block; }
+  .kpi b { display: block; font-size: 20px; font-weight: 800; color: var(--navy); }
+  .kpi b.bad { color: var(--coral); }
+  .kpi span { font-size: 11px; color: var(--mute); }
+  details summary { list-style: none; cursor: pointer; font-size: 12px; color: var(--navy); font-weight: 800; letter-spacing: .08em; margin-top: 12px; }
+  details summary::-webkit-details-marker { display: none; }
+  .bar { display: grid; grid-template-columns: 96px 1fr 44px; align-items: center; gap: 8px; font-size: 12px; margin: 5px 0; }
+  .track { position: relative; height: 10px; background: var(--cream); border: 1.5px solid var(--navy); border-radius: 6px; }
+  .track i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--navy); }
+  .track i.부족 { background: var(--coral); }
+  .track i.과다 { background: repeating-linear-gradient(135deg, var(--navy) 0 3px, transparent 3px 6px); }
+  .track::after { content: &quot;&quot;; position: absolute; left: 66.7%; top: -5px; bottom: -5px; width: 2px; background: var(--coral); }  /* 권장섭취량 100% */
+  .bar b { text-align: right; font-weight: 800; }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;main&gt;
+  &lt;section class=&quot;card hero&quot; id=&quot;hero&quot; data-level=&quot;ok&quot;&gt;
+    &lt;span class=&quot;dot&quot;&gt;&lt;/span&gt;
+    &lt;div class=&quot;eyebrow&quot;&gt;지금 줄을 서면&lt;/div&gt;
+    &lt;div class=&quot;wait&quot;&gt;&lt;span id=&quot;wait&quot;&gt;—&lt;/span&gt;&lt;small&gt;분&lt;/small&gt;&lt;/div&gt;
+    &lt;span id=&quot;state&quot;&gt;—&lt;/span&gt;
+    &lt;div class=&quot;row&quot;&gt;
+      &lt;div&gt;&lt;b id=&quot;queue&quot;&gt;—&lt;/b&gt;명 대기 중&lt;/div&gt;
+      &lt;div&gt;&lt;b id=&quot;rate&quot;&gt;—&lt;/b&gt;명/분 배식 속도&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/section&gt;
+  &lt;div class=&quot;muted&quot; style=&quot;display:flex;justify-content:space-between;padding:6px 4px 10px&quot;&gt;
+    &lt;span&gt;갱신 &lt;span id=&quot;updated&quot;&gt;&lt;/span&gt; · 30초마다&lt;/span&gt;&lt;span&gt;추정치 · 배식 초반 오차 큼&lt;/span&gt;
+  &lt;/div&gt;
+
+  &lt;section class=&quot;card&quot;&gt;
+    &lt;div class=&quot;eyebrow&quot;&gt;최근 2시간 예상 대기&lt;/div&gt;
+    &lt;canvas id=&quot;chart&quot; width=&quot;600&quot; height=&quot;120&quot;&gt;&lt;/canvas&gt;
+  &lt;/section&gt;
+
+  &lt;section class=&quot;card&quot;&gt;
+    &lt;div class=&quot;eyebrow&quot;&gt;오늘 중식&lt;/div&gt;
+    &lt;ul id=&quot;menu&quot;&gt;&lt;/ul&gt;
+    &lt;div class=&quot;kpi&quot;&gt;
+      &lt;div&gt;&lt;b id=&quot;energy&quot;&gt;—&lt;/b&gt;&lt;span&gt;에너지 충족&lt;/span&gt;&lt;/div&gt;
+      &lt;div&gt;&lt;b id=&quot;ratio&quot;&gt;—&lt;/b&gt;&lt;span&gt;탄·단·지 비율&lt;/span&gt;&lt;/div&gt;
+      &lt;div&gt;&lt;b id=&quot;mar&quot;&gt;—&lt;/b&gt;&lt;span&gt;미량영양소&lt;/span&gt;&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;details&gt;&lt;summary&gt;▸ 영양소별 보기&lt;/summary&gt;&lt;div id=&quot;micro&quot; style=&quot;margin-top:8px&quot;&gt;&lt;/div&gt;&lt;/details&gt;
+    &lt;div class=&quot;muted&quot; id=&quot;stdnote&quot; style=&quot;margin-top:8px&quot;&gt;&lt;/div&gt;
+  &lt;/section&gt;
+&lt;/main&gt;
+
+&lt;script&gt;
+const $ = s =&gt; document.querySelector(s);
+const j = async u =&gt; (await fetch(u, { cache: &quot;no-store&quot; })).json();
+const BUSY_MIN = 12, EASY_MIN = 5;           // 판정 임계값 (학교마다 다를 수 있음)
+function level(st) {
+  if (st.state === &quot;no_data&quot;) return &quot;off&quot;;
+  if (st.state === &quot;insufficient_rate&quot;) return &quot;wait&quot;;
+  return st.wait_min &gt; BUSY_MIN ? &quot;busy&quot; : &quot;ok&quot;;
+}
+function verdict(st) {
+  return { off: &quot;정보 없음&quot;, wait: &quot;배식 시작 대기&quot;,
+           busy: &quot;혼잡 · 잠시 후 추천&quot;,
+           ok: st.wait_min &lt;= EASY_MIN ? &quot;여유 · 바로 가세요&quot; : &quot;보통&quot; }[level(st)];
+}
+
+async function refresh() {
+  const st = await j(&quot;/api/status&quot;);
+  $(&quot;#wait&quot;).textContent = st.wait_min == null ? &quot;—&quot; : st.wait_min;
+  $(&quot;#queue&quot;).textContent = st.queue_len ?? &quot;—&quot;;
+  $(&quot;#rate&quot;).textContent = st.rate_per_min ?? &quot;—&quot;;
+  $(&quot;#state&quot;).textContent = verdict(st);
+  $(&quot;#hero&quot;).dataset.level = level(st);
+  $(&quot;#updated&quot;).textContent = st.updated_at
+    ? new Date(st.updated_at).toLocaleTimeString(&quot;ko-KR&quot;) : &quot;-&quot;;
+  const h = await j(&quot;/api/history?minutes=120&quot;);
+  drawChart(h.rows);
+}
+
+function drawChart(rows) {
+  const c = $(&quot;#chart&quot;), g = c.getContext(&quot;2d&quot;);
+  g.clearRect(0, 0, c.width, c.height);
+  const pts = rows.filter(r =&gt; r.wait_min != null);
+  if (pts.length &lt; 2) return;
+  const max = Math.max(5, ...pts.map(r =&gt; r.wait_min));
+  g.beginPath(); g.strokeStyle = &quot;#22304D&quot;; g.lineWidth = 2;
+  pts.forEach((r, i) =&gt; {
+    const x = i / (pts.length - 1) * c.width;
+    const y = c.height - r.wait_min / max * (c.height - 10) - 5;
+    i ? g.lineTo(x, y) : g.moveTo(x, y);
+  });
+  g.stroke();
+}
+
+async function loadMeal() {
+  const m = await j(&quot;/api/meal&quot;);
+  if (m.state !== &quot;ok&quot; || !m.today) {
+    $(&quot;#menu&quot;).innerHTML = &quot;&lt;li&gt;&quot; + (m.state === &quot;no_meal&quot;
+      ? &quot;이번 주 급식 정보가 없습니다&quot; : &quot;급식 정보를 아직 받지 못했습니다&quot;) + &quot;&lt;/li&gt;&quot;;
+    return;
+  }
+  $(&quot;#menu&quot;).innerHTML = m.today.menu.map(x =&gt; `&lt;li&gt;${x}&lt;/li&gt;`).join(&quot;&quot;);
+  const a = m.today.assess;
+  $(&quot;#energy&quot;).textContent = a.energy_pct == null ? &quot;—&quot; : a.energy_pct + &quot;%&quot;;
+  $(&quot;#mar&quot;).textContent = a.mar == null ? &quot;—&quot; : a.mar + &quot;%&quot;;
+  $(&quot;#ratio&quot;).textContent = a.macro_ratio_ok ? &quot;적정&quot; : &quot;범위 밖&quot;;
+  $(&quot;#ratio&quot;).className = a.macro_ratio_ok ? &quot;&quot; : &quot;bad&quot;;
+  $(&quot;#ratio&quot;).title = `탄 ${a.macro_ratio.carb} · 단 ${a.macro_ratio.protein} · 지 ${a.macro_ratio.fat} %`;
+  $(&quot;#mar&quot;).className = a.mar &lt; 90 ? &quot;bad&quot; : &quot;&quot;;
+  $(&quot;#micro&quot;).innerHTML = a.micro.map(x =&gt;
+    `&lt;div class=&quot;bar&quot;&gt;&lt;span&gt;${x.label}&lt;/span&gt;
+       &lt;div class=&quot;track&quot;&gt;&lt;i class=&quot;${x.band}&quot; style=&quot;width:${Math.min(x.pct, 150) / 1.5}%&quot;&gt;&lt;/i&gt;&lt;/div&gt;
+       &lt;b&gt;${x.pct}%&lt;/b&gt;&lt;/div&gt;`).join(&quot;&quot;);
+  $(&quot;#stdnote&quot;).textContent =
+    `기준: ${m.std.group} · ${m.std.source} · 코랄 세로선 = 권장섭취량. 영양교사 산출값 기준 참고 지표입니다.`;
+}
+
+refresh(); loadMeal();
+setInterval(refresh, 30000);
+if (&quot;serviceWorker&quot; in navigator) navigator.serviceWorker.register(&quot;/sw.js&quot;);
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+</figure>
+<p>색과 구조는 <code>docs/</code> 의 레이아웃 도면 v3(네이비·크림·코랄)를 따릅니다. 급식 카드의 막대는 8단계의 영양 지표를 그립니다. 코랄 세로선(66.7% 위치)이 권장섭취량 100% 이고, 막대가 네이비면 적정·코랄이면 부족·빗금이면 과다입니다. 미리 만들어 두는 이유는 8단계 결과를 바로 눈으로 보기 위해서입니다.</p>
+
+<h3>7-2. PWA 파일 두 개</h3>
+<p>PWA 는 "홈 화면에 추가"가 되는 웹페이지입니다. <code>manifest.json</code> 이 이름·아이콘을, <code>sw.js</code> 가 오프라인 캐시를 맡습니다. <strong>sw.js 에서 <code>/api/</code> 를 캐시하면 30초 폴링이 캐시된 옛 값만 돌려주는 함정</strong>이 있어, API 요청은 통과시키고 정적 파일만 캐시합니다.</p>
+<figure class="code">
+<figcaption><span class="path">static/manifest.json</span><span class="lang">json</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;급식실 대기 안내&quot;,
+  &quot;short_name&quot;: &quot;급식대기&quot;,
+  &quot;start_url&quot;: &quot;/&quot;,
+  &quot;display&quot;: &quot;standalone&quot;,
+  &quot;background_color&quot;: &quot;#f4f6f4&quot;,
+  &quot;theme_color&quot;: &quot;#4a8a68&quot;,
+  &quot;icons&quot;: [{ &quot;src&quot;: &quot;/icons/icon-192.png&quot;, &quot;sizes&quot;: &quot;192x192&quot;, &quot;type&quot;: &quot;image/png&quot; }]
+}</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">static/sw.js</span><span class="lang">js</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-js">// 서비스워커: 정적 파일만 캐시한다. /api/ 는 절대 캐시하지 않는다 (30초 폴링이 무의미해짐)
+const CACHE = &quot;mealboard-v1&quot;;
+const STATIC = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;];
+
+self.addEventListener(&quot;install&quot;, e =&gt;
+  e.waitUntil(caches.open(CACHE).then(c =&gt; c.addAll(STATIC))));
+
+self.addEventListener(&quot;fetch&quot;, e =&gt; {
+  const url = new URL(e.request.url);
+  if (url.pathname.startsWith(&quot;/api/&quot;)) return;          // 네트워크로 그냥 통과
+  e.respondWith(caches.match(e.request).then(r =&gt; r || fetch(e.request)));
+});</code></pre>
+</figure>
+<p>아이콘은 192×192 PNG 아무 것이나 <code>static/icons/icon-192.png</code> 로 두면 됩니다(없어도 동작은 함).</p>
+
+<h3>7-3. 실행과 배포</h3>
+<figure class="code">
+<figcaption><span class="path">개발 PC</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">uv run uvicorn app.main:app --port 8100     # + 다른 창에서 mock_feed
+# http://localhost:8100/ 에서 숫자가 30초마다 바뀌는지, mock 을 --scenario gap 으로 다시 켜면 &#x27;데이터 없음&#x27;이 뜨는지
+git add static &amp;&amp; git commit -m &quot;static: 대시보드 + PWA (manifest, sw)&quot; &amp;&amp; git push</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">cd /opt/mealboard &amp;&amp; git pull &amp;&amp; sudo systemctl restart mealboard-api
+# 팀원 PC 브라우저: http://&lt;Tailscale IP&gt;:8100/  ← 아직 안 열린다 (아래 참고)</code></pre>
+</figure>
+<p>api 는 <code>127.0.0.1</code> 에만 묶여 있어 Tailscale 주소로도 바로 열리지 않습니다. 의도한 것입니다 — 외부 노출은 9단계의 cloudflared 만 담당합니다. 그 전에 팀원이 화면을 보려면 SSH 터널을 씁니다:</p>
+<figure class="code">
+<figcaption><span class="path">팀원 PC</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">ssh -L 8100:127.0.0.1:8100 minsu@100.x.x.x     # 이 창을 켜 둔 채로
+# 내 PC 브라우저에서 http://localhost:8100/</code></pre>
+</figure>
+
+<dl class="term"><dt>폴링(polling)</dt><dd>일정 시간마다 서버에 '새 값 있어?' 하고 다시 묻는 방식. 서버가 밀어주는 방식(WebSocket)보다 단순하고 장애에 강합니다.</dd></dl>
+<dl class="term"><dt>서비스워커(sw.js)</dt><dd>브라우저 뒤에서 도는 작은 프로그램. 파일을 캐시해 오프라인에서도 화면을 띄웁니다. 잘못 쓰면 옛 데이터를 보여주므로 API 는 제외.</dd></dl>
+
+</section><section id="s8" class="step">
+<header><span class="stepnum">STEP 8</span><h2>NEIS 급식 정보와 영양 지표</h2><span class="layer">데이터</span></header>
+<div class="sysmap" aria-label="시스템 지도">
+  <div class="lane"><em>개발 흐름</em><div class="node" data-k="pc"><b>개발 PC</b><span>코드 작성 · Claude Code 실행 · git push</span></div><i>git push →</i><div class="node" data-k="gh"><b>GitHub</b><span>저장소 원본 (팀 공용)</span></div><i>git pull →</i><div class="node" data-k="pi"><b>홈 Pi 5</b><span>실제로 서비스가 도는 곳</span></div></div>
+  <div class="lane"><em>Pi 안 · 데이터</em><div class="node" data-k="mock"><b>mock_feed</b><span>가짜 대기 인원 생성 (vision 대역)</span></div><i>또는</i><div class="node" data-k="vision"><b>vision</b><span>카메라 카운팅 — 학교 Pi 에서만</span></div><i>쓰기 →</i><div class="node" data-k="db"><b>queue.db</b><span>SQLite · 숫자만 저장</span></div><i>← 읽기</i><div class="node on" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div></div>
+  <div class="lane"><em>Pi 안 · 급식</em><div class="node on" data-k="neis"><b>fetch_neis</b><span>NEIS 급식 API → 영양 지표</span></div><i>하루 1회 →</i><div class="node on" data-k="meal"><b>meal.json</b><span>오늘·이번 주 급식 캐시</span></div><i>← 읽기</i><div class="node on" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div><i>→</i><div class="node on" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div></div>
+  <div class="lane"><em>공개</em><div class="node on" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div><i>→</i><div class="node" data-k="cf"><b>cloudflared</b><span>학교망 밖으로 내보내는 터널</span></div><i>→ 인터넷 →</i><div class="node" data-k="user"><b>학생·교사</b><span>QR → 휴대폰</span></div><i>· 전부</i><div class="node" data-k="sysd"><b>systemd</b><span>부팅 시 자동 실행 · 재시작</span></div><i>가 관리</i></div>
+</div>
+
+<p class="goal">목표: 매일 05:40 에 이번 주 중식 식단과 영양성분을 NEIS 에서 받아 법정 기준과 비교한 결과가 <code>meal.json</code> 에 저장되고, 대시보드 급식 카드에 나타나는 상태.</p>
+
+<h3>8-1. 기준 파일</h3>
+<p>학교급식법 시행규칙 [별표 3] 의 <strong>고등학생 남자</strong> 한 행입니다(공주고는 남고 — <code>schoolInfo</code> API 의 <code>COEDU_SC_NM</code> 으로 확인). 다른 학교로 옮기면 이 파일만 바꿉니다.</p>
+<figure class="code">
+<figcaption><span class="path">data/nutrition_std.json</span><span class="lang">json</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-json">{
+  &quot;school&quot;: &quot;공주고등학교&quot;,
+  &quot;group&quot;: &quot;고등학생 남 (1식 기준)&quot;,
+  &quot;source&quot;: &quot;학교급식법 시행규칙 [별표 3] 학교급식의 영양관리기준&quot;,
+  &quot;upper_factor&quot;: 1.5,
+  &quot;per_meal&quot;: {
+    &quot;energy_kcal&quot;: 900,
+    &quot;protein_g&quot;: 21.7,
+    &quot;micro&quot;: {
+      &quot;vitA&quot;: {&quot;label&quot;: &quot;비타민A (㎍RAE)&quot;, &quot;ear&quot;: 207,  &quot;rni&quot;: 284},
+      &quot;b1&quot;:   {&quot;label&quot;: &quot;티아민 (mg)&quot;,     &quot;ear&quot;: 0.37, &quot;rni&quot;: 0.44},
+      &quot;b2&quot;:   {&quot;label&quot;: &quot;리보플라빈 (mg)&quot;, &quot;ear&quot;: 0.47, &quot;rni&quot;: 0.57},
+      &quot;vitC&quot;: {&quot;label&quot;: &quot;비타민C (mg)&quot;,    &quot;ear&quot;: 26.7, &quot;rni&quot;: 33.4},
+      &quot;ca&quot;:   {&quot;label&quot;: &quot;칼슘 (mg)&quot;,       &quot;ear&quot;: 250,  &quot;rni&quot;: 300},
+      &quot;fe&quot;:   {&quot;label&quot;: &quot;철 (mg)&quot;,         &quot;ear&quot;: 3.7,  &quot;rni&quot;: 4.7}
+    }
+  },
+  &quot;energy_ratio&quot;: {&quot;carb&quot;: [55, 65], &quot;protein&quot;: [7, 20], &quot;fat&quot;: [15, 30]}
+}</code></pre>
+</figure>
+<p><code>upper_factor 1.5</code> 는 "권장량의 150% 를 넘으면 과다로 표시"하는 <em>화면용 기준</em>이지 법정 상한이 아닙니다. 법은 상한을 정하지 않습니다.</p>
+
+<h3>8-2. 왜 코사인 유사도가 아닌가</h3>
+<p>공모전 보고서는 영양성분 벡터와 기준 벡터의 코사인 유사도를 "영양 밸런스"로 썼습니다. 그런데 에너지(900)·칼슘(300)·비타민A(284) 처럼 숫자가 큰 항목이 각도를 거의 결정하고, 티아민(0.44)·철(4.7) 은 사실상 무시됩니다. 게다가 모든 영양소가 절반이어도 유사도는 1.0 입니다(크기 불변). 그래서 여기서는 영양소마다 <em>기준 대비 비율</em>로 먼저 바꾸고, 법정 기준의 구조를 그대로 따르는 세 지표를 냅니다:</p>
+<ul>
+<li><strong>에너지 충족률</strong> = 실제 kcal ÷ 900 — "양이 충분한가"</li>
+<li><strong>에너지 적정비율</strong> — 탄수화물·단백질·지방이 각각 55~65 / 7~20 / 15~30 % 안에 있는가 — "균형인가". 단백질이 기준 g 을 넘어도 이 비율 안이면 문제가 아닙니다(보고서의 "단백질 초과"는 이 관점에서 재해석됩니다)</li>
+<li><strong>MAR</strong>(Mean Adequacy Ratio) = 미량영양소 6종의 min(실제/권장, 1) 평균 — "부족한 것이 있는가". 넘치는 건 1 로 잘라 과잉이 부족을 가리지 못하게 합니다</li>
+</ul>
+<p>영양소별로는 평균필요량(EAR) 미만이면 부족, EAR~권장(RNI)×1.5 면 적정, 그 위면 과다. 기준이 EAR~RNI <em>범위</em>인 점을 그대로 씁니다.</p>
+
+<h3>8-3. 코드</h3>
+<figure class="code">
+<figcaption><span class="path">jobs/fetch_neis.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">&quot;&quot;&quot;NEIS 급식 API → data/meal.json  (하루 1회, systemd timer 가 실행)
+프론트는 이 파일만 읽는다. NEIS 를 직접 호출하지 않는다 (키 노출·호출 제한 방지).
+
+실행:  uv run python -m jobs.fetch_neis
+&quot;&quot;&quot;
+import datetime as dt
+import json
+import os
+import re
+import urllib.parse
+import urllib.request
+
+from dotenv import load_dotenv
+from app.config import BASE, DATA, MEAL_JSON
+
+load_dotenv(BASE / &quot;.env&quot;)
+STD = json.loads((DATA / &quot;nutrition_std.json&quot;).read_text(encoding=&quot;utf-8&quot;))
+URL = &quot;https://open.neis.go.kr/hub/mealServiceDietInfo&quot;
+
+# NEIS 항목명 → 우리 키.  앞글자 일치로 찾아 &quot;비타민A(R.E)&quot; 같은 표기 변동에 견딘다
+KEYMAP = [(&quot;탄수화물&quot;, &quot;carb_g&quot;), (&quot;단백질&quot;, &quot;protein_g&quot;), (&quot;지방&quot;, &quot;fat_g&quot;),
+          (&quot;비타민A&quot;, &quot;vitA&quot;), (&quot;티아민&quot;, &quot;b1&quot;), (&quot;리보플라빈&quot;, &quot;b2&quot;),
+          (&quot;비타민C&quot;, &quot;vitC&quot;), (&quot;칼슘&quot;, &quot;ca&quot;), (&quot;철&quot;, &quot;fe&quot;)]
+
+
+def parse_ntr(s):
+    &quot;&quot;&quot;&#x27;탄수화물(g) : 90.6&lt;br/&gt;단백질(g) : 30.1 ...&#x27; → {&#x27;carb_g&#x27;: 90.6, ...}&quot;&quot;&quot;
+    out = {}
+    for name, val in re.findall(r&quot;([^&lt;&gt;:]+?)\s*:\s*([\d.]+)&quot;, s):
+        for prefix, key in KEYMAP:
+            if name.strip().startswith(prefix):
+                out[key] = float(val)
+                break
+    return out
+
+
+def parse_kcal(s):
+    m = re.search(r&quot;[\d.]+&quot;, s or &quot;&quot;)
+    return float(m.group()) if m else None
+
+
+def assess(kcal, n):
+    &quot;&quot;&quot;법정 기준과 비교해 세 지표를 낸다: 에너지 충족률 · 에너지 적정비율 · 미량영양소 충족(MAR)&quot;&quot;&quot;
+    std = STD[&quot;per_meal&quot;]
+    energy_pct = round(kcal / std[&quot;energy_kcal&quot;] * 100) if kcal else None
+
+    macro = {&quot;carb&quot;: n.get(&quot;carb_g&quot;, 0) * 4,
+             &quot;protein&quot;: n.get(&quot;protein_g&quot;, 0) * 4,
+             &quot;fat&quot;: n.get(&quot;fat_g&quot;, 0) * 9}                    # g → kcal
+    total = sum(macro.values()) or 1
+    ratio = {k: round(v / total * 100) for k, v in macro.items()}
+    rng = STD[&quot;energy_ratio&quot;]
+    ratio_ok = all(rng[k][0] &lt;= ratio[k] &lt;= rng[k][1] for k in ratio)
+
+    items, nars = [], []
+    for key, ref in std[&quot;micro&quot;].items():
+        v = n.get(key)
+        if v is None:
+            continue
+        nars.append(min(v / ref[&quot;rni&quot;], 1.0))                 # NAR: 넘치는 건 1 로 자른다
+        if v &lt; ref[&quot;ear&quot;]:
+            band = &quot;부족&quot;
+        elif v &gt; ref[&quot;rni&quot;] * STD[&quot;upper_factor&quot;]:
+            band = &quot;과다&quot;
+        else:
+            band = &quot;적정&quot;
+        items.append({&quot;key&quot;: key, &quot;label&quot;: ref[&quot;label&quot;], &quot;value&quot;: v,
+                      &quot;ear&quot;: ref[&quot;ear&quot;], &quot;rni&quot;: ref[&quot;rni&quot;],
+                      &quot;pct&quot;: round(v / ref[&quot;rni&quot;] * 100), &quot;band&quot;: band})
+    mar = round(sum(nars) / len(nars) * 100) if nars else None
+    protein_pct = round(n[&quot;protein_g&quot;] / std[&quot;protein_g&quot;] * 100) if &quot;protein_g&quot; in n else None
+    return {&quot;energy_pct&quot;: energy_pct, &quot;protein_pct&quot;: protein_pct,
+            &quot;macro_ratio&quot;: ratio, &quot;macro_ratio_ok&quot;: ratio_ok,
+            &quot;mar&quot;: mar, &quot;micro&quot;: items}
+
+
+def fetch(from_ymd, to_ymd):
+    q = urllib.parse.urlencode({
+        &quot;KEY&quot;: os.environ[&quot;NEIS_KEY&quot;], &quot;Type&quot;: &quot;json&quot;,
+        &quot;ATPT_OFCDC_SC_CODE&quot;: os.environ[&quot;NEIS_ATPT_CODE&quot;],
+        &quot;SD_SCHUL_CODE&quot;: os.environ[&quot;NEIS_SCHOOL_CODE&quot;],
+        &quot;MMEAL_SC_CODE&quot;: &quot;2&quot;,                                 # 2 = 중식
+        &quot;MLSV_FROM_YMD&quot;: from_ymd, &quot;MLSV_TO_YMD&quot;: to_ymd})
+    with urllib.request.urlopen(URL + &quot;?&quot; + q, timeout=20) as r:
+        data = json.load(r)
+    if &quot;mealServiceDietInfo&quot; not in data:                     # INFO-200(급식 없음) 등
+        return [], data.get(&quot;RESULT&quot;, {}).get(&quot;CODE&quot;, &quot;?&quot;)
+    return data[&quot;mealServiceDietInfo&quot;][1][&quot;row&quot;], &quot;INFO-000&quot;
+
+
+def main():
+    today = dt.date.today()
+    monday = today - dt.timedelta(days=today.weekday())
+    friday = monday + dt.timedelta(days=4)
+    rows, code = fetch(monday.strftime(&quot;%Y%m%d&quot;), friday.strftime(&quot;%Y%m%d&quot;))
+
+    week = []
+    for r in rows:
+        n = parse_ntr(r.get(&quot;NTR_INFO&quot;, &quot;&quot;))
+        kcal = parse_kcal(r.get(&quot;CAL_INFO&quot;))
+        menu = [m.strip() for m in r.get(&quot;DDISH_NM&quot;, &quot;&quot;).split(&quot;&lt;br/&gt;&quot;) if m.strip()]
+        week.append({&quot;date&quot;: r[&quot;MLSV_YMD&quot;], &quot;menu&quot;: menu, &quot;kcal&quot;: kcal,
+                     &quot;nutrients&quot;: n, &quot;assess&quot;: assess(kcal, n)})
+
+    def avg(key):
+        vals = [d[&quot;assess&quot;][key] for d in week if d[&quot;assess&quot;][key] is not None]
+        return round(sum(vals) / len(vals)) if vals else None
+
+    today_s = today.strftime(&quot;%Y%m%d&quot;)
+    out = {&quot;fetched_at&quot;: dt.datetime.now().isoformat(timespec=&quot;seconds&quot;),
+           &quot;result_code&quot;: code,
+           &quot;state&quot;: &quot;ok&quot; if week else &quot;no_meal&quot;,
+           &quot;std&quot;: {&quot;school&quot;: STD[&quot;school&quot;], &quot;group&quot;: STD[&quot;group&quot;], &quot;source&quot;: STD[&quot;source&quot;]},
+           &quot;today&quot;: next((d for d in week if d[&quot;date&quot;] == today_s), None),
+           &quot;week_avg&quot;: {&quot;energy_pct&quot;: avg(&quot;energy_pct&quot;), &quot;mar&quot;: avg(&quot;mar&quot;)},
+           &quot;week&quot;: week}
+    MEAL_JSON.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding=&quot;utf-8&quot;)
+    print(f&quot;저장 {MEAL_JSON}  {len(week)}일치  {code}&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    main()</code></pre>
+</figure>
+<p><code>parse_ntr</code> 은 NEIS 의 <code>NTR_INFO</code> 문자열("탄수화물(g) : 90.6&lt;br/&gt;단백질(g) : 30.1 …")을 앞글자 일치로 읽습니다. NEIS 가 괄호 표기를 바꿔도 견딥니다. 주말·방학이면 API 가 <code>INFO-200</code> 을 주는데, 이건 오류가 아니라 "급식 없음"이므로 <code>state: no_meal</code> 로 구분해 저장합니다.</p>
+
+<h3>8-4. 실행</h3>
+<figure class="code">
+<figcaption><span class="path">개발 PC</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash"># PC 의 .env 에도 NEIS_KEY 를 넣어 두면 PC 에서 먼저 시험 가능
+uv run python -m jobs.fetch_neis
+type data\meal.json          # (mac/리눅스: cat data/meal.json) — today 와 week 가 채워졌는지
+git add jobs data/nutrition_std.json &amp;&amp; git commit -m &quot;jobs: fetch_neis + 영양 지표(에너지 충족률·적정비율·MAR)&quot; &amp;&amp; git push</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">cd /opt/mealboard &amp;&amp; git pull
+sudo systemctl start mealboard-neis        # 타이머를 기다리지 않고 지금 1회 실행
+journalctl -u mealboard-neis -n 3          # &#x27;저장 ... N일치 INFO-000&#x27;
+curl -s localhost:8100/api/meal | head -c 300</code></pre>
+</figure>
+<p>대시보드를 새로고침하면 급식 카드에 메뉴와 막대가 뜹니다. 화면 아래 "영양교사 산출값 기준 참고 지표" 문구는 남겨 두세요 — NEIS 수치는 원재료 기준 계산값이라 조리 손실(특히 비타민C)이 빠져 있고, 판정 표현은 학교와의 신뢰 문제로 이어질 수 있습니다.</p>
+
+<dl class="term"><dt>EAR / RNI</dt><dd>평균필요량 / 권장섭취량. EAR 은 집단의 절반이 필요를 채우는 양, RNI 는 거의 모두가 채우는 양. 급식 기준은 '이 사이에 들어오면 충족'으로 읽습니다.</dd></dl>
+<dl class="term"><dt>MAR</dt><dd>Mean Adequacy Ratio. 영양학에서 식사의 질을 재는 정립된 지표. 영양소별 충족비(NAR, 1 을 상한)의 평균.</dd></dl>
+
+</section><section id="s9" class="step">
+<header><span class="stepnum">STEP 9</span><h2>외부 공개 — Cloudflare Tunnel, PWA, QR</h2><span class="layer">공개</span></header>
+<div class="sysmap" aria-label="시스템 지도">
+  <div class="lane"><em>개발 흐름</em><div class="node" data-k="pc"><b>개발 PC</b><span>코드 작성 · Claude Code 실행 · git push</span></div><i>git push →</i><div class="node" data-k="gh"><b>GitHub</b><span>저장소 원본 (팀 공용)</span></div><i>git pull →</i><div class="node" data-k="pi"><b>홈 Pi 5</b><span>실제로 서비스가 도는 곳</span></div></div>
+  <div class="lane"><em>Pi 안 · 데이터</em><div class="node" data-k="mock"><b>mock_feed</b><span>가짜 대기 인원 생성 (vision 대역)</span></div><i>또는</i><div class="node" data-k="vision"><b>vision</b><span>카메라 카운팅 — 학교 Pi 에서만</span></div><i>쓰기 →</i><div class="node" data-k="db"><b>queue.db</b><span>SQLite · 숫자만 저장</span></div><i>← 읽기</i><div class="node" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div></div>
+  <div class="lane"><em>Pi 안 · 급식</em><div class="node" data-k="neis"><b>fetch_neis</b><span>NEIS 급식 API → 영양 지표</span></div><i>하루 1회 →</i><div class="node" data-k="meal"><b>meal.json</b><span>오늘·이번 주 급식 캐시</span></div><i>← 읽기</i><div class="node" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div><i>→</i><div class="node on" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div></div>
+  <div class="lane"><em>공개</em><div class="node on" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div><i>→</i><div class="node on" data-k="cf"><b>cloudflared</b><span>학교망 밖으로 내보내는 터널</span></div><i>→ 인터넷 →</i><div class="node on" data-k="user"><b>학생·교사</b><span>QR → 휴대폰</span></div><i>· 전부</i><div class="node" data-k="sysd"><b>systemd</b><span>부팅 시 자동 실행 · 재시작</span></div><i>가 관리</i></div>
+</div>
+
+<p class="goal">목표: 인터넷 어디서든 <code>https://meal.내도메인</code> 으로 대시보드가 열리고, 그 주소의 QR 이 있는 상태. 홈 Pi 에서 만든 터널 설정은 학교 Pi 에 그대로 옮겨집니다.</p>
+
+<h3>9-1. 왜 터널인가</h3>
+<p>학교망은 밖에서 들어오는 연결을 막습니다. 터널은 Pi 가 <em>밖으로</em> Cloudflare 에 연결을 열어 두고, 학생의 요청이 그 통로를 거꾸로 타고 들어오는 방식입니다. 포트포워딩도, 고정 IP 도 필요 없고, 443 아웃바운드만 되면 됩니다. Netlify 같은 호스팅으로는 대체되지 않습니다 — 서버(DB·API)가 Pi 안에 있기 때문입니다.</p>
+<p>준비: Cloudflare 계정에 본인 도메인이 등록되어 있어야 합니다(무료 플랜). 없다면 이 단계는 건너뛰고 7-3 의 SSH 터널로 팀 내부 확인만 계속해도 됩니다.</p>
+
+<h3>9-2. 설치와 터널 생성 (Pi)</h3>
+<figure class="code">
+<figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">sudo mkdir -p --mode=0755 /usr/share/keyrings
+curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg &gt;/dev/null
+echo &quot;deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main&quot; | sudo tee /etc/apt/sources.list.d/cloudflared.list
+sudo apt update &amp;&amp; sudo apt install -y cloudflared
+
+cloudflared tunnel login                     # 링크를 브라우저에서 열어 도메인 선택
+cloudflared tunnel create mealboard          # 출력되는 Tunnel ID 와 json 경로를 메모
+cloudflared tunnel route dns mealboard meal.example.com    # 내 도메인의 서브도메인으로</code></pre>
+</figure>
+<p>설치 명령은 Cloudflare 공식 문서 기준입니다. 바뀌었을 수 있으니 실패하면 문서를 우선하세요.</p>
+
+<h3>9-3. 설정 파일과 서비스 등록</h3>
+<figure class="code">
+<figcaption><span class="path">deploy/cloudflared-config.yml (저장소용 견본)</span><span class="lang">yaml</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-yaml"># /etc/cloudflared/config.yml  — &lt;TUNNEL_ID&gt;, &lt;USER&gt;, 도메인을 실제 값으로
+tunnel: &lt;TUNNEL_ID&gt;
+credentials-file: /home/&lt;USER&gt;/.cloudflared/&lt;TUNNEL_ID&gt;.json
+ingress:
+  - hostname: meal.example.com          # Cloudflare 에 등록한 내 도메인의 서브도메인
+    service: http://127.0.0.1:8100      # Pi 안의 FastAPI (API_PORT 와 같게)
+  - service: http_status:404            # 그 외 요청은 거부</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">sudo mkdir -p /etc/cloudflared
+sudo cp /opt/mealboard/deploy/cloudflared-config.yml /etc/cloudflared/config.yml
+sudo nano /etc/cloudflared/config.yml        # &lt;TUNNEL_ID&gt;, &lt;USER&gt;, 도메인 채우기
+sudo cloudflared service install             # systemd 유닛 생성 + 자동 시작
+systemctl status cloudflared --no-pager</code></pre>
+</figure>
+<p>저장소에는 값이 빠진 견본만 두고, 실제 <code>config.yml</code> 과 자격증명 json 은 Pi 에만 있습니다(CLAUDE.md §5 — 터널 자격증명은 커밋·채팅에 노출 금지).</p>
+
+<h3>9-4. QR</h3>
+<figure class="code">
+<figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">sudo apt install -y qrencode
+qrencode -o /opt/mealboard/static/icons/qr.png -s 8 &quot;https://meal.example.com&quot;
+# 이 png 를 급식실 입구에 붙인다. 대시보드 자체에는 QR 을 넣지 않아도 됨</code></pre>
+</figure>
+
+<h3>확인</h3>
+<ul>
+<li>휴대폰 데이터(집 WiFi 끄고)로 <code>https://meal.example.com</code> 이 열리고 숫자가 갱신된다</li>
+<li>브라우저 메뉴에 "홈 화면에 추가"가 뜬다 (PWA)</li>
+<li><code>https://meal.example.com/api/status</code> 는 열리지만 SSH·Streamlit 등 다른 포트는 열리지 않는다 — 터널이 8100 만 내보내기 때문</li>
+</ul>
+
+<h3>학교 Pi 로 갈 때</h3>
+<p><code>cloudflared tunnel create</code> 를 다시 하지 않아도 됩니다. Pi 의 <code>~/.cloudflared/&lt;ID&gt;.json</code> 과 <code>/etc/cloudflared/config.yml</code> 을 안전한 방법(USB, scp)으로 옮기고 <code>service install</code> 만 하면 같은 주소가 학교 Pi 를 가리킵니다. 홈 Pi 쪽 cloudflared 는 그때 끕니다(같은 터널을 두 곳에서 켜면 트래픽이 갈립니다).</p>
+
+</section><section id="s10" class="step">
+<header><span class="stepnum">STEP 10</span><h2>검증 체크리스트, 진단 순서, 이식</h2><span class="layer">운영</span></header>
+<div class="sysmap" aria-label="시스템 지도">
+  <div class="lane"><em>개발 흐름</em><div class="node" data-k="pc"><b>개발 PC</b><span>코드 작성 · Claude Code 실행 · git push</span></div><i>git push →</i><div class="node" data-k="gh"><b>GitHub</b><span>저장소 원본 (팀 공용)</span></div><i>git pull →</i><div class="node on" data-k="pi"><b>홈 Pi 5</b><span>실제로 서비스가 도는 곳</span></div></div>
+  <div class="lane"><em>Pi 안 · 데이터</em><div class="node" data-k="mock"><b>mock_feed</b><span>가짜 대기 인원 생성 (vision 대역)</span></div><i>또는</i><div class="node" data-k="vision"><b>vision</b><span>카메라 카운팅 — 학교 Pi 에서만</span></div><i>쓰기 →</i><div class="node" data-k="db"><b>queue.db</b><span>SQLite · 숫자만 저장</span></div><i>← 읽기</i><div class="node" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div></div>
+  <div class="lane"><em>Pi 안 · 급식</em><div class="node" data-k="neis"><b>fetch_neis</b><span>NEIS 급식 API → 영양 지표</span></div><i>하루 1회 →</i><div class="node" data-k="meal"><b>meal.json</b><span>오늘·이번 주 급식 캐시</span></div><i>← 읽기</i><div class="node" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div><i>→</i><div class="node" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div></div>
+  <div class="lane"><em>공개</em><div class="node" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div><i>→</i><div class="node" data-k="cf"><b>cloudflared</b><span>학교망 밖으로 내보내는 터널</span></div><i>→ 인터넷 →</i><div class="node" data-k="user"><b>학생·교사</b><span>QR → 휴대폰</span></div><i>· 전부</i><div class="node on" data-k="sysd"><b>systemd</b><span>부팅 시 자동 실행 · 재시작</span></div><i>가 관리</i></div>
+</div>
+
+<p class="goal">목표: "된다"를 팀원 누구나 같은 방법으로 확인할 수 있고, 안 될 때 어디부터 볼지가 정해진 상태.</p>
+
+<h3>10-1. 데모 통과 조건</h3>
+<ol>
+<li>Pi 재부팅 후 아무 명령 없이 <code>curl localhost:8100/api/status</code> 가 <code>ok</code> — systemd 가 전부 되살렸다는 뜻</li>
+<li>대시보드 숫자가 30초 안에 바뀐다</li>
+<li><code>sudo systemctl restart mealboard-mock</code> 직후 화면이 잠깐 "배식 시작 대기"(λ 계산 중) 를 거쳐 정상으로 돌아온다</li>
+<li><code>sudo systemctl stop mealboard-mock</code> 2분 뒤 화면이 "데이터 없음" — 카메라가 죽었을 때의 모습</li>
+<li>급식 카드에 오늘 메뉴와 영양 막대가 있다 (방학이면 "급식 정보가 없습니다")</li>
+<li>팀원이 자기 계정으로 SSH → <code>git pull</code> → 재시작을 혼자 할 수 있다</li>
+<li>(9단계까지 했다면) 휴대폰 데이터로 외부 주소가 열린다</li>
+</ol>
+
+<h3>10-2. 안 될 때 보는 순서 — 위에서 아래로, 건너뛰지 않기</h3>
+<figure class="code">
+<figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash"># ① 코드가 최신인가
+cd /opt/mealboard &amp;&amp; git status &amp;&amp; git log -1 --oneline
+# ② 서비스가 살아 있나
+systemctl status mealboard-api mealboard-mock --no-pager
+# ③ DB 에 새 행이 들어오나 (ts 가 지금 시각에 가까워야)
+sqlite3 data/queue.db &quot;select ts, state from samples order by ts desc limit 3&quot;
+# ④ 로그
+journalctl -u mealboard-api -n 50 --no-pager
+journalctl -u mealboard-mock -n 20 --no-pager
+# ⑤ 시간·온도·디스크
+timedatectl | grep synchronized ; vcgencmd measure_temp ; df -h / | tail -1</code></pre>
+</figure>
+<p>경험칙(Plant 실증): "대시보드에 안 나온다"는 열에 아홉이 <em>그리는 쪽</em> 문제입니다. ③에서 DB 에 데이터가 있으면 카메라·mock 은 용의선상에서 빼고 api 와 static 부터 봅니다. ③에서 없으면 반대입니다.</p>
+
+<h3>10-3. 해서는 안 되는 것 (CLAUDE.md §5 와 동일)</h3>
+<ul>
+<li><code>data/</code> 안 파일 삭제, DB 의 DELETE/DROP/UPDATE — 정리 도구는 ①빈 조건 거부 ②자동 백업 ③되돌리기 명령 출력, 세 겹 없이는 만들지 않는다</li>
+<li>Pi 폴더에서 직접 파일 편집</li>
+<li><code>~/plant/</code> 접근 — Plant 프로젝트 소유</li>
+<li>.env·터널 자격증명을 커밋·채팅·스크린샷에 노출</li>
+</ul>
+
+<h3>10-4. 학교 Pi 로 옮길 때 실제로 달라지는 것</h3>
+<table class="tbl">
+<tr><th>항목</th><th>홈 Pi</th><th>학교 Pi</th></tr>
+<tr><td>설치</td><td colspan="2"><code>setup_pi.sh</code> 동일</td></tr>
+<tr><td>데이터 생성</td><td><code>mealboard-mock</code></td><td><code>mealboard-vision</code> (mock 은 Conflicts 로 자동 정지)</td></tr>
+<tr><td>추가 작업</td><td>없음</td><td><code>calibrate_zones.py</code> 로 ROI·가상선 잡기 → <code>data/zones.json</code></td></tr>
+<tr><td>.env</td><td colspan="2">각각 손으로. NEIS 값은 같음</td></tr>
+<tr><td>cloudflared</td><td>자격증명 원본</td><td>같은 파일 복사, 홈 쪽은 정지</td></tr>
+<tr><td>Plant 공존</td><td>있음 (정지)</td><td>없음</td></tr>
+</table>
+
+<h3>10-5. 작업 로그</h3>
+<p>README 말미의 「작업 로그」에 이 매뉴얼을 완주한 날짜와 결과를 한 줄로 남깁니다. 다음 사람(그리고 Claude Code)이 "지금 어디까지 됐나"를 커밋 로그 대신 여기서 읽습니다.</p>
+<figure class="code">
+<figcaption><span class="path">README.md 「작업 로그」</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">- **2026-08**: 홈 Pi 5 스테이징 완성 — mock_feed·api·대시보드·NEIS 영양 지표·systemd 자동실행. 카메라(vision)·calibrate 는 학교 Pi 이전 시</code></pre>
+</figure>
+
+</section>
+</main>
+</div>
+<script>
+document.querySelectorAll('figure.code .copy').forEach(b=>{
+  b.addEventListener('click',async()=>{
+    const t=b.closest('figure').querySelector('pre').innerText;
+    try{await navigator.clipboard.writeText(t);b.textContent='복사됨';b.classList.add('done');
+        setTimeout(()=>{b.textContent='복사';b.classList.remove('done')},1500)}
+    catch(e){b.textContent='실패'}
+  });
+});
+const links=[...document.querySelectorAll('nav a')];
+const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.toggle('cur',l.getAttribute('href')==='#'+e.target.id))}})},{rootMargin:'-20% 0px -70% 0px'});
+document.querySelectorAll('section.step').forEach(s=>io.observe(s));
+</script>
+</body>
+</html>
