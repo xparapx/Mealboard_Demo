@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>급식실 대기 안내</title>
+<link rel="manifest" href="/manifest.json">
+<style>
+  /* 팔레트: docs/ 레이아웃 도면 v3 — 네이비·크림·코랄, 그라데이션·그림자 없음 */
+  :root { --navy:#22304D; --cream:#F4EFE6; --cream2:#FBF8F3; --coral:#F26D6D;
+          --ink:#1B2133; --mute:#7A8299; --soft:#DCD5C8; --off:#B9BCC9; }
+  body { font-family: "Pretendard", system-ui, sans-serif; margin: 0; background: var(--cream); color: var(--ink);
+         font-variant-numeric: tabular-nums; }
+  main { max-width: 640px; margin: 0 auto; padding: 16px; }
+  .card { background: var(--cream2); border: 1.5px solid var(--navy); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
+  .eyebrow { font-size: 10.5px; letter-spacing: .2em; color: var(--mute); font-weight: 800; }
+  /* 히어로: 평소 네이비, 혼잡이면 코랄, 정보 없음이면 점선 */
+  .hero { background: var(--navy); color: var(--cream); position: relative; }
+  .hero .eyebrow { color: var(--cream); opacity: .8; }
+  .hero[data-level="busy"] { background: var(--coral); color: #fff; }
+  .hero[data-level="off"] { background: var(--cream2); color: var(--ink); border-style: dashed; }
+  .hero[data-level="off"] .eyebrow { color: var(--mute); opacity: 1; }
+  .wait { font-size: 92px; font-weight: 800; line-height: .9; letter-spacing: -.04em; color: #fff; }
+  .hero[data-level="off"] .wait { color: var(--off); }
+  .wait small { font-size: 22px; font-weight: 600; margin-left: 4px; opacity: .9; }
+  #state { display: inline-block; margin-top: 14px; padding: 6px 14px; border-radius: 999px; font-size: 13px;
+           font-weight: 800; border: 1.5px solid var(--cream); background: var(--cream); color: var(--navy); }
+  .hero[data-level="wait"] #state { background: transparent; color: var(--coral); border-color: var(--coral); }
+  .hero[data-level="busy"] #state { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .hero[data-level="off"] #state { background: transparent; color: var(--mute); border-color: var(--off); }
+  .dot { position: absolute; right: 18px; top: 18px; width: 14px; height: 14px; border-radius: 50%; background: var(--coral); }
+  .hero[data-level="busy"] .dot { background: var(--navy); }
+  .hero[data-level="off"] .dot { background: var(--off); }
+  .row { display: flex; justify-content: space-between; margin-top: 18px; padding-top: 12px; font-size: 13px; }
+  .hero .row { border-top: 1px dashed rgba(244,239,230,.4); }
+  .hero[data-level="off"] .row { border-top-color: var(--soft); }
+  .row b { font-size: 16px; font-weight: 800; }
+  .muted { color: var(--mute); font-size: 11px; }
+  canvas { width: 100%; height: 72px; display: block; border-bottom: 1.5px solid var(--navy); margin-top: 8px; }
+  ul { margin: 8px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 14px; }
+  li { padding-left: 14px; position: relative; }
+  li::before { content: ""; position: absolute; left: 0; top: .6em; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--navy); }
+  li:first-child { grid-column: 1 / -1; font-weight: 800; font-size: 15px; }
+  li:first-child::before { background: var(--coral); border-color: var(--coral); }
+  .kpi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; counter-reset: k; }
+  .kpi > div { border: 1.5px solid var(--navy); border-radius: 12px; padding: 8px 10px; counter-increment: k; }
+  .kpi > div::before { content: "0" counter(k); font-size: 10px; font-weight: 800; letter-spacing: .1em; color: var(--coral); display: block; }
+  .kpi b { display: block; font-size: 20px; font-weight: 800; color: var(--navy); }
+  .kpi b.bad { color: var(--coral); }
+  .kpi span { font-size: 11px; color: var(--mute); }
+  details summary { list-style: none; cursor: pointer; font-size: 12px; color: var(--navy); font-weight: 800; letter-spacing: .08em; margin-top: 12px; }
+  details summary::-webkit-details-marker { display: none; }
+  .bar { display: grid; grid-template-columns: 96px 1fr 44px; align-items: center; gap: 8px; font-size: 12px; margin: 5px 0; }
+  .track { position: relative; height: 10px; background: var(--cream); border: 1.5px solid var(--navy); border-radius: 6px; }
+  .track i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--navy); }
+  .track i.부족 { background: var(--coral); }
+  .track i.과다 { background: repeating-linear-gradient(135deg, var(--navy) 0 3px, transparent 3px 6px); }
+  .track::after { content: ""; position: absolute; left: 66.7%; top: -5px; bottom: -5px; width: 2px; background: var(--coral); }  /* 권장섭취량 100% */
+  .bar b { text-align: right; font-weight: 800; }
+</style>
+</head>
+<body>
+<main>
+  <section class="card hero" id="hero" data-level="ok">
+    <span class="dot"></span>
+    <div class="eyebrow">지금 줄을 서면</div>
+    <div class="wait"><span id="wait">—</span><small>분</small></div>
+    <span id="state">—</span>
+    <div class="row">
+      <div><b id="queue">—</b>명 대기 중</div>
+      <div><b id="rate">—</b>명/분 배식 속도</div>
+    </div>
+  </section>
+  <div class="muted" style="display:flex;justify-content:space-between;padding:6px 4px 10px">
+    <span>갱신 <span id="updated"></span> · 30초마다</span><span>추정치 · 배식 초반 오차 큼</span>
+  </div>
+
+  <section class="card">
+    <div class="eyebrow">최근 2시간 예상 대기</div>
+    <canvas id="chart" width="600" height="120"></canvas>
+  </section>
+
+  <section class="card">
+    <div class="eyebrow">오늘 중식</div>
+    <ul id="menu"></ul>
+    <div class="kpi">
+      <div><b id="energy">—</b><span>에너지 충족</span></div>
+      <div><b id="ratio">—</b><span>탄·단·지 비율</span></div>
+      <div><b id="mar">—</b><span>미량영양소</span></div>
+    </div>
+    <details><summary>▸ 영양소별 보기</summary><div id="micro" style="margin-top:8px"></div></details>
+    <div class="muted" id="stdnote" style="margin-top:8px"></div>
+  </section>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const j = async u => (await fetch(u, { cache: "no-store" })).json();
+const BUSY_MIN = 12, EASY_MIN = 5;           // 판정 임계값 (학교마다 다를 수 있음)
+function level(st) {
+  if (st.state === "no_data") return "off";
+  if (st.state === "insufficient_rate") return "wait";
+  return st.wait_min > BUSY_MIN ? "busy" : "ok";
+}
+function verdict(st) {
+  return { off: "정보 없음", wait: "배식 시작 대기",
+           busy: "혼잡 · 잠시 후 추천",
+           ok: st.wait_min <= EASY_MIN ? "여유 · 바로 가세요" : "보통" }[level(st)];
+}
+
+async function refresh() {
+  const st = await j("/api/status");
+  $("#wait").textContent = st.wait_min == null ? "—" : st.wait_min;
+  $("#queue").textContent = st.queue_len ?? "—";
+  $("#rate").textContent = st.rate_per_min ?? "—";
+  $("#state").textContent = verdict(st);
+  $("#hero").dataset.level = level(st);
+  $("#updated").textContent = st.updated_at
+    ? new Date(st.updated_at).toLocaleTimeString("ko-KR") : "-";
+  const h = await j("/api/history?minutes=120");
+  drawChart(h.rows);
+}
+
+function drawChart(rows) {
+  const c = $("#chart"), g = c.getContext("2d");
+  g.clearRect(0, 0, c.width, c.height);
+  const pts = rows.filter(r => r.wait_min != null);
+  if (pts.length < 2) return;
+  const max = Math.max(5, ...pts.map(r => r.wait_min));
+  g.beginPath(); g.strokeStyle = "#22304D"; g.lineWidth = 2;
+  pts.forEach((r, i) => {
+    const x = i / (pts.length - 1) * c.width;
+    const y = c.height - r.wait_min / max * (c.height - 10) - 5;
+    i ? g.lineTo(x, y) : g.moveTo(x, y);
+  });
+  g.stroke();
+}
+
+async function loadMeal() {
+  const m = await j("/api/meal");
+  if (m.state !== "ok" || !m.today) {
+    $("#menu").innerHTML = "<li>" + (m.state === "no_meal"
+      ? "이번 주 급식 정보가 없습니다" : "급식 정보를 아직 받지 못했습니다") + "</li>";
+    return;
+  }
+  $("#menu").innerHTML = m.today.menu.map(x => `<li>${x}</li>`).join("");
+  const a = m.today.assess;
+  $("#energy").textContent = a.energy_pct == null ? "—" : a.energy_pct + "%";
+  $("#mar").textContent = a.mar == null ? "—" : a.mar + "%";
+  $("#ratio").textContent = a.macro_ratio_ok ? "적정" : "범위 밖";
+  $("#ratio").className = a.macro_ratio_ok ? "" : "bad";
+  $("#ratio").title = `탄 ${a.macro_ratio.carb} · 단 ${a.macro_ratio.protein} · 지 ${a.macro_ratio.fat} %`;
+  $("#mar").className = a.mar < 90 ? "bad" : "";
+  $("#micro").innerHTML = a.micro.map(x =>
+    `<div class="bar"><span>${x.label}</span>
+       <div class="track"><i class="${x.band}" style="width:${Math.min(x.pct, 150) / 1.5}%"></i></div>
+       <b>${x.pct}%</b></div>`).join("");
+  $("#stdnote").textContent =
+    `기준: ${m.std.group} · ${m.std.source} · 코랄 세로선 = 권장섭취량. 영양교사 산출값 기준 참고 지표입니다.`;
+}
+
+refresh(); loadMeal();
+setInterval(refresh, 30000);
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
+</script>
+</body>
+</html>
