@@ -1,0 +1,9 @@
+# 데이터·비밀은 절대 커밋하지 않는다 (예외 두 파일만 포함)
+data/*
+!data/plan_bg.png
+!data/nutrition_std.json
+.env
+.venv/
+__pycache__/
+*.db
+*.db-*

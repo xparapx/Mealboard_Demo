@@ -1,0 +1,16 @@
+[project]
+name = "mealboard"
+version = "0.1.0"
+description = "학교 급식실 대기시간 + 급식 영양 대시보드"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "python-dotenv",
+]
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

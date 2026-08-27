@@ -1,0 +1,143 @@
+# CLAUDE.md — Mealboard (학교 급식 모니터링 대시보드)
+
+> 이 파일은 Claude Code 작업 지침이다. 저장소 루트에 두면 모든 세션이 자동으로 읽는다.
+> 사람용 문서는 README.md와 docs/, 기계(Claude)용 규칙은 이 파일 — 역할을 섞지 말 것.
+
+## 0. 현재 상태 (2026-08) — 세션 시작 시 먼저 읽을 것
+
+- **홈 Pi 5(64bit, Debian 13 Trixie, 시스템 Python 3.13) = 스테이징.** 학교 Pi도 같은 OS·Python이어야 uv.lock이 그대로 맞는다. 카메라 없음 → `mealboard-vision` 미설치, `mealboard-mock`이 대역.
+  로드맵 ④는 개발 PC 웹캠·동영상 파일로 진행. ⑤ 중 uv 셋업·systemd·cloudflared는 홈 Pi에서 완료, calibrate만 학교 Pi 이전 시.
+- **PI_HOST는 Tailscale 주소**(.env 참조). 공용 체크아웃은 `/opt/mealboard`. **Pi에서 직접 편집 금지, `git pull`만.**
+  개발은 각자 PC의 클론에서 하고 Claude Code도 PC에서 실행해 SSH로 Pi를 제어한다.
+- **같은 Pi에 Plant 프로젝트가 정지 상태로 공존**(`~/plant/`, planthub·plantdash·plantsnap 유닛).
+  `~/plant/`와 그 DB에는 어떤 이유로도 접근·수정하지 않는다. 포트 8000·8501·1883은 Plant 소유.
+- 홈 Pi에서는 vision 프레임 소스로 `picamera`를 쓰지 않는다(Plant 카메라 타이머와 배타 자원). `webcam|file`만.
+- NEIS 인증키(개발계정) 발급 완료. 학교코드 8140036(공주고, 남고), 교육청 N10.
+
+## 1. 프로젝트 한 줄 정의
+
+급식실 카메라(라즈베리파이 5 + YOLO)로 대기 인원·처리율을 측정해 **예상 대기시간**을 산출하고,
+NEIS 급식 API의 메뉴·영양 정보와 함께 웹 대시보드(PWA)로 제공한다. 학생·교사가 QR로 접속한다.
+
+## 2. 확정된 설계 결정 (재논의 금지, 변경 시 사용자 승인 필요)
+
+| 항목 | 결정 | 근거 |
+|---|---|---|
+| 실행 위치 | 전부 Pi (셀프 호스팅, 모델 B) | 카메라가 Pi에 물리적으로 있음. Netlify 등 호스팅으로 대체 불가(서버가 Pi 안) |
+| DB | SQLite (WAL 모드) | 단일 기기. **쓰기 주체는 vision(또는 mock) 하나**, app은 SELECT만 |
+| 백엔드 | FastAPI 단일 Python 스택 | vision 프로세스와 언어 통일. **Pi에 Node.js 설치 금지** |
+| API 포트 | **8100** (.env `API_PORT`), 127.0.0.1 바인딩 | 8000은 Plant `setup_camera.py`가 사용. 외부 노출은 cloudflared만 |
+| 프론트 | static/ 정적 파일 + fetch 폴링(30초) | React 필요 시 개발 PC에서 빌드한 dist만 복사 |
+| 외부 노출 | Cloudflare Tunnel (443 아웃바운드) | 학교망 인바운드 차단 대응. 포트포워딩 금지. 팀 SSH 접속은 Tailscale(용도 구분) |
+| 대기시간 | Little's law: W = L / λ | L=ROI 점유 인원, λ=배식대 가상선 통과율(5분 이동평균). **ROI 출구변 = λ 측정선**(같은 경계). λ < 0.5명/분이면 `insufficient_rate`로 산출 불가 처리 |
+| 카운팅 | YOLOv8n/11n + ByteTrack, 기준점은 bbox 바닥 중앙 | 라인크로싱은 부호 변화 + ±20px 완충띠. `imgsz`·프레임 스킵은 설정으로 뺀다(Pi 5 CPU 수 fps) |
+| 영상 취급 | **프레임 저장·전송 절대 금지. 숫자만 DB에** | 개인정보 원칙. 학교 협의의 전제 조건 |
+| 디버그 뷰 | 카운트 프로세스 내장, 127.0.0.1 전용 MJPEG, 터치파일(/tmp/debug_on)로 on/off | 관리자만 SSH 터널로 열람. 켜짐 이력을 DB에 기록 |
+| 히트맵 | 공개 화면은 빈 급식실 배경/평면도 위 히트맵만. 실사+마커는 디버그 뷰 전용 | |
+| NEIS | `jobs/fetch_neis.py`가 하루 1회(systemd timer 05:40) `data/meal.json` 캐시 → 프론트는 `/api/meal`만 | 키 노출·호출 제한 방지. **프론트에서 NEIS 직접 호출 금지**. 주말·방학의 INFO-200은 오류가 아닌 `no_meal` |
+| 영양 지표 | **에너지 충족률 · 에너지 적정비율(탄55~65/단7~20/지15~30%) · MAR** 세 가지. 코사인 유사도 사용 안 함 | 코사인은 단위 큰 성분(kcal·칼슘·비타민A)이 지배하고 크기 불변. 기준은 `data/nutrition_std.json`(학교별 1행), 영양소별 판정은 EAR~RNI 범위 |
+| 해석 AI | 기본은 숫자→텍스트 LLM(이벤트 트리거). VLM은 예외 경로 | 카운팅 트랙과 SQLite로 완전 분리 |
+
+## 3. 저장소 구조 (선행 레포 계승)
+
+선행 레포 `Arduino_MQTT_MultiNode_Demo`, `Plant_Growth_Monitoring_Demo`의 규약을 따른다:
+- 최상위는 **역할 폴더** + README.md + .gitignore
+- `docs/` = GitHub Pages: `index.html`(프로젝트개요) + `manual.html`(구축 매뉴얼, 모든 코드 `<pre>` 수록 + 복사 버튼, 한국어, 처음 나오는 용어는 그 자리에서 설명)
+- README 말미에 **「작업 로그」** 절 유지 (yyyy-mm 단위, 최신이 위)
+- **systemd 유닛 파일은 저장소 `deploy/`에 포함** — Plant에서 Pi에 직접 만들어 새 Pi로 따라오지 못한 교훈. 설치는 `setup_pi.sh`가 한다
+
+```
+Mealboard_Demo/
+├── CLAUDE.md                     # 이 파일
+├── README.md                     # 개요·구조·셋업·작업 로그 (선행 레포 형식)
+├── setup_pi.sh                   # Pi 최초 설치 + 유닛 갱신 (멱등)
+├── docs/                         # GitHub Pages (index.html + manual.html)
+├── app/                          # FastAPI: main.py, config.py, db.py, routers/{status,history,meal,heatmap}.py
+├── vision/                       # counter.py(진입점), source.py(webcam|file|picamera), zones.py, waittime.py, heatmap.py, debug_stream.py, calibrate.py
+├── jobs/                         # fetch_neis.py, mock_feed.py
+├── static/                       # index.html, css/, js/, manifest.json, sw.js, icons/
+├── data/                         # queue.db, meal.json, heatmap.png, zones.json (git 제외 / plan_bg.png·nutrition_std.json만 포함)
+├── deploy/                       # mealboard-{api,mock,vision,neis}.service, mealboard-neis.timer, cloudflared-config.yml(견본)
+├── tests/                        # test_waittime.py 등 순수 로직 테스트
+├── .env.example                  # 키 이름만 (실제 .env는 git 제외)
+├── .gitignore                    # data/*(예외 2개), .env, .venv/, __pycache__/, *.db*
+└── pyproject.toml                # uv 관리
+```
+
+**파일 명명 규칙 (Plant 레포 계승)** — 접두어가 실행 주체를 뜻한다:
+- `run_*` = systemd가 자동 실행 / `setup_*`, `calibrate_*` = 사람이 최초 1회 / `check_*` = 검증 도구 / 무접두어 = 라이브러리
+- 설정의 단일 출처는 파일 하나(`data/zones.json`, `data/nutrition_std.json`, `.env`) — **스크립트에 좌표·키·기준치 하드코딩 금지**
+
+## 4. 개발 환경 규칙
+
+- 패키지 관리는 **uv**. 시스템 Python 3.13 사용(`requires-python >=3.11`). Pi에서는 반드시 `uv venv --system-site-packages`를 **`uv sync`/`uv add`보다 먼저** 실행
+  (picamera2는 시스템 apt 패키지. 순서가 뒤바뀌면 venv 재생성으로 설치분이 날아감 — Plant 프로젝트에서 실증된 함정)
+- 개발 PC에는 카메라가 없다 → `jobs/mock_feed.py`로 SQLite에 가짜 데이터를 넣고 app/과 static/을 개발한다.
+  vision/ 없이 웹 전체가 돌아가는 상태를 항상 유지할 것
+- **mock과 vision은 동시에 켜지지 않는다** — `mealboard-mock.service`의 `Conflicts=mealboard-vision.service`가 보장. 학교 Pi 전환 = mock disable, vision enable
+- API 계약이 우선: `/api/status`, `/api/history`, `/api/meal`, `/api/heatmap` 응답 스키마를 바꿀 때는
+  프론트·문서·mock을 같은 커밋에서 함께 수정. `/api/status`의 `state`는 `ok | no_data | insufficient_rate`, 2분 이상 새 행 없으면 `stale`
+- `static/sw.js`는 정적 파일만 캐시. **`/api/*`는 절대 캐시하지 않는다**(폴링이 무의미해짐)
+- `.env`는 systemd `EnvironmentFile`로도 읽히므로 **값 뒤 줄 끝 주석 금지**(값의 일부로 들어감)
+- 모듈 실행은 저장소 루트에서 `python -m jobs.mock_feed` 형식(패키지 import 경로 유지)
+
+## 5. SSH로 Pi를 제어할 때 (Claude Code 필독)
+
+접속: `ssh <PI_USER>@<PI_HOST>` (실제 값은 .env 또는 사용자에게 확인. known_hosts 이슈 시 사용자에게 보고)
+팀원은 각자 계정 + SSH 키. 공용 계정 없음.
+
+**허용 (자유롭게)**
+- 읽기 전체: `systemctl status`, `journalctl -u <svc> -n 100`, DB SELECT, `ls`, `cat`, `ss -tlnp`, `vcgencmd measure_temp`, `timedatectl`
+- 코드 반영: `/opt/mealboard`에서 `git pull` 후 해당 서비스만 `sudo systemctl restart mealboard-api`(vision·mock은 아래 주의 참조). 의존성이 바뀌면 `uv sync`, 유닛이 바뀌면 `bash setup_pi.sh`
+
+**주의 (실행 전 사용자에게 확인)**
+- `mealboard-vision` 재시작: 점심 운영 시간(11:30~14:00)에는 카운팅 공백이 생긴다 — 시간을 확인하고 물을 것
+- 카메라는 **배타적 자원**: calibrate.py·디버그 도구를 띄우려면 vision 서비스를 먼저 내려야 한다 (Plant 프로젝트 실증)
+- systemd 유닛 수정, cloudflared 설정 변경, apt 설치, 타임존 변경(Plant 타이머 시각에 영향)
+
+**금지 (사용자 명시 지시 없이는 절대 불가)**
+- `/opt/mealboard` 안에서 파일 직접 편집 — 코드는 PC에서 커밋해 pull한다
+- `data/` 내 파일 삭제·초기화, DB의 DELETE/DROP/UPDATE — 정리 도구를 만들 때는 반드시 ①빈 조건이면 실행 거부 ②실행 전 `queue.db.bak-<시각>` 자동 백업 ③되돌리는 명령 출력, 세 겹을 갖출 것 (Plant 프로젝트에서 `--fix`로 220행을 잃은 사고의 재발 방지 규칙)
+- `~/plant/` 및 Plant 유닛(planthub·plantdash·plantsnap) 접근·수정
+- 프레임 이미지를 디스크에 저장하거나 외부로 전송하는 코드 작성 — 어떤 디버깅 목적이라도 사용자 승인 필요
+- `rm -rf`, 전원 관련(`shutdown`, `reboot`) — reboot는 확인 후에만
+- .env, 인증키, 터널 자격증명(`~/.cloudflared/*.json`, `/etc/cloudflared/config.yml`)을 로그·커밋·채팅에 노출
+
+**진단 순서 (뭔가 이상할 때)**
+① `git status`·`git log -1`(코드가 최신인가) → ② 서비스 살아있나 → ③ DB에 최신 행이 들어오나 → ④ journalctl → ⑤ 시간 동기·온도·디스크.
+"대시보드에 안 나온다"는 대부분 그리는 쪽 문제다: DB에 데이터가 있으면 프론트/라우터부터 의심 (Plant 실증)
+
+## 6. Git / GitHub 워크플로
+
+- 원격: `github.com/xparapx/Mealboard_Demo` (main 단일 브랜치, 선행 레포와 동일). GitHub 조작은 `gh` CLI(설치·로그인은 사용자가)
+- 커밋 단위: 기능 하나 = 커밋 하나. 메시지는 한국어 명령형 요약 한 줄 + 필요 시 본문
+  (예: `vision: 라인크로싱 완충띠 ±20px 추가`)
+- **커밋 전 확인**: `git status`에 data/(예외 2개 제외)·.env가 없을 것 (있다면 .gitignore부터 수정)
+- 코드와 매뉴얼 동기화: `<pre>` 수록 코드를 바꾼 커밋은 docs/manual.html도 같은 커밋에서 갱신,
+  `check_manual.py`류 대조 도구가 생기면 커밋 전 실행
+- push는 매 작업 세션 종료 시. 사용자가 요청하면 중간에도. Pi는 자동으로 pull하지 않는다 — 배포는 사람(또는 `/deploy`)이 명시적으로
+- README 「작업 로그」는 의미 있는 변경마다 갱신 (커밋마다는 아님)
+
+## 7. Claude Code 확장 요소 (필요한 것만)
+
+- **CLAUDE.md(이 파일)로 충분한 것**: 프로젝트 규칙·구조·안전수칙 전달 — 별도 에이전트/플러그인 불필요
+- **슬래시 커맨드 (권장, `.claude/commands/`)**: 반복 절차를 파일로 고정
+  - `pi-status.md` — SSH로 서비스 상태(api·mock/vision·neis.timer·cloudflared) + DB 최신 행 시각 + 디스크·온도·시간동기 요약
+  - `deploy.md` — 커밋 확인 → push → Pi에서 pull → (필요 시 uv sync) → api 서비스 재시작 → `/api/status` 응답 검증
+  - `logday.md` — 오늘 journalctl 요약과 이상 징후 보고
+- **스킬 (후순위)**: docs/manual.html 패널 편집 규칙(용어 즉시 설명, 복사 버튼, 코드 동기화)이
+  반복 부담이 되면 그때 `manual-editing` 스킬로 분리 — 초기엔 만들지 말 것
+- **서브에이전트/훅**: 이 규모에서는 불필요. 도입하지 않는다
+- **MCP**: 불필요 (GitHub는 gh/git CLI, Pi는 ssh로 충분)
+
+## 8. 단계별 로드맵 (현재 위치를 커밋 로그와 README 작업 로그로 판단)
+
+① app/ + mock_feed + /api/status → /docs에서 검증
+② static/ 대시보드 (mock 데이터로 완성. 레이아웃은 docs/ 도면의 스펙을 따른다)
+③ jobs/fetch_neis.py + /api/meal (파싱 + 영양 지표 3종)
+④ vision/ 프로토타입 — 개발 PC 웹캠·동영상 파일 소스로 counter·zones·waittime 검증 (tests/ 포함). `vision/source.py`로 소스 추상화
+⑤ Pi 이전: uv 셋업(§4 순서 엄수) → systemd → cloudflared **[홈 Pi에서 완료]** → calibrate → 실측 **[학교 Pi]**
+⑥ PWA + QR (cloudflared는 ⑤에서 완료)
+⑦ (선택) 해석 LLM, 히트맵 고도화, AI HAT 도입
+
+각 단계는 독립 실행 가능해야 하며, 다음 단계로 넘어가기 전 사용자에게 동작 확인을 받는다.
