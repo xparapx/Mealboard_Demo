@@ -6,6 +6,7 @@ After=network.target
 User=__USER__
 WorkingDirectory=/opt/mealboard
 EnvironmentFile=/opt/mealboard/.env
+Environment=PYTHONUNBUFFERED=1
 ExecStart=/opt/mealboard/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port ${API_PORT}
 Restart=on-failure
 RestartSec=3

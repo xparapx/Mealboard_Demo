@@ -6,6 +6,7 @@ Conflicts=mealboard-vision.service
 [Service]
 User=__USER__
 WorkingDirectory=/opt/mealboard
+Environment=PYTHONUNBUFFERED=1
 ExecStart=/opt/mealboard/.venv/bin/python -m jobs.mock_feed --speed 30
 Restart=on-failure
 

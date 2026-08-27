@@ -332,6 +332,7 @@ After=network.target
 User=__USER__
 WorkingDirectory=/opt/mealboard
 EnvironmentFile=/opt/mealboard/.env
+Environment=PYTHONUNBUFFERED=1
 ExecStart=/opt/mealboard/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port ${API_PORT}
 Restart=on-failure
 RestartSec=3
@@ -349,6 +350,7 @@ Conflicts=mealboard-vision.service
 [Service]
 User=__USER__
 WorkingDirectory=/opt/mealboard
+Environment=PYTHONUNBUFFERED=1
 ExecStart=/opt/mealboard/.venv/bin/python -m jobs.mock_feed --speed 30
 Restart=on-failure
 
@@ -365,6 +367,7 @@ Description=Mealboard NEIS 급식 갱신 (1회 실행)
 Type=oneshot
 User=__USER__
 WorkingDirectory=/opt/mealboard
+Environment=PYTHONUNBUFFERED=1
 ExecStart=/opt/mealboard/.venv/bin/python -m jobs.fetch_neis</code></pre>
 </figure>
 <figure class="code">
