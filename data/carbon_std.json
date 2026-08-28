@@ -1,0 +1,11 @@
+{
+  "note": "탄소 카드 계수. 전부 추정치 — 값과 출처를 확인 후 갱신할 것. 화면에는 반드시 '추정' 표기.",
+  "energy_density_kcal_per_g": 1.8,
+  "portion_g_override": null,
+  "ef_kgco2e_per_kg": 2.5,
+  "ef_source": "FAO Food Wastage Footprint(2013) 전과정 전 지구 평균",
+  "world_daily_kg": 12.9,
+  "korea_daily_kg": 30.0,
+  "capita_source": "Our World in Data 1인당 연간 CO2 ÷ 365 (세계 약 4.7t, 한국 약 11t)",
+  "car_km_per_kgco2e": 6.0
+}

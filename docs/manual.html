@@ -246,6 +246,7 @@ pythonpath = [&quot;.&quot;]</code></pre>
 data/*
 !data/plan_bg.png
 !data/nutrition_std.json
+!data/carbon_std.json
 .env
 .venv/
 __pycache__/
@@ -268,8 +269,7 @@ LUNCH_END=14:00</code></pre>
 </figure>
 <figure class="code">
 <figcaption><span class="path">.gitattributes</span><span class="lang">text</span><button class="copy" type="button">복사</button></figcaption>
-<pre><code class="lang-text"># 모든 텍스트 파일은 저장소·체크아웃 모두 LF. Windows 에서 만든 sh·service 가 Pi 에서 깨지지 않게
-* text=auto eol=lf
+<pre><code class="lang-text">* text=auto eol=lf
 *.png binary</code></pre>
 </figure>
 <p>네 파일 모두 <strong>VS Code 로 만드세요.</strong> 메모장은 <code>.gitignore.txt</code> 처럼 확장자를 붙이거나 인코딩을 바꿉니다. 점으로 시작하는 파일은 "도구에게 주는 설정"이라는 유닉스 관례이고, 점 뒤가 이름 전체입니다.</p>
@@ -852,7 +852,7 @@ systemctl status mealboard-api --no-pager</code></pre>
 &lt;style&gt;
   /* 팔레트: docs/layout.html 도면 v4 — ColorCombos #285 (차콜·에그셸·멜론). 그림자 없음, 구분은 선과 채움색으로만 */
   :root { --char:#505050; --egg:#FFF5C3; --egg2:#FFFBE4; --paper:#FFFDF5;
-          --teal:#129793; --aqua:#9BD7D5; --melon:#FF7260;
+          --teal:#129793; --aqua:#9BD7D5; --aqua2:#D3EDEC; --melon:#FF7260;
           --ink:#2B2B2B; --mute:#7A7A72; --soft:#E6DFB8; --off:#BDBDB5; }
   body { font-family: &quot;Pretendard&quot;, system-ui, sans-serif; margin: 0; background: var(--egg); color: var(--ink);
          font-variant-numeric: tabular-nums; }
@@ -924,6 +924,23 @@ systemctl status mealboard-api --no-pager</code></pre>
   .bar.short b::after { content: &quot; 부족&quot;; font-size: 10px; }
   .track::after { content: &quot;&quot;; position: absolute; left: 66.7%; top: -5px; bottom: -5px; width: 2px; background: var(--melon); }  /* 권장섭취량 100% */
   .bar b { text-align: right; font-weight: 800; }
+  /* ⑧ 탄소 카드: 틸 외곽선. 4버튼 기본값 &quot;다 먹음&quot;, 선택은 localStorage(mb_waste) 에만 — 서버 쓰기 없음 */
+  .carbon { border-color: var(--teal); }
+  .carbon .big { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+  .carbon .num { font-size: 40px; font-weight: 800; letter-spacing: -.03em; color: var(--teal); line-height: 1; }
+  .carbon .unit { font-size: 13px; color: var(--mute); }
+  .carbon .cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .carbon .cmp &gt; div { background: var(--aqua2); border-radius: 10px; padding: 8px 10px; font-size: 11px; color: var(--char); }
+  .carbon .cmp b { display: block; font-size: 18px; font-weight: 800; color: var(--char); }
+  .carbon .pick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 12px; }
+  .carbon .pick &gt; div { border: 1.5px solid var(--char); border-radius: 999px; text-align: center; font-size: 12px; font-weight: 700;
+                        min-height: 44px; display: grid; place-items: center; cursor: pointer; user-select: none; }
+  .carbon .pick &gt; div.on { background: var(--teal); color: #000; border-color: var(--teal); }
+  .carbon .mine { margin-top: 10px; font-size: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .carbon .mine b { color: var(--teal); }
+  .carbon .ring { width: 44px; height: 44px; border-radius: 50%; flex: none; background: conic-gradient(var(--teal) 0 0%, var(--egg2) 0%);
+                  display: grid; place-items: center; font-size: 10px; font-weight: 800; border: 1.5px solid var(--char); }
+  .carbon .ring i { width: 32px; height: 32px; border-radius: 50%; background: var(--paper); display: grid; place-items: center; font-style: normal; }
 &lt;/style&gt;
 &lt;/head&gt;
 &lt;body&gt;
@@ -958,6 +975,21 @@ systemctl status mealboard-api --no-pager</code></pre>
     &lt;/div&gt;
     &lt;details&gt;&lt;summary&gt;▸ 영양소별 보기&lt;/summary&gt;&lt;div id=&quot;micro&quot; style=&quot;margin-top:8px&quot;&gt;&lt;/div&gt;&lt;/details&gt;
     &lt;div class=&quot;muted&quot; id=&quot;stdnote&quot; style=&quot;margin-top:8px&quot;&gt;&lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;section class=&quot;card carbon&quot; id=&quot;carboncard&quot; hidden&gt;
+    &lt;div class=&quot;eyebrow&quot;&gt;오늘 급식을 다 남기면&lt;/div&gt;
+    &lt;div class=&quot;big&quot;&gt;&lt;span class=&quot;num&quot; id=&quot;co2&quot;&gt;—&lt;/span&gt;&lt;span class=&quot;unit&quot; id=&quot;co2unit&quot;&gt;kg CO₂e&lt;/span&gt;&lt;/div&gt;
+    &lt;div class=&quot;cmp&quot;&gt;
+      &lt;div&gt;&lt;b id=&quot;vsworld&quot;&gt;—&lt;/b&gt;세계 1인 하루 평균 배출 대비&lt;/div&gt;
+      &lt;div&gt;&lt;b id=&quot;vskorea&quot;&gt;—&lt;/b&gt;한국 1인 하루 평균 배출 대비&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;pick&quot; id=&quot;pick&quot;&gt;
+      &lt;div data-f=&quot;0&quot; class=&quot;on&quot;&gt;다 먹음&lt;/div&gt;&lt;div data-f=&quot;0.25&quot;&gt;¼ 남김&lt;/div&gt;&lt;div data-f=&quot;0.5&quot;&gt;½ 남김&lt;/div&gt;&lt;div data-f=&quot;1&quot;&gt;다 남김&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;mine&quot;&gt;&lt;div&gt;이번 달 내가 남긴 급식 &lt;b id=&quot;minekg&quot;&gt;0 kg CO₂e&lt;/b&gt;&lt;br&gt;&lt;span class=&quot;muted&quot; id=&quot;minesub&quot;&gt;&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;ring&quot; id=&quot;ring&quot; title=&quot;이번 달 '다 먹음' 비율&quot;&gt;&lt;i id=&quot;ringpct&quot;&gt;—&lt;/i&gt;&lt;/div&gt;&lt;/div&gt;
+    &lt;div class=&quot;muted&quot; id=&quot;carbonnote&quot; style=&quot;margin-top:8px&quot;&gt;&lt;/div&gt;
   &lt;/section&gt;
 &lt;/main&gt;
 
@@ -1034,6 +1066,7 @@ async function loadMeal() {
   if (m.state !== &quot;ok&quot; || !m.today) {
     $(&quot;#menu&quot;).innerHTML = &quot;&lt;li&gt;&quot; + (m.state === &quot;no_meal&quot;
       ? &quot;이번 주 급식 정보가 없습니다&quot; : &quot;급식 정보를 아직 받지 못했습니다&quot;) + &quot;&lt;/li&gt;&quot;;
+    $(&quot;#carboncard&quot;).hidden = true;
     return;
   }
   $(&quot;#menu&quot;).innerHTML = m.today.menu.map(x =&gt; `&lt;li&gt;${x}&lt;/li&gt;`).join(&quot;&quot;);
@@ -1052,6 +1085,39 @@ async function loadMeal() {
        &lt;b&gt;${x.pct}%&lt;/b&gt;&lt;/div&gt;`).join(&quot;&quot;);
   $(&quot;#stdnote&quot;).textContent =
     `기준: ${m.std.group} · ${m.std.source} · 멜론 세로선 = 권장섭취량. 영양교사 산출값 기준 참고 지표입니다.`;
+  renderCarbon(m);
+}
+
+// ⑧ 탄소 카드. 계수는 /api/meal 의 carbon_std(= data/carbon_std.json), 선택 기록은 이 브라우저의 localStorage 에만
+const WASTE_KEY = &quot;mb_waste&quot;;               // { &quot;2026-08-28&quot;: { frac: 0.25, kg: 1.41 }, ... }  frac = 남긴 비율
+const loadWaste = () =&gt; { try { return JSON.parse(localStorage.getItem(WASTE_KEY)) || {}; } catch { return {}; } };
+function renderCarbon(m) {
+  const c = m.today &amp;&amp; m.today.carbon, card = $(&quot;#carboncard&quot;);
+  card.hidden = !c;
+  if (!c) return;
+  const cs = m.carbon_std, day = m.today.date.replace(/(\d{4})(\d{2})(\d{2})/, &quot;$1-$2-$3&quot;);
+  $(&quot;#co2&quot;).textContent = c.kgco2e.toFixed(1);
+  $(&quot;#co2unit&quot;).textContent = `kg CO₂e · 1인분 약 ${c.portion_g} g 기준`;
+  $(&quot;#vsworld&quot;).textContent = c.pct_world + &quot;%&quot;;
+  $(&quot;#vskorea&quot;).textContent = c.pct_korea + &quot;%&quot;;
+  $(&quot;#carbonnote&quot;).textContent = (c.estimate ? &quot;추정치 · &quot; : &quot;&quot;) + &quot;1인분 무게는 kcal 로 환산(NEIS 는 g 미제공)&quot;
+    + ` · 배출계수: ${cs.ef_source} · 1인 평균: ${cs.capita_source} · 승용차 환산 ${c.car_km} km · 선택 기록은 이 브라우저에만 저장됩니다`;
+  const log = loadWaste(), picked = log[day] ? log[day].frac : 0;   // 기본 선택 &quot;다 먹음&quot;
+  $(&quot;#pick&quot;).querySelectorAll(&quot;div&quot;).forEach(el =&gt; {
+    el.classList.toggle(&quot;on&quot;, +el.dataset.f === picked);
+    el.onclick = () =&gt; {
+      const w = loadWaste(); w[day] = { frac: +el.dataset.f, kg: c.kgco2e };
+      try { localStorage.setItem(WASTE_KEY, JSON.stringify(w)); } catch {}
+      renderCarbon(m);
+    };
+  });
+  const month = day.slice(0, 7), days = Object.entries(log).filter(([d]) =&gt; d.startsWith(month));
+  const kg = days.reduce((s, [, v]) =&gt; s + v.frac * v.kg, 0), clean = days.filter(([, v]) =&gt; v.frac === 0).length;
+  const pct = days.length ? Math.round(clean / days.length * 100) : 0;
+  $(&quot;#minekg&quot;).textContent = kg.toFixed(1) + &quot; kg CO₂e&quot;;
+  $(&quot;#minesub&quot;).textContent = `≈ 승용차 ${Math.round(kg * (c.car_km / c.kgco2e))} km · ${days.length}일 기록`;
+  $(&quot;#ringpct&quot;).textContent = days.length ? pct + &quot;%&quot; : &quot;—&quot;;
+  $(&quot;#ring&quot;).style.background = `conic-gradient(var(--teal) 0 ${pct}%, var(--egg2) ${pct}%)`;
 }
 
 refresh(); loadMeal();
@@ -1182,6 +1248,7 @@ from app.config import BASE, DATA, MEAL_JSON
 
 load_dotenv(BASE / &quot;.env&quot;)
 STD = json.loads((DATA / &quot;nutrition_std.json&quot;).read_text(encoding=&quot;utf-8&quot;))
+CARBON = json.loads((DATA / &quot;carbon_std.json&quot;).read_text(encoding=&quot;utf-8&quot;))
 URL = &quot;https://open.neis.go.kr/hub/mealServiceDietInfo&quot;
 
 # NEIS 항목명 → 우리 키.  앞글자 일치로 찾아 &quot;비타민A(R.E)&quot; 같은 표기 변동에 견딘다
@@ -1191,7 +1258,7 @@ KEYMAP = [(&quot;탄수화물&quot;, &quot;carb_g&quot;), (&quot;단백질&quot;
 
 
 def parse_ntr(s):
-    &quot;&quot;&quot;&#x27;탄수화물(g) : 90.6&lt;br/&gt;단백질(g) : 30.1 ...&#x27; → {&#x27;carb_g&#x27;: 90.6, ...}&quot;&quot;&quot;
+    &quot;&quot;&quot;'탄수화물(g) : 90.6&lt;br/&gt;단백질(g) : 30.1 ...' → {'carb_g': 90.6, ...}&quot;&quot;&quot;
     out = {}
     for name, val in re.findall(r&quot;([^&lt;&gt;:]+?)\s*:\s*([\d.]+)&quot;, s):
         for prefix, key in KEYMAP:
@@ -1241,6 +1308,19 @@ def assess(kcal, n):
             &quot;mar&quot;: mar, &quot;micro&quot;: items}
 
 
+def carbon(kcal):
+    &quot;&quot;&quot;오늘 1인분을 전량 잔반 처리했을 때의 추정 배출량과 비교값&quot;&quot;&quot;
+    if not kcal:
+        return None
+    g = CARBON[&quot;portion_g_override&quot;] or round(kcal / CARBON[&quot;energy_density_kcal_per_g&quot;])
+    kg = round(g / 1000 * CARBON[&quot;ef_kgco2e_per_kg&quot;], 2)
+    return {&quot;portion_g&quot;: g, &quot;kgco2e&quot;: kg,
+            &quot;pct_world&quot;: round(kg / CARBON[&quot;world_daily_kg&quot;] * 100),
+            &quot;pct_korea&quot;: round(kg / CARBON[&quot;korea_daily_kg&quot;] * 100),
+            &quot;car_km&quot;: round(kg * CARBON[&quot;car_km_per_kgco2e&quot;], 1),
+            &quot;estimate&quot;: True}
+
+
 def fetch(from_ymd, to_ymd):
     q = urllib.parse.urlencode({
         &quot;KEY&quot;: os.environ[&quot;NEIS_KEY&quot;], &quot;Type&quot;: &quot;json&quot;,
@@ -1267,7 +1347,7 @@ def main():
         kcal = parse_kcal(r.get(&quot;CAL_INFO&quot;))
         menu = [m.strip() for m in r.get(&quot;DDISH_NM&quot;, &quot;&quot;).split(&quot;&lt;br/&gt;&quot;) if m.strip()]
         week.append({&quot;date&quot;: r[&quot;MLSV_YMD&quot;], &quot;menu&quot;: menu, &quot;kcal&quot;: kcal,
-                     &quot;nutrients&quot;: n, &quot;assess&quot;: assess(kcal, n)})
+                     &quot;nutrients&quot;: n, &quot;assess&quot;: assess(kcal, n), &quot;carbon&quot;: carbon(kcal)})
 
     def avg(key):
         vals = [d[&quot;assess&quot;][key] for d in week if d[&quot;assess&quot;][key] is not None]
@@ -1280,6 +1360,7 @@ def main():
            &quot;std&quot;: {&quot;school&quot;: STD[&quot;school&quot;], &quot;group&quot;: STD[&quot;group&quot;], &quot;source&quot;: STD[&quot;source&quot;]},
            &quot;today&quot;: next((d for d in week if d[&quot;date&quot;] == today_s), None),
            &quot;week_avg&quot;: {&quot;energy_pct&quot;: avg(&quot;energy_pct&quot;), &quot;mar&quot;: avg(&quot;mar&quot;)},
+           &quot;carbon_std&quot;: {&quot;ef_source&quot;: CARBON[&quot;ef_source&quot;], &quot;capita_source&quot;: CARBON[&quot;capita_source&quot;]},
            &quot;week&quot;: week}
     MEAL_JSON.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding=&quot;utf-8&quot;)
     print(f&quot;저장 {MEAL_JSON}  {len(week)}일치  {code}&quot;)
@@ -1500,7 +1581,7 @@ def carbon(kcal):
 <p>실행 결과 예 (오늘 1011.5 kcal): portion 562 g → 1.41 kg CO₂e → 세계 11% · 한국 5% · 승용차 8.5 km.</p>
 
 <h3>11-3. 화면</h3>
-<p>급식 카드 아래 새 카드. 도면 v4 의 ⑧ 주석과 산식 절을 그대로 따릅니다 — 틸 숫자 40px, 비교 2칸(aqua 배경), 4버튼(다 먹음·¼·½·다 남김, 기본 "다 먹음"), 월간 합산과 "다 먹음 비율" 링. localStorage 키는 <code>mb_waste</code>, 값은 날짜별 {"frac", "kg"}. 각주에 계수 출처(<code>carbon_std</code>)와 "추정" 문구.</p>
+<p>급식 카드 아래 새 카드. 도면 v4 의 ⑧ 주석과 산식 절을 그대로 따릅니다 — 틸 숫자 40px, 비교 2칸(aqua 배경), 4버튼(다 먹음·¼·½·다 남김, 기본 "다 먹음"), 월간 합산과 "다 먹음 비율" 링. localStorage 키는 <code>mb_waste</code>, 값은 날짜별 {"frac", "kg"}. 각주에 계수 출처(<code>carbon_std</code>)와 "추정" 문구. 코드는 별도 파일이 아니라 7단계 <code>static/index.html</code> 블록 안의 탄소 카드 부분(<code>#carboncard</code>, <code>renderCarbon</code>)입니다.</p>
 
 <h3>확인</h3>
 <figure class="code">

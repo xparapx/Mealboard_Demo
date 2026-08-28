@@ -15,6 +15,7 @@ from app.config import BASE, DATA, MEAL_JSON
 
 load_dotenv(BASE / ".env")
 STD = json.loads((DATA / "nutrition_std.json").read_text(encoding="utf-8"))
+CARBON = json.loads((DATA / "carbon_std.json").read_text(encoding="utf-8"))
 URL = "https://open.neis.go.kr/hub/mealServiceDietInfo"
 
 # NEIS 항목명 → 우리 키.  앞글자 일치로 찾아 "비타민A(R.E)" 같은 표기 변동에 견딘다
@@ -74,6 +75,19 @@ def assess(kcal, n):
             "mar": mar, "micro": items}
 
 
+def carbon(kcal):
+    """오늘 1인분을 전량 잔반 처리했을 때의 추정 배출량과 비교값"""
+    if not kcal:
+        return None
+    g = CARBON["portion_g_override"] or round(kcal / CARBON["energy_density_kcal_per_g"])
+    kg = round(g / 1000 * CARBON["ef_kgco2e_per_kg"], 2)
+    return {"portion_g": g, "kgco2e": kg,
+            "pct_world": round(kg / CARBON["world_daily_kg"] * 100),
+            "pct_korea": round(kg / CARBON["korea_daily_kg"] * 100),
+            "car_km": round(kg * CARBON["car_km_per_kgco2e"], 1),
+            "estimate": True}
+
+
 def fetch(from_ymd, to_ymd):
     q = urllib.parse.urlencode({
         "KEY": os.environ["NEIS_KEY"], "Type": "json",
@@ -100,7 +114,7 @@ def main():
         kcal = parse_kcal(r.get("CAL_INFO"))
         menu = [m.strip() for m in r.get("DDISH_NM", "").split("<br/>") if m.strip()]
         week.append({"date": r["MLSV_YMD"], "menu": menu, "kcal": kcal,
-                     "nutrients": n, "assess": assess(kcal, n)})
+                     "nutrients": n, "assess": assess(kcal, n), "carbon": carbon(kcal)})
 
     def avg(key):
         vals = [d["assess"][key] for d in week if d["assess"][key] is not None]
@@ -113,6 +127,7 @@ def main():
            "std": {"school": STD["school"], "group": STD["group"], "source": STD["source"]},
            "today": next((d for d in week if d["date"] == today_s), None),
            "week_avg": {"energy_pct": avg("energy_pct"), "mar": avg("mar")},
+           "carbon_std": {"ef_source": CARBON["ef_source"], "capita_source": CARBON["capita_source"]},
            "week": week}
     MEAL_JSON.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"저장 {MEAL_JSON}  {len(week)}일치  {code}")
