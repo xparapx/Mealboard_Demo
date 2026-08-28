@@ -749,7 +749,7 @@ from vision.waittime import estimate_wait
 TICK = 10           # 시뮬레이션 1틱 = 10초
 CAPACITY = 20.0     # 배식대 처리 능력 (명/분)
 CYCLE_MIN = 170     # 11:20 ~ 14:10 을 한 사이클로 보고 반복
-PATH = [(0.08, 0.88), (0.5, 0.85), (0.55, 0.25), (0.92, 0.12)]   # 입구 → 꺾임 → 배식대 (0~1 정규화 좌표)
+PATH = [(0.10, 0.08), (0.07, 0.50), (0.09, 0.82), (0.45, 0.88)]   # 입구(좌상) → 좌측 통로 아래로 → 배식대 앞(하단 중앙) — 0~1 정규화
 POSITIONS = DATA / &quot;positions.json&quot;
 
 
@@ -898,7 +898,9 @@ systemctl status mealboard-api --no-pager</code></pre>
   /* 팔레트: docs/layout.html 도면 v4 — ColorCombos #285 (차콜·에그셸·멜론). 외곽선 1.5px 은 유지하고 깊이는 고도 체계(--e1~e3)로 */
   :root { --char:#505050; --egg:#FFF5C3; --egg2:#FFFBE4; --paper:#FFFDF5;
           --teal:#129793; --aqua:#9BD7D5; --aqua2:#D3EDEC; --melon:#FF7260;
-          --ink:#2B2B2B; --mute:#7A7A72; --soft:#E6DFB8; --off:#BDBDB5;
+          --ink:#2B2B2B; --mute:#6B6B5E; --soft:#E6DFB8; --off:#BDBDB5;
+          --tint-chart:#EAF6F5; --tint-map:#F3F1E4; --tint-meal:#FFFDF5; --tint-carbon:#E7F5F1; --tint-news:#FFF1EC;   /* 섹션 틴트 */
+          --teal-ink:#0E7A76; --melon-ink:#D14A38;                                                                   /* 틴트 위 eyebrow */
           --e1: 0 1px 2px rgba(43,43,43,.06);      /* 모든 카드 기본 */
           --e2: 0 6px 16px rgba(43,43,43,.12);     /* 히어로·탄소 카드 */
           --e3: 0 12px 28px rgba(43,43,43,.16); }  /* hover */
@@ -907,7 +909,13 @@ systemctl status mealboard-api --no-pager</code></pre>
   main { max-width: 640px; margin: 0 auto; padding: 16px; }
   .card { background: var(--paper); border: 1.5px solid var(--char); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px;
           box-shadow: var(--e1); }
-  .eyebrow { font-size: 10.5px; letter-spacing: .2em; color: var(--mute); font-weight: 800; }
+  .eyebrow { font-size: 10.5px; letter-spacing: .2em; color: var(--char); font-weight: 800; }
+  /* 섹션별 옅은 틴트 + 같은 계열의 진한 eyebrow. 히어로·KPI 3칸은 그대로, 외곽선 1.5px 차콜은 전 카드 유지 */
+  #chartcard { background: var(--tint-chart); }  #chartcard .eyebrow { color: var(--teal-ink); }
+  #plancard  { background: var(--tint-map); }
+  #mealcard  { background: var(--tint-meal); }
+  .carbon    { background: var(--tint-carbon); }  .carbon .eyebrow { color: var(--teal-ink); }
+  #newscard  { background: var(--tint-news); }    #newscard .eyebrow { color: var(--melon-ink); }
   /* 히어로(식권 카드) 4가지 얼굴: ok=차콜+아쿠아 칩 · wait=차콜+멜론 외곽선 칩 · busy=멜론 카드+차콜 칩 · off=점선 */
   .hero { background: var(--char); color: var(--egg); position: relative; box-shadow: var(--e2); }
   .hero .eyebrow { color: var(--egg); opacity: .75; }
@@ -1002,6 +1010,9 @@ systemctl status mealboard-api --no-pager</code></pre>
   .carbon .ring { width: 44px; height: 44px; border-radius: 50%; flex: none; background: conic-gradient(var(--teal) 0 0%, var(--egg2) 0%);
                   display: grid; place-items: center; font-size: 10px; font-weight: 800; border: 1.5px solid var(--char); }
   .carbon .ring i { width: 32px; height: 32px; border-radius: 50%; background: var(--paper); display: grid; place-items: center; font-style: normal; }
+  .basis { display: inline; }
+  .basis summary { display: inline; margin: 0; padding: 0; font-size: 11px; letter-spacing: 0; color: var(--teal-ink); border-radius: 4px; }
+  .basis[open] &gt; div { margin-top: 4px; }
   /* ⑨ 이슈 링크: 제목 1줄(40자 말줄임) + 출처 + 날짜, 탭 시 새 창. 본문 요약 없음 */
   .news { display: grid; grid-template-columns: 1fr; gap: 6px; margin: 8px 0 0; font-size: 13px; }
   .news li { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 8px 10px 8px 14px; border: 1.5px solid var(--char);
@@ -1070,7 +1081,7 @@ systemctl status mealboard-api --no-pager</code></pre>
   &lt;/div&gt;
 
   &lt;div class=&quot;col&quot;&gt;
-    &lt;section class=&quot;card&quot;&gt;
+    &lt;section class=&quot;card&quot; id=&quot;mealcard&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;오늘 중식&lt;/div&gt;
       &lt;ul id=&quot;menu&quot;&gt;&lt;/ul&gt;
       &lt;div class=&quot;kpi&quot;&gt;
@@ -1095,7 +1106,8 @@ systemctl status mealboard-api --no-pager</code></pre>
       &lt;/div&gt;
       &lt;div class=&quot;mine&quot;&gt;&lt;div&gt;이번 달 내가 남긴 급식 &lt;b id=&quot;minekg&quot;&gt;0 kg CO₂e&lt;/b&gt;&lt;br&gt;&lt;span class=&quot;muted&quot; id=&quot;minesub&quot;&gt;&lt;/span&gt;&lt;/div&gt;
         &lt;div class=&quot;ring&quot; id=&quot;ring&quot; title=&quot;이번 달 '다 먹음' 비율&quot;&gt;&lt;i id=&quot;ringpct&quot;&gt;—&lt;/i&gt;&lt;/div&gt;&lt;/div&gt;
-      &lt;div class=&quot;muted&quot; id=&quot;carbonnote&quot; style=&quot;margin-top:8px&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;muted&quot; style=&quot;margin-top:8px&quot;&gt;추정치입니다 · 선택 기록은 이 브라우저에만 저장 ·
+        &lt;details class=&quot;basis&quot;&gt;&lt;summary&gt;산정 기준 보기&lt;/summary&gt;&lt;div id=&quot;carbonnote&quot;&gt;&lt;/div&gt;&lt;/details&gt;&lt;/div&gt;
     &lt;/section&gt;
 
     &lt;section class=&quot;card&quot; id=&quot;newscard&quot; hidden&gt;
@@ -1166,7 +1178,8 @@ function drawChart(rows) {
   g.stroke();
 }
 
-// ⑩ 급식실 현황: 벡터 평면도 위 익명 위치 마커. x,y 는 0~1 정규화 좌표 — 우상단 = 배식대, 좌하단 = 입구
+// ⑩ 급식실 현황: 카메라 시점 기준 벡터 평면도. x,y 는 0~1 정규화 좌표 —
+//    입구 = 좌측 상단, 통로 = 좌측변을 따라 아래로, 배식대 = 하단변 좌측 끝~중앙, 퇴식구 = 우측 하단, 출구 = 우측 중앙
 function drawPlan(p) {
   const c = $(&quot;#plan&quot;), g = c.getContext(&quot;2d&quot;), W = c.width, H = c.height, pad = 14;
   const ok = p.state === &quot;ok&quot;;
@@ -1175,14 +1188,23 @@ function drawPlan(p) {
   g.clearRect(0, 0, W, H);
   const X = x =&gt; pad + x * (W - 2 * pad), Y = y =&gt; pad + y * (H - 2 * pad);
   g.fillStyle = &quot;#FFFBE4&quot;; g.fillRect(X(0), Y(0), W - 2 * pad, H - 2 * pad);                       // 바닥
+  g.fillStyle = &quot;rgba(80,80,80,.06)&quot;; g.fillRect(X(0), Y(0), X(.16) - X(0), H - 2 * pad);          // 통로: 좌측변 띠
   g.setLineDash([]); g.lineWidth = 1.5; g.strokeStyle = &quot;#505050&quot;; g.strokeRect(X(0), Y(0), W - 2 * pad, H - 2 * pad);  // 외곽
-  g.setLineDash([6, 4]); g.lineWidth = 2; g.strokeStyle = &quot;#FF7260&quot;;                                 // 배식대: 우상단 멜론 점선
-  g.strokeRect(X(.72), Y(.05), X(.98) - X(.72), Y(.2) - Y(.05));
+  g.setLineDash([6, 4]); g.lineWidth = 2; g.strokeStyle = &quot;#FF7260&quot;;                                 // 배식대: 하단 좌측 끝 ~ 중앙, 멜론 점선
+  g.strokeRect(X(.02), Y(.90), X(.50) - X(.02), Y(.98) - Y(.90));
+  g.strokeStyle = &quot;#505050&quot;; g.lineWidth = 1.5;                                                       // 퇴식구: 우측 하단 작은 차콜 점선
+  g.strokeRect(X(.84), Y(.86), X(.98) - X(.84), Y(.98) - Y(.86));
   g.setLineDash([]);
+  g.strokeStyle = &quot;#FFFBE4&quot;; g.lineWidth = 3;                                                         // 외곽선 틈 = 입구(상단 좌측)·출구(우측 중앙)
+  g.beginPath(); g.moveTo(X(.06), Y(0)); g.lineTo(X(.14), Y(0)); g.stroke();
+  g.beginPath(); g.moveTo(X(1), Y(.44)); g.lineTo(X(1), Y(.56)); g.stroke();
   g.font = &quot;700 12px system-ui, sans-serif&quot;; g.textBaseline = &quot;middle&quot;;
-  g.fillStyle = &quot;#FF7260&quot;; g.textAlign = &quot;right&quot;; g.fillText(&quot;배식대&quot;, X(.97), Y(.125));
-  g.strokeStyle = &quot;#FFFBE4&quot;; g.lineWidth = 3; g.beginPath(); g.moveTo(X(0), Y(.84)); g.lineTo(X(0), Y(.92)); g.stroke();  // 입구 = 외곽선 틈
-  g.fillStyle = &quot;#7A7A72&quot;; g.textAlign = &quot;left&quot;; g.fillText(&quot;입구&quot;, X(.03), Y(.95));                // 좌하단 라벨
+  g.fillStyle = &quot;#505050&quot;; g.textAlign = &quot;left&quot;;  g.fillText(&quot;입구&quot;, X(.18), Y(.06));
+  g.fillStyle = &quot;#6B6B5E&quot;; g.font = &quot;700 11px system-ui, sans-serif&quot;; g.fillText(&quot;통로&quot;, X(.03), Y(.5));
+  g.font = &quot;700 12px system-ui, sans-serif&quot;;
+  g.fillStyle = &quot;#FF7260&quot;; g.textAlign = &quot;center&quot;; g.fillText(&quot;배식대&quot;, X(.26), Y(.94));
+  g.fillStyle = &quot;#505050&quot;; g.textAlign = &quot;right&quot;;  g.fillText(&quot;퇴식구&quot;, X(.97), Y(.82));
+  g.fillStyle = &quot;#505050&quot;; g.textAlign = &quot;right&quot;;  g.fillText(&quot;출구&quot;, X(.97), Y(.5));
   if (!ok) return;
   p.points.forEach(({ x, y }) =&gt; {                                                                  // 익명 마커: 틸 원 r=5, 차콜 테두리 1px
     g.beginPath(); g.arc(X(x), Y(y), 5, 0, Math.PI * 2);
@@ -1229,8 +1251,8 @@ function renderCarbon(m) {
   $(&quot;#co2unit&quot;).textContent = `kg CO₂e · 1인분 약 ${c.portion_g} g 기준`;
   $(&quot;#vsworld&quot;).textContent = c.pct_world + &quot;%&quot;;
   $(&quot;#vskorea&quot;).textContent = c.pct_korea + &quot;%&quot;;
-  $(&quot;#carbonnote&quot;).textContent = (c.estimate ? &quot;추정치 · &quot; : &quot;&quot;) + &quot;1인분 무게는 kcal 로 환산(NEIS 는 g 미제공)&quot;
-    + ` · 배출계수: ${cs.ef_source} · 1인 평균: ${cs.capita_source} · 승용차 환산 ${c.car_km} km · 선택 기록은 이 브라우저에만 저장됩니다`;
+  $(&quot;#carbonnote&quot;).textContent = `1인분 무게 = kcal ÷ 에너지밀도 환산(NEIS 는 g 미제공) · 배출계수: ${cs.ef_source}`
+    + ` · 1인 평균: ${cs.capita_source} · 승용차 환산 ${c.car_km} km`;
   const log = loadWaste(), picked = log[day] ? log[day].frac : 0;   // 기본 선택 &quot;다 먹음&quot;
   $(&quot;#pick&quot;).querySelectorAll(&quot;div&quot;).forEach(el =&gt; {
     el.classList.toggle(&quot;on&quot;, +el.dataset.f === picked);
@@ -1751,7 +1773,7 @@ def carbon(kcal):
 <p>실행 결과 예 (오늘 1011.5 kcal): portion 562 g → 1.41 kg CO₂e → 세계 11% · 한국 5% · 승용차 8.5 km.</p>
 
 <h3>11-3. 화면</h3>
-<p>급식 카드 아래 새 카드. 도면 v4 의 ⑧ 주석과 산식 절을 그대로 따릅니다 — 틸 숫자 40px, 비교 2칸(aqua 배경), 4버튼(다 먹음·¼·½·다 남김, 기본 "다 먹음"), 월간 합산과 "다 먹음 비율" 링. localStorage 키는 <code>mb_waste</code>, 값은 날짜별 {"frac", "kg"}. 각주에 계수 출처(<code>carbon_std</code>)와 "추정" 문구. 코드는 별도 파일이 아니라 7단계 <code>static/index.html</code> 블록 안의 탄소 카드 부분(<code>#carboncard</code>, <code>renderCarbon</code>)입니다.</p>
+<p>급식 카드 아래 새 카드. 도면 v4 의 ⑧ 주석과 산식 절을 그대로 따릅니다 — 틸 숫자 40px, 비교 2칸(aqua 배경), 4버튼(다 먹음·¼·½·다 남김, 기본 "다 먹음"), 월간 합산과 "다 먹음 비율" 링. localStorage 키는 <code>mb_waste</code>, 값은 날짜별 {"frac", "kg"}. 각주는 기본 한 줄("추정치입니다 · 선택 기록은 이 브라우저에만 저장 · 산정 기준 보기")이고 "산정 기준 보기"(details)를 펼치면 계수 출처(<code>carbon_std</code>)·무게 환산·승용차 환산 전문이 나옵니다. 코드는 별도 파일이 아니라 7단계 <code>static/index.html</code> 블록 안의 탄소 카드 부분(<code>#carboncard</code>, <code>renderCarbon</code>)입니다.</p>
 
 <h3>확인</h3>
 <figure class="code">
@@ -1923,10 +1945,10 @@ python -c &quot;import json;print(json.load(open(&#x27;data/news.json&#x27;,enco
 <p>CLAUDE.md §2 의 히트맵 행은 이 단계에서 "공개 화면은 빈 평면도 위 히트맵·익명 위치 마커(순간 상태만, 이력 저장 없음)"으로 넓혔습니다(사용자 승인). 구현은 그 문장을 그대로 따릅니다: 카운팅 프로세스(지금은 mock)가 <code>data/positions.json</code> <em>한 파일</em>을 매 틱 덮어쓰고, API 는 그 파일을 읽어 줄 뿐입니다. 표(samples)에는 넣지 않으므로 "몇 시에 누가 어디 있었나"는 재구성할 수 없습니다. 좌표는 0~1 로 정규화된 숫자 두 개이고, 사람을 구분할 어떤 값도 없습니다. 파일은 <code>data/*</code> 규칙으로 git 에서 제외됩니다.</p>
 
 <h3>13-2. mock_feed — 폴리라인을 따라 배치</h3>
-<p>입구(0.08, 0.88) → 꺾임(0.5, 0.85) → (0.55, 0.25) → 배식대(0.92, 0.12) 네 점을 잇는 선 위에 대기 인원을 등간격으로 놓고 ±0.02 지터를 줍니다. 덮어쓰기는 임시 파일에 쓴 뒤 <code>os.replace</code> — API 가 반쯤 쓰인 파일을 읽는 일이 없습니다. Windows 개발 PC 에서는 API 가 읽는 찰나에 <code>os.replace</code> 가 거부될 수 있어 몇 번 재시도하고 끝내 안 되면 그 틱만 건너뜁니다(Pi 의 Linux 에서는 항상 원자적). <code>--scenario gap</code> 구간에서는 DB 와 함께 이 파일도 멈춰, 카메라가 죽은 상황이 API 의 <code>no_data</code> 로 그대로 드러납니다. 전체 파일은 6단계 블록에 있습니다.</p>
+<p>실제 카메라 시점 배치를 따라 입구(0.10, 0.08) → 좌측 통로 아래로 (0.07, 0.50) → (0.09, 0.82) → 배식대 앞(0.45, 0.88) 네 점을 잇는 선 위에 대기 인원을 등간격으로 놓고 ±0.02 지터를 줍니다. 덮어쓰기는 임시 파일에 쓴 뒤 <code>os.replace</code> — API 가 반쯤 쓰인 파일을 읽는 일이 없습니다. Windows 개발 PC 에서는 API 가 읽는 찰나에 <code>os.replace</code> 가 거부될 수 있어 몇 번 재시도하고 끝내 안 되면 그 틱만 건너뜁니다(Pi 의 Linux 에서는 항상 원자적). <code>--scenario gap</code> 구간에서는 DB 와 함께 이 파일도 멈춰, 카메라가 죽은 상황이 API 의 <code>no_data</code> 로 그대로 드러납니다. 전체 파일은 6단계 블록에 있습니다.</p>
 <figure class="code">
 <figcaption><span class="path">jobs/mock_feed.py 에 추가된 부분</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
-<pre><code class="lang-python">PATH = [(0.08, 0.88), (0.5, 0.85), (0.55, 0.25), (0.92, 0.12)]   # 입구 → 꺾임 → 배식대 (0~1 정규화 좌표)
+<pre><code class="lang-python">PATH = [(0.10, 0.08), (0.07, 0.50), (0.09, 0.82), (0.45, 0.88)]   # 입구(좌상) → 좌측 통로 아래로 → 배식대 앞(하단 중앙) — 0~1 정규화
 POSITIONS = DATA / &quot;positions.json&quot;
 
 
@@ -2019,7 +2041,7 @@ app.mount(&quot;/&quot;, StaticFiles(directory=BASE / &quot;static&quot;, html=T
 </figure>
 
 <h3>13-4. 화면 — 카드 ⑩</h3>
-<p>도면 v4 의 주석 ⑩·컴포넌트 스펙을 따릅니다. canvas(600×360, 5:3)에 벡터 평면도 — 바닥(egg2)·외곽 1.5px 차콜·우상단 멜론 점선 사각형(배식대)·좌하단 외곽선 틈과 라벨(입구) — 를 그리고 점을 틸 원(r=5, 차콜 테두리 1px)으로 찍습니다. 우상단 칩에 "N명", 각주에 "영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다". <code>no_data</code> 면 평면도만 흐리게(opacity .35) 두고 "표시할 위치 없음"을 띄웁니다. 폴링은 식권 카드의 <code>refresh()</code> 에 한 줄로 편승하고(30초), 고도·hover 는 다른 카드와 같습니다. 데스크톱 2컬럼에서는 왼쪽 컬럼 맨 아래, 모바일에서는 추이 다음입니다. 코드는 7단계 <code>static/index.html</code> 블록의 <code>#plancard</code> · <code>drawPlan</code> 부분입니다.</p>
+<p>도면 v4 의 주석 ⑩·컴포넌트 스펙을 따릅니다. canvas(600×360, 5:3)에 실제 카메라 시점 기준의 벡터 평면도 — 바닥(egg2)·외곽 1.5px 차콜, 입구 = 좌측 상단(외곽선 틈+라벨), 통로 = 좌측변의 옅은 띠, 배식대 = 하단변 좌측 끝~중앙의 멜론 점선, 퇴식구 = 우측 하단의 작은 차콜 점선, 출구 = 우측 중앙(외곽선 틈+라벨) — 를 그리고 점을 틸 원(r=5, 차콜 테두리 1px)으로 찍습니다. 우상단 칩에 "N명", 각주에 "영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다". <code>no_data</code> 면 평면도만 흐리게(opacity .35) 두고 "표시할 위치 없음"을 띄웁니다. 폴링은 식권 카드의 <code>refresh()</code> 에 한 줄로 편승하고(30초), 고도·hover 는 다른 카드와 같습니다. 데스크톱 2컬럼에서는 왼쪽 컬럼 맨 아래, 모바일에서는 추이 다음입니다. 코드는 7단계 <code>static/index.html</code> 블록의 <code>#plancard</code> · <code>drawPlan</code> 부분입니다.</p>
 
 <h3>확인</h3>
 <figure class="code">
