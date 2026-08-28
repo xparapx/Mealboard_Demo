@@ -850,56 +850,77 @@ systemctl status mealboard-api --no-pager</code></pre>
 &lt;title&gt;급식실 대기 안내&lt;/title&gt;
 &lt;link rel=&quot;manifest&quot; href=&quot;/manifest.json&quot;&gt;
 &lt;style&gt;
-  /* 팔레트: docs/ 레이아웃 도면 v3 — 네이비·크림·코랄, 그라데이션·그림자 없음 */
-  :root { --navy:#22304D; --cream:#F4EFE6; --cream2:#FBF8F3; --coral:#F26D6D;
-          --ink:#1B2133; --mute:#7A8299; --soft:#DCD5C8; --off:#B9BCC9; }
-  body { font-family: &quot;Pretendard&quot;, system-ui, sans-serif; margin: 0; background: var(--cream); color: var(--ink);
+  /* 팔레트: docs/layout.html 도면 v4 — ColorCombos #285 (차콜·에그셸·멜론). 그림자 없음, 구분은 선과 채움색으로만 */
+  :root { --char:#505050; --egg:#FFF5C3; --egg2:#FFFBE4; --paper:#FFFDF5;
+          --teal:#129793; --aqua:#9BD7D5; --melon:#FF7260;
+          --ink:#2B2B2B; --mute:#7A7A72; --soft:#E6DFB8; --off:#BDBDB5; }
+  body { font-family: &quot;Pretendard&quot;, system-ui, sans-serif; margin: 0; background: var(--egg); color: var(--ink);
          font-variant-numeric: tabular-nums; }
   main { max-width: 640px; margin: 0 auto; padding: 16px; }
-  .card { background: var(--cream2); border: 1.5px solid var(--navy); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
+  .card { background: var(--paper); border: 1.5px solid var(--char); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
   .eyebrow { font-size: 10.5px; letter-spacing: .2em; color: var(--mute); font-weight: 800; }
-  /* 히어로: 평소 네이비, 혼잡이면 코랄, 정보 없음이면 점선 */
-  .hero { background: var(--navy); color: var(--cream); position: relative; }
-  .hero .eyebrow { color: var(--cream); opacity: .8; }
-  .hero[data-level=&quot;busy&quot;] { background: var(--coral); color: #fff; }
-  .hero[data-level=&quot;off&quot;] { background: var(--cream2); color: var(--ink); border-style: dashed; }
+  /* 히어로(식권 카드) 4가지 얼굴: ok=차콜+아쿠아 칩 · wait=차콜+멜론 외곽선 칩 · busy=멜론 카드+차콜 칩 · off=점선 */
+  .hero { background: var(--char); color: var(--egg); position: relative; }
+  .hero .eyebrow { color: var(--egg); opacity: .75; }
+  .hero[data-level=&quot;busy&quot;] { background: var(--melon); color: #000; }
+  .hero[data-level=&quot;busy&quot;] .eyebrow { color: #000; opacity: .7; }
+  .hero[data-level=&quot;off&quot;] { background: var(--egg2); color: var(--ink); border-style: dashed; }
   .hero[data-level=&quot;off&quot;] .eyebrow { color: var(--mute); opacity: 1; }
   .wait { font-size: 92px; font-weight: 800; line-height: .9; letter-spacing: -.04em; color: #fff; }
+  .hero[data-level=&quot;busy&quot;] .wait { color: #000; }
   .hero[data-level=&quot;off&quot;] .wait { color: var(--off); }
   .wait small { font-size: 22px; font-weight: 600; margin-left: 4px; opacity: .9; }
   #state { display: inline-block; margin-top: 14px; padding: 6px 14px; border-radius: 999px; font-size: 13px;
-           font-weight: 800; border: 1.5px solid var(--cream); background: var(--cream); color: var(--navy); }
-  .hero[data-level=&quot;wait&quot;] #state { background: transparent; color: var(--coral); border-color: var(--coral); }
-  .hero[data-level=&quot;busy&quot;] #state { background: var(--navy); color: #fff; border-color: var(--navy); }
+           font-weight: 800; border: 1.5px solid var(--aqua); background: var(--aqua); color: var(--char); }
+  .hero[data-level=&quot;wait&quot;] #state { background: transparent; color: var(--melon); border-color: var(--melon); }
+  .hero[data-level=&quot;busy&quot;] #state { background: var(--char); color: var(--egg); border-color: var(--char); }
   .hero[data-level=&quot;off&quot;] #state { background: transparent; color: var(--mute); border-color: var(--off); }
-  .dot { position: absolute; right: 18px; top: 18px; width: 14px; height: 14px; border-radius: 50%; background: var(--coral); }
-  .hero[data-level=&quot;busy&quot;] .dot { background: var(--navy); }
+  .dot { position: absolute; right: 18px; top: 18px; width: 14px; height: 14px; border-radius: 50%; background: var(--teal); }  /* 라이브 */
+  .hero[data-level=&quot;busy&quot;] .dot { background: var(--char); }
   .hero[data-level=&quot;off&quot;] .dot { background: var(--off); }
   .row { display: flex; justify-content: space-between; margin-top: 18px; padding-top: 12px; font-size: 13px; }
-  .hero .row { border-top: 1px dashed rgba(244,239,230,.4); }
+  .hero .row { border-top: 1px dashed rgba(255,245,195,.35); }
+  .hero .row b { color: #fff; }
+  .hero[data-level=&quot;busy&quot;] .row { border-top-color: rgba(0,0,0,.3); }
+  .hero[data-level=&quot;busy&quot;] .row b { color: #000; }
   .hero[data-level=&quot;off&quot;] .row { border-top-color: var(--soft); }
+  .hero[data-level=&quot;off&quot;] .row b { color: var(--ink); }
   .row b { font-size: 16px; font-weight: 800; }
   .muted { color: var(--mute); font-size: 11px; }
-  canvas { width: 100%; height: 72px; display: block; border-bottom: 1.5px solid var(--navy); margin-top: 8px; }
+  canvas { width: 100%; height: 72px; display: block; border-bottom: 1.5px solid var(--char); margin-top: 8px; }
   ul { margin: 8px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 14px; }
   li { padding-left: 14px; position: relative; }
-  li::before { content: &quot;&quot;; position: absolute; left: 0; top: .6em; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--navy); }
+  li::before { content: &quot;&quot;; position: absolute; left: 0; top: .6em; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--char); }
   li:first-child { grid-column: 1 / -1; font-weight: 800; font-size: 15px; }
-  li:first-child::before { background: var(--coral); border-color: var(--coral); }
+  li:first-child::before { background: var(--melon); border-color: var(--melon); }
+  /* 영양 3칸: 색은 칸의 정체성(01 틸 · 02 아쿠아 · 03 멜론), 상태는 우상단 플래그 — 둘을 섞지 않는다 */
   .kpi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; counter-reset: k; }
-  .kpi &gt; div { border: 1.5px solid var(--navy); border-radius: 12px; padding: 8px 10px; counter-increment: k; }
-  .kpi &gt; div::before { content: &quot;0&quot; counter(k); font-size: 10px; font-weight: 800; letter-spacing: .1em; color: var(--coral); display: block; }
-  .kpi b { display: block; font-size: 20px; font-weight: 800; color: var(--navy); }
-  .kpi b.bad { color: var(--coral); }
-  .kpi span { font-size: 11px; color: var(--mute); }
-  details summary { list-style: none; cursor: pointer; font-size: 12px; color: var(--navy); font-weight: 800; letter-spacing: .08em; margin-top: 12px; }
+  .kpi &gt; div { border: 1.5px solid var(--char); border-radius: 12px; padding: 8px 10px; position: relative; counter-increment: k; }
+  .kpi &gt; div:nth-child(1) { background: var(--teal); color: #000; }
+  .kpi &gt; div:nth-child(2) { background: var(--aqua); color: var(--char); }
+  .kpi &gt; div:nth-child(3) { background: var(--melon); color: #000; }
+  .kpi &gt; div::before { content: &quot;0&quot; counter(k); font-size: 10px; font-weight: 800; letter-spacing: .1em; opacity: .7; display: block; }
+  .kpi b { display: block; font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
+  .kpi span { font-size: 11px; opacity: .8; }
+  .kpi .flag { position: absolute; right: 8px; top: 8px; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 999px;
+               background: rgba(0,0,0,.18); opacity: 1; }
+  .kpi .flag:empty { display: none; }
+  details summary { list-style: none; cursor: pointer; font-size: 12px; color: var(--teal); font-weight: 800; letter-spacing: .08em; margin-top: 12px; }
   details summary::-webkit-details-marker { display: none; }
-  .bar { display: grid; grid-template-columns: 96px 1fr 44px; align-items: center; gap: 8px; font-size: 12px; margin: 5px 0; }
-  .track { position: relative; height: 10px; background: var(--cream); border: 1.5px solid var(--navy); border-radius: 6px; }
-  .track i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--navy); }
-  .track i.부족 { background: var(--coral); }
-  .track i.과다 { background: repeating-linear-gradient(135deg, var(--navy) 0 3px, transparent 3px 6px); }
-  .track::after { content: &quot;&quot;; position: absolute; left: 66.7%; top: -5px; bottom: -5px; width: 2px; background: var(--coral); }  /* 권장섭취량 100% */
+  /* 영양소 막대: 6개 고유색(틸→아쿠아→차콜 램프). 부족은 막대색 유지 + 멜론 외곽선 + 라벨. 수용성 비타민은 과다 없음 */
+  .bar { display: grid; grid-template-columns: 90px 1fr 64px; align-items: center; gap: 8px; font-size: 12px; margin: 5px 0; }
+  .track { position: relative; height: 10px; background: var(--egg2); border: 1.5px solid var(--char); border-radius: 6px; }
+  .track i { position: absolute; left: 0; top: 0; bottom: 0; }
+  .bar:nth-child(1) .track i { background: #129793; }
+  .bar:nth-child(2) .track i { background: #3FA9A5; }
+  .bar:nth-child(3) .track i { background: #6FC2BF; }
+  .bar:nth-child(4) .track i { background: #9BD7D5; }
+  .bar:nth-child(5) .track i { background: #7C7C7C; }
+  .bar:nth-child(6) .track i { background: #505050; }
+  .bar.short .track { border-color: var(--melon); box-shadow: inset 0 0 0 1px var(--melon); }
+  .bar.short b { color: var(--melon); }
+  .bar.short b::after { content: &quot; 부족&quot;; font-size: 10px; }
+  .track::after { content: &quot;&quot;; position: absolute; left: 66.7%; top: -5px; bottom: -5px; width: 2px; background: var(--melon); }  /* 권장섭취량 100% */
   .bar b { text-align: right; font-weight: 800; }
 &lt;/style&gt;
 &lt;/head&gt;
@@ -928,9 +949,9 @@ systemctl status mealboard-api --no-pager</code></pre>
     &lt;div class=&quot;eyebrow&quot;&gt;오늘 중식&lt;/div&gt;
     &lt;ul id=&quot;menu&quot;&gt;&lt;/ul&gt;
     &lt;div class=&quot;kpi&quot;&gt;
-      &lt;div&gt;&lt;b id=&quot;energy&quot;&gt;—&lt;/b&gt;&lt;span&gt;에너지 충족&lt;/span&gt;&lt;/div&gt;
+      &lt;div&gt;&lt;b id=&quot;energy&quot;&gt;—&lt;/b&gt;&lt;span&gt;에너지 충족&lt;/span&gt;&lt;span class=&quot;flag&quot; id=&quot;energyflag&quot;&gt;&lt;/span&gt;&lt;/div&gt;
       &lt;div&gt;&lt;b id=&quot;ratio&quot;&gt;—&lt;/b&gt;&lt;span&gt;탄·단·지 비율&lt;/span&gt;&lt;/div&gt;
-      &lt;div&gt;&lt;b id=&quot;mar&quot;&gt;—&lt;/b&gt;&lt;span&gt;미량영양소&lt;/span&gt;&lt;/div&gt;
+      &lt;div&gt;&lt;b id=&quot;mar&quot;&gt;—&lt;/b&gt;&lt;span&gt;미량영양소&lt;/span&gt;&lt;span class=&quot;flag&quot; id=&quot;marflag&quot;&gt;&lt;/span&gt;&lt;/div&gt;
     &lt;/div&gt;
     &lt;details&gt;&lt;summary&gt;▸ 영양소별 보기&lt;/summary&gt;&lt;div id=&quot;micro&quot; style=&quot;margin-top:8px&quot;&gt;&lt;/div&gt;&lt;/details&gt;
     &lt;div class=&quot;muted&quot; id=&quot;stdnote&quot; style=&quot;margin-top:8px&quot;&gt;&lt;/div&gt;
@@ -971,12 +992,19 @@ function drawChart(rows) {
   const pts = rows.filter(r =&gt; r.wait_min != null);
   if (pts.length &lt; 2) return;
   const max = Math.max(5, ...pts.map(r =&gt; r.wait_min));
-  g.beginPath(); g.strokeStyle = &quot;#22304D&quot;; g.lineWidth = 2;
-  pts.forEach((r, i) =&gt; {
-    const x = i / (pts.length - 1) * c.width;
-    const y = c.height - r.wait_min / max * (c.height - 10) - 5;
-    i ? g.lineTo(x, y) : g.moveTo(x, y);
-  });
+  const xy = pts.map((r, i) =&gt; [i / (pts.length - 1) * c.width,
+                                c.height - r.wait_min / max * (c.height - 10) - 5]);
+  // 면 채움: 위(높은 값)로 갈수록 진한 틸, 아래는 투명 — 봉우리가 스스로 강조된다
+  const grad = g.createLinearGradient(0, 0, 0, c.height);
+  grad.addColorStop(0, &quot;rgba(18,151,147,.9)&quot;);
+  grad.addColorStop(.55, &quot;rgba(18,151,147,.35)&quot;);
+  grad.addColorStop(1, &quot;rgba(155,215,213,0)&quot;);
+  g.beginPath();
+  xy.forEach(([x, y], i) =&gt; i ? g.lineTo(x, y) : g.moveTo(x, y));
+  g.lineTo(c.width, c.height); g.lineTo(0, c.height); g.closePath();
+  g.fillStyle = grad; g.fill();
+  g.beginPath(); g.strokeStyle = &quot;#129793&quot;; g.lineWidth = 2;
+  xy.forEach(([x, y], i) =&gt; i ? g.lineTo(x, y) : g.moveTo(x, y));
   g.stroke();
 }
 
@@ -990,17 +1018,19 @@ async function loadMeal() {
   $(&quot;#menu&quot;).innerHTML = m.today.menu.map(x =&gt; `&lt;li&gt;${x}&lt;/li&gt;`).join(&quot;&quot;);
   const a = m.today.assess;
   $(&quot;#energy&quot;).textContent = a.energy_pct == null ? &quot;—&quot; : a.energy_pct + &quot;%&quot;;
-  $(&quot;#mar&quot;).textContent = a.mar == null ? &quot;—&quot; : a.mar + &quot;%&quot;;
+  $(&quot;#energyflag&quot;).textContent = a.energy_pct == null ? &quot;&quot;
+    : a.energy_pct &gt; 110 ? &quot;많음&quot; : a.energy_pct &lt; 90 ? &quot;적음&quot; : &quot;&quot;;
   $(&quot;#ratio&quot;).textContent = a.macro_ratio_ok ? &quot;적정&quot; : &quot;범위 밖&quot;;
-  $(&quot;#ratio&quot;).className = a.macro_ratio_ok ? &quot;&quot; : &quot;bad&quot;;
   $(&quot;#ratio&quot;).title = `탄 ${a.macro_ratio.carb} · 단 ${a.macro_ratio.protein} · 지 ${a.macro_ratio.fat} %`;
-  $(&quot;#mar&quot;).className = a.mar &lt; 90 ? &quot;bad&quot; : &quot;&quot;;
+  $(&quot;#mar&quot;).textContent = a.mar == null ? &quot;—&quot; : a.mar + &quot;%&quot;;
+  const short = a.micro.filter(x =&gt; x.band === &quot;부족&quot;).length;
+  $(&quot;#marflag&quot;).textContent = short ? `부족 ${short}` : &quot;&quot;;
   $(&quot;#micro&quot;).innerHTML = a.micro.map(x =&gt;
-    `&lt;div class=&quot;bar&quot;&gt;&lt;span&gt;${x.label}&lt;/span&gt;
-       &lt;div class=&quot;track&quot;&gt;&lt;i class=&quot;${x.band}&quot; style=&quot;width:${Math.min(x.pct, 150) / 1.5}%&quot;&gt;&lt;/i&gt;&lt;/div&gt;
+    `&lt;div class=&quot;bar${x.band === &quot;부족&quot; ? &quot; short&quot; : &quot;&quot;}&quot;&gt;&lt;span&gt;${x.label}&lt;/span&gt;
+       &lt;div class=&quot;track&quot;&gt;&lt;i style=&quot;width:${Math.min(x.pct, 150) / 1.5}%&quot;&gt;&lt;/i&gt;&lt;/div&gt;
        &lt;b&gt;${x.pct}%&lt;/b&gt;&lt;/div&gt;`).join(&quot;&quot;);
   $(&quot;#stdnote&quot;).textContent =
-    `기준: ${m.std.group} · ${m.std.source} · 코랄 세로선 = 권장섭취량. 영양교사 산출값 기준 참고 지표입니다.`;
+    `기준: ${m.std.group} · ${m.std.source} · 멜론 세로선 = 권장섭취량. 영양교사 산출값 기준 참고 지표입니다.`;
 }
 
 refresh(); loadMeal();
@@ -1010,7 +1040,7 @@ if (&quot;serviceWorker&quot; in navigator) navigator.serviceWorker.register(&qu
 &lt;/body&gt;
 &lt;/html&gt;</code></pre>
 </figure>
-<p>색과 구조는 <code>docs/</code> 의 레이아웃 도면 v3(네이비·크림·코랄)를 따릅니다. 급식 카드의 막대는 8단계의 영양 지표를 그립니다. 코랄 세로선(66.7% 위치)이 권장섭취량 100% 이고, 막대가 네이비면 적정·코랄이면 부족·빗금이면 과다입니다. 미리 만들어 두는 이유는 8단계 결과를 바로 눈으로 보기 위해서입니다.</p>
+<p>색과 구조는 <code>docs/layout.html</code> 의 레이아웃 도면 v4(ColorCombos #285 — 차콜·에그셸·멜론, 보조로 틸·아쿠아)를 따릅니다. 식권 카드는 상태에 따라 네 얼굴을 갖고(여유=차콜+아쿠아 칩, 배식 대기=멜론 외곽선 칩, 혼잡=멜론 카드+차콜 칩, 정보 없음=점선), 스파크라인은 위가 진한 틸 그라데이션으로 봉우리를 강조합니다. 급식 카드의 영양 3칸은 고유색(01 틸·02 아쿠아·03 멜론)이 칸의 정체성이고 상태는 우상단 플래그(많음·적음·부족 N)로만 표시합니다. 영양소 막대는 6개가 각각 고유색이며, 멜론 세로선(66.7% 위치)이 권장섭취량 100%, 부족이면 막대색은 그대로 두고 트랙에 멜론 외곽선과 "부족" 라벨을 붙입니다. 미리 만들어 두는 이유는 8단계 결과를 바로 눈으로 보기 위해서입니다.</p>
 
 <h3>7-2. PWA 파일 두 개</h3>
 <p>PWA 는 "홈 화면에 추가"가 되는 웹페이지입니다. <code>manifest.json</code> 이 이름·아이콘을, <code>sw.js</code> 가 오프라인 캐시를 맡습니다. <strong>sw.js 에서 <code>/api/</code> 를 캐시하면 30초 폴링이 캐시된 옛 값만 돌려주는 함정</strong>이 있어, API 요청은 통과시키고 정적 파일만 캐시합니다.</p>
