@@ -71,7 +71,7 @@ strong{color:var(--ink)}
 <nav>
 <h1>Mealboard 구축 매뉴얼</h1>
 <p class="sub">홈 Pi 5 · 카메라 제외 · 2026-08</p>
-<a href="#s0"><span class="n">0</span><span>시작하기 전에</span><small>읽기</small></a><a href="#s1"><span class="n">1</span><span>Pi 기본 설정 — 시각, 계정, 원격 접속</span><small>Pi</small></a><a href="#s2"><span class="n">2</span><span>저장소 뼈대 — GitHub 에 프로젝트 만들기</span><small>저장소</small></a><a href="#s3"><span class="n">3</span><span>설치 스크립트와 systemd 유닛</span><small>Pi · 저장소</small></a><a href="#s4"><span class="n">4</span><span>대기시간 계산 — 순수 로직과 테스트</span><small>앱</small></a><a href="#s5"><span class="n">5</span><span>데이터베이스와 API</span><small>앱</small></a><a href="#s6"><span class="n">6</span><span>mock_feed — 카메라 대역</span><small>앱</small></a><a href="#s7"><span class="n">7</span><span>대시보드 화면</span><small>앱</small></a><a href="#s8"><span class="n">8</span><span>NEIS 급식 정보와 영양 지표</span><small>데이터</small></a><a href="#s9"><span class="n">9</span><span>외부 공개 — Cloudflare Tunnel, PWA, QR</span><small>공개</small></a><a href="#s10"><span class="n">10</span><span>검증 체크리스트, 진단 순서, 이식</span><small>운영</small></a>
+<a href="#s0"><span class="n">0</span><span>시작하기 전에</span><small>읽기</small></a><a href="#s1"><span class="n">1</span><span>Pi 기본 설정 — 시각, 계정, 원격 접속</span><small>Pi</small></a><a href="#s2"><span class="n">2</span><span>저장소 뼈대 — GitHub 에 프로젝트 만들기</span><small>저장소</small></a><a href="#s3"><span class="n">3</span><span>설치 스크립트와 systemd 유닛</span><small>Pi · 저장소</small></a><a href="#s4"><span class="n">4</span><span>대기시간 계산 — 순수 로직과 테스트</span><small>앱</small></a><a href="#s5"><span class="n">5</span><span>데이터베이스와 API</span><small>앱</small></a><a href="#s6"><span class="n">6</span><span>mock_feed — 카메라 대역</span><small>앱</small></a><a href="#s7"><span class="n">7</span><span>대시보드 화면</span><small>앱</small></a><a href="#s8"><span class="n">8</span><span>NEIS 급식 정보와 영양 지표</span><small>데이터</small></a><a href="#s9"><span class="n">9</span><span>외부 공개 — Cloudflare Tunnel, PWA, QR</span><small>공개</small></a><a href="#s10"><span class="n">10</span><span>검증 체크리스트, 진단 순서, 이식</span><small>운영</small></a><a href="#s11"><span class="n">11</span><span>탄소 카드 — 잔반의 배출량</span><small>확장</small></a><a href="#s12"><span class="n">12</span><span>이슈 링크 — 기후·탄소 뉴스</span><small>확장</small></a>
 </nav>
 <main>
 <div class="hero">
@@ -1441,6 +1441,220 @@ timedatectl | grep synchronized ; vcgencmd measure_temp ; df -h / | tail -1</cod
 <figure class="code">
 <figcaption><span class="path">README.md 「작업 로그」</span><button class="copy" type="button">복사</button></figcaption>
 <pre><code class="lang-bash">- **2026-08**: 홈 Pi 5 스테이징 완성 — mock_feed·api·대시보드·NEIS 영양 지표·systemd 자동실행. 카메라(vision)·calibrate 는 학교 Pi 이전 시</code></pre>
+</figure>
+
+</section><section id="s11" class="step">
+<header><span class="stepnum">STEP 11</span><h2>탄소 카드 — 잔반의 배출량</h2><span class="layer">확장</span></header>
+<div class="sysmap" aria-label="시스템 지도">
+  <div class="lane"><em>개발 흐름</em><div class="node" data-k="pc"><b>개발 PC</b><span>코드 작성 · Claude Code 실행 · git push</span></div><i>git push →</i><div class="node" data-k="gh"><b>GitHub</b><span>저장소 원본 (팀 공용)</span></div><i>git pull →</i><div class="node" data-k="pi"><b>홈 Pi 5</b><span>실제로 서비스가 도는 곳</span></div></div>
+  <div class="lane"><em>Pi 안 · 데이터</em><div class="node" data-k="mock"><b>mock_feed</b><span>가짜 대기 인원 생성 (vision 대역)</span></div><i>또는</i><div class="node" data-k="vision"><b>vision</b><span>카메라 카운팅 — 학교 Pi 에서만</span></div><i>쓰기 →</i><div class="node" data-k="db"><b>queue.db</b><span>SQLite · 숫자만 저장</span></div><i>← 읽기</i><div class="node on" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div></div>
+  <div class="lane"><em>Pi 안 · 급식</em><div class="node on" data-k="neis"><b>fetch_neis</b><span>NEIS 급식 API → 영양 지표</span></div><i>하루 1회 →</i><div class="node on" data-k="meal"><b>meal.json</b><span>오늘·이번 주 급식 캐시</span></div><i>← 읽기</i><div class="node on" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div><i>→</i><div class="node on" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div></div>
+  <div class="lane"><em>공개</em><div class="node on" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div><i>→</i><div class="node" data-k="cf"><b>cloudflared</b><span>학교망 밖으로 내보내는 터널</span></div><i>→ 인터넷 →</i><div class="node" data-k="user"><b>학생·교사</b><span>QR → 휴대폰</span></div><i>· 전부</i><div class="node" data-k="sysd"><b>systemd</b><span>부팅 시 자동 실행 · 재시작</span></div><i>가 관리</i></div>
+</div>
+
+<p class="goal">목표: 급식 카드 아래에 "오늘 1인분을 다 남기면 몇 kg CO₂e 이고, 세계·한국 1인 하루 평균의 몇 %인가"가 뜨고, 학생이 4버튼으로 자기 기록을 브라우저에만 쌓는 상태. 산식·색·문구는 <code>docs/layout.html</code> 도면 v4 의 "탄소 카드 산식" 절이 스펙.</p>
+
+<h3>11-1. 원칙</h3>
+<p>숫자 세 개(1인분 무게, 배출계수, 1인 평균)가 전부 추정입니다. 그래서 ① 계수는 코드가 아니라 <code>data/carbon_std.json</code> 한 파일에 출처와 함께, ② 화면에 "추정" 표기, ③ 4버튼 선택은 서버로 보내지 않고 localStorage 에만(쓰기 주체 원칙 유지). 죄책감 문구 금지 — 기본 선택은 "다 먹음".</p>
+<figure class="code">
+<figcaption><span class="path">data/carbon_std.json</span><span class="lang">json</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-json">{
+  &quot;note&quot;: &quot;탄소 카드 계수. 전부 추정치 — 값과 출처를 확인 후 갱신할 것. 화면에는 반드시 &#x27;추정&#x27; 표기.&quot;,
+  &quot;energy_density_kcal_per_g&quot;: 1.8,
+  &quot;portion_g_override&quot;: null,
+  &quot;ef_kgco2e_per_kg&quot;: 2.5,
+  &quot;ef_source&quot;: &quot;FAO Food Wastage Footprint(2013) 전과정 전 지구 평균&quot;,
+  &quot;world_daily_kg&quot;: 12.9,
+  &quot;korea_daily_kg&quot;: 30.0,
+  &quot;capita_source&quot;: &quot;Our World in Data 1인당 연간 CO2 ÷ 365 (세계 약 4.7t, 한국 약 11t)&quot;,
+  &quot;car_km_per_kgco2e&quot;: 6.0
+}</code></pre>
+</figure>
+<p><code>.gitignore</code> 에 예외 한 줄 추가: <code>!data/carbon_std.json</code></p>
+
+<h3>11-2. fetch_neis 에 계산 추가</h3>
+<figure class="code">
+<figcaption><span class="path">jobs/fetch_neis.py 에 추가할 부분</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python"># jobs/fetch_neis.py 에 추가되는 부분 (STD 로드 아래에 CARBON 로드, assess 아래에 carbon 함수)
+
+CARBON = json.loads((DATA / &quot;carbon_std.json&quot;).read_text(encoding=&quot;utf-8&quot;))
+
+
+def carbon(kcal):
+    &quot;&quot;&quot;오늘 1인분을 전량 잔반 처리했을 때의 추정 배출량과 비교값&quot;&quot;&quot;
+    if not kcal:
+        return None
+    g = CARBON[&quot;portion_g_override&quot;] or round(kcal / CARBON[&quot;energy_density_kcal_per_g&quot;])
+    kg = round(g / 1000 * CARBON[&quot;ef_kgco2e_per_kg&quot;], 2)
+    return {&quot;portion_g&quot;: g, &quot;kgco2e&quot;: kg,
+            &quot;pct_world&quot;: round(kg / CARBON[&quot;world_daily_kg&quot;] * 100),
+            &quot;pct_korea&quot;: round(kg / CARBON[&quot;korea_daily_kg&quot;] * 100),
+            &quot;car_km&quot;: round(kg * CARBON[&quot;car_km_per_kgco2e&quot;], 1),
+            &quot;estimate&quot;: True}
+
+# week.append 의 딕셔너리에 한 항목 추가:
+#   &quot;carbon&quot;: carbon(kcal),
+# out 딕셔너리에 출처 항목 추가 (프론트 각주용):
+#   &quot;carbon_std&quot;: {&quot;ef_source&quot;: CARBON[&quot;ef_source&quot;], &quot;capita_source&quot;: CARBON[&quot;capita_source&quot;]},</code></pre>
+</figure>
+<p>실행 결과 예 (오늘 1011.5 kcal): portion 562 g → 1.41 kg CO₂e → 세계 11% · 한국 5% · 승용차 8.5 km.</p>
+
+<h3>11-3. 화면</h3>
+<p>급식 카드 아래 새 카드. 도면 v4 의 ⑧ 주석과 산식 절을 그대로 따릅니다 — 틸 숫자 40px, 비교 2칸(aqua 배경), 4버튼(다 먹음·¼·½·다 남김, 기본 "다 먹음"), 월간 합산과 "다 먹음 비율" 링. localStorage 키는 <code>mb_waste</code>, 값은 날짜별 {"frac", "kg"}. 각주에 계수 출처(<code>carbon_std</code>)와 "추정" 문구.</p>
+
+<h3>확인</h3>
+<figure class="code">
+<figcaption><span class="path">개발 PC</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">uv run python -m jobs.fetch_neis
+python -c &quot;import json;d=json.load(open(&#x27;data/meal.json&#x27;,encoding=&#x27;utf-8&#x27;));print(d[&#x27;today&#x27;][&#x27;carbon&#x27;])&quot;
+# 브라우저: 버튼을 눌러 새로고침 후에도 선택이 유지되는지 (localStorage)</code></pre>
+</figure>
+
+</section><section id="s12" class="step">
+<header><span class="stepnum">STEP 12</span><h2>이슈 링크 — 기후·탄소 뉴스</h2><span class="layer">확장</span></header>
+<div class="sysmap" aria-label="시스템 지도">
+  <div class="lane"><em>개발 흐름</em><div class="node" data-k="pc"><b>개발 PC</b><span>코드 작성 · Claude Code 실행 · git push</span></div><i>git push →</i><div class="node" data-k="gh"><b>GitHub</b><span>저장소 원본 (팀 공용)</span></div><i>git pull →</i><div class="node" data-k="pi"><b>홈 Pi 5</b><span>실제로 서비스가 도는 곳</span></div></div>
+  <div class="lane"><em>Pi 안 · 데이터</em><div class="node" data-k="mock"><b>mock_feed</b><span>가짜 대기 인원 생성 (vision 대역)</span></div><i>또는</i><div class="node" data-k="vision"><b>vision</b><span>카메라 카운팅 — 학교 Pi 에서만</span></div><i>쓰기 →</i><div class="node" data-k="db"><b>queue.db</b><span>SQLite · 숫자만 저장</span></div><i>← 읽기</i><div class="node on" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div></div>
+  <div class="lane"><em>Pi 안 · 급식</em><div class="node on" data-k="neis"><b>fetch_neis</b><span>NEIS 급식 API → 영양 지표</span></div><i>하루 1회 →</i><div class="node" data-k="meal"><b>meal.json</b><span>오늘·이번 주 급식 캐시</span></div><i>← 읽기</i><div class="node on" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div><i>→</i><div class="node on" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div></div>
+  <div class="lane"><em>공개</em><div class="node on" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div><i>→</i><div class="node" data-k="cf"><b>cloudflared</b><span>학교망 밖으로 내보내는 터널</span></div><i>→ 인터넷 →</i><div class="node" data-k="user"><b>학생·교사</b><span>QR → 휴대폰</span></div><i>· 전부</i><div class="node" data-k="sysd"><b>systemd</b><span>부팅 시 자동 실행 · 재시작</span></div><i>가 관리</i></div>
+</div>
+
+<p class="goal">목표: 대시보드 맨 아래에 기후·탄소 이슈 3건이 제목·출처·날짜·링크로 뜨고, 매일 06:10 자동 갱신되는 상태. NEIS 와 같은 패턴의 두 번째 사례입니다: job → json 캐시 → /api/news → 카드.</p>
+
+<h3>12-1. 피드 목록과 잡</h3>
+<p>본문 요약은 넣지 않습니다(저작권 — 제목·출처·링크는 표시 가능, 요약은 로드맵 ⑦ LLM 에서). 피드 주소는 설정 파일에 두고, <strong>구현 시 curl 로 각 주소가 200 + XML 인지 확인 후 확정</strong>합니다. 구글뉴스 RSS 는 검색어 기반이라 안정적인 출발점이고, 환경부·교육청 보도자료 RSS 를 확인해 교체·추가하면 됩니다.</p>
+<figure class="code">
+<figcaption><span class="path">data/news_feeds.json</span><span class="lang">json</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-json">{
+  &quot;note&quot;: &quot;이슈 링크 RSS 목록. 주소는 구현 시 curl 로 200·XML 인지 확인 후 확정. 학교·지역에 맞게 교체 가능.&quot;,
+  &quot;max_items&quot;: 3,
+  &quot;feeds&quot;: [
+    {&quot;name&quot;: &quot;구글뉴스 탄소중립&quot;, &quot;url&quot;: &quot;https://news.google.com/rss/search?q=%ED%83%84%EC%86%8C%EC%A4%91%EB%A6%BD&amp;hl=ko&amp;gl=KR&amp;ceid=KR:ko&quot;},
+    {&quot;name&quot;: &quot;구글뉴스 기후 급식&quot;, &quot;url&quot;: &quot;https://news.google.com/rss/search?q=%EA%B8%B0%ED%9B%84%EB%B3%80%ED%99%94%20%EA%B8%89%EC%8B%9D&amp;hl=ko&amp;gl=KR&amp;ceid=KR:ko&quot;}
+  ]
+}</code></pre>
+</figure>
+<p><code>.gitignore</code> 예외 추가: <code>!data/news_feeds.json</code></p>
+<figure class="code">
+<figcaption><span class="path">jobs/fetch_news.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">&quot;&quot;&quot;기후·탄소 이슈 RSS → data/news.json  (하루 1회, systemd timer)
+제목·출처·날짜·링크만 저장한다. 본문 요약은 넣지 않는다(저작권, LLM 요약은 로드맵 ⑦).
+
+실행:  uv run python -m jobs.fetch_news
+&quot;&quot;&quot;
+import datetime as dt
+import json
+import urllib.request
+import xml.etree.ElementTree as ET
+from email.utils import parsedate_to_datetime
+
+from app.config import DATA
+
+FEEDS_FILE = DATA / &quot;news_feeds.json&quot;
+OUT = DATA / &quot;news.json&quot;
+
+
+def fetch(url):
+    req = urllib.request.Request(url, headers={&quot;User-Agent&quot;: &quot;Mealboard/0.1&quot;})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return ET.fromstring(r.read())
+
+
+def main():
+    cfg = json.loads(FEEDS_FILE.read_text(encoding=&quot;utf-8&quot;))
+    items = []
+    for f in cfg[&quot;feeds&quot;]:
+        try:
+            root = fetch(f[&quot;url&quot;])
+        except Exception as e:                       # 피드 하나가 죽어도 나머지는 진행
+            print(f&quot;건너뜀 {f[&#x27;name&#x27;]}: {e}&quot;)
+            continue
+        for it in root.iter(&quot;item&quot;):
+            title = (it.findtext(&quot;title&quot;) or &quot;&quot;).strip()
+            link = (it.findtext(&quot;link&quot;) or &quot;&quot;).strip()
+            src = (it.findtext(&quot;source&quot;) or f[&quot;name&quot;]).strip()
+            try:
+                d = parsedate_to_datetime(it.findtext(&quot;pubDate&quot;))
+            except Exception:
+                d = None
+            if title and link:
+                items.append({&quot;title&quot;: title, &quot;link&quot;: link, &quot;source&quot;: src,
+                              &quot;date&quot;: d.strftime(&quot;%m-%d&quot;) if d else &quot;&quot;,
+                              &quot;_ts&quot;: d.timestamp() if d else 0})
+    items.sort(key=lambda x: -x[&quot;_ts&quot;])
+    seen, top = set(), []
+    for x in items:                                   # 제목 앞부분으로 중복 제거
+        key = x[&quot;title&quot;][:40]
+        if key in seen:
+            continue
+        seen.add(key)
+        x.pop(&quot;_ts&quot;)
+        top.append(x)
+        if len(top) &gt;= cfg.get(&quot;max_items&quot;, 3):
+            break
+    OUT.write_text(json.dumps({&quot;fetched_at&quot;: dt.datetime.now().isoformat(timespec=&quot;seconds&quot;),
+                               &quot;state&quot;: &quot;ok&quot; if top else &quot;no_data&quot;,
+                               &quot;items&quot;: top}, ensure_ascii=False, indent=1), encoding=&quot;utf-8&quot;)
+    print(f&quot;저장 {OUT}  {len(top)}건&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    main()</code></pre>
+</figure>
+
+<h3>12-2. 창구와 타이머</h3>
+<figure class="code">
+<figcaption><span class="path">app/routers/news.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">import json
+from fastapi import APIRouter
+from ..config import DATA
+
+router = APIRouter()
+
+
+@router.get(&quot;/api/news&quot;)
+def news():
+    p = DATA / &quot;news.json&quot;
+    if not p.exists():
+        return {&quot;state&quot;: &quot;no_data&quot;, &quot;items&quot;: []}
+    return json.loads(p.read_text(encoding=&quot;utf-8&quot;))</code></pre>
+</figure>
+<p><code>app/main.py</code> 에 <code>from .routers import news</code> 와 <code>app.include_router(news.router)</code> 추가 (static mount 보다 위).</p>
+<figure class="code">
+<figcaption><span class="path">deploy/mealboard-news.service</span><span class="lang">ini</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-ini">[Unit]
+Description=Mealboard 이슈 링크 갱신 (1회 실행)
+
+[Service]
+Type=oneshot
+User=__USER__
+WorkingDirectory=/opt/mealboard
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/mealboard/.venv/bin/python -m jobs.fetch_news</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">deploy/mealboard-news.timer</span><span class="lang">ini</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-ini">[Unit]
+Description=매일 06:10 이슈 링크 갱신 (05:40 NEIS 와 간격)
+
+[Timer]
+OnCalendar=*-*-* 06:10:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target</code></pre>
+</figure>
+<p><code>setup_pi.sh</code> 의 enable 줄에 <code>mealboard-news.timer</code> 추가.</p>
+
+<h3>12-3. 화면</h3>
+<p>도면 v4 의 ⑨ 카드: 제목 1줄(40자 말줄임) + 출처 + 날짜, 탭 시 새 창(<code>target="_blank" rel="noopener"</code>). <code>state:no_data</code> 면 카드 숨김.</p>
+
+<h3>확인</h3>
+<figure class="code">
+<figcaption><span class="path">개발 PC</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">uv run python -m jobs.fetch_news          # &#x27;저장 ... 3건&#x27;
+python -c &quot;import json;print(json.load(open(&#x27;data/news.json&#x27;,encoding=&#x27;utf-8&#x27;))[&#x27;items&#x27;][0][&#x27;title&#x27;])&quot;
+# Pi 반영 후: systemctl list-timers &#x27;mealboard*&#x27;  → news 타이머 06:10</code></pre>
 </figure>
 
 </section>
