@@ -269,7 +269,8 @@ LUNCH_END=14:00</code></pre>
 </figure>
 <figure class="code">
 <figcaption><span class="path">.gitattributes</span><span class="lang">text</span><button class="copy" type="button">복사</button></figcaption>
-<pre><code class="lang-text">* text=auto eol=lf
+<pre><code class="lang-text"># 모든 텍스트 파일은 저장소·체크아웃 모두 LF. Windows 에서 만든 sh·service 가 Pi 에서 깨지지 않게
+* text=auto eol=lf
 *.png binary</code></pre>
 </figure>
 <p>네 파일 모두 <strong>VS Code 로 만드세요.</strong> 메모장은 <code>.gitignore.txt</code> 처럼 확장자를 붙이거나 인코딩을 바꿉니다. 점으로 시작하는 파일은 "도구에게 주는 설정"이라는 유닉스 관례이고, 점 뒤가 이름 전체입니다.</p>
