@@ -6,7 +6,9 @@
 ## 0. 현재 상태 (2026-08) — 세션 시작 시 먼저 읽을 것
 
 - **홈 Pi 5(64bit, Debian 13 Trixie, 시스템 Python 3.13) = 스테이징.** 학교 Pi도 같은 OS·Python이어야 uv.lock이 그대로 맞는다. 카메라 없음 → `mealboard-vision` 미설치, `mealboard-mock`이 대역.
-  로드맵 ④는 개발 PC 웹캠·동영상 파일로 진행. ⑤ 중 uv 셋업·systemd 는 홈 Pi 완료, cloudflared 는 9단계에서 진행 예정, calibrate만 학교 Pi 이전 시.
+  로드맵 ④는 개발 PC 웹캠·동영상 파일로 진행. ⑤ 중 uv 셋업·systemd·외부 공개는 홈 Pi 완료, calibrate만 학교 Pi 이전 시.
+- **외부 공개**: 스테이징·시범 운영은 **Tailscale Funnel**(고정 주소 `https://rsp.taild5f11e.ts.net`, `tailscale funnel --bg 8100`, 재부팅 유지).
+  정식 배포 전환 시 Cloudflare Tunnel + 유료 도메인(cloudflared 는 Pi 에 설치 완료). kro.kr 류 무료 하위 도메인은 Cloudflare 에 등록 불가.
 - **PI_HOST는 Tailscale 주소**(.env 참조). 공용 체크아웃은 `/opt/mealboard`. **Pi에서 직접 편집 금지, `git pull`만.**
   개발은 각자 PC의 클론에서 하고 Claude Code도 PC에서 실행해 SSH로 Pi를 제어한다.
 - **같은 Pi에 Plant 프로젝트가 정지 상태로 공존**(`~/plant/`, planthub·plantdash·plantsnap 유닛).
@@ -26,9 +28,9 @@ NEIS 급식 API의 메뉴·영양 정보와 함께 웹 대시보드(PWA)로 제�
 | 실행 위치 | 전부 Pi (셀프 호스팅, 모델 B) | 카메라가 Pi에 물리적으로 있음. Netlify 등 호스팅으로 대체 불가(서버가 Pi 안) |
 | DB | SQLite (WAL 모드) | 단일 기기. **쓰기 주체는 vision(또는 mock) 하나**, app은 SELECT만 |
 | 백엔드 | FastAPI 단일 Python 스택 | vision 프로세스와 언어 통일. **Pi에 Node.js 설치 금지** |
-| API 포트 | **8100** (.env `API_PORT`), 127.0.0.1 바인딩 | 8000은 Plant `setup_camera.py`가 사용. 외부 노출은 cloudflared만 |
+| API 포트 | **8100** (.env `API_PORT`), 127.0.0.1 바인딩 | 8000은 Plant `setup_camera.py`가 사용. 외부 노출은 Funnel/cloudflared 가 8100 만 내보낸다 |
 | 프론트 | static/ 정적 파일 + fetch 폴링(30초) | React 필요 시 개발 PC에서 빌드한 dist만 복사 |
-| 외부 노출 | Cloudflare Tunnel (443 아웃바운드) | 학교망 인바운드 차단 대응. 포트포워딩 금지. 팀 SSH 접속은 Tailscale(용도 구분) |
+| 외부 노출 | 스테이징·시범 운영: **Tailscale Funnel**(고정 주소, 443 아웃바운드). 정식 배포: Cloudflare Tunnel + 유료 도메인 | 학교망 인바운드 차단 대응. 포트포워딩 금지. 둘 다 Pi 가 밖으로 연결을 여는 방식. 팀 SSH 는 tailnet 내부(Funnel 은 공개, 용도 구분) |
 | 대기시간 | Little's law: W = L / λ | L=ROI 점유 인원, λ=배식대 가상선 통과율(5분 이동평균). **ROI 출구변 = λ 측정선**(같은 경계). λ < 0.5명/분이면 `insufficient_rate`로 산출 불가 처리 |
 | 카운팅 | YOLOv8n/11n + ByteTrack, 기준점은 bbox 바닥 중앙 | 라인크로싱은 부호 변화 + ±20px 완충띠. `imgsz`·프레임 스킵은 설정으로 뺀다(Pi 5 CPU 수 fps) |
 | 영상 취급 | **프레임 저장·전송 절대 금지. 숫자만 DB에** | 개인정보 원칙. 학교 협의의 전제 조건 |
@@ -136,8 +138,8 @@ Mealboard_Demo/
 ② static/ 대시보드 (mock 데이터로 완성. 레이아웃은 docs/ 도면의 스펙을 따른다)
 ③ jobs/fetch_neis.py + /api/meal (파싱 + 영양 지표 3종)
 ④ vision/ 프로토타입 — 개발 PC 웹캠·동영상 파일 소스로 counter·zones·waittime 검증 (tests/ 포함). `vision/source.py`로 소스 추상화
-⑤ Pi 이전: uv 셋업(§4 순서 엄수) → systemd → cloudflared **[홈 Pi에서 완료]** → calibrate → 실측 **[학교 Pi]**
-⑥ PWA + QR (cloudflared는 ⑤에서 완료)
+⑤ Pi 이전: uv 셋업(§4 순서 엄수) → systemd → 외부 공개(Tailscale Funnel) **[홈 Pi에서 완료]** → calibrate → 실측 **[학교 Pi]**
+⑥ PWA + QR (공개 주소는 ⑤의 Funnel. 정식 배포 시 Cloudflare Tunnel + 유료 도메인으로 전환)
 ⑦ (선택) 해석 LLM, 히트맵 고도화, AI HAT 도입
 
 각 단계는 독립 실행 가능해야 하며, 다음 단계로 넘어가기 전 사용자에게 동작 확인을 받는다.
