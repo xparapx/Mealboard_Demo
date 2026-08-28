@@ -111,12 +111,12 @@ details[open] summary::before{content:"▾ "}
 .bar{display:grid;grid-template-columns:90px 1fr 64px;gap:8px;align-items:center;font-size:12px;margin:5px 0}
 .track{position:relative;height:10px;background:var(--egg2);border:1.5px solid var(--line);border-radius:6px}
 .track i{position:absolute;left:0;top:0;bottom:0}
-.bar:nth-child(1) .track i{background:#129793}
-.bar:nth-child(2) .track i{background:#3FA9A5}
-.bar:nth-child(3) .track i{background:#6FC2BF}
-.bar:nth-child(4) .track i{background:#9BD7D5}
-.bar:nth-child(5) .track i{background:#7C7C7C}
-.bar:nth-child(6) .track i{background:#505050}
+.bar:nth-child(1) .track i{background:#A1C9F4}
+.bar:nth-child(2) .track i{background:#FFB482}
+.bar:nth-child(3) .track i{background:#8DE5A1}
+.bar:nth-child(4) .track i{background:#FF9F9B}
+.bar:nth-child(5) .track i{background:#D0BBFF}
+.bar:nth-child(6) .track i{background:#DEBB9B}
 .bar.short .track{border-color:var(--melon);box-shadow:inset 0 0 0 1px var(--melon)}
 .bar.short b{color:var(--melon)}
 .bar.short b::after{content:" 부족";font-size:10px}
@@ -209,7 +209,7 @@ tr:last-child td{border-bottom:0}
 <div><h4>이번 판에서 바뀐 것</h4><ul>
 <li><b>그래프 그라데이션</b> — 면 채움이 위(높은 값)로 갈수록 진한 틸, 아래는 투명. 봉우리가 스스로 강조된다</li>
 <li><b>영양 3칸 고유색</b> — 01 틸 / 02 아쿠아 / 03 멜론. 색이 "몇 번째 칸"을 뜻하고, 상태는 우상단 작은 플래그로</li>
-<li><b>영양소별 막대 고유색</b> — 틸→아쿠아→차콜 6단 램프. 부족은 막대 색을 바꾸지 않고 멜론 외곽선 + "부족" 라벨</li>
+<li><b>영양소별 막대 고유색</b> — seaborn pastel 6색을 영양소마다 고정. 부족은 막대 색을 바꾸지 않고 멜론 외곽선 + "부족" 라벨</li>
 <li><b>탄소 카드(⑧)·이슈 링크(⑨)</b> 추가</li>
 </ul></div>
 </div>
@@ -303,7 +303,7 @@ tr:last-child td{border-bottom:0}
     <div class="note"><b>3</b><strong>스파크라인.</strong> 축·눈금 없음, 오른쪽 끝이 "지금". 학생이 보는 건 "지금이 봉우리 앞인가 뒤인가"이지 수치가 아닙니다. 데이터가 2점 미만이면 카드 자체를 숨깁니다.<span class="api">/api/history?minutes=120 · wait_min 만</span></div>
     <div class="note"><b>4</b><strong>메뉴.</strong> 첫 항목(주요리)만 굵게, 나머지 2열. NEIS 순서를 그대로 쓰되 알레르기 번호 "(5.9.10)" 는 탭하면 보이게 접습니다.<span class="api">today.menu[]</span></div>
     <div class="note"><b>5</b><strong>영양 요약 3칸.</strong> 법정 기준의 구조(양·비율·충족)를 그대로 3칸으로. 숫자 하나가 아니라 세 질문에 세 답.<span class="api">energy_pct · macro_ratio_ok · mar</span></div>
-    <div class="note"><b>6</b><strong>접힌 상세.</strong> 기본은 닫힘. 교사·영양교사용. 막대마다 고유색(틸→차콜 램프), 멜론 세로선이 권장섭취량(100%), 트랙 끝이 150%. 부족은 멜론 외곽선 + 라벨. 수용성 비타민(B1·B2·C)은 과다 판정 없음.<span class="api">micro[].pct · band</span></div>
+    <div class="note"><b>6</b><strong>접힌 상세.</strong> 기본은 닫힘. 교사·영양교사용. 막대마다 고유색(seaborn pastel, 영양소 key 에 고정), 멜론 세로선이 권장섭취량(100%), 트랙 끝이 150%. 부족은 멜론 외곽선 + 라벨. 수용성 비타민(B1·B2·C)은 과다 판정 없음.<span class="api">micro[].pct · band</span></div>
     <div class="note"><b>7</b><strong>기준 출처.</strong> 판정 표현("미달")을 쓰지 않고 "참고 지표"로 남기는 문장. 학교와의 신뢰를 지키는 장치.<span class="api">std.group · std.source</span></div>
     <div class="note"><b>8</b><strong>탄소 카드.</strong> 오늘 식단 1인분을 전부 버렸을 때의 배출량. 1인분 무게는 NEIS 에 없어 kcal ÷ 1.8 kcal/g 로 추정하고, 배출계수·비교 기준은 <code>data/carbon_std.json</code> 한 파일에 출처와 함께 둔다. 4버튼은 학생 본인의 선택 — 서버에 보내지 않고 브라우저에만 저장(localStorage). 링은 이번 달 "다 먹음" 비율.<span class="api">/api/meal today.carbon · 브라우저 localStorage</span></div>
     <div class="note"><b>9</b><strong>이슈 링크.</strong> 제목·출처·날짜만. 본문 요약은 넣지 않는다(저작권·LLM 은 로드맵 ⑦). <code>jobs/fetch_news.py</code> 가 RSS 2~3개에서 최신 3건을 골라 <code>news.json</code> 에 캐시, 하루 1회.<span class="api">/api/news items[]</span></div>
@@ -362,7 +362,7 @@ tr:last-child td{border-bottom:0}
   <div class="tok"><i style="background:#129793"></i>틸 <code>--teal #129793</code><br>라이브 점·그래프·영양 01·탄소 카드·정상</div>
   <div class="tok"><i style="background:#9BD7D5"></i>아쿠아 <code>--aqua #9BD7D5</code><br>여유 칩·영양 02·비교 박스</div>
   <div class="tok"><i style="background:#FF7260"></i>멜론 <code>--melon #FF7260</code><br>혼잡·부족·권장선·"지금"·주석 번호</div>
-  <div class="tok"><i style="background:linear-gradient(90deg,#129793,#3FA9A5,#6FC2BF,#9BD7D5,#7C7C7C,#505050)"></i>영양소 막대 6색 <code>129793 · 3FA9A5 · 6FC2BF · 9BD7D5 · 7C7C7C · 505050</code></div>
+  <div class="tok"><i style="background:linear-gradient(90deg,#A1C9F4,#FFB482,#8DE5A1,#FF9F9B,#D0BBFF,#DEBB9B)"></i>영양소 막대 6색 · seaborn pastel <code>vitA A1C9F4 · b1 FFB482 · b2 8DE5A1 · vitC FF9F9B · ca D0BBFF · fe DEBB9B</code><br>영양소 key 에 고정 — 순서가 바뀌어도 색은 따라간다</div>
   <div class="tok"><i style="background:linear-gradient(180deg,rgba(18,151,147,.9),rgba(18,151,147,.35) 55%,rgba(155,215,213,0))"></i>그래프 채움 <code>틸 .9 → .35 → 아쿠아 0</code><br>위가 진함 = 높은 값 강조</div>
   <div class="tok"><i style="background:#BDBDB5"></i>정보 없음 <code>--off #BDBDB5</code><br>팔레트 밖 유일한 예외</div>
 </div>
@@ -377,7 +377,7 @@ tr:last-child td{border-bottom:0}
 <tr><td>영양 3칸</td><td>20px / 800 숫자 + 11px 라벨, 칸 고유색</td><td>우상단 플래그(많음/부족 N)로 상태</td><td>색은 칸의 정체성, 상태는 플래그 — 둘을 섞지 않음</td></tr>
 <tr><td>탄소 카드</td><td>40px 틸 숫자, 비교 2칸, 4버튼 44px, 링 44px</td><td>버튼 선택 → localStorage 에 날짜별 저장 → 월간 합산</td><td>기본 선택 "다 먹음". 서버 쓰기 없음</td></tr>
 <tr><td>이슈 링크</td><td>13px 제목 1줄 + 10.5px 메타</td><td>탭 시 새 창</td><td>최대 3건, 제목 40자 말줄임</td></tr>
-<tr><td>영양소 막대</td><td>트랙 10px + 1.5px 선, 멜론 세로선 66.7% = 100%</td><td>기본 접힘</td><td>막대 고유색 6단 · 부족은 멜론 외곽선+라벨 · 수용성은 과다 없음</td></tr>
+<tr><td>영양소 막대</td><td>트랙 10px + 1.5px 선, 멜론 세로선 66.7% = 100%</td><td>기본 접힘</td><td>막대 고유색 6색(seaborn pastel, key 매핑) · 부족은 멜론 외곽선+라벨 · 수용성은 과다 없음</td></tr>
 <tr><td>카드</td><td>radius 14px, 1.5px 차콜 선, 여백 14×16px</td><td>—</td><td>그림자 없음. 구분은 선과 채움색으로만</td></tr>
 <tr><td>터치 영역</td><td>최소 44×44px</td><td>접기 summary 전체가 탭 대상</td><td>—</td></tr>
 </table>
