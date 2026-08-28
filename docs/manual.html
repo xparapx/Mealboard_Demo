@@ -772,10 +772,17 @@ def layout_points(n):
 
 
 def write_positions(ts, queue):
-    &quot;&quot;&quot;data/positions.json 을 원자적으로 덮어쓴다 (tmp 에 쓰고 os.replace). 순간 상태만, 이력 없음&quot;&quot;&quot;
+    &quot;&quot;&quot;data/positions.json 을 원자적으로 덮어쓴다 (tmp 에 쓰고 os.replace). 순간 상태만, 이력 없음.
+    Windows 에서는 API 가 읽는 순간 os.replace 가 거부될 수 있어 잠깐 재시도하고, 끝내 안 되면 이번 틱은 건너뛴다(옛 파일 유지).&quot;&quot;&quot;
     tmp = POSITIONS.parent / (POSITIONS.name + &quot;.tmp&quot;)
     tmp.write_text(json.dumps({&quot;updated_at&quot;: ts, &quot;n&quot;: queue, &quot;points&quot;: layout_points(queue)}), encoding=&quot;utf-8&quot;)
-    os.replace(tmp, POSITIONS)
+    for _ in range(5):
+        try:
+            os.replace(tmp, POSITIONS)
+            return
+        except PermissionError:
+            time.sleep(0.02)
+    tmp.unlink(missing_ok=True)
 
 
 def noisy(mu):
@@ -1860,7 +1867,7 @@ python -c &quot;import json;print(json.load(open(&#x27;data/news.json&#x27;,enco
 <p>CLAUDE.md §2 의 히트맵 행은 이 단계에서 "공개 화면은 빈 평면도 위 히트맵·익명 위치 마커(순간 상태만, 이력 저장 없음)"으로 넓혔습니다(사용자 승인). 구현은 그 문장을 그대로 따릅니다: 카운팅 프로세스(지금은 mock)가 <code>data/positions.json</code> <em>한 파일</em>을 매 틱 덮어쓰고, API 는 그 파일을 읽어 줄 뿐입니다. 표(samples)에는 넣지 않으므로 "몇 시에 누가 어디 있었나"는 재구성할 수 없습니다. 좌표는 0~1 로 정규화된 숫자 두 개이고, 사람을 구분할 어떤 값도 없습니다. 파일은 <code>data/*</code> 규칙으로 git 에서 제외됩니다.</p>
 
 <h3>13-2. mock_feed — 폴리라인을 따라 배치</h3>
-<p>입구(0.08, 0.88) → 꺾임(0.5, 0.85) → (0.55, 0.25) → 배식대(0.92, 0.12) 네 점을 잇는 선 위에 대기 인원을 등간격으로 놓고 ±0.02 지터를 줍니다. 덮어쓰기는 임시 파일에 쓴 뒤 <code>os.replace</code> — API 가 반쯤 쓰인 파일을 읽는 일이 없습니다. <code>--scenario gap</code> 구간에서는 DB 와 함께 이 파일도 멈춰, 카메라가 죽은 상황이 API 의 <code>no_data</code> 로 그대로 드러납니다. 전체 파일은 6단계 블록에 있습니다.</p>
+<p>입구(0.08, 0.88) → 꺾임(0.5, 0.85) → (0.55, 0.25) → 배식대(0.92, 0.12) 네 점을 잇는 선 위에 대기 인원을 등간격으로 놓고 ±0.02 지터를 줍니다. 덮어쓰기는 임시 파일에 쓴 뒤 <code>os.replace</code> — API 가 반쯤 쓰인 파일을 읽는 일이 없습니다. Windows 개발 PC 에서는 API 가 읽는 찰나에 <code>os.replace</code> 가 거부될 수 있어 몇 번 재시도하고 끝내 안 되면 그 틱만 건너뜁니다(Pi 의 Linux 에서는 항상 원자적). <code>--scenario gap</code> 구간에서는 DB 와 함께 이 파일도 멈춰, 카메라가 죽은 상황이 API 의 <code>no_data</code> 로 그대로 드러납니다. 전체 파일은 6단계 블록에 있습니다.</p>
 <figure class="code">
 <figcaption><span class="path">jobs/mock_feed.py 에 추가된 부분</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
 <pre><code class="lang-python">PATH = [(0.08, 0.88), (0.5, 0.85), (0.55, 0.25), (0.92, 0.12)]   # 입구 → 꺾임 → 배식대 (0~1 정규화 좌표)
@@ -1891,10 +1898,17 @@ def layout_points(n):
 
 
 def write_positions(ts, queue):
-    &quot;&quot;&quot;data/positions.json 을 원자적으로 덮어쓴다 (tmp 에 쓰고 os.replace). 순간 상태만, 이력 없음&quot;&quot;&quot;
+    &quot;&quot;&quot;data/positions.json 을 원자적으로 덮어쓴다 (tmp 에 쓰고 os.replace). 순간 상태만, 이력 없음.
+    Windows 에서는 API 가 읽는 순간 os.replace 가 거부될 수 있어 잠깐 재시도하고, 끝내 안 되면 이번 틱은 건너뛴다(옛 파일 유지).&quot;&quot;&quot;
     tmp = POSITIONS.parent / (POSITIONS.name + &quot;.tmp&quot;)
     tmp.write_text(json.dumps({&quot;updated_at&quot;: ts, &quot;n&quot;: queue, &quot;points&quot;: layout_points(queue)}), encoding=&quot;utf-8&quot;)
-    os.replace(tmp, POSITIONS)
+    for _ in range(5):
+        try:
+            os.replace(tmp, POSITIONS)
+            return
+        except PermissionError:
+            time.sleep(0.02)
+    tmp.unlink(missing_ok=True)
 
 # main() 의 DB 기록 직후 한 줄:
 #   write_positions(ts, queue)</code></pre>

@@ -50,10 +50,17 @@ def layout_points(n):
 
 
 def write_positions(ts, queue):
-    """data/positions.json 을 원자적으로 덮어쓴다 (tmp 에 쓰고 os.replace). 순간 상태만, 이력 없음"""
+    """data/positions.json 을 원자적으로 덮어쓴다 (tmp 에 쓰고 os.replace). 순간 상태만, 이력 없음.
+    Windows 에서는 API 가 읽는 순간 os.replace 가 거부될 수 있어 잠깐 재시도하고, 끝내 안 되면 이번 틱은 건너뛴다(옛 파일 유지)."""
     tmp = POSITIONS.parent / (POSITIONS.name + ".tmp")
     tmp.write_text(json.dumps({"updated_at": ts, "n": queue, "points": layout_points(queue)}), encoding="utf-8")
-    os.replace(tmp, POSITIONS)
+    for _ in range(5):
+        try:
+            os.replace(tmp, POSITIONS)
+            return
+        except PermissionError:
+            time.sleep(0.02)
+    tmp.unlink(missing_ok=True)
 
 
 def noisy(mu):
