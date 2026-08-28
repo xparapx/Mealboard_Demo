@@ -220,11 +220,12 @@ tr:last-child td{border-bottom:0}
   <div class="n">1</div><div>지금 서면 몇 분?</div><div>식권 카드 — 88px 숫자 + 판정 칩(여유/보통/혼잡)</div><div><code>/api/status</code> wait_min, state</div>
   <div class="n">2</div><div>왜? (줄 길이, 빠지는 속도)</div><div>식권 하단 두 수치</div><div>queue_len, rate_per_min</div>
   <div class="n">3</div><div>지금이 피크인가, 곧 풀리나</div><div>최근 2시간 스파크라인</div><div><code>/api/history</code></div>
-  <div class="n">4</div><div>오늘 뭐 나와?</div><div>메뉴 2열, 주요리 강조</div><div><code>/api/meal</code> today.menu</div>
-  <div class="n">5</div><div>오늘 급식은 괜찮은 한 끼인가</div><div>영양 요약 3칸</div><div>assess.energy_pct · macro_ratio_ok · mar</div>
-  <div class="n">6</div><div>(교사) 어느 영양소가 부족한가</div><div>접힌 영양소 막대 6개</div><div>assess.micro[]</div>
-  <div class="n">7</div><div>남기면 얼마나 배출되나 · 나는?</div><div>탄소 카드 — 전량 잔반 시 CO₂e, 비교 2칸, 내 선택 4버튼</div><div><code>/api/meal</code> carbon · 브라우저 저장</div>
-  <div class="n">8</div><div>오늘 기후 이슈</div><div>링크 3개 (제목·출처·날짜)</div><div><code>/api/news</code></div>
+  <div class="n">4</div><div>줄이 어디까지 늘어섰나</div><div>평면도 위 익명 위치 마커 (영상 아님)</div><div><code>/api/positions</code> n, points</div>
+  <div class="n">5</div><div>오늘 뭐 나와?</div><div>메뉴 2열, 주요리 강조</div><div><code>/api/meal</code> today.menu</div>
+  <div class="n">6</div><div>오늘 급식은 괜찮은 한 끼인가</div><div>영양 요약 3칸</div><div>assess.energy_pct · macro_ratio_ok · mar</div>
+  <div class="n">7</div><div>(교사) 어느 영양소가 부족한가</div><div>접힌 영양소 막대 6개</div><div>assess.micro[]</div>
+  <div class="n">8</div><div>남기면 얼마나 배출되나 · 나는?</div><div>탄소 카드 — 전량 잔반 시 CO₂e, 비교 2칸, 내 선택 4버튼</div><div><code>/api/meal</code> carbon · 브라우저 저장</div>
+  <div class="n">9</div><div>오늘 기후 이슈</div><div>링크 3개 (제목·출처·날짜)</div><div><code>/api/news</code></div>
 </div>
 
 <h2>모바일 도면 <small>390 × 844 · 세로 1스크롤</small></h2>
@@ -249,6 +250,24 @@ tr:last-child td{border-bottom:0}
         <div class="now"></div><div class="lab">10:07</div><div class="lab r">지금</div>
       </div>
       <div style="height:14px"></div>
+    </div>
+
+    <div class="card" style="position:relative"><span class="tag" style="left:-11px;top:-11px">10</span>
+      <div class="eyebrow">급식실 현황</div>
+      <span style="position:absolute;right:14px;top:12px;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:var(--aqua);color:var(--char)">38명</span>
+      <svg viewBox="0 0 300 180" style="width:100%;display:block;margin-top:8px" aria-label="평면도 목업">
+        <rect x="8" y="8" width="284" height="164" fill="#FFFBE4" stroke="#505050" stroke-width="1.5"/>
+        <rect x="212" y="16" width="74" height="26" fill="none" stroke="#FF7260" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="282" y="33" font-size="11" font-weight="700" fill="#FF7260" text-anchor="end">배식대</text>
+        <line x1="8" y1="146" x2="8" y2="160" stroke="#FFFBE4" stroke-width="3"/>
+        <text x="16" y="166" font-size="11" font-weight="700" fill="#7A7A72">입구</text>
+        <g fill="#129793" stroke="#505050" stroke-width="1">
+          <circle cx="30" cy="150" r="5"/><circle cx="58" cy="153" r="5"/><circle cx="86" cy="149" r="5"/><circle cx="114" cy="152" r="5"/>
+          <circle cx="142" cy="150" r="5"/><circle cx="160" cy="132" r="5"/><circle cx="163" cy="106" r="5"/><circle cx="166" cy="80" r="5"/>
+          <circle cx="170" cy="56" r="5"/><circle cx="196" cy="46" r="5"/><circle cx="224" cy="52" r="5"/><circle cx="252" cy="48" r="5"/>
+        </g>
+      </svg>
+      <div class="foot-note">영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다</div>
     </div>
 
     <div class="card"><span class="tag" style="left:-11px;top:-11px">4</span>
@@ -307,6 +326,7 @@ tr:last-child td{border-bottom:0}
     <div class="note"><b>7</b><strong>기준 출처.</strong> 판정 표현("미달")을 쓰지 않고 "참고 지표"로 남기는 문장. 학교와의 신뢰를 지키는 장치.<span class="api">std.group · std.source</span></div>
     <div class="note"><b>8</b><strong>탄소 카드.</strong> 오늘 식단 1인분을 전부 버렸을 때의 배출량. 1인분 무게는 NEIS 에 없어 kcal ÷ 1.8 kcal/g 로 추정하고, 배출계수·비교 기준은 <code>data/carbon_std.json</code> 한 파일에 출처와 함께 둔다. 4버튼은 학생 본인의 선택 — 서버에 보내지 않고 브라우저에만 저장(localStorage). 링은 이번 달 "다 먹음" 비율.<span class="api">/api/meal today.carbon · 브라우저 localStorage</span></div>
     <div class="note"><b>9</b><strong>이슈 링크.</strong> 제목·출처·날짜만. 본문 요약은 넣지 않는다(저작권·LLM 은 로드맵 ⑦). <code>jobs/fetch_news.py</code> 가 RSS 2~3개에서 최신 3건을 골라 <code>news.json</code> 에 캐시, 하루 1회.<span class="api">/api/news items[]</span></div>
+    <div class="note"><b>10</b><strong>급식실 현황.</strong> 빈 평면도(벡터) 위에 익명 위치 마커만 — 영상·실사·이력이 전혀 없다(CLAUDE.md §2, 사용자 승인). 우상단 멜론 점선 사각형이 배식대, 좌하단 외곽선 틈과 라벨이 입구. 마커는 틸 원 r=5 + 차콜 테두리 1px, 우상단 칩에 "N명". 데스크톱은 추이 아래(왼쪽 컬럼), 모바일은 추이 다음. 2분 넘게 새 파일이 없으면 평면도만 흐리게(opacity .35) + "표시할 위치 없음". 30초 폴링은 식권 카드의 refresh 에 편승.<span class="api">/api/positions state · n · points[{x,y} 0~1] — 파일 하나를 덮어쓸 뿐 이력 없음</span></div>
   </div>
 </div>
 
@@ -380,6 +400,7 @@ tr:last-child td{border-bottom:0}
 <tr><td>영양소 막대</td><td>트랙 10px + 1.5px 선, 멜론 세로선 66.7% = 100%</td><td>기본 접힘</td><td>막대 고유색 6색(seaborn pastel, key 매핑) · 부족은 멜론 외곽선+라벨 · 수용성은 과다 없음</td></tr>
 <tr><td>카드</td><td>radius 14px, 1.5px 차콜 선, 여백 14×16px</td><td>hover 시 3px 상승</td><td>깊이는 고도 체계(--e1~e3, 아래 절) 로. 외곽선은 유지</td></tr>
 <tr><td>터치 영역</td><td>최소 44×44px</td><td>접기 summary 전체가 탭 대상</td><td>—</td></tr>
+<tr><td>급식실 현황 ⑩</td><td>canvas 5:3 (600×360), 바닥 egg2 · 외곽 1.5px 차콜, 배식대 = 우상단 멜론 점선 사각형(x .72~.98, y .05~.20), 입구 = 좌하단 외곽선 틈 + 라벨</td><td>30초 폴링(refresh 편승) · no_data 면 canvas opacity .35 + "표시할 위치 없음"</td><td>마커 틸 r=5 + 차콜 1px · 좌표 0~1 정규화 · 우상단 "N명" 칩 · 이력 저장 없음</td></tr>
 </table>
 
 <h2>데스크톱·모션 스펙 <small>반응형 · 고도 체계 · 마이크로 인터랙션</small></h2>
@@ -387,7 +408,7 @@ tr:last-child td{border-bottom:0}
 <table>
 <tr><th>뷰포트</th><th>레이아웃</th><th>비고</th></tr>
 <tr><td>≤ 899px (모바일)</td><td>단일 컬럼, max-width 640, 카드 간격 10px — 모바일 도면 그대로</td><td>기본</td></tr>
-<tr><td>≥ 900px (데스크톱)</td><td>max-width 1100, grid 2컬럼 <code>1.1fr 1fr</code>, gap 20px. 왼쪽 = 식권 카드 + 갱신 메타 + 추이 / 오른쪽 = 급식 + 탄소 + 이슈</td><td>식권 숫자 120px. 마크업은 <code>.col</code> 두 개로 묶어 두고, 모바일에서는 그 래퍼가 그냥 블록</td></tr>
+<tr><td>≥ 900px (데스크톱)</td><td>max-width 1100, grid 2컬럼 <code>1.1fr 1fr</code>, gap 20px. 왼쪽 = 식권 카드 + 갱신 메타 + 추이 + 급식실 현황 ⑩ / 오른쪽 = 급식 + 탄소 + 이슈</td><td>식권 숫자 120px. 마크업은 <code>.col</code> 두 개로 묶어 두고, 모바일에서는 그 래퍼가 그냥 블록</td></tr>
 </table>
 <h4 style="margin:24px 0 8px;font-size:11px;letter-spacing:.18em;color:var(--teal)">고도 체계 (CSS 변수)</h4>
 <div class="tokens">
@@ -409,7 +430,7 @@ tr:last-child td{border-bottom:0}
 <h2>의도적으로 뺀 것 <small>넣고 싶어질 때 다시 읽을 목록</small></h2>
 <table>
 <tr><th>뺀 것</th><th>이유</th></tr>
-<tr><td>급식실 실사·히트맵</td><td>공개 화면에는 개인정보 원칙상 빈 평면도 위 히트맵만 허용(CLAUDE.md). 그것도 이 화면의 2초 결정에는 기여하지 않아 v1 에서 제외. 필요하면 스파크라인 아래 별도 카드</td></tr>
+<tr><td>급식실 실사·히트맵</td><td>실사는 디버그 뷰 전용. 공개 화면은 빈 평면도 위 익명 마커(⑩, 도입)·히트맵까지만 허용(CLAUDE.md §2). 히트맵은 마커 카드의 평면도를 재사용하는 후순위 확장</td></tr>
 <tr><td>주간 식단표</td><td>학생은 오늘만 본다. 주간은 <code>/api/meal</code> 의 week 를 쓰는 별도 페이지 <code>/week</code></td></tr>
 <tr><td>탄소 카드의 본문 요약·죄책감 문구</td><td>인식용 지표. 산식 절 참조</td></tr>
 <tr><td>코사인 유사도 "밸런스 점수"</td><td>단위 스케일에 지배되어 해석이 안 됨. 3칸 요약으로 대체</td></tr>

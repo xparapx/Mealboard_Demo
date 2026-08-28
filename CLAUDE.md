@@ -33,7 +33,7 @@ NEIS 급식 API의 메뉴·영양 정보와 함께 웹 대시보드(PWA)로 제�
 | 카운팅 | YOLOv8n/11n + ByteTrack, 기준점은 bbox 바닥 중앙 | 라인크로싱은 부호 변화 + ±20px 완충띠. `imgsz`·프레임 스킵은 설정으로 뺀다(Pi 5 CPU 수 fps) |
 | 영상 취급 | **프레임 저장·전송 절대 금지. 숫자만 DB에** | 개인정보 원칙. 학교 협의의 전제 조건 |
 | 디버그 뷰 | 카운트 프로세스 내장, 127.0.0.1 전용 MJPEG, 터치파일(/tmp/debug_on)로 on/off | 관리자만 SSH 터널로 열람. 켜짐 이력을 DB에 기록 |
-| 히트맵 | 공개 화면은 빈 급식실 배경/평면도 위 히트맵만. 실사+마커는 디버그 뷰 전용 | |
+| 히트맵 | 공개 화면은 빈 평면도 위 히트맵·익명 위치 마커(순간 상태만, 이력 저장 없음). 실사+마커는 디버그 뷰 전용 | 마커는 `data/positions.json` 한 파일을 덮어쓰기만 하며 `/api/positions` 가 120초 stale 규칙으로 내준다 |
 | NEIS | `jobs/fetch_neis.py`가 하루 1회(systemd timer 05:40) `data/meal.json` 캐시 → 프론트는 `/api/meal`만 | 키 노출·호출 제한 방지. **프론트에서 NEIS 직접 호출 금지**. 주말·방학의 INFO-200은 오류가 아닌 `no_meal` |
 | 영양 지표 | **에너지 충족률 · 에너지 적정비율(탄55~65/단7~20/지15~30%) · MAR** 세 가지. 코사인 유사도 사용 안 함 | 코사인은 단위 큰 성분(kcal·칼슘·비타민A)이 지배하고 크기 불변. 기준은 `data/nutrition_std.json`(학교별 1행), 영양소별 판정은 EAR~RNI 범위 |
 | 해석 AI | 기본은 숫자→텍스트 LLM(이벤트 트리거). VLM은 예외 경로 | 카운팅 트랙과 SQLite로 완전 분리 |
@@ -52,7 +52,7 @@ Mealboard_Demo/
 ├── README.md                     # 개요·구조·셋업·작업 로그 (선행 레포 형식)
 ├── setup_pi.sh                   # Pi 최초 설치 + 유닛 갱신 (멱등)
 ├── docs/                         # GitHub Pages (index.html + manual.html)
-├── app/                          # FastAPI: main.py, config.py, db.py, routers/{status,history,meal,heatmap}.py
+├── app/                          # FastAPI: main.py, config.py, db.py, routers/{status,history,meal,positions,heatmap}.py
 ├── vision/                       # counter.py(진입점), source.py(webcam|file|picamera), zones.py, waittime.py, heatmap.py, debug_stream.py, calibrate.py
 ├── jobs/                         # fetch_neis.py, mock_feed.py
 ├── static/                       # index.html, css/, js/, manifest.json, sw.js, icons/

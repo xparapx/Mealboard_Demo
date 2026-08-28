@@ -8,22 +8,52 @@
 """
 import argparse
 import datetime as dt
+import json
 import math
+import os
 import random
 import time
 from collections import deque
 
+from app.config import DATA
 from app.db import connect
 from vision.waittime import estimate_wait
 
 TICK = 10           # 시뮬레이션 1틱 = 10초
 CAPACITY = 20.0     # 배식대 처리 능력 (명/분)
 CYCLE_MIN = 170     # 11:20 ~ 14:10 을 한 사이클로 보고 반복
+PATH = [(0.08, 0.88), (0.5, 0.85), (0.55, 0.25), (0.92, 0.12)]   # 입구 → 꺾임 → 배식대 (0~1 정규화 좌표)
+POSITIONS = DATA / "positions.json"
 
 
 def arrival_rate(m):
     """경과 분 m → 도착률(명/분). 학년별 시간차 배식을 흉내낸 두 봉우리"""
     return 25 * math.exp(-((m - 25) / 12) ** 2) + 18 * math.exp(-((m - 70) / 15) ** 2)
+
+
+def layout_points(n):
+    """폴리라인 PATH 를 따라 n 명을 등간격 배치 + 지터 ±0.02. 좌표뿐, 사람을 식별할 정보는 없다"""
+    seg = [math.dist(PATH[i], PATH[i + 1]) for i in range(len(PATH) - 1)]
+    total = sum(seg)
+    pts = []
+    for i in range(n):
+        d = (i + 0.5) / n * total
+        k = 0
+        while k < len(seg) - 1 and d > seg[k]:
+            d -= seg[k]
+            k += 1
+        t = d / seg[k]
+        x = PATH[k][0] + (PATH[k + 1][0] - PATH[k][0]) * t + random.uniform(-0.02, 0.02)
+        y = PATH[k][1] + (PATH[k + 1][1] - PATH[k][1]) * t + random.uniform(-0.02, 0.02)
+        pts.append({"x": round(min(max(x, 0), 1), 3), "y": round(min(max(y, 0), 1), 3)})
+    return pts
+
+
+def write_positions(ts, queue):
+    """data/positions.json 을 원자적으로 덮어쓴다 (tmp 에 쓰고 os.replace). 순간 상태만, 이력 없음"""
+    tmp = POSITIONS.parent / (POSITIONS.name + ".tmp")
+    tmp.write_text(json.dumps({"updated_at": ts, "n": queue, "points": layout_points(queue)}), encoding="utf-8")
+    os.replace(tmp, POSITIONS)
 
 
 def noisy(mu):
@@ -57,10 +87,11 @@ def main():
         wait, state = estimate_wait(queue, rate)              # W = L / λ
 
         if not (a.scenario == "gap" and 80 <= m < 90):
+            ts = dt.datetime.now().isoformat(timespec="milliseconds")
             con.execute("INSERT OR REPLACE INTO samples VALUES (?,?,?,?,?)",
-                        (dt.datetime.now().isoformat(timespec="milliseconds"),
-                         queue, round(rate, 2), wait, state))
+                        (ts, queue, round(rate, 2), wait, state))
             con.commit()
+            write_positions(ts, queue)                        # 카메라(=mock) 가 멈추면 이 파일도 멈춘다 → API 가 stale 로 판단
         print(f"{m:6.1f}분  대기 {queue:3d}명  처리 {rate:5.1f}/분  예상 {wait}분  {state}")
 
         sim += TICK

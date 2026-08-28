@@ -71,7 +71,7 @@ strong{color:var(--ink)}
 <nav>
 <h1>Mealboard 구축 매뉴얼</h1>
 <p class="sub">홈 Pi 5 · 카메라 제외 · 2026-08</p>
-<a href="#s0"><span class="n">0</span><span>시작하기 전에</span><small>읽기</small></a><a href="#s1"><span class="n">1</span><span>Pi 기본 설정 — 시각, 계정, 원격 접속</span><small>Pi</small></a><a href="#s2"><span class="n">2</span><span>저장소 뼈대 — GitHub 에 프로젝트 만들기</span><small>저장소</small></a><a href="#s3"><span class="n">3</span><span>설치 스크립트와 systemd 유닛</span><small>Pi · 저장소</small></a><a href="#s4"><span class="n">4</span><span>대기시간 계산 — 순수 로직과 테스트</span><small>앱</small></a><a href="#s5"><span class="n">5</span><span>데이터베이스와 API</span><small>앱</small></a><a href="#s6"><span class="n">6</span><span>mock_feed — 카메라 대역</span><small>앱</small></a><a href="#s7"><span class="n">7</span><span>대시보드 화면</span><small>앱</small></a><a href="#s8"><span class="n">8</span><span>NEIS 급식 정보와 영양 지표</span><small>데이터</small></a><a href="#s9"><span class="n">9</span><span>외부 공개 — Cloudflare Tunnel, PWA, QR</span><small>공개</small></a><a href="#s10"><span class="n">10</span><span>검증 체크리스트, 진단 순서, 이식</span><small>운영</small></a><a href="#s11"><span class="n">11</span><span>탄소 카드 — 잔반의 배출량</span><small>확장</small></a><a href="#s12"><span class="n">12</span><span>이슈 링크 — 기후·탄소 뉴스</span><small>확장</small></a>
+<a href="#s0"><span class="n">0</span><span>시작하기 전에</span><small>읽기</small></a><a href="#s1"><span class="n">1</span><span>Pi 기본 설정 — 시각, 계정, 원격 접속</span><small>Pi</small></a><a href="#s2"><span class="n">2</span><span>저장소 뼈대 — GitHub 에 프로젝트 만들기</span><small>저장소</small></a><a href="#s3"><span class="n">3</span><span>설치 스크립트와 systemd 유닛</span><small>Pi · 저장소</small></a><a href="#s4"><span class="n">4</span><span>대기시간 계산 — 순수 로직과 테스트</span><small>앱</small></a><a href="#s5"><span class="n">5</span><span>데이터베이스와 API</span><small>앱</small></a><a href="#s6"><span class="n">6</span><span>mock_feed — 카메라 대역</span><small>앱</small></a><a href="#s7"><span class="n">7</span><span>대시보드 화면</span><small>앱</small></a><a href="#s8"><span class="n">8</span><span>NEIS 급식 정보와 영양 지표</span><small>데이터</small></a><a href="#s9"><span class="n">9</span><span>외부 공개 — Cloudflare Tunnel, PWA, QR</span><small>공개</small></a><a href="#s10"><span class="n">10</span><span>검증 체크리스트, 진단 순서, 이식</span><small>운영</small></a><a href="#s11"><span class="n">11</span><span>탄소 카드 — 잔반의 배출량</span><small>확장</small></a><a href="#s12"><span class="n">12</span><span>이슈 링크 — 기후·탄소 뉴스</span><small>확장</small></a><a href="#s13"><span class="n">13</span><span>급식실 현황 — 익명 위치 마커</span><small>확장</small></a>
 </nav>
 <main>
 <div class="hero">
@@ -660,12 +660,13 @@ def meal():
 <pre><code class="lang-python">from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from .config import BASE
-from .routers import status, history, meal
+from .routers import status, history, meal, positions
 
 app = FastAPI(title=&quot;Mealboard&quot;)
 app.include_router(status.router)
 app.include_router(history.router)
 app.include_router(meal.router)
+app.include_router(positions.router)
 # 정적 파일은 마지막에 mount — /api/* 가 먼저 잡히도록
 app.mount(&quot;/&quot;, StaticFiles(directory=BASE / &quot;static&quot;, html=True), name=&quot;static&quot;)</code></pre>
 </figure>
@@ -729,22 +730,52 @@ GET /api/meal      → 8단계 fetch_neis 가 만든 meal.json 그대로</code><
 &quot;&quot;&quot;
 import argparse
 import datetime as dt
+import json
 import math
+import os
 import random
 import time
 from collections import deque
 
+from app.config import DATA
 from app.db import connect
 from vision.waittime import estimate_wait
 
 TICK = 10           # 시뮬레이션 1틱 = 10초
 CAPACITY = 20.0     # 배식대 처리 능력 (명/분)
 CYCLE_MIN = 170     # 11:20 ~ 14:10 을 한 사이클로 보고 반복
+PATH = [(0.08, 0.88), (0.5, 0.85), (0.55, 0.25), (0.92, 0.12)]   # 입구 → 꺾임 → 배식대 (0~1 정규화 좌표)
+POSITIONS = DATA / &quot;positions.json&quot;
 
 
 def arrival_rate(m):
     &quot;&quot;&quot;경과 분 m → 도착률(명/분). 학년별 시간차 배식을 흉내낸 두 봉우리&quot;&quot;&quot;
     return 25 * math.exp(-((m - 25) / 12) ** 2) + 18 * math.exp(-((m - 70) / 15) ** 2)
+
+
+def layout_points(n):
+    &quot;&quot;&quot;폴리라인 PATH 를 따라 n 명을 등간격 배치 + 지터 ±0.02. 좌표뿐, 사람을 식별할 정보는 없다&quot;&quot;&quot;
+    seg = [math.dist(PATH[i], PATH[i + 1]) for i in range(len(PATH) - 1)]
+    total = sum(seg)
+    pts = []
+    for i in range(n):
+        d = (i + 0.5) / n * total
+        k = 0
+        while k &lt; len(seg) - 1 and d &gt; seg[k]:
+            d -= seg[k]
+            k += 1
+        t = d / seg[k]
+        x = PATH[k][0] + (PATH[k + 1][0] - PATH[k][0]) * t + random.uniform(-0.02, 0.02)
+        y = PATH[k][1] + (PATH[k + 1][1] - PATH[k][1]) * t + random.uniform(-0.02, 0.02)
+        pts.append({&quot;x&quot;: round(min(max(x, 0), 1), 3), &quot;y&quot;: round(min(max(y, 0), 1), 3)})
+    return pts
+
+
+def write_positions(ts, queue):
+    &quot;&quot;&quot;data/positions.json 을 원자적으로 덮어쓴다 (tmp 에 쓰고 os.replace). 순간 상태만, 이력 없음&quot;&quot;&quot;
+    tmp = POSITIONS.parent / (POSITIONS.name + &quot;.tmp&quot;)
+    tmp.write_text(json.dumps({&quot;updated_at&quot;: ts, &quot;n&quot;: queue, &quot;points&quot;: layout_points(queue)}), encoding=&quot;utf-8&quot;)
+    os.replace(tmp, POSITIONS)
 
 
 def noisy(mu):
@@ -778,10 +809,11 @@ def main():
         wait, state = estimate_wait(queue, rate)              # W = L / λ
 
         if not (a.scenario == &quot;gap&quot; and 80 &lt;= m &lt; 90):
+            ts = dt.datetime.now().isoformat(timespec=&quot;milliseconds&quot;)
             con.execute(&quot;INSERT OR REPLACE INTO samples VALUES (?,?,?,?,?)&quot;,
-                        (dt.datetime.now().isoformat(timespec=&quot;milliseconds&quot;),
-                         queue, round(rate, 2), wait, state))
+                        (ts, queue, round(rate, 2), wait, state))
             con.commit()
+            write_positions(ts, queue)                        # 카메라(=mock) 가 멈추면 이 파일도 멈춘다 → API 가 stale 로 판단
         print(f&quot;{m:6.1f}분  대기 {queue:3d}명  처리 {rate:5.1f}/분  예상 {wait}분  {state}&quot;)
 
         sim += TICK
@@ -895,7 +927,15 @@ systemctl status mealboard-api --no-pager</code></pre>
   .row b { font-size: 16px; font-weight: 800; }
   .muted { color: var(--mute); font-size: 11px; }
   /* 스파크라인: 높이 72px, 틸 선 2px + 세로 그라데이션 채움(위 틸 .9 → 아래 아쿠아 0). 축·범례 없음 */
-  canvas { width: 100%; height: 72px; display: block; border-bottom: 1.5px solid var(--char); margin-top: 8px; }
+  #chart { width: 100%; height: 72px; display: block; border-bottom: 1.5px solid var(--char); margin-top: 8px; }
+  /* ⑩ 급식실 현황: 벡터 평면도 + 익명 위치 마커. 영상 아님 · 순간 상태만 · 이력 없음 (CLAUDE.md §2) */
+  .plan { position: relative; }
+  .plan .count { position: absolute; right: 14px; top: 12px; font-size: 13px; font-weight: 800; color: var(--char);
+                 background: var(--aqua); border: 1.5px solid var(--aqua); border-radius: 999px; padding: 3px 10px; }
+  #plan { width: 100%; height: auto; aspect-ratio: 5 / 3; display: block; margin-top: 8px; }
+  .plan[data-state=&quot;no_data&quot;] #plan { opacity: .35; }
+  .plan .empty { position: absolute; left: 0; right: 0; top: 50%; text-align: center; font-size: 13px; font-weight: 800; color: var(--mute); display: none; }
+  .plan[data-state=&quot;no_data&quot;] .empty { display: block; }
   ul { margin: 8px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 14px; }
   li { padding-left: 14px; position: relative; }
   li::before { content: &quot;&quot;; position: absolute; left: 0; top: .6em; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--char); }
@@ -1001,6 +1041,14 @@ systemctl status mealboard-api --no-pager</code></pre>
       &lt;div class=&quot;eyebrow&quot;&gt;최근 2시간 예상 대기&lt;/div&gt;
       &lt;canvas id=&quot;chart&quot; width=&quot;600&quot; height=&quot;120&quot;&gt;&lt;/canvas&gt;
     &lt;/section&gt;
+
+    &lt;section class=&quot;card plan&quot; id=&quot;plancard&quot; data-state=&quot;no_data&quot;&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;급식실 현황&lt;/div&gt;
+      &lt;span class=&quot;count&quot; id=&quot;posn&quot;&gt;—&lt;/span&gt;
+      &lt;canvas id=&quot;plan&quot; width=&quot;600&quot; height=&quot;360&quot;&gt;&lt;/canvas&gt;
+      &lt;div class=&quot;empty&quot;&gt;표시할 위치 없음&lt;/div&gt;
+      &lt;div class=&quot;muted&quot; style=&quot;margin-top:8px&quot;&gt;영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다&lt;/div&gt;
+    &lt;/section&gt;
   &lt;/div&gt;
 
   &lt;div class=&quot;col&quot;&gt;
@@ -1069,6 +1117,7 @@ async function refresh() {
     ? new Date(st.updated_at).toLocaleTimeString(&quot;ko-KR&quot;) : &quot;-&quot;;
   const h = await j(&quot;/api/history?minutes=120&quot;);
   drawChart(h.rows);
+  try { drawPlan(await j(&quot;/api/positions&quot;)); } catch { drawPlan({ state: &quot;no_data&quot; }); }
 }
 
 function drawChart(rows) {
@@ -1092,6 +1141,30 @@ function drawChart(rows) {
   g.beginPath(); g.strokeStyle = &quot;#129793&quot;; g.lineWidth = 2;
   xy.forEach(([x, y], i) =&gt; i ? g.lineTo(x, y) : g.moveTo(x, y));
   g.stroke();
+}
+
+// ⑩ 급식실 현황: 벡터 평면도 위 익명 위치 마커. x,y 는 0~1 정규화 좌표 — 우상단 = 배식대, 좌하단 = 입구
+function drawPlan(p) {
+  const c = $(&quot;#plan&quot;), g = c.getContext(&quot;2d&quot;), W = c.width, H = c.height, pad = 14;
+  const ok = p.state === &quot;ok&quot;;
+  $(&quot;#plancard&quot;).dataset.state = ok ? &quot;ok&quot; : &quot;no_data&quot;;
+  $(&quot;#posn&quot;).textContent = ok ? `${p.n}명` : &quot;—&quot;;
+  g.clearRect(0, 0, W, H);
+  const X = x =&gt; pad + x * (W - 2 * pad), Y = y =&gt; pad + y * (H - 2 * pad);
+  g.fillStyle = &quot;#FFFBE4&quot;; g.fillRect(X(0), Y(0), W - 2 * pad, H - 2 * pad);                       // 바닥
+  g.setLineDash([]); g.lineWidth = 1.5; g.strokeStyle = &quot;#505050&quot;; g.strokeRect(X(0), Y(0), W - 2 * pad, H - 2 * pad);  // 외곽
+  g.setLineDash([6, 4]); g.lineWidth = 2; g.strokeStyle = &quot;#FF7260&quot;;                                 // 배식대: 우상단 멜론 점선
+  g.strokeRect(X(.72), Y(.05), X(.98) - X(.72), Y(.2) - Y(.05));
+  g.setLineDash([]);
+  g.font = &quot;700 12px system-ui, sans-serif&quot;; g.textBaseline = &quot;middle&quot;;
+  g.fillStyle = &quot;#FF7260&quot;; g.textAlign = &quot;right&quot;; g.fillText(&quot;배식대&quot;, X(.97), Y(.125));
+  g.strokeStyle = &quot;#FFFBE4&quot;; g.lineWidth = 3; g.beginPath(); g.moveTo(X(0), Y(.84)); g.lineTo(X(0), Y(.92)); g.stroke();  // 입구 = 외곽선 틈
+  g.fillStyle = &quot;#7A7A72&quot;; g.textAlign = &quot;left&quot;; g.fillText(&quot;입구&quot;, X(.03), Y(.95));                // 좌하단 라벨
+  if (!ok) return;
+  p.points.forEach(({ x, y }) =&gt; {                                                                  // 익명 마커: 틸 원 r=5, 차콜 테두리 1px
+    g.beginPath(); g.arc(X(x), Y(y), 5, 0, Math.PI * 2);
+    g.fillStyle = &quot;#129793&quot;; g.fill(); g.lineWidth = 1; g.strokeStyle = &quot;#505050&quot;; g.stroke();
+  });
 }
 
 async function loadMeal() {
@@ -1771,6 +1844,124 @@ WantedBy=timers.target</code></pre>
 python -c &quot;import json;print(json.load(open(&#x27;data/news.json&#x27;,encoding=&#x27;utf-8&#x27;))[&#x27;items&#x27;][0][&#x27;title&#x27;])&quot;
 # Pi 반영 후: systemctl list-timers &#x27;mealboard*&#x27;  → news 타이머 06:10</code></pre>
 </figure>
+
+</section><section id="s13" class="step">
+<header><span class="stepnum">STEP 13</span><h2>급식실 현황 — 익명 위치 마커</h2><span class="layer">확장</span></header>
+<div class="sysmap" aria-label="시스템 지도">
+  <div class="lane"><em>개발 흐름</em><div class="node" data-k="pc"><b>개발 PC</b><span>코드 작성 · Claude Code 실행 · git push</span></div><i>git push →</i><div class="node" data-k="gh"><b>GitHub</b><span>저장소 원본 (팀 공용)</span></div><i>git pull →</i><div class="node" data-k="pi"><b>홈 Pi 5</b><span>실제로 서비스가 도는 곳</span></div></div>
+  <div class="lane"><em>Pi 안 · 데이터</em><div class="node on" data-k="mock"><b>mock_feed</b><span>가짜 대기 인원 생성 (vision 대역)</span></div><i>또는</i><div class="node" data-k="vision"><b>vision</b><span>카메라 카운팅 — 학교 Pi 에서만</span></div><i>쓰기 →</i><div class="node" data-k="db"><b>queue.db</b><span>SQLite · 숫자만 저장</span></div><i>← 읽기</i><div class="node on" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div></div>
+  <div class="lane"><em>Pi 안 · 급식</em><div class="node" data-k="neis"><b>fetch_neis</b><span>NEIS 급식 API → 영양 지표</span></div><i>하루 1회 →</i><div class="node" data-k="meal"><b>meal.json</b><span>오늘·이번 주 급식 캐시</span></div><i>← 읽기</i><div class="node on" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div><i>→</i><div class="node on" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div></div>
+  <div class="lane"><em>공개</em><div class="node on" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div><i>→</i><div class="node" data-k="cf"><b>cloudflared</b><span>학교망 밖으로 내보내는 터널</span></div><i>→ 인터넷 →</i><div class="node" data-k="user"><b>학생·교사</b><span>QR → 휴대폰</span></div><i>· 전부</i><div class="node" data-k="sysd"><b>systemd</b><span>부팅 시 자동 실행 · 재시작</span></div><i>가 관리</i></div>
+</div>
+
+<p class="goal">목표: 추이 카드 아래에 빈 평면도가 뜨고, 그 위에 "지금 줄 선 사람들이 어디쯤 있는가"가 익명 점으로 30초마다 갱신되는 상태. 영상·실사·이력은 어디에도 없다.</p>
+
+<h3>13-1. 원칙 — 순간 상태 파일 하나</h3>
+<p>CLAUDE.md §2 의 히트맵 행은 이 단계에서 "공개 화면은 빈 평면도 위 히트맵·익명 위치 마커(순간 상태만, 이력 저장 없음)"으로 넓혔습니다(사용자 승인). 구현은 그 문장을 그대로 따릅니다: 카운팅 프로세스(지금은 mock)가 <code>data/positions.json</code> <em>한 파일</em>을 매 틱 덮어쓰고, API 는 그 파일을 읽어 줄 뿐입니다. 표(samples)에는 넣지 않으므로 "몇 시에 누가 어디 있었나"는 재구성할 수 없습니다. 좌표는 0~1 로 정규화된 숫자 두 개이고, 사람을 구분할 어떤 값도 없습니다. 파일은 <code>data/*</code> 규칙으로 git 에서 제외됩니다.</p>
+
+<h3>13-2. mock_feed — 폴리라인을 따라 배치</h3>
+<p>입구(0.08, 0.88) → 꺾임(0.5, 0.85) → (0.55, 0.25) → 배식대(0.92, 0.12) 네 점을 잇는 선 위에 대기 인원을 등간격으로 놓고 ±0.02 지터를 줍니다. 덮어쓰기는 임시 파일에 쓴 뒤 <code>os.replace</code> — API 가 반쯤 쓰인 파일을 읽는 일이 없습니다. <code>--scenario gap</code> 구간에서는 DB 와 함께 이 파일도 멈춰, 카메라가 죽은 상황이 API 의 <code>no_data</code> 로 그대로 드러납니다. 전체 파일은 6단계 블록에 있습니다.</p>
+<figure class="code">
+<figcaption><span class="path">jobs/mock_feed.py 에 추가된 부분</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">PATH = [(0.08, 0.88), (0.5, 0.85), (0.55, 0.25), (0.92, 0.12)]   # 입구 → 꺾임 → 배식대 (0~1 정규화 좌표)
+POSITIONS = DATA / &quot;positions.json&quot;
+
+
+def arrival_rate(m):
+    &quot;&quot;&quot;경과 분 m → 도착률(명/분). 학년별 시간차 배식을 흉내낸 두 봉우리&quot;&quot;&quot;
+    return 25 * math.exp(-((m - 25) / 12) ** 2) + 18 * math.exp(-((m - 70) / 15) ** 2)
+
+
+def layout_points(n):
+    &quot;&quot;&quot;폴리라인 PATH 를 따라 n 명을 등간격 배치 + 지터 ±0.02. 좌표뿐, 사람을 식별할 정보는 없다&quot;&quot;&quot;
+    seg = [math.dist(PATH[i], PATH[i + 1]) for i in range(len(PATH) - 1)]
+    total = sum(seg)
+    pts = []
+    for i in range(n):
+        d = (i + 0.5) / n * total
+        k = 0
+        while k &lt; len(seg) - 1 and d &gt; seg[k]:
+            d -= seg[k]
+            k += 1
+        t = d / seg[k]
+        x = PATH[k][0] + (PATH[k + 1][0] - PATH[k][0]) * t + random.uniform(-0.02, 0.02)
+        y = PATH[k][1] + (PATH[k + 1][1] - PATH[k][1]) * t + random.uniform(-0.02, 0.02)
+        pts.append({&quot;x&quot;: round(min(max(x, 0), 1), 3), &quot;y&quot;: round(min(max(y, 0), 1), 3)})
+    return pts
+
+
+def write_positions(ts, queue):
+    &quot;&quot;&quot;data/positions.json 을 원자적으로 덮어쓴다 (tmp 에 쓰고 os.replace). 순간 상태만, 이력 없음&quot;&quot;&quot;
+    tmp = POSITIONS.parent / (POSITIONS.name + &quot;.tmp&quot;)
+    tmp.write_text(json.dumps({&quot;updated_at&quot;: ts, &quot;n&quot;: queue, &quot;points&quot;: layout_points(queue)}), encoding=&quot;utf-8&quot;)
+    os.replace(tmp, POSITIONS)
+
+# main() 의 DB 기록 직후 한 줄:
+#   write_positions(ts, queue)</code></pre>
+</figure>
+
+<h3>13-3. 창구 — /api/positions</h3>
+<p><code>status.py</code> 와 같은 120초 stale 규칙입니다. 파일이 없거나 오래되면 <code>state: no_data</code> 와 빈 <code>points</code>. 5단계 <code>main.py</code> 에 라우터 한 줄이 추가됩니다.</p>
+<figure class="code">
+<figcaption><span class="path">app/routers/positions.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">import datetime as dt
+import json
+from fastapi import APIRouter
+from ..config import DATA
+
+router = APIRouter()
+POSITIONS = DATA / &quot;positions.json&quot;
+STALE_SEC = 120   # status.py 와 같은 규칙: 이 시간 넘게 새 파일이 없으면 '데이터 없음'
+
+
+@router.get(&quot;/api/positions&quot;)
+def positions():
+    &quot;&quot;&quot;익명 위치 마커의 순간 상태. 파일 하나를 덮어쓸 뿐 이력은 어디에도 남지 않는다 (CLAUDE.md §2)&quot;&quot;&quot;
+    empty = {&quot;state&quot;: &quot;no_data&quot;, &quot;updated_at&quot;: None, &quot;stale&quot;: False, &quot;n&quot;: 0, &quot;points&quot;: []}
+    if not POSITIONS.exists():
+        return empty
+    try:
+        p = json.loads(POSITIONS.read_text(encoding=&quot;utf-8&quot;))
+    except ValueError:                       # 덮어쓰는 순간에 읽혔을 때 — 다음 폴링에서 정상
+        return empty
+    age = (dt.datetime.now() - dt.datetime.fromisoformat(p[&quot;updated_at&quot;])).total_seconds()
+    if age &gt; STALE_SEC:
+        return {**empty, &quot;updated_at&quot;: p[&quot;updated_at&quot;], &quot;stale&quot;: True}
+    return {&quot;state&quot;: &quot;ok&quot;, &quot;updated_at&quot;: p[&quot;updated_at&quot;], &quot;stale&quot;: False, &quot;n&quot;: p[&quot;n&quot;], &quot;points&quot;: p[&quot;points&quot;]}
+</code></pre>
+</figure>
+
+<figure class="code">
+<figcaption><span class="path">app/main.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from .config import BASE
+from .routers import status, history, meal, positions
+
+app = FastAPI(title=&quot;Mealboard&quot;)
+app.include_router(status.router)
+app.include_router(history.router)
+app.include_router(meal.router)
+app.include_router(positions.router)
+# 정적 파일은 마지막에 mount — /api/* 가 먼저 잡히도록
+app.mount(&quot;/&quot;, StaticFiles(directory=BASE / &quot;static&quot;, html=True), name=&quot;static&quot;)
+</code></pre>
+</figure>
+
+<h3>13-4. 화면 — 카드 ⑩</h3>
+<p>도면 v4 의 주석 ⑩·컴포넌트 스펙을 따릅니다. canvas(600×360, 5:3)에 벡터 평면도 — 바닥(egg2)·외곽 1.5px 차콜·우상단 멜론 점선 사각형(배식대)·좌하단 외곽선 틈과 라벨(입구) — 를 그리고 점을 틸 원(r=5, 차콜 테두리 1px)으로 찍습니다. 우상단 칩에 "N명", 각주에 "영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다". <code>no_data</code> 면 평면도만 흐리게(opacity .35) 두고 "표시할 위치 없음"을 띄웁니다. 폴링은 식권 카드의 <code>refresh()</code> 에 한 줄로 편승하고(30초), 고도·hover 는 다른 카드와 같습니다. 데스크톱 2컬럼에서는 왼쪽 컬럼 맨 아래, 모바일에서는 추이 다음입니다. 코드는 7단계 <code>static/index.html</code> 블록의 <code>#plancard</code> · <code>drawPlan</code> 부분입니다.</p>
+
+<h3>확인</h3>
+<figure class="code">
+<figcaption><span class="path">개발 PC</span><span class="lang">bash</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">uv run uvicorn app.main:app --port 8100     # + 다른 창에서 uv run python -m jobs.mock_feed --speed 60
+curl -s localhost:8100/api/positions | head -c 200      # state ok, n, points[{x,y}]
+curl -s localhost:8100/api/status                       # queue_len 이 위의 n · points 개수와 같아야 함 (같은 틱에 기록)
+ls data/positions.json*                                 # .tmp 가 남아 있지 않아야 정상 (os.replace)
+# mock 을 끄고 2분 뒤 다시 /api/positions → state no_data, 카드가 흐려지고 &quot;표시할 위치 없음&quot;</code></pre>
+</figure>
+
+<dl class="term"><dt>원자적 덮어쓰기</dt><dd>임시 파일에 다 쓴 뒤 이름만 바꿔치기(<code>os.replace</code>)하는 방식. 읽는 쪽은 언제나 "완전한 옛 파일" 아니면 "완전한 새 파일"만 본다.</dd></dl>
 
 </section>
 </main>
