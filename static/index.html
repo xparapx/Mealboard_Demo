@@ -43,7 +43,9 @@
   .hero[data-level="off"] .row b { color: var(--ink); }
   .row b { font-size: 16px; font-weight: 800; }
   .muted { color: var(--mute); font-size: 11px; }
-  canvas { width: 100%; height: 72px; display: block; border-bottom: 1.5px solid var(--char); margin-top: 8px; }
+  /* 히트맵 밴드: 2분 × 60칸, Spectral 역순. 색 스케일은 식권 칩과 같은 임계값(5·12분)에 고정. 데이터 없는 칸은 --off */
+  canvas { width: 100%; height: 44px; display: block; border: 1.5px solid var(--char); border-radius: 8px; margin-top: 8px; }
+  .axis { display: flex; justify-content: space-between; margin-top: 6px; }
   ul { margin: 8px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 14px; }
   li { padding-left: 14px; position: relative; }
   li::before { content: ""; position: absolute; left: 0; top: .6em; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--char); }
@@ -96,9 +98,10 @@
     <span>갱신 <span id="updated"></span> · 30초마다</span><span>추정치 · 배식 초반 오차 큼</span>
   </div>
 
-  <section class="card">
+  <section class="card" id="chartcard">
     <div class="eyebrow">최근 2시간 예상 대기</div>
-    <canvas id="chart" width="600" height="120"></canvas>
+    <canvas id="chart" width="600" height="44"></canvas>
+    <div class="muted axis"><span>2시간 전</span><span>청 = 여유(≤5분) · 적 = 혼잡(12분+)</span><span>지금</span></div>
   </section>
 
   <section class="card">
@@ -139,29 +142,47 @@ async function refresh() {
   $("#updated").textContent = st.updated_at
     ? new Date(st.updated_at).toLocaleTimeString("ko-KR") : "-";
   const h = await j("/api/history?minutes=120");
-  drawChart(h.rows);
+  drawBand(h.rows);
 }
 
-function drawChart(rows) {
+// ColorBrewer Spectral 11단 (seaborn "Spectral" 과 동일) 을 뒤집어 0=청(여유) → 1=적(혼잡)
+const SPECTRAL_R = ["#5e4fa2", "#3288bd", "#66c2a5", "#abdda4", "#e6f598", "#ffffbf",
+                    "#fee08b", "#fdae61", "#f46d43", "#d53e4f", "#9e0142"];
+function spectral(t) {
+  const s = Math.min(Math.max(t, 0), 1) * (SPECTRAL_R.length - 1), i = Math.floor(s), f = s - i;
+  const a = SPECTRAL_R[i], b = SPECTRAL_R[Math.min(i + 1, SPECTRAL_R.length - 1)];
+  const ch = (h, k) => parseInt(h.slice(k, k + 2), 16);
+  return "rgb(" + [1, 3, 5].map(k => Math.round(ch(a, k) + (ch(b, k) - ch(a, k)) * f)).join(",") + ")";
+}
+
+// 절대 스케일 — 식권 칩과 같은 임계값. 0~여유(5분)=청→녹, 여유~혼잡(12분)=노→주황, 혼잡 이상=적(2배에서 포화)
+function waitT(v) {
+  if (v <= EASY_MIN) return v / EASY_MIN * .45;
+  if (v <= BUSY_MIN) return .45 + (v - EASY_MIN) / (BUSY_MIN - EASY_MIN) * .40;
+  return .85 + Math.min((v - BUSY_MIN) / BUSY_MIN, 1) * .15;
+}
+
+const WINDOW_MIN = 120, BINS = 60;               // 2시간을 2분 칸 60개로
+function drawBand(rows) {
   const c = $("#chart"), g = c.getContext("2d");
   g.clearRect(0, 0, c.width, c.height);
-  const pts = rows.filter(r => r.wait_min != null);
-  if (pts.length < 2) return;
-  const max = Math.max(5, ...pts.map(r => r.wait_min));
-  const xy = pts.map((r, i) => [i / (pts.length - 1) * c.width,
-                                c.height - r.wait_min / max * (c.height - 10) - 5]);
-  // 면 채움: 위(높은 값)로 갈수록 진한 틸, 아래는 투명 — 봉우리가 스스로 강조된다
-  const grad = g.createLinearGradient(0, 0, 0, c.height);
-  grad.addColorStop(0, "rgba(18,151,147,.9)");
-  grad.addColorStop(.55, "rgba(18,151,147,.35)");
-  grad.addColorStop(1, "rgba(155,215,213,0)");
-  g.beginPath();
-  xy.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
-  g.lineTo(c.width, c.height); g.lineTo(0, c.height); g.closePath();
-  g.fillStyle = grad; g.fill();
-  g.beginPath(); g.strokeStyle = "#129793"; g.lineWidth = 2;
-  xy.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
-  g.stroke();
+  const end = Date.now(), start = end - WINDOW_MIN * 60000;
+  const sum = new Array(BINS).fill(0), n = new Array(BINS).fill(0);
+  rows.forEach(r => {
+    if (r.wait_min == null) return;                                  // 산출 불가 표본은 빈 칸으로
+    const t = new Date(r.ts).getTime();
+    if (t < start || t > end) return;
+    const b = Math.min(BINS - 1, Math.floor((t - start) / (end - start) * BINS));
+    sum[b] += r.wait_min; n[b]++;
+  });
+  const vals = sum.map((v, i) => n[i] ? v / n[i] : null), have = vals.filter(v => v != null);
+  $("#chartcard").hidden = have.length < 2;                        // 데이터 2점 미만이면 카드 숨김
+  if (have.length < 2) return;
+  const w = c.width / BINS;
+  vals.forEach((v, i) => {
+    g.fillStyle = v == null ? "#BDBDB5" : spectral(waitT(v));
+    g.fillRect(i * w, 0, Math.ceil(w), c.height);
+  });
 }
 
 async function loadMeal() {

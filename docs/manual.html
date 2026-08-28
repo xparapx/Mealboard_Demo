@@ -887,7 +887,9 @@ systemctl status mealboard-api --no-pager</code></pre>
   .hero[data-level=&quot;off&quot;] .row b { color: var(--ink); }
   .row b { font-size: 16px; font-weight: 800; }
   .muted { color: var(--mute); font-size: 11px; }
-  canvas { width: 100%; height: 72px; display: block; border-bottom: 1.5px solid var(--char); margin-top: 8px; }
+  /* 히트맵 밴드: 2분 × 60칸, Spectral 역순. 색 스케일은 식권 칩과 같은 임계값(5·12분)에 고정. 데이터 없는 칸은 --off */
+  canvas { width: 100%; height: 44px; display: block; border: 1.5px solid var(--char); border-radius: 8px; margin-top: 8px; }
+  .axis { display: flex; justify-content: space-between; margin-top: 6px; }
   ul { margin: 8px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 14px; }
   li { padding-left: 14px; position: relative; }
   li::before { content: &quot;&quot;; position: absolute; left: 0; top: .6em; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--char); }
@@ -940,9 +942,10 @@ systemctl status mealboard-api --no-pager</code></pre>
     &lt;span&gt;갱신 &lt;span id=&quot;updated&quot;&gt;&lt;/span&gt; · 30초마다&lt;/span&gt;&lt;span&gt;추정치 · 배식 초반 오차 큼&lt;/span&gt;
   &lt;/div&gt;
 
-  &lt;section class=&quot;card&quot;&gt;
+  &lt;section class=&quot;card&quot; id=&quot;chartcard&quot;&gt;
     &lt;div class=&quot;eyebrow&quot;&gt;최근 2시간 예상 대기&lt;/div&gt;
-    &lt;canvas id=&quot;chart&quot; width=&quot;600&quot; height=&quot;120&quot;&gt;&lt;/canvas&gt;
+    &lt;canvas id=&quot;chart&quot; width=&quot;600&quot; height=&quot;44&quot;&gt;&lt;/canvas&gt;
+    &lt;div class=&quot;muted axis&quot;&gt;&lt;span&gt;2시간 전&lt;/span&gt;&lt;span&gt;청 = 여유(≤5분) · 적 = 혼잡(12분+)&lt;/span&gt;&lt;span&gt;지금&lt;/span&gt;&lt;/div&gt;
   &lt;/section&gt;
 
   &lt;section class=&quot;card&quot;&gt;
@@ -983,29 +986,47 @@ async function refresh() {
   $(&quot;#updated&quot;).textContent = st.updated_at
     ? new Date(st.updated_at).toLocaleTimeString(&quot;ko-KR&quot;) : &quot;-&quot;;
   const h = await j(&quot;/api/history?minutes=120&quot;);
-  drawChart(h.rows);
+  drawBand(h.rows);
 }
 
-function drawChart(rows) {
+// ColorBrewer Spectral 11단 (seaborn &quot;Spectral&quot; 과 동일) 을 뒤집어 0=청(여유) → 1=적(혼잡)
+const SPECTRAL_R = [&quot;#5e4fa2&quot;, &quot;#3288bd&quot;, &quot;#66c2a5&quot;, &quot;#abdda4&quot;, &quot;#e6f598&quot;, &quot;#ffffbf&quot;,
+                    &quot;#fee08b&quot;, &quot;#fdae61&quot;, &quot;#f46d43&quot;, &quot;#d53e4f&quot;, &quot;#9e0142&quot;];
+function spectral(t) {
+  const s = Math.min(Math.max(t, 0), 1) * (SPECTRAL_R.length - 1), i = Math.floor(s), f = s - i;
+  const a = SPECTRAL_R[i], b = SPECTRAL_R[Math.min(i + 1, SPECTRAL_R.length - 1)];
+  const ch = (h, k) =&gt; parseInt(h.slice(k, k + 2), 16);
+  return &quot;rgb(&quot; + [1, 3, 5].map(k =&gt; Math.round(ch(a, k) + (ch(b, k) - ch(a, k)) * f)).join(&quot;,&quot;) + &quot;)&quot;;
+}
+
+// 절대 스케일 — 식권 칩과 같은 임계값. 0~여유(5분)=청→녹, 여유~혼잡(12분)=노→주황, 혼잡 이상=적(2배에서 포화)
+function waitT(v) {
+  if (v &lt;= EASY_MIN) return v / EASY_MIN * .45;
+  if (v &lt;= BUSY_MIN) return .45 + (v - EASY_MIN) / (BUSY_MIN - EASY_MIN) * .40;
+  return .85 + Math.min((v - BUSY_MIN) / BUSY_MIN, 1) * .15;
+}
+
+const WINDOW_MIN = 120, BINS = 60;               // 2시간을 2분 칸 60개로
+function drawBand(rows) {
   const c = $(&quot;#chart&quot;), g = c.getContext(&quot;2d&quot;);
   g.clearRect(0, 0, c.width, c.height);
-  const pts = rows.filter(r =&gt; r.wait_min != null);
-  if (pts.length &lt; 2) return;
-  const max = Math.max(5, ...pts.map(r =&gt; r.wait_min));
-  const xy = pts.map((r, i) =&gt; [i / (pts.length - 1) * c.width,
-                                c.height - r.wait_min / max * (c.height - 10) - 5]);
-  // 면 채움: 위(높은 값)로 갈수록 진한 틸, 아래는 투명 — 봉우리가 스스로 강조된다
-  const grad = g.createLinearGradient(0, 0, 0, c.height);
-  grad.addColorStop(0, &quot;rgba(18,151,147,.9)&quot;);
-  grad.addColorStop(.55, &quot;rgba(18,151,147,.35)&quot;);
-  grad.addColorStop(1, &quot;rgba(155,215,213,0)&quot;);
-  g.beginPath();
-  xy.forEach(([x, y], i) =&gt; i ? g.lineTo(x, y) : g.moveTo(x, y));
-  g.lineTo(c.width, c.height); g.lineTo(0, c.height); g.closePath();
-  g.fillStyle = grad; g.fill();
-  g.beginPath(); g.strokeStyle = &quot;#129793&quot;; g.lineWidth = 2;
-  xy.forEach(([x, y], i) =&gt; i ? g.lineTo(x, y) : g.moveTo(x, y));
-  g.stroke();
+  const end = Date.now(), start = end - WINDOW_MIN * 60000;
+  const sum = new Array(BINS).fill(0), n = new Array(BINS).fill(0);
+  rows.forEach(r =&gt; {
+    if (r.wait_min == null) return;                                  // 산출 불가 표본은 빈 칸으로
+    const t = new Date(r.ts).getTime();
+    if (t &lt; start || t &gt; end) return;
+    const b = Math.min(BINS - 1, Math.floor((t - start) / (end - start) * BINS));
+    sum[b] += r.wait_min; n[b]++;
+  });
+  const vals = sum.map((v, i) =&gt; n[i] ? v / n[i] : null), have = vals.filter(v =&gt; v != null);
+  $(&quot;#chartcard&quot;).hidden = have.length &lt; 2;                        // 데이터 2점 미만이면 카드 숨김
+  if (have.length &lt; 2) return;
+  const w = c.width / BINS;
+  vals.forEach((v, i) =&gt; {
+    g.fillStyle = v == null ? &quot;#BDBDB5&quot; : spectral(waitT(v));
+    g.fillRect(i * w, 0, Math.ceil(w), c.height);
+  });
 }
 
 async function loadMeal() {
@@ -1040,7 +1061,7 @@ if (&quot;serviceWorker&quot; in navigator) navigator.serviceWorker.register(&qu
 &lt;/body&gt;
 &lt;/html&gt;</code></pre>
 </figure>
-<p>색과 구조는 <code>docs/layout.html</code> 의 레이아웃 도면 v4(ColorCombos #285 — 차콜·에그셸·멜론, 보조로 틸·아쿠아)를 따릅니다. 식권 카드는 상태에 따라 네 얼굴을 갖고(여유=차콜+아쿠아 칩, 배식 대기=멜론 외곽선 칩, 혼잡=멜론 카드+차콜 칩, 정보 없음=점선), 스파크라인은 위가 진한 틸 그라데이션으로 봉우리를 강조합니다. 급식 카드의 영양 3칸은 고유색(01 틸·02 아쿠아·03 멜론)이 칸의 정체성이고 상태는 우상단 플래그(많음·적음·부족 N)로만 표시합니다. 영양소 막대는 6개가 각각 고유색이며, 멜론 세로선(66.7% 위치)이 권장섭취량 100%, 부족이면 막대색은 그대로 두고 트랙에 멜론 외곽선과 "부족" 라벨을 붙입니다. 미리 만들어 두는 이유는 8단계 결과를 바로 눈으로 보기 위해서입니다.</p>
+<p>색과 구조는 <code>docs/layout.html</code> 의 레이아웃 도면 v4(ColorCombos #285 — 차콜·에그셸·멜론, 보조로 틸·아쿠아)를 따릅니다. 식권 카드는 상태에 따라 네 얼굴을 갖고(여유=차콜+아쿠아 칩, 배식 대기=멜론 외곽선 칩, 혼잡=멜론 카드+차콜 칩, 정보 없음=점선), 최근 2시간은 선 그래프 대신 1행 히트맵 밴드(2분 × 60칸)로, Spectral 색상표를 뒤집어 청=여유 → 적=혼잡으로 칠합니다. 색 스케일은 창 안 상대값이 아니라 식권 칩과 같은 임계값(여유 ≤5분 · 혼잡 >12분)에 고정해 두 요소가 같은 판정을 말하게 하고, 데이터 없는 칸은 회색으로 둡니다. 급식 카드의 영양 3칸은 고유색(01 틸·02 아쿠아·03 멜론)이 칸의 정체성이고 상태는 우상단 플래그(많음·적음·부족 N)로만 표시합니다. 영양소 막대는 6개가 각각 고유색이며, 멜론 세로선(66.7% 위치)이 권장섭취량 100%, 부족이면 막대색은 그대로 두고 트랙에 멜론 외곽선과 "부족" 라벨을 붙입니다. 미리 만들어 두는 이유는 8단계 결과를 바로 눈으로 보기 위해서입니다.</p>
 
 <h3>7-2. PWA 파일 두 개</h3>
 <p>PWA 는 "홈 화면에 추가"가 되는 웹페이지입니다. <code>manifest.json</code> 이 이름·아이콘을, <code>sw.js</code> 가 오프라인 캐시를 맡습니다. <strong>sw.js 에서 <code>/api/</code> 를 캐시하면 30초 폴링이 캐시된 옛 값만 돌려주는 함정</strong>이 있어, API 요청은 통과시키고 정적 파일만 캐시합니다.</p>
