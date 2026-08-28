@@ -1,0 +1,8 @@
+{
+  "note": "이슈 링크 RSS 목록. 주소는 구현 시 curl 로 200·XML 인지 확인 후 확정. 학교·지역에 맞게 교체 가능.",
+  "max_items": 3,
+  "feeds": [
+    {"name": "구글뉴스 탄소중립", "url": "https://news.google.com/rss/search?q=%ED%83%84%EC%86%8C%EC%A4%91%EB%A6%BD&hl=ko&gl=KR&ceid=KR:ko"},
+    {"name": "구글뉴스 기후 급식", "url": "https://news.google.com/rss/search?q=%EA%B8%B0%ED%9B%84%EB%B3%80%ED%99%94%20%EA%B8%89%EC%8B%9D&hl=ko&gl=KR&ceid=KR:ko"}
+  ]
+}

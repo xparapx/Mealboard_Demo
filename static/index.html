@@ -113,8 +113,14 @@
   .carbon .ring { width: 44px; height: 44px; border-radius: 50%; flex: none; background: conic-gradient(var(--teal) 0 0%, var(--egg2) 0%);
                   display: grid; place-items: center; font-size: 10px; font-weight: 800; border: 1.5px solid var(--char); }
   .carbon .ring i { width: 32px; height: 32px; border-radius: 50%; background: var(--paper); display: grid; place-items: center; font-style: normal; }
-  /* ⑨ 이슈 링크(12단계) 항목 — 마크업이 들어오면 그대로 적용된다 */
-  .news li { padding: 8px 10px 8px 14px; border: 1.5px solid var(--char); border-radius: 10px; background: var(--egg2); overflow: hidden; }
+  /* ⑨ 이슈 링크: 제목 1줄(40자 말줄임) + 출처 + 날짜, 탭 시 새 창. 본문 요약 없음 */
+  .news { display: grid; grid-template-columns: 1fr; gap: 6px; margin: 8px 0 0; font-size: 13px; }
+  .news li { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 8px 10px 8px 14px; border: 1.5px solid var(--char);
+             border-radius: 10px; background: var(--egg2); overflow: hidden; }
+  .news li:first-child { grid-column: auto; font-weight: inherit; font-size: 13px; }
+  .news li a { color: inherit; text-decoration: none; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .news li em { font-style: normal; font-size: 10px; font-weight: 800; color: var(--teal); letter-spacing: .08em; align-self: start; padding-top: 2px; }
+  .news li small { grid-column: 1 / -1; font-size: 10.5px; color: var(--mute); }
   .news li::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; height: auto; border: 0; border-radius: 0;
                      background: var(--teal); transform: translateX(-100%); }
   /* 버튼류(탄소 4버튼 · details summary): 눌림·키보드 초점 */
@@ -201,6 +207,11 @@
       <div class="mine"><div>이번 달 내가 남긴 급식 <b id="minekg">0 kg CO₂e</b><br><span class="muted" id="minesub"></span></div>
         <div class="ring" id="ring" title="이번 달 '다 먹음' 비율"><i id="ringpct">—</i></div></div>
       <div class="muted" id="carbonnote" style="margin-top:8px"></div>
+    </section>
+
+    <section class="card" id="newscard" hidden>
+      <div class="eyebrow">오늘의 기후 이슈</div>
+      <ul class="news" id="news"></ul>
     </section>
   </div>
 </main>
@@ -350,7 +361,22 @@ function renderCarbon(m) {
   $("#ring").style.background = `conic-gradient(var(--teal) 0 ${pct}%, var(--egg2) ${pct}%)`;
 }
 
-refresh(); loadMeal();
+// ⑨ 이슈 링크: /api/news (하루 1회 캐시). 제목·출처·날짜·링크만, 외부 문자열이므로 이스케이프. no_data 면 카드 숨김
+const escapeHtml = s => String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+async function loadNews() {
+  let n;
+  try { n = await j("/api/news"); } catch { n = { state: "no_data", items: [] }; }
+  const card = $("#newscard");
+  card.hidden = n.state !== "ok" || !(n.items && n.items.length);
+  if (card.hidden) return;
+  $("#news").innerHTML = n.items.map(x => {
+    const t = x.title.length > 40 ? x.title.slice(0, 40) + "…" : x.title;
+    return `<li><a href="${escapeHtml(x.link)}" target="_blank" rel="noopener" title="${escapeHtml(x.title)}">${escapeHtml(t)}</a>`
+         + `<em>${escapeHtml(x.source)}</em><small>${escapeHtml(x.date)}</small></li>`;
+  }).join("");
+}
+
+refresh(); loadMeal(); loadNews();
 setInterval(refresh, 30000);
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
 </script>

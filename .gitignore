@@ -3,6 +3,7 @@ data/*
 !data/plan_bg.png
 !data/nutrition_std.json
 !data/carbon_std.json
+!data/news_feeds.json
 .env
 .venv/
 __pycache__/

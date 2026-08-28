@@ -39,7 +39,7 @@ for u in deploy/*.service deploy/*.timer; do
   rm -f "$tmp"
 done
 sudo systemctl daemon-reload
-sudo systemctl enable --now mealboard-api mealboard-mock mealboard-neis.timer
+sudo systemctl enable --now mealboard-api mealboard-mock mealboard-neis.timer mealboard-news.timer
 echo ">> 카메라 있는 Pi 에서만:  sudo systemctl disable --now mealboard-mock && sudo systemctl enable --now mealboard-vision"
 
 echo "== 완료. 확인:  curl -s localhost:\${API_PORT:-8100}/api/status"

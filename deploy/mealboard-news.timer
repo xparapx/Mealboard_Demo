@@ -1,0 +1,9 @@
+[Unit]
+Description=매일 06:10 이슈 링크 갱신 (05:40 NEIS 와 간격)
+
+[Timer]
+OnCalendar=*-*-* 06:10:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,9 @@
+[Unit]
+Description=Mealboard 이슈 링크 갱신 (1회 실행)
+
+[Service]
+Type=oneshot
+User=__USER__
+WorkingDirectory=/opt/mealboard
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/mealboard/.venv/bin/python -m jobs.fetch_news

@@ -250,6 +250,7 @@ data/*
 !data/plan_bg.png
 !data/nutrition_std.json
 !data/carbon_std.json
+!data/news_feeds.json
 .env
 .venv/
 __pycache__/
@@ -432,7 +433,7 @@ for u in deploy/*.service deploy/*.timer; do
   rm -f &quot;$tmp&quot;
 done
 sudo systemctl daemon-reload
-sudo systemctl enable --now mealboard-api mealboard-mock mealboard-neis.timer
+sudo systemctl enable --now mealboard-api mealboard-mock mealboard-neis.timer mealboard-news.timer
 echo &quot;&gt;&gt; 카메라 있는 Pi 에서만:  sudo systemctl disable --now mealboard-mock &amp;&amp; sudo systemctl enable --now mealboard-vision&quot;
 
 echo &quot;== 완료. 확인:  curl -s localhost:\${API_PORT:-8100}/api/status&quot;</code></pre>
@@ -663,13 +664,14 @@ def meal():
 <pre><code class="lang-python">from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from .config import BASE
-from .routers import status, history, meal, positions
+from .routers import status, history, meal, positions, news
 
 app = FastAPI(title=&quot;Mealboard&quot;)
 app.include_router(status.router)
 app.include_router(history.router)
 app.include_router(meal.router)
 app.include_router(positions.router)
+app.include_router(news.router)
 # 정적 파일은 마지막에 mount — /api/* 가 먼저 잡히도록
 app.mount(&quot;/&quot;, StaticFiles(directory=BASE / &quot;static&quot;, html=True), name=&quot;static&quot;)</code></pre>
 </figure>
@@ -1000,8 +1002,14 @@ systemctl status mealboard-api --no-pager</code></pre>
   .carbon .ring { width: 44px; height: 44px; border-radius: 50%; flex: none; background: conic-gradient(var(--teal) 0 0%, var(--egg2) 0%);
                   display: grid; place-items: center; font-size: 10px; font-weight: 800; border: 1.5px solid var(--char); }
   .carbon .ring i { width: 32px; height: 32px; border-radius: 50%; background: var(--paper); display: grid; place-items: center; font-style: normal; }
-  /* ⑨ 이슈 링크(12단계) 항목 — 마크업이 들어오면 그대로 적용된다 */
-  .news li { padding: 8px 10px 8px 14px; border: 1.5px solid var(--char); border-radius: 10px; background: var(--egg2); overflow: hidden; }
+  /* ⑨ 이슈 링크: 제목 1줄(40자 말줄임) + 출처 + 날짜, 탭 시 새 창. 본문 요약 없음 */
+  .news { display: grid; grid-template-columns: 1fr; gap: 6px; margin: 8px 0 0; font-size: 13px; }
+  .news li { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 8px 10px 8px 14px; border: 1.5px solid var(--char);
+             border-radius: 10px; background: var(--egg2); overflow: hidden; }
+  .news li:first-child { grid-column: auto; font-weight: inherit; font-size: 13px; }
+  .news li a { color: inherit; text-decoration: none; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .news li em { font-style: normal; font-size: 10px; font-weight: 800; color: var(--teal); letter-spacing: .08em; align-self: start; padding-top: 2px; }
+  .news li small { grid-column: 1 / -1; font-size: 10.5px; color: var(--mute); }
   .news li::before { content: &quot;&quot;; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; height: auto; border: 0; border-radius: 0;
                      background: var(--teal); transform: translateX(-100%); }
   /* 버튼류(탄소 4버튼 · details summary): 눌림·키보드 초점 */
@@ -1088,6 +1096,11 @@ systemctl status mealboard-api --no-pager</code></pre>
       &lt;div class=&quot;mine&quot;&gt;&lt;div&gt;이번 달 내가 남긴 급식 &lt;b id=&quot;minekg&quot;&gt;0 kg CO₂e&lt;/b&gt;&lt;br&gt;&lt;span class=&quot;muted&quot; id=&quot;minesub&quot;&gt;&lt;/span&gt;&lt;/div&gt;
         &lt;div class=&quot;ring&quot; id=&quot;ring&quot; title=&quot;이번 달 '다 먹음' 비율&quot;&gt;&lt;i id=&quot;ringpct&quot;&gt;—&lt;/i&gt;&lt;/div&gt;&lt;/div&gt;
       &lt;div class=&quot;muted&quot; id=&quot;carbonnote&quot; style=&quot;margin-top:8px&quot;&gt;&lt;/div&gt;
+    &lt;/section&gt;
+
+    &lt;section class=&quot;card&quot; id=&quot;newscard&quot; hidden&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;오늘의 기후 이슈&lt;/div&gt;
+      &lt;ul class=&quot;news&quot; id=&quot;news&quot;&gt;&lt;/ul&gt;
     &lt;/section&gt;
   &lt;/div&gt;
 &lt;/main&gt;
@@ -1237,7 +1250,22 @@ function renderCarbon(m) {
   $(&quot;#ring&quot;).style.background = `conic-gradient(var(--teal) 0 ${pct}%, var(--egg2) ${pct}%)`;
 }
 
-refresh(); loadMeal();
+// ⑨ 이슈 링크: /api/news (하루 1회 캐시). 제목·출처·날짜·링크만, 외부 문자열이므로 이스케이프. no_data 면 카드 숨김
+const escapeHtml = s =&gt; String(s).replace(/[&amp;&lt;&gt;&quot;']/g, ch =&gt; ({ &quot;&amp;&quot;: &quot;&amp;amp;&quot;, &quot;&lt;&quot;: &quot;&amp;lt;&quot;, &quot;&gt;&quot;: &quot;&amp;gt;&quot;, '&quot;': &quot;&amp;quot;&quot;, &quot;'&quot;: &quot;&amp;#39;&quot; }[ch]));
+async function loadNews() {
+  let n;
+  try { n = await j(&quot;/api/news&quot;); } catch { n = { state: &quot;no_data&quot;, items: [] }; }
+  const card = $(&quot;#newscard&quot;);
+  card.hidden = n.state !== &quot;ok&quot; || !(n.items &amp;&amp; n.items.length);
+  if (card.hidden) return;
+  $(&quot;#news&quot;).innerHTML = n.items.map(x =&gt; {
+    const t = x.title.length &gt; 40 ? x.title.slice(0, 40) + &quot;…&quot; : x.title;
+    return `&lt;li&gt;&lt;a href=&quot;${escapeHtml(x.link)}&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot; title=&quot;${escapeHtml(x.title)}&quot;&gt;${escapeHtml(t)}&lt;/a&gt;`
+         + `&lt;em&gt;${escapeHtml(x.source)}&lt;/em&gt;&lt;small&gt;${escapeHtml(x.date)}&lt;/small&gt;&lt;/li&gt;`;
+  }).join(&quot;&quot;);
+}
+
+refresh(); loadMeal(); loadNews();
 setInterval(refresh, 30000);
 if (&quot;serviceWorker&quot; in navigator) navigator.serviceWorker.register(&quot;/sw.js&quot;);
 &lt;/script&gt;
@@ -1978,16 +2006,16 @@ def positions():
 <pre><code class="lang-python">from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from .config import BASE
-from .routers import status, history, meal, positions
+from .routers import status, history, meal, positions, news
 
 app = FastAPI(title=&quot;Mealboard&quot;)
 app.include_router(status.router)
 app.include_router(history.router)
 app.include_router(meal.router)
 app.include_router(positions.router)
+app.include_router(news.router)
 # 정적 파일은 마지막에 mount — /api/* 가 먼저 잡히도록
-app.mount(&quot;/&quot;, StaticFiles(directory=BASE / &quot;static&quot;, html=True), name=&quot;static&quot;)
-</code></pre>
+app.mount(&quot;/&quot;, StaticFiles(directory=BASE / &quot;static&quot;, html=True), name=&quot;static&quot;)</code></pre>
 </figure>
 
 <h3>13-4. 화면 — 카드 ⑩</h3>
