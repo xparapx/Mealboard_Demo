@@ -6,23 +6,29 @@
 <title>급식실 대기 안내</title>
 <link rel="manifest" href="/manifest.json">
 <style>
-  /* 팔레트: docs/layout.html 도면 v4 — ColorCombos #285 (차콜·에그셸·멜론). 그림자 없음, 구분은 선과 채움색으로만 */
+  /* 팔레트: docs/layout.html 도면 v4 — ColorCombos #285 (차콜·에그셸·멜론). 외곽선 1.5px 은 유지하고 깊이는 고도 체계(--e1~e3)로 */
   :root { --char:#505050; --egg:#FFF5C3; --egg2:#FFFBE4; --paper:#FFFDF5;
           --teal:#129793; --aqua:#9BD7D5; --aqua2:#D3EDEC; --melon:#FF7260;
-          --ink:#2B2B2B; --mute:#7A7A72; --soft:#E6DFB8; --off:#BDBDB5; }
+          --ink:#2B2B2B; --mute:#7A7A72; --soft:#E6DFB8; --off:#BDBDB5;
+          --e1: 0 1px 2px rgba(43,43,43,.06);      /* 모든 카드 기본 */
+          --e2: 0 6px 16px rgba(43,43,43,.12);     /* 히어로·탄소 카드 */
+          --e3: 0 12px 28px rgba(43,43,43,.16); }  /* hover */
   body { font-family: "Pretendard", system-ui, sans-serif; margin: 0; background: var(--egg); color: var(--ink);
          font-variant-numeric: tabular-nums; }
   main { max-width: 640px; margin: 0 auto; padding: 16px; }
-  .card { background: var(--paper); border: 1.5px solid var(--char); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
+  .card { background: var(--paper); border: 1.5px solid var(--char); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px;
+          box-shadow: var(--e1); }
   .eyebrow { font-size: 10.5px; letter-spacing: .2em; color: var(--mute); font-weight: 800; }
   /* 히어로(식권 카드) 4가지 얼굴: ok=차콜+아쿠아 칩 · wait=차콜+멜론 외곽선 칩 · busy=멜론 카드+차콜 칩 · off=점선 */
-  .hero { background: var(--char); color: var(--egg); position: relative; }
+  .hero { background: var(--char); color: var(--egg); position: relative; box-shadow: var(--e2); }
   .hero .eyebrow { color: var(--egg); opacity: .75; }
   .hero[data-level="busy"] { background: var(--melon); color: #000; }
   .hero[data-level="busy"] .eyebrow { color: #000; opacity: .7; }
   .hero[data-level="off"] { background: var(--egg2); color: var(--ink); border-style: dashed; }
   .hero[data-level="off"] .eyebrow { color: var(--mute); opacity: 1; }
-  .wait { font-size: 92px; font-weight: 800; line-height: .9; letter-spacing: -.04em; color: #fff; }
+  .wait { font-size: 92px; font-weight: 800; line-height: .9; letter-spacing: -.04em; color: #fff; transform-origin: left center; }
+  .wait.pulse { animation: pulse .25s ease; }              /* 값이 실제로 바뀔 때만 JS 가 붙인다 */
+  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.04); } 100% { transform: scale(1); } }
   .hero[data-level="busy"] .wait { color: #000; }
   .hero[data-level="off"] .wait { color: var(--off); }
   .wait small { font-size: 22px; font-weight: 600; margin-left: 4px; opacity: .9; }
@@ -43,9 +49,8 @@
   .hero[data-level="off"] .row b { color: var(--ink); }
   .row b { font-size: 16px; font-weight: 800; }
   .muted { color: var(--mute); font-size: 11px; }
-  /* 히트맵 밴드: 2분 × 60칸, Spectral 역순. 색 스케일은 식권 칩과 같은 임계값(5·12분)에 고정. 데이터 없는 칸은 --off */
-  canvas { width: 100%; height: 44px; display: block; border: 1.5px solid var(--char); border-radius: 8px; margin-top: 8px; }
-  .axis { display: flex; justify-content: space-between; margin-top: 6px; }
+  /* 스파크라인: 높이 72px, 틸 선 2px + 세로 그라데이션 채움(위 틸 .9 → 아래 아쿠아 0). 축·범례 없음 */
+  canvas { width: 100%; height: 72px; display: block; border-bottom: 1.5px solid var(--char); margin-top: 8px; }
   ul { margin: 8px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 14px; }
   li { padding-left: 14px; position: relative; }
   li::before { content: ""; position: absolute; left: 0; top: .6em; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--char); }
@@ -63,8 +68,11 @@
   .kpi .flag { position: absolute; right: 8px; top: 8px; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 999px;
                background: rgba(0,0,0,.18); opacity: 1; }
   .kpi .flag:empty { display: none; }
-  details summary { list-style: none; cursor: pointer; font-size: 12px; color: var(--teal); font-weight: 800; letter-spacing: .08em; margin-top: 12px; }
+  details summary { list-style: none; cursor: pointer; font-size: 12px; color: var(--teal); font-weight: 800; letter-spacing: .08em; margin-top: 12px;
+                    display: inline-block; padding: 4px 6px; border-radius: 8px; }
   details summary::-webkit-details-marker { display: none; }
+  details[open] > :not(summary) { animation: reveal .2s ease; }   /* 펼침: opacity 0→1, 4px 위로 */
+  @keyframes reveal { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
   /* 영양소 막대: seaborn pastel 6색을 영양소 key 에 매핑(순서가 바뀌어도 유지). 부족은 막대색 유지 + 멜론 외곽선 + 라벨. 수용성 비타민은 과다 없음 */
   .bar { display: grid; grid-template-columns: 90px 1fr 64px; align-items: center; gap: 8px; font-size: 12px; margin: 5px 0; }
   .track { position: relative; height: 10px; background: var(--egg2); border: 1.5px solid var(--char); border-radius: 6px; }
@@ -81,7 +89,7 @@
   .track::after { content: ""; position: absolute; left: 66.7%; top: -5px; bottom: -5px; width: 2px; background: var(--melon); }  /* 권장섭취량 100% */
   .bar b { text-align: right; font-weight: 800; }
   /* ⑧ 탄소 카드: 틸 외곽선. 4버튼 기본값 "다 먹음", 선택은 localStorage(mb_waste) 에만 — 서버 쓰기 없음 */
-  .carbon { border-color: var(--teal); }
+  .carbon { border-color: var(--teal); box-shadow: var(--e2); }
   .carbon .big { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
   .carbon .num { font-size: 40px; font-weight: 800; letter-spacing: -.03em; color: var(--teal); line-height: 1; }
   .carbon .unit { font-size: 13px; color: var(--mute); }
@@ -97,56 +105,88 @@
   .carbon .ring { width: 44px; height: 44px; border-radius: 50%; flex: none; background: conic-gradient(var(--teal) 0 0%, var(--egg2) 0%);
                   display: grid; place-items: center; font-size: 10px; font-weight: 800; border: 1.5px solid var(--char); }
   .carbon .ring i { width: 32px; height: 32px; border-radius: 50%; background: var(--paper); display: grid; place-items: center; font-style: normal; }
+  /* ⑨ 이슈 링크(12단계) 항목 — 마크업이 들어오면 그대로 적용된다 */
+  .news li { padding: 8px 10px 8px 14px; border: 1.5px solid var(--char); border-radius: 10px; background: var(--egg2); overflow: hidden; }
+  .news li::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; height: auto; border: 0; border-radius: 0;
+                     background: var(--teal); transform: translateX(-100%); }
+  /* 버튼류(탄소 4버튼 · details summary): 눌림·키보드 초점 */
+  .carbon .pick > div:active, details summary:active { transform: translateY(1px) scale(.98); }
+  .carbon .pick > div:focus-visible, details summary:focus-visible { outline: 2px solid var(--melon); outline-offset: 2px; }
+  /* 데스크톱(≥900px): 2컬럼 — 왼쪽 히어로+추이 / 오른쪽 급식+탄소+이슈 */
+  @media (min-width: 900px) {
+    main { max-width: 1100px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 20px; align-items: start; padding: 24px; }
+    .wait { font-size: 120px; }
+  }
+  /* 마이크로 인터랙션 — 포인터가 있는 기기에서만 */
+  @media (hover: hover) {
+    .card { transition: transform .18s ease, box-shadow .18s ease; }
+    .card:hover { transform: translateY(-3px); box-shadow: var(--e3); }
+    .carbon .pick > div, details summary { transition: transform .12s ease, box-shadow .12s ease, background .12s ease; }
+    .carbon .pick > div:hover, details summary:hover { transform: translateY(-1px); box-shadow: var(--e1); }
+    .news li { transition: background .18s ease; }
+    .news li::before { transition: transform .18s ease; }
+    .news li:hover { background: var(--aqua2); }
+    .news li:hover::before { transform: translateX(0); }
+  }
+  /* 움직임 줄이기 설정: transform·transition·animation 전부 해제 */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; transform: none !important; }
+    .news li::before { display: none; }
+  }
 </style>
 </head>
 <body>
 <main>
-  <section class="card hero" id="hero" data-level="ok">
-    <span class="dot"></span>
-    <div class="eyebrow">지금 줄을 서면</div>
-    <div class="wait"><span id="wait">—</span><small>분</small></div>
-    <span id="state">—</span>
-    <div class="row">
-      <div><b id="queue">—</b>명 대기 중</div>
-      <div><b id="rate">—</b>명/분 배식 속도</div>
+  <div class="col">
+    <section class="card hero" id="hero" data-level="ok">
+      <span class="dot"></span>
+      <div class="eyebrow">지금 줄을 서면</div>
+      <div class="wait" id="waitbox"><span id="wait">—</span><small>분</small></div>
+      <span id="state">—</span>
+      <div class="row">
+        <div><b id="queue">—</b>명 대기 중</div>
+        <div><b id="rate">—</b>명/분 배식 속도</div>
+      </div>
+    </section>
+    <div class="muted" style="display:flex;justify-content:space-between;padding:6px 4px 10px">
+      <span>갱신 <span id="updated"></span> · 30초마다</span><span>추정치 · 배식 초반 오차 큼</span>
     </div>
-  </section>
-  <div class="muted" style="display:flex;justify-content:space-between;padding:6px 4px 10px">
-    <span>갱신 <span id="updated"></span> · 30초마다</span><span>추정치 · 배식 초반 오차 큼</span>
+
+    <section class="card" id="chartcard">
+      <div class="eyebrow">최근 2시간 예상 대기</div>
+      <canvas id="chart" width="600" height="120"></canvas>
+    </section>
   </div>
 
-  <section class="card" id="chartcard">
-    <div class="eyebrow">최근 2시간 예상 대기</div>
-    <canvas id="chart" width="600" height="44"></canvas>
-    <div class="muted axis"><span>2시간 전</span><span>청 = 여유(≤5분) · 적 = 혼잡(12분+)</span><span>지금</span></div>
-  </section>
+  <div class="col">
+    <section class="card">
+      <div class="eyebrow">오늘 중식</div>
+      <ul id="menu"></ul>
+      <div class="kpi">
+        <div><b id="energy">—</b><span>에너지 충족</span><span class="flag" id="energyflag"></span></div>
+        <div><b id="ratio">—</b><span>탄·단·지 비율</span></div>
+        <div><b id="mar">—</b><span>미량영양소</span><span class="flag" id="marflag"></span></div>
+      </div>
+      <details><summary>▸ 영양소별 보기</summary><div id="micro" style="margin-top:8px"></div></details>
+      <div class="muted" id="stdnote" style="margin-top:8px"></div>
+    </section>
 
-  <section class="card">
-    <div class="eyebrow">오늘 중식</div>
-    <ul id="menu"></ul>
-    <div class="kpi">
-      <div><b id="energy">—</b><span>에너지 충족</span><span class="flag" id="energyflag"></span></div>
-      <div><b id="ratio">—</b><span>탄·단·지 비율</span></div>
-      <div><b id="mar">—</b><span>미량영양소</span><span class="flag" id="marflag"></span></div>
-    </div>
-    <details><summary>▸ 영양소별 보기</summary><div id="micro" style="margin-top:8px"></div></details>
-    <div class="muted" id="stdnote" style="margin-top:8px"></div>
-  </section>
-
-  <section class="card carbon" id="carboncard" hidden>
-    <div class="eyebrow">오늘 급식을 다 남기면</div>
-    <div class="big"><span class="num" id="co2">—</span><span class="unit" id="co2unit">kg CO₂e</span></div>
-    <div class="cmp">
-      <div><b id="vsworld">—</b>세계 1인 하루 평균 배출 대비</div>
-      <div><b id="vskorea">—</b>한국 1인 하루 평균 배출 대비</div>
-    </div>
-    <div class="pick" id="pick">
-      <div data-f="0" class="on">다 먹음</div><div data-f="0.25">¼ 남김</div><div data-f="0.5">½ 남김</div><div data-f="1">다 남김</div>
-    </div>
-    <div class="mine"><div>이번 달 내가 남긴 급식 <b id="minekg">0 kg CO₂e</b><br><span class="muted" id="minesub"></span></div>
-      <div class="ring" id="ring" title="이번 달 '다 먹음' 비율"><i id="ringpct">—</i></div></div>
-    <div class="muted" id="carbonnote" style="margin-top:8px"></div>
-  </section>
+    <section class="card carbon" id="carboncard" hidden>
+      <div class="eyebrow">오늘 급식을 다 남기면</div>
+      <div class="big"><span class="num" id="co2">—</span><span class="unit" id="co2unit">kg CO₂e</span></div>
+      <div class="cmp">
+        <div><b id="vsworld">—</b>세계 1인 하루 평균 배출 대비</div>
+        <div><b id="vskorea">—</b>한국 1인 하루 평균 배출 대비</div>
+      </div>
+      <div class="pick" id="pick">
+        <div data-f="0" class="on" role="button" tabindex="0">다 먹음</div><div data-f="0.25" role="button" tabindex="0">¼ 남김</div>
+        <div data-f="0.5" role="button" tabindex="0">½ 남김</div><div data-f="1" role="button" tabindex="0">다 남김</div>
+      </div>
+      <div class="mine"><div>이번 달 내가 남긴 급식 <b id="minekg">0 kg CO₂e</b><br><span class="muted" id="minesub"></span></div>
+        <div class="ring" id="ring" title="이번 달 '다 먹음' 비율"><i id="ringpct">—</i></div></div>
+      <div class="muted" id="carbonnote" style="margin-top:8px"></div>
+    </section>
+  </div>
 </main>
 
 <script>
@@ -164,9 +204,18 @@ function verdict(st) {
            ok: st.wait_min <= EASY_MIN ? "여유 · 바로 가세요" : "보통" }[level(st)];
 }
 
+let lastWait = null;
 async function refresh() {
   const st = await j("/api/status");
-  $("#wait").textContent = st.wait_min == null ? "—" : st.wait_min;
+  const shown = st.wait_min == null ? "—" : String(st.wait_min);
+  if (shown !== lastWait) {                                   // 값이 실제로 바뀔 때만 0.25s 스케일 펄스
+    $("#wait").textContent = shown;
+    if (lastWait !== null) {
+      const box = $("#waitbox"); box.classList.remove("pulse"); void box.offsetWidth; box.classList.add("pulse");
+      box.addEventListener("animationend", () => box.classList.remove("pulse"), { once: true });
+    }
+    lastWait = shown;
+  }
   $("#queue").textContent = st.queue_len ?? "—";
   $("#rate").textContent = st.rate_per_min ?? "—";
   $("#state").textContent = verdict(st);
@@ -174,47 +223,30 @@ async function refresh() {
   $("#updated").textContent = st.updated_at
     ? new Date(st.updated_at).toLocaleTimeString("ko-KR") : "-";
   const h = await j("/api/history?minutes=120");
-  drawBand(h.rows);
+  drawChart(h.rows);
 }
 
-// ColorBrewer Spectral 11단 (seaborn "Spectral" 과 동일) 을 뒤집어 0=청(여유) → 1=적(혼잡)
-const SPECTRAL_R = ["#5e4fa2", "#3288bd", "#66c2a5", "#abdda4", "#e6f598", "#ffffbf",
-                    "#fee08b", "#fdae61", "#f46d43", "#d53e4f", "#9e0142"];
-function spectral(t) {
-  const s = Math.min(Math.max(t, 0), 1) * (SPECTRAL_R.length - 1), i = Math.floor(s), f = s - i;
-  const a = SPECTRAL_R[i], b = SPECTRAL_R[Math.min(i + 1, SPECTRAL_R.length - 1)];
-  const ch = (h, k) => parseInt(h.slice(k, k + 2), 16);
-  return "rgb(" + [1, 3, 5].map(k => Math.round(ch(a, k) + (ch(b, k) - ch(a, k)) * f)).join(",") + ")";
-}
-
-// 절대 스케일 — 식권 칩과 같은 임계값. 0~여유(5분)=청→녹, 여유~혼잡(12분)=노→주황, 혼잡 이상=적(2배에서 포화)
-function waitT(v) {
-  if (v <= EASY_MIN) return v / EASY_MIN * .45;
-  if (v <= BUSY_MIN) return .45 + (v - EASY_MIN) / (BUSY_MIN - EASY_MIN) * .40;
-  return .85 + Math.min((v - BUSY_MIN) / BUSY_MIN, 1) * .15;
-}
-
-const WINDOW_MIN = 120, BINS = 60;               // 2시간을 2분 칸 60개로
-function drawBand(rows) {
+function drawChart(rows) {
   const c = $("#chart"), g = c.getContext("2d");
   g.clearRect(0, 0, c.width, c.height);
-  const end = Date.now(), start = end - WINDOW_MIN * 60000;
-  const sum = new Array(BINS).fill(0), n = new Array(BINS).fill(0);
-  rows.forEach(r => {
-    if (r.wait_min == null) return;                                  // 산출 불가 표본은 빈 칸으로
-    const t = new Date(r.ts).getTime();
-    if (t < start || t > end) return;
-    const b = Math.min(BINS - 1, Math.floor((t - start) / (end - start) * BINS));
-    sum[b] += r.wait_min; n[b]++;
-  });
-  const vals = sum.map((v, i) => n[i] ? v / n[i] : null), have = vals.filter(v => v != null);
-  $("#chartcard").hidden = have.length < 2;                        // 데이터 2점 미만이면 카드 숨김
-  if (have.length < 2) return;
-  const w = c.width / BINS;
-  vals.forEach((v, i) => {
-    g.fillStyle = v == null ? "#BDBDB5" : spectral(waitT(v));
-    g.fillRect(i * w, 0, Math.ceil(w), c.height);
-  });
+  const pts = rows.filter(r => r.wait_min != null);
+  $("#chartcard").hidden = pts.length < 2;                    // 데이터 2점 미만이면 카드 숨김
+  if (pts.length < 2) return;
+  const max = Math.max(5, ...pts.map(r => r.wait_min));
+  const xy = pts.map((r, i) => [i / (pts.length - 1) * c.width,
+                                c.height - r.wait_min / max * (c.height - 10) - 5]);
+  // 면 채움: 위(높은 값)로 갈수록 진한 틸, 아래는 투명 — 봉우리가 스스로 강조된다
+  const grad = g.createLinearGradient(0, 0, 0, c.height);
+  grad.addColorStop(0, "rgba(18,151,147,.9)");
+  grad.addColorStop(.55, "rgba(18,151,147,.35)");
+  grad.addColorStop(1, "rgba(155,215,213,0)");
+  g.beginPath();
+  xy.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
+  g.lineTo(c.width, c.height); g.lineTo(0, c.height); g.closePath();
+  g.fillStyle = grad; g.fill();
+  g.beginPath(); g.strokeStyle = "#129793"; g.lineWidth = 2;
+  xy.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
+  g.stroke();
 }
 
 async function loadMeal() {
@@ -266,6 +298,7 @@ function renderCarbon(m) {
       try { localStorage.setItem(WASTE_KEY, JSON.stringify(w)); } catch {}
       renderCarbon(m);
     };
+    el.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); el.onclick(); } };
   });
   const month = day.slice(0, 7), days = Object.entries(log).filter(([d]) => d.startsWith(month));
   const kg = days.reduce((s, [, v]) => s + v.frac * v.kg, 0), clean = days.filter(([, v]) => v.frac === 0).length;

@@ -378,8 +378,32 @@ tr:last-child td{border-bottom:0}
 <tr><td>탄소 카드</td><td>40px 틸 숫자, 비교 2칸, 4버튼 44px, 링 44px</td><td>버튼 선택 → localStorage 에 날짜별 저장 → 월간 합산</td><td>기본 선택 "다 먹음". 서버 쓰기 없음</td></tr>
 <tr><td>이슈 링크</td><td>13px 제목 1줄 + 10.5px 메타</td><td>탭 시 새 창</td><td>최대 3건, 제목 40자 말줄임</td></tr>
 <tr><td>영양소 막대</td><td>트랙 10px + 1.5px 선, 멜론 세로선 66.7% = 100%</td><td>기본 접힘</td><td>막대 고유색 6색(seaborn pastel, key 매핑) · 부족은 멜론 외곽선+라벨 · 수용성은 과다 없음</td></tr>
-<tr><td>카드</td><td>radius 14px, 1.5px 차콜 선, 여백 14×16px</td><td>—</td><td>그림자 없음. 구분은 선과 채움색으로만</td></tr>
+<tr><td>카드</td><td>radius 14px, 1.5px 차콜 선, 여백 14×16px</td><td>hover 시 3px 상승</td><td>깊이는 고도 체계(--e1~e3, 아래 절) 로. 외곽선은 유지</td></tr>
 <tr><td>터치 영역</td><td>최소 44×44px</td><td>접기 summary 전체가 탭 대상</td><td>—</td></tr>
+</table>
+
+<h2>데스크톱·모션 스펙 <small>반응형 · 고도 체계 · 마이크로 인터랙션</small></h2>
+<p class="sub">모바일 도면이 기준이고, 넓은 화면과 포인터가 있는 기기에서만 아래가 더해집니다. 외곽선 1.5px 은 어떤 경우에도 유지 — 플랫한 정체성 위에 깊이를 얹는 방식입니다.</p>
+<table>
+<tr><th>뷰포트</th><th>레이아웃</th><th>비고</th></tr>
+<tr><td>≤ 899px (모바일)</td><td>단일 컬럼, max-width 640, 카드 간격 10px — 모바일 도면 그대로</td><td>기본</td></tr>
+<tr><td>≥ 900px (데스크톱)</td><td>max-width 1100, grid 2컬럼 <code>1.1fr 1fr</code>, gap 20px. 왼쪽 = 식권 카드 + 갱신 메타 + 추이 / 오른쪽 = 급식 + 탄소 + 이슈</td><td>식권 숫자 120px. 마크업은 <code>.col</code> 두 개로 묶어 두고, 모바일에서는 그 래퍼가 그냥 블록</td></tr>
+</table>
+<h4 style="margin:24px 0 8px;font-size:11px;letter-spacing:.18em;color:var(--teal)">고도 체계 (CSS 변수)</h4>
+<div class="tokens">
+  <div class="tok"><i style="background:var(--paper);box-shadow:0 1px 2px rgba(43,43,43,.06);border:1.5px solid var(--line)"></i>--e1 <code>0 1px 2px rgba(43,43,43,.06)</code><br>모든 카드 기본</div>
+  <div class="tok"><i style="background:var(--paper);box-shadow:0 6px 16px rgba(43,43,43,.12);border:1.5px solid var(--line)"></i>--e2 <code>0 6px 16px rgba(43,43,43,.12)</code><br>식권 카드 · 탄소 카드 (판단과 행동)</div>
+  <div class="tok"><i style="background:var(--paper);box-shadow:0 12px 28px rgba(43,43,43,.16);border:1.5px solid var(--line)"></i>--e3 <code>0 12px 28px rgba(43,43,43,.16)</code><br>hover 시 — 카드가 3px 떠오를 때</div>
+</div>
+<h4 style="margin:24px 0 8px;font-size:11px;letter-spacing:.18em;color:var(--teal)">마이크로 인터랙션</h4>
+<table>
+<tr><th>요소</th><th>트리거</th><th>동작</th><th>제약</th></tr>
+<tr><td>카드</td><td>hover</td><td>translateY(−3px) + --e3. transition transform .18s ease, box-shadow .18s ease</td><td><code>@media (hover:hover)</code> 안에서만 — 터치 기기에서 hover 잔상 방지</td></tr>
+<tr><td>버튼류 (탄소 4버튼, details summary)</td><td>hover / :active / :focus-visible</td><td>hover 1px 상승 + --e1 · :active translateY(1px) scale(.98) · :focus-visible 멜론 2px outline(offset 2px)</td><td>4버튼은 role=button + tabindex=0, Enter/Space 로도 선택</td></tr>
+<tr><td>식권 숫자</td><td>값 변경</td><td>0.25s 스케일 펄스 1 → 1.04 → 1 (transform-origin 왼쪽)</td><td>값이 실제로 바뀔 때만. 첫 표시·같은 값 재갱신에는 없음</td></tr>
+<tr><td>이슈 링크 항목</td><td>hover</td><td>배경 aqua2 + 좌측 4px 틸 바가 translateX(−100%) → 0 슬라이드 인 (.18s)</td><td>12단계 마크업이 들어오면 그대로 적용</td></tr>
+<tr><td>details 펼침</td><td>[open]</td><td>내용 opacity 0→1 + translateY(4px→0), .2s ease</td><td>summary 자체는 움직이지 않음</td></tr>
+<tr><td>전부</td><td><code>prefers-reduced-motion: reduce</code></td><td>transform · transition · animation 해제 (<code>!important</code>), 이슈 링크의 슬라이드 바는 숨김</td><td>접근성 설정이 항상 우선</td></tr>
 </table>
 
 <h2>의도적으로 뺀 것 <small>넣고 싶어질 때 다시 읽을 목록</small></h2>
