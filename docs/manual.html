@@ -1089,18 +1089,18 @@ git add static &amp;&amp; git commit -m &quot;static: 대시보드 + PWA (manife
     &quot;energy_kcal&quot;: 900,
     &quot;protein_g&quot;: 21.7,
     &quot;micro&quot;: {
-      &quot;vitA&quot;: {&quot;label&quot;: &quot;비타민A (㎍RAE)&quot;, &quot;ear&quot;: 207,  &quot;rni&quot;: 284},
-      &quot;b1&quot;:   {&quot;label&quot;: &quot;티아민 (mg)&quot;,     &quot;ear&quot;: 0.37, &quot;rni&quot;: 0.44},
-      &quot;b2&quot;:   {&quot;label&quot;: &quot;리보플라빈 (mg)&quot;, &quot;ear&quot;: 0.47, &quot;rni&quot;: 0.57},
-      &quot;vitC&quot;: {&quot;label&quot;: &quot;비타민C (mg)&quot;,    &quot;ear&quot;: 26.7, &quot;rni&quot;: 33.4},
-      &quot;ca&quot;:   {&quot;label&quot;: &quot;칼슘 (mg)&quot;,       &quot;ear&quot;: 250,  &quot;rni&quot;: 300},
-      &quot;fe&quot;:   {&quot;label&quot;: &quot;철 (mg)&quot;,         &quot;ear&quot;: 3.7,  &quot;rni&quot;: 4.7}
+      &quot;vitA&quot;: {&quot;label&quot;: &quot;비타민A (㎍RAE)&quot;, &quot;ear&quot;: 207,  &quot;rni&quot;: 284,  &quot;has_ul&quot;: true},
+      &quot;b1&quot;:   {&quot;label&quot;: &quot;티아민 (mg)&quot;,     &quot;ear&quot;: 0.37, &quot;rni&quot;: 0.44, &quot;has_ul&quot;: false},
+      &quot;b2&quot;:   {&quot;label&quot;: &quot;리보플라빈 (mg)&quot;, &quot;ear&quot;: 0.47, &quot;rni&quot;: 0.57, &quot;has_ul&quot;: false},
+      &quot;vitC&quot;: {&quot;label&quot;: &quot;비타민C (mg)&quot;,    &quot;ear&quot;: 26.7, &quot;rni&quot;: 33.4, &quot;has_ul&quot;: false},
+      &quot;ca&quot;:   {&quot;label&quot;: &quot;칼슘 (mg)&quot;,       &quot;ear&quot;: 250,  &quot;rni&quot;: 300,  &quot;has_ul&quot;: true},
+      &quot;fe&quot;:   {&quot;label&quot;: &quot;철 (mg)&quot;,         &quot;ear&quot;: 3.7,  &quot;rni&quot;: 4.7,  &quot;has_ul&quot;: true}
     }
   },
   &quot;energy_ratio&quot;: {&quot;carb&quot;: [55, 65], &quot;protein&quot;: [7, 20], &quot;fat&quot;: [15, 30]}
 }</code></pre>
 </figure>
-<p><code>upper_factor 1.5</code> 는 "권장량의 150% 를 넘으면 과다로 표시"하는 <em>화면용 기준</em>이지 법정 상한이 아닙니다. 법은 상한을 정하지 않습니다.</p>
+<p><code>upper_factor 1.5</code> 는 "권장량의 150% 를 넘으면 과다로 표시"하는 <em>화면용 기준</em>이지 법정 상한이 아닙니다. 법은 상한을 정하지 않습니다. <code>has_ul: false</code> 인 수용성 비타민(티아민·리보플라빈·비타민C)은 과잉분이 배출되어 상한 개념이 약하므로 RNI 를 넘어도 과다가 아닌 적정으로 둡니다.</p>
 
 <h3>8-2. 왜 코사인 유사도가 아닌가</h3>
 <p>공모전 보고서는 영양성분 벡터와 기준 벡터의 코사인 유사도를 "영양 밸런스"로 썼습니다. 그런데 에너지(900)·칼슘(300)·비타민A(284) 처럼 숫자가 큰 항목이 각도를 거의 결정하고, 티아민(0.44)·철(4.7) 은 사실상 무시됩니다. 게다가 모든 영양소가 절반이어도 유사도는 1.0 입니다(크기 불변). 그래서 여기서는 영양소마다 <em>기준 대비 비율</em>로 먼저 바꾸고, 법정 기준의 구조를 그대로 따르는 세 지표를 냅니다:</p>
@@ -1176,7 +1176,7 @@ def assess(kcal, n):
         nars.append(min(v / ref[&quot;rni&quot;], 1.0))                 # NAR: 넘치는 건 1 로 자른다
         if v &lt; ref[&quot;ear&quot;]:
             band = &quot;부족&quot;
-        elif v &gt; ref[&quot;rni&quot;] * STD[&quot;upper_factor&quot;]:
+        elif ref[&quot;has_ul&quot;] and v &gt; ref[&quot;rni&quot;] * STD[&quot;upper_factor&quot;]:   # 상한(UL) 있는 영양소만 과다 판정
             band = &quot;과다&quot;
         else:
             band = &quot;적정&quot;

@@ -7,12 +7,12 @@
     "energy_kcal": 900,
     "protein_g": 21.7,
     "micro": {
-      "vitA": {"label": "비타민A (㎍RAE)", "ear": 207,  "rni": 284},
-      "b1":   {"label": "티아민 (mg)",     "ear": 0.37, "rni": 0.44},
-      "b2":   {"label": "리보플라빈 (mg)", "ear": 0.47, "rni": 0.57},
-      "vitC": {"label": "비타민C (mg)",    "ear": 26.7, "rni": 33.4},
-      "ca":   {"label": "칼슘 (mg)",       "ear": 250,  "rni": 300},
-      "fe":   {"label": "철 (mg)",         "ear": 3.7,  "rni": 4.7}
+      "vitA": {"label": "비타민A (㎍RAE)", "ear": 207,  "rni": 284,  "has_ul": true},
+      "b1":   {"label": "티아민 (mg)",     "ear": 0.37, "rni": 0.44, "has_ul": false},
+      "b2":   {"label": "리보플라빈 (mg)", "ear": 0.47, "rni": 0.57, "has_ul": false},
+      "vitC": {"label": "비타민C (mg)",    "ear": 26.7, "rni": 33.4, "has_ul": false},
+      "ca":   {"label": "칼슘 (mg)",       "ear": 250,  "rni": 300,  "has_ul": true},
+      "fe":   {"label": "철 (mg)",         "ear": 3.7,  "rni": 4.7,  "has_ul": true}
     }
   },
   "energy_ratio": {"carb": [55, 65], "protein": [7, 20], "fat": [15, 30]}

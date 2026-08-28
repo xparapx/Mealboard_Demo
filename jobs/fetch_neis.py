@@ -60,7 +60,7 @@ def assess(kcal, n):
         nars.append(min(v / ref["rni"], 1.0))                 # NAR: 넘치는 건 1 로 자른다
         if v < ref["ear"]:
             band = "부족"
-        elif v > ref["rni"] * STD["upper_factor"]:
+        elif ref["has_ul"] and v > ref["rni"] * STD["upper_factor"]:   # 상한(UL) 있는 영양소만 과다 판정
             band = "과다"
         else:
             band = "적정"

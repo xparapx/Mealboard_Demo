@@ -6,7 +6,7 @@
 ## 0. 현재 상태 (2026-08) — 세션 시작 시 먼저 읽을 것
 
 - **홈 Pi 5(64bit, Debian 13 Trixie, 시스템 Python 3.13) = 스테이징.** 학교 Pi도 같은 OS·Python이어야 uv.lock이 그대로 맞는다. 카메라 없음 → `mealboard-vision` 미설치, `mealboard-mock`이 대역.
-  로드맵 ④는 개발 PC 웹캠·동영상 파일로 진행. ⑤ 중 uv 셋업·systemd·cloudflared는 홈 Pi에서 완료, calibrate만 학교 Pi 이전 시.
+  로드맵 ④는 개발 PC 웹캠·동영상 파일로 진행. ⑤ 중 uv 셋업·systemd 는 홈 Pi 완료, cloudflared 는 9단계에서 진행 예정, calibrate만 학교 Pi 이전 시.
 - **PI_HOST는 Tailscale 주소**(.env 참조). 공용 체크아웃은 `/opt/mealboard`. **Pi에서 직접 편집 금지, `git pull`만.**
   개발은 각자 PC의 클론에서 하고 Claude Code도 PC에서 실행해 SSH로 Pi를 제어한다.
 - **같은 Pi에 Plant 프로젝트가 정지 상태로 공존**(`~/plant/`, planthub·plantdash·plantsnap 유닛).
