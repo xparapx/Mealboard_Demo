@@ -1,11 +1,23 @@
 {
   "note": "기후 이슈 RSS. 국내보다 세계적으로 주목받는 주제를 다루기 위해 해외 공신력 있는 매체로 구성했다. 주소는 curl 로 200·XML·description 유무를 확인한 뒤에만 추가할 것. 학교·지역에 맞게 교체 가능.",
   "max_items": 3,
-  "summary_chars": 150,
+  "summary_chars": 180,
   "feeds": [
-    {"name": "Carbon Brief", "url": "https://www.carbonbrief.org/feed/"},
-    {"name": "Inside Climate News", "url": "https://insideclimatenews.org/feed/"},
-    {"name": "The Guardian", "url": "https://www.theguardian.com/environment/climate-crisis/rss"},
-    {"name": "Yale Climate Connections", "url": "https://yaleclimateconnections.org/feed/"}
+    {
+      "name": "Carbon Brief",
+      "url": "https://www.carbonbrief.org/feed/"
+    },
+    {
+      "name": "Inside Climate News",
+      "url": "https://insideclimatenews.org/feed/"
+    },
+    {
+      "name": "The Guardian",
+      "url": "https://www.theguardian.com/environment/climate-crisis/rss"
+    },
+    {
+      "name": "Yale Climate Connections",
+      "url": "https://yaleclimateconnections.org/feed/"
+    }
   ]
 }

@@ -1099,10 +1099,11 @@ systemctl status mealboard-api --no-pager</code></pre>
   .news { list-style: none; margin: 6px 0 0; padding: 0; }
   .news li { display: flex; flex-direction: column; gap: 7px; padding: 13px 0; border-bottom: 1px solid var(--hair); }
   .news li:last-child { border-bottom: 0; }
+  /* 헤드라인이 잘리는 것보다 요약이 짧은 편이 낫다 — 제목에 3줄, 요약에 2줄 */
   .news li a { font-size: 13.5px; font-weight: 600; color: var(--ink); line-height: 1.4;
-               display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .news li p { margin: 0; font-size: 11.5px; color: var(--ink2); line-height: 1.55;
                display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .news li p { margin: 0; font-size: 11.5px; color: var(--ink2); line-height: 1.55;
+               display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .news li div { display: flex; align-items: center; gap: 8px; }
   .news li em { font-style: normal; font-size: 10px; font-weight: 700; color: var(--teal-ink);
                 background: var(--teal-tint); border-radius: 6px; padding: 3px 7px; }
@@ -2117,12 +2118,24 @@ python -c &quot;import json;d=json.load(open(&#x27;data/meal.json&#x27;,encoding
 <pre><code class="lang-json">{
   &quot;note&quot;: &quot;기후 이슈 RSS. 국내보다 세계적으로 주목받는 주제를 다루기 위해 해외 공신력 있는 매체로 구성했다. 주소는 curl 로 200·XML·description 유무를 확인한 뒤에만 추가할 것. 학교·지역에 맞게 교체 가능.&quot;,
   &quot;max_items&quot;: 3,
-  &quot;summary_chars&quot;: 150,
+  &quot;summary_chars&quot;: 180,
   &quot;feeds&quot;: [
-    {&quot;name&quot;: &quot;Carbon Brief&quot;, &quot;url&quot;: &quot;https://www.carbonbrief.org/feed/&quot;},
-    {&quot;name&quot;: &quot;Inside Climate News&quot;, &quot;url&quot;: &quot;https://insideclimatenews.org/feed/&quot;},
-    {&quot;name&quot;: &quot;The Guardian&quot;, &quot;url&quot;: &quot;https://www.theguardian.com/environment/climate-crisis/rss&quot;},
-    {&quot;name&quot;: &quot;Yale Climate Connections&quot;, &quot;url&quot;: &quot;https://yaleclimateconnections.org/feed/&quot;}
+    {
+      &quot;name&quot;: &quot;Carbon Brief&quot;,
+      &quot;url&quot;: &quot;https://www.carbonbrief.org/feed/&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Inside Climate News&quot;,
+      &quot;url&quot;: &quot;https://insideclimatenews.org/feed/&quot;
+    },
+    {
+      &quot;name&quot;: &quot;The Guardian&quot;,
+      &quot;url&quot;: &quot;https://www.theguardian.com/environment/climate-crisis/rss&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Yale Climate Connections&quot;,
+      &quot;url&quot;: &quot;https://yaleclimateconnections.org/feed/&quot;
+    }
   ]
 }</code></pre>
 </figure>
@@ -2169,12 +2182,27 @@ def clean(s):
     return re.sub(r&quot;\s+&quot;, &quot; &quot;, TAG.sub(&quot; &quot;, html.unescape(s or &quot;&quot;))).strip()
 
 
+SENT = re.compile(r&quot;(?&lt;=[.!?])\s+&quot;)
+
+
 def summarize(s, limit):
-    &quot;&quot;&quot;낱말 경계에서 자른다. 단어 중간에서 끊기면 읽다 만 것처럼 보인다&quot;&quot;&quot;
+    &quot;&quot;&quot;문장 경계에서 자른다.
+
+    낱말 경계로만 자르면 조각난 문장이 번역기로 넘어가 &quot;…을 준비하고 있었는데&quot; 같은
+    끊긴 한국어가 나온다. 번역기에는 언제나 완결된 문장만 준다.
+    첫 문장부터 한도를 넘으면 그때만 낱말 경계로 자르고 말줄임표를 붙인다.
+    &quot;&quot;&quot;
     s = JUNK.sub(&quot;&quot;, BOILER.sub(&quot;&quot;, clean(s)))
     if len(s) &lt;= limit:
         return s
-    cut = s[:limit]
+    out = &quot;&quot;
+    for sent in SENT.split(s):
+        if out and len(out) + 1 + len(sent) &gt; limit:
+            break
+        out = f&quot;{out} {sent}&quot;.strip()
+    if out:
+        return out
+    cut = s[:limit]                                   # 첫 문장이 이미 한도를 넘는 경우
     sp = cut.rfind(&quot; &quot;)
     return (cut[:sp] if sp &gt; limit * 0.6 else cut).rstrip(&quot; ,.;:—-&quot;) + &quot;…&quot;
 

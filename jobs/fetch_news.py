@@ -38,12 +38,27 @@ def clean(s):
     return re.sub(r"\s+", " ", TAG.sub(" ", html.unescape(s or ""))).strip()
 
 
+SENT = re.compile(r"(?<=[.!?])\s+")
+
+
 def summarize(s, limit):
-    """낱말 경계에서 자른다. 단어 중간에서 끊기면 읽다 만 것처럼 보인다"""
+    """문장 경계에서 자른다.
+
+    낱말 경계로만 자르면 조각난 문장이 번역기로 넘어가 "…을 준비하고 있었는데" 같은
+    끊긴 한국어가 나온다. 번역기에는 언제나 완결된 문장만 준다.
+    첫 문장부터 한도를 넘으면 그때만 낱말 경계로 자르고 말줄임표를 붙인다.
+    """
     s = JUNK.sub("", BOILER.sub("", clean(s)))
     if len(s) <= limit:
         return s
-    cut = s[:limit]
+    out = ""
+    for sent in SENT.split(s):
+        if out and len(out) + 1 + len(sent) > limit:
+            break
+        out = f"{out} {sent}".strip()
+    if out:
+        return out
+    cut = s[:limit]                                   # 첫 문장이 이미 한도를 넘는 경우
     sp = cut.rfind(" ")
     return (cut[:sp] if sp > limit * 0.6 else cut).rstrip(" ,.;:—-") + "…"
 
