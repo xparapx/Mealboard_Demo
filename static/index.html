@@ -221,8 +221,9 @@
     .col > .grow { flex: 1 1 auto; }
     #newscard.grow { display: flex; flex-direction: column; }
     #newscard.grow .news { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+    /* 짧은 쪽 컬럼이 흡수하는 높이는 빈 여백이 아니라 더 큰 평면도가 된다 */
     #plancard.grow { display: flex; flex-direction: column; }
-    #plancard.grow #plan { margin-top: auto; margin-bottom: auto; }
+    #plancard.grow #plan { flex: 1 1 0; min-height: 191px; aspect-ratio: auto; }
     .card { padding: 24px 26px; }
     .big b { font-size: 120px; } .big i { font-size: 28px; }
     #chart { height: 130px; }
@@ -458,8 +459,13 @@ function drawPlan(p) {
   const ok = p.state === "ok";
   $("#plancard").dataset.state = ok ? "ok" : "no_data";
   $("#posn").textContent = ok ? `${p.n}명` : "—";
-  const c = $("#plan"), W = c.clientWidth || 318, H = W * 191 / 318, { g } = fit(c, H);
-  const s = W / 318, X = v => v * s, Y = v => v * s;                  // 도면 좌표(318×191)를 실제 폭에 맞춰 확대
+  // 도면 좌표(318×191)를 상자에 맞춰 확대하고 가운데 둔다 — 카드가 세로로 늘면 평면도도 같이 커진다
+  const c = $("#plan"), W = c.clientWidth || 318;
+  const H = c.clientHeight || Math.round(W * 191 / 318);
+  const { g } = fit(c, H);
+  const s = Math.min(W / 318, H / 191);
+  const ox = (W - 318 * s) / 2, oy = (H - 191 * s) / 2;
+  const X = v => ox + v * s, Y = v => oy + v * s;
   const box = (x, y, w, h, r, fill, stroke, dash, lw) => {
     g.setLineDash(dash || []); g.lineWidth = lw || 1.5;
     g.beginPath(); g.roundRect(X(x), Y(y), X(w), Y(h), X(r));
@@ -551,6 +557,7 @@ function renderMeal(m) {
     $("#allergens").innerHTML = ""; $("#micro").innerHTML = "";
     ["#energy", "#ratio", "#mar"].forEach(s => $(s).textContent = "—");
     ["#energyflag", "#marflag"].forEach(s => $(s).textContent = "");
+    setTimeout(balance, 0);            // 카드가 숨은 뒤에 컬럼 높이를 다시 맞춘다
     return;
   }
   const dishes = m.today.menu.map(splitAllergy);
@@ -586,6 +593,7 @@ function renderMeal(m) {
   }).join("");
 
   renderCarbon(m);
+  setTimeout(balance, 0);              // 영양 3칸·칩이 붙어 오른쪽이 길어졌을 수 있다
 }
 
 /* ② 이번 주 식단 — meal.json 이 이미 월~금을 통째로 담고 있다. 프론트만 있으면 된다 */
@@ -616,7 +624,6 @@ function renderWeek(m) {
 function renderCarbon(m) {
   const c = m.today && m.today.carbon, cs = m.carbon_std || {};
   $("#carboncard").hidden = !c;
-  setTimeout(balance, 0);
   if (!c) return;
   $("#co2").textContent = c.kgco2e.toFixed(1);
   $("#co2unit").textContent = `kg CO₂e · 1인분 약 ${c.portion_g} g 기준`;
@@ -655,6 +662,7 @@ function balance() {
     const vis = kids.filter(el => !el.hidden && el.classList.contains("card"));
     if (vis.length) vis[vis.length - 1].classList.add("grow");
   });
+  if (LASTPOS) drawPlan(LASTPOS);      // 평면도 카드의 상자가 바뀌었으니 그 크기로 다시 그린다
 }
 
 refresh(); loadMeal(); loadNews();

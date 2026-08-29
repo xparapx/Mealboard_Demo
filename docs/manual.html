@@ -1117,8 +1117,9 @@ systemctl status mealboard-api --no-pager</code></pre>
     .col &gt; .grow { flex: 1 1 auto; }
     #newscard.grow { display: flex; flex-direction: column; }
     #newscard.grow .news { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+    /* 짧은 쪽 컬럼이 흡수하는 높이는 빈 여백이 아니라 더 큰 평면도가 된다 */
     #plancard.grow { display: flex; flex-direction: column; }
-    #plancard.grow #plan { margin-top: auto; margin-bottom: auto; }
+    #plancard.grow #plan { flex: 1 1 0; min-height: 191px; aspect-ratio: auto; }
     .card { padding: 24px 26px; }
     .big b { font-size: 120px; } .big i { font-size: 28px; }
     #chart { height: 130px; }
@@ -1354,8 +1355,13 @@ function drawPlan(p) {
   const ok = p.state === &quot;ok&quot;;
   $(&quot;#plancard&quot;).dataset.state = ok ? &quot;ok&quot; : &quot;no_data&quot;;
   $(&quot;#posn&quot;).textContent = ok ? `${p.n}명` : &quot;—&quot;;
-  const c = $(&quot;#plan&quot;), W = c.clientWidth || 318, H = W * 191 / 318, { g } = fit(c, H);
-  const s = W / 318, X = v =&gt; v * s, Y = v =&gt; v * s;                  // 도면 좌표(318×191)를 실제 폭에 맞춰 확대
+  // 도면 좌표(318×191)를 상자에 맞춰 확대하고 가운데 둔다 — 카드가 세로로 늘면 평면도도 같이 커진다
+  const c = $(&quot;#plan&quot;), W = c.clientWidth || 318;
+  const H = c.clientHeight || Math.round(W * 191 / 318);
+  const { g } = fit(c, H);
+  const s = Math.min(W / 318, H / 191);
+  const ox = (W - 318 * s) / 2, oy = (H - 191 * s) / 2;
+  const X = v =&gt; ox + v * s, Y = v =&gt; oy + v * s;
   const box = (x, y, w, h, r, fill, stroke, dash, lw) =&gt; {
     g.setLineDash(dash || []); g.lineWidth = lw || 1.5;
     g.beginPath(); g.roundRect(X(x), Y(y), X(w), Y(h), X(r));
@@ -1447,6 +1453,7 @@ function renderMeal(m) {
     $(&quot;#allergens&quot;).innerHTML = &quot;&quot;; $(&quot;#micro&quot;).innerHTML = &quot;&quot;;
     [&quot;#energy&quot;, &quot;#ratio&quot;, &quot;#mar&quot;].forEach(s =&gt; $(s).textContent = &quot;—&quot;);
     [&quot;#energyflag&quot;, &quot;#marflag&quot;].forEach(s =&gt; $(s).textContent = &quot;&quot;);
+    setTimeout(balance, 0);            // 카드가 숨은 뒤에 컬럼 높이를 다시 맞춘다
     return;
   }
   const dishes = m.today.menu.map(splitAllergy);
@@ -1482,6 +1489,7 @@ function renderMeal(m) {
   }).join(&quot;&quot;);
 
   renderCarbon(m);
+  setTimeout(balance, 0);              // 영양 3칸·칩이 붙어 오른쪽이 길어졌을 수 있다
 }
 
 /* ② 이번 주 식단 — meal.json 이 이미 월~금을 통째로 담고 있다. 프론트만 있으면 된다 */
@@ -1512,7 +1520,6 @@ function renderWeek(m) {
 function renderCarbon(m) {
   const c = m.today &amp;&amp; m.today.carbon, cs = m.carbon_std || {};
   $(&quot;#carboncard&quot;).hidden = !c;
-  setTimeout(balance, 0);
   if (!c) return;
   $(&quot;#co2&quot;).textContent = c.kgco2e.toFixed(1);
   $(&quot;#co2unit&quot;).textContent = `kg CO₂e · 1인분 약 ${c.portion_g} g 기준`;
@@ -1551,6 +1558,7 @@ function balance() {
     const vis = kids.filter(el =&gt; !el.hidden &amp;&amp; el.classList.contains(&quot;card&quot;));
     if (vis.length) vis[vis.length - 1].classList.add(&quot;grow&quot;);
   });
+  if (LASTPOS) drawPlan(LASTPOS);      // 평면도 카드의 상자가 바뀌었으니 그 크기로 다시 그린다
 }
 
 refresh(); loadMeal(); loadNews();
