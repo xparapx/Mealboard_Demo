@@ -4,9 +4,9 @@
 피드가 스스로 실어 보내는 <description> — 매체가 배포하라고 내놓은 문장이다.
 그래서 출처와 원문 링크를 반드시 함께 두고, 본문을 더 긁어오지 않는다.
 
-읽는 사람은 고등학생이고 매체는 전부 해외라, 저장 직전에 한 번 한국어로 옮긴다.
-번역은 하루 한 번 세 건뿐이라 호출도 비용도 미미하다. 키가 없거나 호출이 실패하면
-원문 영어를 그대로 싣는다 — 번역이 안 됐다고 카드를 비우지는 않는다.
+읽는 사람은 고등학생이고 매체는 전부 해외라, 저장 직전에 DeepL 로 한국어로 옮긴다.
+하루 세 건(약 800자)이라 무료 한도(월 50만 자)의 5% 도 쓰지 않는다. 키가 없거나
+호출이 실패하면 원문 영어를 그대로 싣는다 — 번역이 안 됐다고 카드를 비우지는 않는다.
 
 실행:  uv run python -m jobs.fetch_news
 """
@@ -15,6 +15,7 @@ import html
 import json
 import os
 import re
+import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 from email.utils import parsedate_to_datetime
@@ -47,49 +48,42 @@ def summarize(s, limit):
     return (cut[:sp] if sp > limit * 0.6 else cut).rstrip(" ,.;:—-") + "…"
 
 
-MODEL = "claude-opus-5"
-TRANSLATE_SYSTEM = """학교 급식 대시보드에 실을 해외 기후 뉴스를 한국어로 옮긴다. 읽는 사람은 고등학생이다.
-
-- 제목은 신문 헤드라인처럼 간결하게. 40자 이내.
-- 요약은 두 문장 이내, 90자 이내.
-- 원문에 없는 사실을 더하지 않는다. 모르는 것은 옮기지 않고 지운다.
-- 기관·지명·인명은 널리 쓰이는 한국어 표기를 쓰고, 없으면 원문 표기를 그대로 둔다.
-- 입력과 같은 순서·같은 개수의 JSON 배열만 출력한다. 설명도 코드펜스도 붙이지 않는다.
-  [{"i": 0, "title": "...", "summary": "..."}, ...]"""
+# DeepL API Free — 월 50만 자. 하루 세 건(약 800자)이므로 한도의 5% 도 쓰지 않는다.
+# 무료 키는 끝이 ":fx" 이고 엔드포인트가 다르다. 그걸 보고 고른다.
+DEEPL = {True: "https://api-free.deepl.com/v2/translate",
+         False: "https://api.deepl.com/v2/translate"}
 
 
 def translate(items):
     """제목·요약에 한국어(title_ko·summary_ko)를 붙인다. 어디서 실패하든 원문은 그대로 남는다."""
     if not items:
         return False
-    if not (os.getenv("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_AUTH_TOKEN")):
-        print("  번역 건너뜀: ANTHROPIC_API_KEY 없음 — 원문 영어로 싣는다")
+    key = (os.getenv("DEEPL_API_KEY") or "").strip()
+    if not key:
+        print("  번역 건너뜀: DEEPL_API_KEY 없음 — 원문 영어로 싣는다")
         return False
+
+    texts = [s for x in items for s in (x["title"], x["summary"])]
+    body = json.dumps({"text": texts, "target_lang": "KO"}).encode("utf-8")
+    req = urllib.request.Request(
+        DEEPL[key.endswith(":fx")], data=body, method="POST",
+        headers={"Authorization": f"DeepL-Auth-Key {key}",
+                 "Content-Type": "application/json",
+                 "User-Agent": "Mealboard/0.1"})
     try:
-        import anthropic
-    except ImportError:
-        print("  번역 건너뜀: anthropic 미설치 (uv sync)")
-        return False
-    payload = [{"i": i, "title": x["title"], "summary": x["summary"]} for i, x in enumerate(items)]
-    try:
-        res = anthropic.Anthropic().messages.create(
-            model=MODEL,
-            max_tokens=16000,
-            output_config={"effort": "low"},          # 번역은 단순 작업 — 깊이보다 비용
-            system=TRANSLATE_SYSTEM,
-            messages=[{"role": "user", "content": json.dumps(payload, ensure_ascii=False)}],
-        )
-        raw = "".join(b.text for b in res.content if b.type == "text").strip()
-        raw = re.sub(r"^```(?:json)?|```$", "", raw, flags=re.M).strip()   # 코드펜스가 붙어 와도 견딘다
-        out = json.loads(raw)
-        by_i = {int(x["i"]): x for x in out}
-        if set(by_i) != set(range(len(items))):
-            raise ValueError(f"항목 수가 어긋남: {sorted(by_i)}")
-        for i, x in enumerate(items):
-            ko = by_i[i]
-            x["title_ko"] = clean(ko.get("title")) or x["title"]
-            x["summary_ko"] = clean(ko.get("summary")) or x["summary"]
+        with urllib.request.urlopen(req, timeout=20) as r:
+            out = json.load(r)["translations"]
+        if len(out) != len(texts):                    # 개수가 어긋나면 짝이 밀린다 — 통째로 포기
+            raise ValueError(f"{len(out)}개 회신, {len(texts)}개 요청")
+        for n, x in enumerate(items):
+            x["title_ko"] = clean(out[2 * n]["text"]) or x["title"]
+            x["summary_ko"] = clean(out[2 * n + 1]["text"]) or x["summary"]
         return True
+    except urllib.error.HTTPError as e:               # 456 한도 초과 · 403 키 오류를 구분해 남긴다
+        hint = {403: "키가 잘못됐거나 권한 없음", 456: "이번 달 무료 한도 소진",
+                429: "요청이 너무 잦음"}.get(e.code, "")
+        print(f"  번역 실패: HTTP {e.code} {hint} — 원문 영어로 싣는다")
+        return False
     except Exception as e:                            # 번역이 실패해도 뉴스는 나가야 한다
         print(f"  번역 실패({type(e).__name__}: {e}) — 원문 영어로 싣는다")
         return False

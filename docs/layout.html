@@ -177,6 +177,7 @@ code{font-family:"D2Coding","Cascadia Code",ui-monospace,monospace;background:va
 .news li>span{font-weight:600;color:var(--i1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .news li div{display:flex;align-items:center;gap:7px}
 .news li em{font-style:normal;font-size:9.5px;font-weight:800;color:var(--tli);background:var(--tlt);border-radius:6px;padding:2px 6px}
+.news li em.ko{color:var(--i3);background:var(--hair)}
 .news li small{font-size:10px;color:var(--i3)}
 
 .notes{display:grid;gap:10px}
@@ -357,9 +358,9 @@ tr:last-child td{border-bottom:0}
     <div class="card"><span class="tag" style="left:-11px;top:-11px">11</span>
       <div class="eyebrow">오늘의 기후 이슈 <span style="color:var(--melon)">(아래 제목은 레이아웃용 예시)</span></div>
       <ul class="news">
-        <li><span>학교 급식 잔반 줄이기, 탄소중립 교육으로 확산</span><div><em>구글뉴스</em><small>2026-08-26</small></div></li>
-        <li><span>폭염 장기화에 급식 식재료 수급 대책 논의</span><div><em>구글뉴스</em><small>2026-08-25</small></div></li>
-        <li><span>청소년 기후행동, 급식실에서 시작하는 탄소 줄이기</span><div><em>구글뉴스</em><small>2026-08-24</small></div></li>
+        <li><span>기후변화로 5억 8천만 어린이가 해마다 20일을 더 폭염에 노출</span><div><em>Carbon Brief</em><em class="ko">번역</em><small>08-26</small></div></li>
+        <li><span>데이터센터의 환경 영향이 드디어 여론에 닿고 있는가</span><div><em>The Guardian</em><em class="ko">번역</em><small>08-28</small></div></li>
+        <li><span>네팔 눈사태·홍수 참사의 우려스러운 기후 연결고리</span><div><em>Yale Climate Connections</em><em class="ko">번역</em><small>08-27</small></div></li>
       </ul>
     </div>
   </div>
@@ -375,7 +376,7 @@ tr:last-child td{border-bottom:0}
     <div class="note"><b>8</b><strong>영양소 칩.</strong> v4 의 접힌 막대 6개를 <em>항상 펼친</em> 칩 한 행으로 바꿨습니다. 칩은 권장섭취량(RNI) 대비 과부족만 말합니다. 푸른 계열 = 충족(평균필요량 이상), 붉은 계열 = 부족. 판정 경계는 화면이 아니라 <code>fetch_neis.py</code> 의 <code>band</code> 를 따르므로, 100% 아래여도 EAR 위면 푸른 계열입니다 — 그래야 3칸의 "부족 N" 플래그와 어긋나지 않습니다. 색만으로 판정하지 않도록 ±% 와 "부족" 글자를 함께 둡니다.<span class="api">micro[].pct · band (부족 = EAR 미만)</span></div>
     <div class="note"><b>9</b><strong>이번 주 식단.</strong> <code>fetch_neis.py</code> 는 처음부터 월~금 5일치를 <code>week[]</code> 로 저장해 왔는데 화면은 <code>today</code> 만 썼습니다. 지난 날·오늘·예정일을 <em>색이 아니라 명도</em>로 가릅니다 — 색맹 여부와 무관하고, 틸·멜론에 이미 준 의미와도 충돌하지 않습니다. 서버 변경 없음.<span class="api">week[] · week_avg</span></div>
     <div class="note"><b>10</b><strong>탄소 카드.</strong> 오늘 1인분을 전부 버렸을 때의 배출량. 1인분 무게는 NEIS 에 없어 kcal ÷ 1.8 kcal/g 로 추정하고, 계수는 <code>data/carbon_std.json</code> 한 파일에 출처와 함께 둡니다. v5 에서 잔반 4버튼과 "이번 달 내가 남긴 급식"을 <strong>지웠습니다</strong> — 자기 신고 값은 정확할 수 없고, 정확하지 않은 수를 개인별로 누적해 보여 주면 측정한 것처럼 읽힙니다. 남은 것은 읽기 전용 사실뿐입니다.<span class="api">/api/meal today.carbon · carbon_std</span></div>
-    <div class="note"><b>11</b><strong>이슈 링크.</strong> 제목·출처·날짜만. 본문 요약은 넣지 않습니다(저작권·LLM 은 로드맵 ⑦). v5 에서 항목 테두리를 없애고 헤어라인 구분선으로 바꿨습니다 — 좌측 컬러 바는 흔한 상투구라 함께 뺐습니다.<span class="api">/api/news items[]</span></div>
+    <div class="note"><b>11</b><strong>이슈 링크.</strong> 제목·요약·출처·날짜. 요약은 우리가 본문을 읽어 만든 것이 아니라 피드가 스스로 실어 보내는 <code>&lt;description&gt;</code> 이고, 저장 직전에 DeepL 로 한국어로 옮깁니다(실패하면 원문 영어). 기계 번역임을 출처 옆 "번역" 칩으로 밝힙니다. v5 에서 항목 테두리를 없애고 헤어라인 구분선으로 바꿨습니다 — 좌측 컬러 바는 흔한 상투구라 함께 뺐습니다.<span class="api">/api/news items[]</span></div>
   </div>
 </div>
 
