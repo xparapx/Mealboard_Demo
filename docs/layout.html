@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mealboard 대시보드 레이아웃 도면</title>
+<title>Mealboard 대시보드 도면 v5</title>
 <style>
 :root{
   /* ColorCombos #285 — Charcoal Grey, Egg Shell & Melon */
@@ -40,7 +40,7 @@ code{font-family:"D2Coding","Cascadia Code",ui-monospace,monospace;background:va
 .prio .n::before{content:"0"}
 
 .board{display:grid;grid-template-columns:420px 1fr;gap:36px;align-items:start}
-.phone{width:390px;background:var(--egg2);border-radius:38px;border:8px solid var(--char);padding:12px 12px 20px;position:relative}
+.phone{width:390px;background:#F5F2E9;border-radius:38px;border:8px solid var(--char);padding:12px 12px 20px;position:relative}
 .phone .statusbar{height:18px;display:flex;justify-content:space-between;font-size:11px;color:var(--mute);padding:0 8px;letter-spacing:.06em}
 .dim{position:absolute;font-size:10px;color:var(--note);font-family:ui-monospace,monospace}
 .dim.w{left:0;right:0;top:-26px;text-align:center}
@@ -48,103 +48,136 @@ code{font-family:"D2Coding","Cascadia Code",ui-monospace,monospace;background:va
 .dim.w::before{left:0}.dim.w::after{right:0}
 .tag{position:absolute;width:22px;height:22px;border-radius:50%;background:var(--melon);color:#000;font-size:12px;font-weight:800;display:grid;place-items:center;box-shadow:0 0 0 3px var(--egg2);z-index:2}
 
-.card{background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;margin-top:10px;position:relative}
-.eyebrow{font-size:10.5px;letter-spacing:.2em;color:var(--mute);font-weight:800}
+/* ── 목업 내부는 팔레트 v5. 문서 크롬(표·토큰·주석)은 도면용이라 v4 그대로 둔다 ── */
+.mk{--ground:#F5F2E9;--surface:#FFFCF6;--hair:#F0EDE3;--i1:#33312D;--i2:#6E6A61;--i3:#9A958A;--offc:#C9C2B2;
+    --tl:#129793;--tli:#0C6D6A;--tlt:#DEF0EF;--tlt2:#EAF5F4;--ml:#FF7260;--mli:#C9452F;--mlt:#FFE9E4;--mlt2:#FFF4F1;
+    --sh:0 1px 2px rgba(51,49,45,.04),0 10px 26px rgba(51,49,45,.055)}
+.card{background:var(--surface);border-radius:24px;padding:16px;margin-top:10px;position:relative;box-shadow:var(--sh)}
+.eyebrow{font-size:10.5px;letter-spacing:.10em;color:var(--i3);font-weight:700}
 
-/* ① 히어로: 차콜 블록 + 에그셸 글자, 판정 칩은 팔레트 3색 */
-.ticket{background:var(--char);color:var(--egg);padding:20px 18px 16px;margin-top:12px;position:relative}
-.ticket .eyebrow{color:var(--egg);opacity:.75}
-.ticket .big{display:flex;align-items:baseline;gap:6px;margin-top:2px}
-.ticket .num{font-size:92px;font-weight:800;line-height:.9;letter-spacing:-.04em;color:#fff}
-.ticket .unit{font-size:22px;font-weight:600;opacity:.9}
-.ticket .verdict{display:inline-block;margin-top:14px;padding:6px 14px;border-radius:999px;font-weight:800;font-size:13px;letter-spacing:.04em;background:var(--aqua);color:var(--char);border:1.5px solid var(--aqua)}
-.ticket .foot{display:flex;justify-content:space-between;margin-top:18px;padding-top:12px;border-top:1px dashed rgba(255,245,195,.35);font-size:13px}
-.ticket .foot b{font-size:16px;font-weight:800;color:#fff}
-.ticket .foot span{opacity:.75}
-.ticket .dot{position:absolute;right:18px;top:18px;width:14px;height:14px;border-radius:50%;background:var(--teal)}
-.ticket.mid .verdict{background:transparent;color:var(--melon);border-color:var(--melon)}
-.ticket.bad{background:var(--melon);color:#000}
-.ticket.bad .eyebrow{color:#000;opacity:.7}
-.ticket.bad .num{color:#000}
-.ticket.bad .verdict{background:var(--char);color:var(--egg);border-color:var(--char)}
-.ticket.bad .dot{background:var(--char)}
-.ticket.bad .foot{border-top-color:rgba(0,0,0,.3)} .ticket.bad .foot b{color:#000}
-.ticket.off{background:var(--egg2);color:var(--ink);border:1.5px dashed var(--line)}
-.ticket.off .eyebrow{color:var(--mute);opacity:1}
-.ticket.off .num{color:var(--off)}
-.ticket.off .verdict{background:transparent;color:var(--mute);border-color:var(--off)}
-.ticket.off .foot{border-top-color:var(--soft)} .ticket.off .foot b{color:var(--ink)}
-.ticket.off .dot{background:var(--off)}
+/* ① 히어로 */
+.ticket{background:var(--i1);color:var(--surface);border-radius:24px;padding:18px 18px 14px;box-shadow:0 16px 36px rgba(51,49,45,.24)}
+.ticket .eyebrow{color:rgba(255,253,246,.52)}
+.ticket .big{display:flex;align-items:baseline;gap:6px;margin-top:6px}
+.ticket .num{font-size:82px;font-weight:800;line-height:.86;letter-spacing:-.045em;color:var(--surface)}
+.ticket .unit{font-size:21px;font-weight:500;color:rgba(255,253,246,.58)}
+.vrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}
+.ticket .verdict{display:inline-flex;align-items:center;padding:8px 14px;border-radius:999px;font-weight:700;font-size:12px;background:var(--tlt) ;background:#9BD7D5;color:#223634}
+.arrive{text-align:right;flex:none}
+.arrive em{font-style:normal;display:block;font-size:10.5px;color:rgba(255,253,246,.5)}
+.arrive b{font-size:17px;font-weight:800;letter-spacing:-.02em;color:var(--surface)}
+.ticket .foot{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px;font-size:11px}
+.ticket .foot>div{background:rgba(255,253,246,.07);border-radius:16px;padding:10px 12px}
+.ticket .foot b{display:block;font-size:20px;font-weight:800;color:var(--surface)}
+.ticket .foot span{display:block;color:rgba(255,253,246,.5);margin-top:2px}
+.ticket.mid .verdict{background:transparent;border:1.5px solid var(--ml);color:#FF9182}
+.ticket.mid .num{color:rgba(255,253,246,.28)}
+.ticket.bad{background:var(--ml);box-shadow:0 16px 36px rgba(255,114,96,.32)}
+.ticket.bad .eyebrow,.ticket.bad .unit,.ticket.bad .arrive em{color:rgba(43,20,16,.62)}
+.ticket.bad .num,.ticket.bad .foot b,.ticket.bad .arrive b{color:#2B1410}
+.ticket.bad .foot>div{background:rgba(43,20,16,.10)}
+.ticket.bad .foot span{color:rgba(43,20,16,.55)}
+.ticket.bad .verdict{background:var(--i1);color:var(--surface)}
+.ticket.bad .dot{background:var(--i1)}
+.ticket.off{background:#FBF8F0;color:var(--i1);border:1.5px dashed #D5CDBA;box-shadow:none}
+.ticket.off .eyebrow{color:#A9A296}
+.ticket.off .num,.ticket.off .unit{color:var(--offc)}
+.ticket.off .verdict{background:transparent;border:1.5px solid #D5CDBA;color:var(--i3)}
+.ticket.off .foot>div{background:#F3F0E7}
+.ticket.off .foot b{color:var(--offc)}.ticket.off .foot span{color:#A9A296}
+.ticket.off .dot{background:var(--offc)}
+.ticket .dot{position:absolute;right:18px;top:20px;width:10px;height:10px;border-radius:50%;background:#2FB7B3;box-shadow:0 0 0 5px rgba(47,183,179,.20)}
+.meta{position:relative;display:flex;justify-content:space-between;font-size:10.5px;color:var(--i3);padding:6px 6px 0}
 
-.meta{position:relative;display:flex;justify-content:space-between;font-size:11px;color:var(--mute);padding:6px 4px 0}
+/* ③ 추이 */
+.lead2{font-size:13px;font-weight:600;color:var(--i1);margin-top:6px}
+.lead2 b{color:var(--tli)}
+.spark{height:76px;margin-top:10px;position:relative}
+.spark svg{width:100%;height:100%;display:block}
+.lg{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:10px;color:var(--i3)}
+.lg em{font-style:normal;display:inline-flex;align-items:center;gap:5px;color:var(--i2);margin-right:10px}
+.lg em::before{content:"";width:13px;height:2px;border-radius:2px;background:var(--tl)}
+.lg em.r{color:var(--i3)}
+.lg em.r::before{height:0;background:none;border-top:1.5px dashed #B9B1A0}
+.lg b{color:var(--mli)}
 
-/* ③ 추이 — 높을수록 진한 틸 그라데이션 */
-.spark{height:72px;margin-top:8px;position:relative;border-bottom:1.5px solid var(--line)}
-.spark svg{width:100%;height:100%}
-.spark .now{position:absolute;right:0;top:0;bottom:0;border-left:1.5px dashed var(--melon)}
-.spark .lab{position:absolute;left:0;bottom:-16px;font-size:10px;color:var(--mute);letter-spacing:.06em}
-.spark .lab.r{left:auto;right:0;color:var(--melon)}
+/* ④ 메뉴 + ① 알레르기 */
+.menu{list-style:none;padding:0;margin:8px 0 0}
+.menu li{display:flex;align-items:center;gap:8px;padding:5px 7px;font-size:13px;color:#4A4740}
+.menu li::before{content:"";width:7px;height:7px;border-radius:50%;border:1.5px solid var(--offc);flex:none}
+.menu li.main{font-size:15px;font-weight:800;color:var(--i1)}
+.menu li.main::before{width:8px;height:8px;background:var(--ml);border-color:var(--ml)}
+.menu li.hit{background:var(--mlt2);border-radius:10px}
+.menu li .codes{margin-left:auto;font-size:9.5px;color:var(--i3);letter-spacing:.06em;flex:none}
+.menu li .codes b{color:var(--mli)}
+.menu li .atag{font-size:9.5px;font-weight:800;color:var(--mli);background:var(--mlt);border-radius:6px;padding:2px 6px;flex:none}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.chips span{font-size:9.5px;font-weight:800;border-radius:6px;padding:3px 6px;background:var(--hair);color:var(--i2)}
+.chips span.on{background:var(--mlt);color:var(--mli)}
 
-/* ④ 메뉴 */
-.menu{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:8px;font-size:14px;list-style:none;padding:0}
-.menu li{padding-left:14px;position:relative}
-.menu li::before{content:"";position:absolute;left:0;top:.6em;width:7px;height:7px;border-radius:50%;border:1.5px solid var(--char)}
-.menu li.main{grid-column:1/-1;font-weight:800;font-size:15px}
-.menu li.main::before{background:var(--melon);border-color:var(--melon)}
+/* ⑤ 영양 3칸 */
+.kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:12px}
+.kpi>div{border-radius:16px;padding:9px 10px;position:relative}
+.kpi>div:nth-child(1){background:#CFE9E7}
+.kpi>div:nth-child(2){background:var(--tlt2)}
+.kpi>div:nth-child(3){background:var(--mlt)}
+.kpi>div::before{content:"0" counter(k);counter-increment:k;font-size:9px;font-weight:800;letter-spacing:.12em;display:block;opacity:.85}
+.kpi{counter-reset:k}
+.kpi>div:nth-child(1)::before{color:var(--tli)}
+.kpi>div:nth-child(2)::before{color:#3D8583}
+.kpi>div:nth-child(3)::before{color:var(--mli)}
+.kpi b{display:block;font-size:19px;font-weight:800;letter-spacing:-.02em;color:#22403E;margin-top:2px}
+.kpi>div:nth-child(3) b{color:#4A2A23}
+.kpi span{font-size:10px;color:#4C6564;display:block}
+.kpi>div:nth-child(3) span{color:#7A4A3E}
+.kpi .flag{position:absolute;right:8px;top:8px;font-size:9px;font-weight:800;padding:2px 6px;border-radius:999px;background:#FFD3C9;color:#A83A28}
 
-/* ⑤ 영양 3칸 — 칸마다 고유색 (양=틸 · 균형=아쿠아 · 충족=멜론) */
-.kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;counter-reset:k}
-.kpi>div{border:1.5px solid var(--line);border-radius:12px;padding:8px 10px;position:relative;counter-increment:k}
-.kpi>div:nth-child(1){background:var(--teal);color:#000}
-.kpi>div:nth-child(2){background:var(--aqua);color:var(--char)}
-.kpi>div:nth-child(3){background:var(--melon);color:#000}
-.kpi>div::before{content:"0" counter(k);font-size:10px;font-weight:800;letter-spacing:.1em;opacity:.7}
-.kpi b{display:block;font-size:20px;font-weight:800;letter-spacing:-.02em}
-.kpi span{font-size:11px;opacity:.8}
-.kpi .flag{position:absolute;right:8px;top:8px;font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px;background:rgba(0,0,0,.18)}
+/* ⑥ 영양소 칩 — 토글 없이 항상 펼침 */
+.micro{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-top:8px}
+.micro>div{display:flex;flex-direction:column;gap:4px}
+.micro .v{height:46px;border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;font-size:12.5px;font-weight:800;letter-spacing:-.02em}
+.micro .v em{font-style:normal;font-size:8.5px;font-weight:800}
+.micro .n{font-size:8.5px;color:var(--i3);text-align:center;letter-spacing:-.03em}
+.micro [data-b="hi"] .v{background:#BFE0DE;color:#0A5F5C}
+.micro [data-b="mid"] .v{background:var(--tlt);color:var(--tli)}
+.micro [data-b="lo"] .v{background:var(--tlt2);color:#3D8583}
+.micro [data-b="short"] .v{background:#FFD3C9;color:#A83A28;box-shadow:inset 0 0 0 1.5px var(--ml)}
+.micro [data-b="short"] .n{color:var(--mli);font-weight:800}
 
-/* ⑥ 막대 — 영양소마다 고유색, 부족은 멜론 외곽 + 라벨 */
-details summary{position:relative;cursor:pointer;font-size:12px;color:var(--teal);font-weight:800;letter-spacing:.08em;margin-top:12px;list-style:none}
-details summary::before{content:"▸ "}
-details[open] summary::before{content:"▾ "}
-.bars{margin-top:8px}
-.bar{display:grid;grid-template-columns:90px 1fr 64px;gap:8px;align-items:center;font-size:12px;margin:5px 0}
-.track{position:relative;height:10px;background:var(--egg2);border:1.5px solid var(--line);border-radius:6px}
-.track i{position:absolute;left:0;top:0;bottom:0}
-.bar:nth-child(1) .track i{background:#A1C9F4}
-.bar:nth-child(2) .track i{background:#FFB482}
-.bar:nth-child(3) .track i{background:#8DE5A1}
-.bar:nth-child(4) .track i{background:#FF9F9B}
-.bar:nth-child(5) .track i{background:#D0BBFF}
-.bar:nth-child(6) .track i{background:#DEBB9B}
-.bar.short .track{border-color:var(--melon);box-shadow:inset 0 0 0 1px var(--melon)}
-.bar.short b{color:var(--melon)}
-.bar.short b::after{content:" 부족";font-size:10px}
-.track::after{content:"";position:absolute;left:66.7%;top:-5px;bottom:-5px;width:2px;background:var(--melon)}
-.bar b{text-align:right;font-weight:800}
-.foot-note{position:relative;font-size:10.5px;color:var(--mute);margin-top:14px;line-height:1.5}
+/* ② 이번 주 식단 */
+.week{display:flex;flex-direction:column;gap:2px;margin-top:8px}
+.week>div{display:flex;align-items:center;gap:10px;padding:5px 7px}
+.week .day{width:38px;height:38px;border-radius:13px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#F5F2E9}
+.week .day em{font-style:normal;font-size:9px;font-weight:800;color:var(--i3)}
+.week .day b{font-size:14px;font-weight:800;color:var(--i2);line-height:1.1}
+.week .t b{display:block;font-size:13px;font-weight:500;color:var(--i1)}
+.week .t span{display:block;font-size:10px;color:var(--i3);margin-top:1px}
+.week [data-w="past"] .day{background:var(--hair)}
+.week [data-w="past"] .day em{color:#BDB6A6}.week [data-w="past"] .day b,.week [data-w="past"] .t b{color:#A9A296}
+.week [data-w="today"]{background:var(--tlt2);border-radius:16px}
+.week [data-w="today"] .day{background:var(--i1)}
+.week [data-w="today"] .day em{color:rgba(255,253,246,.6)}.week [data-w="today"] .day b{color:var(--surface)}
+.week [data-w="today"] .t b{font-weight:800}
+.foot-note{position:relative;font-size:10px;color:var(--i3);margin-top:10px;line-height:1.5}
 
-/* ⑧ 탄소 카드 */
-.carbon{border-color:var(--teal)}
-.carbon .big{display:flex;align-items:baseline;gap:6px;margin-top:4px}
-.carbon .num{font-size:40px;font-weight:800;letter-spacing:-.03em;color:var(--teal);line-height:1}
-.carbon .unit{font-size:13px;color:var(--mute)}
-.carbon .cmp{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
-.carbon .cmp>div{background:var(--aqua2);border-radius:10px;padding:8px 10px;font-size:11px;color:var(--char)}
-.carbon .cmp b{display:block;font-size:18px;font-weight:800;color:var(--char)}
-.carbon .pick{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px}
-.carbon .pick>div{border:1.5px solid var(--line);border-radius:999px;text-align:center;font-size:12px;font-weight:700;padding:5px 0}
-.carbon .pick>div.on{background:var(--teal);color:#000;border-color:var(--teal)}
-.carbon .mine{margin-top:10px;font-size:12px;display:flex;justify-content:space-between;align-items:center}
-.carbon .mine b{color:var(--teal)}
-.carbon .ring{width:44px;height:44px;border-radius:50%;background:conic-gradient(var(--teal) 0 78%,var(--egg2) 78%);display:grid;place-items:center;font-size:10px;font-weight:800;border:1.5px solid var(--line)}
-.carbon .ring i{width:32px;height:32px;border-radius:50%;background:var(--paper);display:grid;place-items:center;font-style:normal}
+/* ⑧ 탄소 카드 — 읽기 전용 */
+.carbon{background:var(--tlt2);box-shadow:0 1px 2px rgba(51,49,45,.04),0 10px 26px rgba(18,151,147,.09)}
+.carbon .eyebrow{color:var(--tli)}
+.carbon .big{display:flex;align-items:baseline;gap:6px;margin-top:6px;flex-wrap:wrap}
+.carbon .num{font-size:40px;font-weight:800;letter-spacing:-.035em;color:var(--tli);line-height:1}
+.carbon .unit{font-size:11.5px;color:#5C6E6D}
+.carbon .cmp{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.carbon .cmp>div{background:var(--surface);border-radius:16px;padding:10px 12px;font-size:10px;color:var(--i2)}
+.carbon .cmp b{display:block;font-size:17px;font-weight:800;color:var(--i1);margin-bottom:2px}
 
 /* ⑨ 이슈 링크 */
-.news{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:6px}
-.news li{display:grid;grid-template-columns:1fr auto;gap:8px;font-size:13px;padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--egg2)}
-.news li small{grid-column:1/-1;font-size:10.5px;color:var(--mute)}
-.news li em{font-style:normal;font-size:10px;font-weight:800;color:var(--teal);letter-spacing:.08em;align-self:start;padding-top:2px}
+.news{list-style:none;padding:0;margin:6px 0 0}
+.news li{display:flex;flex-direction:column;gap:5px;font-size:12.5px;padding:10px 0;border-bottom:1px solid var(--hair)}
+.news li:last-child{border-bottom:0}
+.news li>span{font-weight:600;color:var(--i1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.news li div{display:flex;align-items:center;gap:7px}
+.news li em{font-style:normal;font-size:9.5px;font-weight:800;color:var(--tli);background:var(--tlt);border-radius:6px;padding:2px 6px}
+.news li small{font-size:10px;color:var(--i3)}
 
 .notes{display:grid;gap:10px}
 .note{background:var(--paper);border:1.5px solid var(--line);border-radius:12px;padding:10px 14px;font-size:13.5px}
@@ -152,7 +185,7 @@ details[open] summary::before{content:"▾ "}
 .note .api{display:block;margin-top:4px;color:var(--mute);font-size:12px}
 
 .variants{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-.variants .phone-mini{background:var(--egg2);border-radius:22px;border:5px solid var(--char);padding:10px}
+.variants .phone-mini{background:#F5F2E9;border-radius:22px;border:5px solid var(--char);padding:10px}
 .variants .ticket{margin-top:0;padding:14px 14px 10px}
 .variants .num{font-size:58px}
 .variants .unit{font-size:16px}
@@ -163,7 +196,7 @@ details[open] summary::before{content:"▾ "}
 .variants .cap{font-size:12px;color:var(--mute);margin-top:10px;line-height:1.45}
 .variants .cap b{color:var(--ink)}
 
-.kiosk{background:var(--egg2);border:8px solid var(--char);border-radius:16px;aspect-ratio:16/9;padding:28px 32px;display:grid;grid-template-columns:1.1fr 1fr;grid-template-rows:auto 1fr auto;gap:18px 32px;position:relative}
+.kiosk{background:#F5F2E9;border:8px solid var(--char);border-radius:16px;aspect-ratio:16/9;padding:28px 32px;display:grid;grid-template-columns:1.1fr 1fr;grid-template-rows:auto 1fr auto;gap:18px 32px;position:relative}
 .kiosk .k-title{grid-column:1/-1;display:flex;justify-content:space-between;align-items:baseline;font-size:20px;font-weight:800;letter-spacing:.04em;color:var(--char)}
 .kiosk .k-title span{font-size:13px;color:var(--mute);font-weight:600;letter-spacing:.08em}
 .kiosk .k-hero{border-radius:18px;padding:24px 28px;display:flex;flex-direction:column;justify-content:center}
@@ -192,146 +225,157 @@ tr:last-child td{border-bottom:0}
 </style>
 </head>
 <body>
-<main>
-<h1>MEALBOARD<br>대시보드 도면 <b>v4</b></h1><div class="rule"></div>
-<p class="lead">학생이 교실에서 급식실로 걸어가며 <strong>2초 안에 "지금 갈까, 조금 있다 갈까"</strong>를 정하는 화면입니다. 첫 화면은 그 결정 하나에 전부 씁니다. 메뉴와 영양은 그다음 스크롤이고, 영양 세부는 교사·영양교사를 위한 접힌 영역입니다. 모바일이 기준이고, 급식실 입구 디스플레이용 가로 도면을 뒤에 둡니다.</p>
+<main class="mk">
+<h1>MEALBOARD<br>대시보드 도면 <b>v5</b></h1><div class="rule"></div>
+<p class="lead">학생이 교실에서 급식실로 걸어가며 <strong>2초 안에 "지금 갈까, 조금 있다 갈까"</strong>를 정하는 화면입니다. 첫 화면은 그 결정 하나에 전부 씁니다. 메뉴·알레르기·영양은 그다음 스크롤입니다. v5 는 팔레트를 그대로 두고 <strong>표면을 외곽선에서 고도로</strong> 옮긴 판이며, 알레르기 표시 · 이번 주 식단 · 배식대 도착 시각 · 평소 곡선 네 가지가 더해졌습니다. 모바일이 기준이고, 급식실 입구 디스플레이용 가로 도면을 뒤에 둡니다.</p>
 
 <h2>팔레트 <small>ColorCombos #285 · Charcoal Grey, Egg Shell &amp; Melon</small></h2>
-<p class="sub">다섯 색을 역할로 나눴습니다. 같은 색이 두 가지 뜻을 갖지 않게 하는 것이 규칙입니다.</p>
+<p class="sub">색은 v4 그대로입니다. 바뀐 것은 <b>표면</b> — 1.5px 차콜 외곽선을 걷어내고 라운드와 그림자로 깊이를 만듭니다. 같은 색이 두 가지 뜻을 갖지 않게 하는 규칙은 유지됩니다.</p>
 <div class="ref">
 <div><h4>색 → 역할</h4><ul>
-<li><b>#505050 차콜</b> — 구조. 히어로 카드, 외곽선, 제목, 기기 테두리</li>
-<li><b>#FFF5C3 에그셸</b> — 바탕. 카드는 한 단계 밝은 <code>#FFFDF5</code>, 페이지는 원색</li>
-<li><b>#129793 틸</b> — 정상·충분·"살아 있음". 라이브 점, 그래프, 영양 01칸, 탄소 카드</li>
-<li><b>#9BD7D5 아쿠아</b> — 보조·균형. 여유 판정 칩, 영양 02칸, 비교 박스</li>
-<li><b>#FF7260 멜론</b> — "지금 봐야 할 것". 혼잡 카드, 부족 표시, 권장섭취량 선, 주석 번호</li>
+<li><b>#33312D 차콜</b> — 구조. 히어로 카드, 제목, 오늘 배지, 기기 테두리 (v4 의 #505050 보다 한 단계 깊게)</li>
+<li><b>#F5F2E9 바탕 / #FFFCF6 카드</b> — 채도를 뺀 에그셸. 카드가 흰색이라 바탕이 진하면 그림자가 일을 못 한다</li>
+<li><b>#129793 틸</b> — 정상·충족·"살아 있음". 라이브 점, 그래프, 영양 01칸, 탄소 카드, 위치 마커</li>
+<li><b>#9BD7D5 아쿠아</b> — 보조·균형. 여유 판정 칩</li>
+<li><b>#FF7260 멜론</b> — "지금 봐야 할 것". 혼잡 카드, 부족 칩, 알레르기 일치, 주요리 점, 주석 번호</li>
 </ul></div>
-<div><h4>이번 판에서 바뀐 것</h4><ul>
-<li><b>그래프 그라데이션</b> — 면 채움이 위(높은 값)로 갈수록 진한 틸, 아래는 투명. 봉우리가 스스로 강조된다</li>
-<li><b>영양 3칸 고유색</b> — 01 틸 / 02 아쿠아 / 03 멜론. 색이 "몇 번째 칸"을 뜻하고, 상태는 우상단 작은 플래그로</li>
-<li><b>영양소별 막대 고유색</b> — seaborn pastel 6색을 영양소마다 고정. 부족은 막대 색을 바꾸지 않고 멜론 외곽선 + "부족" 라벨</li>
-<li><b>탄소 카드(⑧)·이슈 링크(⑨)</b> 추가</li>
+<div><h4>v5 에서 바뀐 것</h4><ul>
+<li><b>외곽선 → 고도</b> — 전 카드의 1.5px 차콜 선을 제거하고 radius 24 + 2단 그림자. 카드가 여섯 장을 넘자 선이 화면을 잘게 썰었다</li>
+<li><b>영양소 막대 → 칩 한 행</b> — 토글 없이 항상 펼침. seaborn pastel 6색은 명도·채도·색맹 대비 검증에서 전 항목 탈락해 폐기. 색은 <em>상태</em>만 말한다</li>
+<li><b>섹션 틴트 폐기</b> — 카드가 흰색으로 통일되고, 탄소 카드만 틸 틴트로 남아 "다른 종류의 카드"임을 알린다</li>
+<li><b>알레르기 표시 · 이번 주 식단 · 배식대 도착 시각 · 평소 곡선</b> 추가</li>
+<li><b>잔반 4버튼·개인 누적 제거</b> — 자기 신고 값을 누적해 보이면 측정한 것처럼 읽힌다</li>
 </ul></div>
 </div>
 <h2>정보 우선순위 <small>왜 이 순서인가</small></h2>
 <p class="sub">위에 있을수록 크고, 아래로 갈수록 작아지며 접힙니다. 이 표가 곧 화면의 세로 순서입니다.</p>
 <div class="prio">
   <div>순위</div><div>사용자가 알고 싶은 것</div><div>화면 요소</div><div>데이터</div>
-  <div class="n">1</div><div>지금 서면 몇 분?</div><div>식권 카드 — 88px 숫자 + 판정 칩(여유/보통/혼잡)</div><div><code>/api/status</code> wait_min, state</div>
-  <div class="n">2</div><div>왜? (줄 길이, 빠지는 속도)</div><div>식권 하단 두 수치</div><div>queue_len, rate_per_min</div>
-  <div class="n">3</div><div>지금이 피크인가, 곧 풀리나</div><div>최근 2시간 스파크라인</div><div><code>/api/history</code></div>
-  <div class="n">4</div><div>줄이 어디까지 늘어섰나</div><div>평면도 위 익명 위치 마커 (영상 아님)</div><div><code>/api/positions</code> n, points</div>
-  <div class="n">5</div><div>오늘 뭐 나와?</div><div>메뉴 2열, 주요리 강조</div><div><code>/api/meal</code> today.menu</div>
-  <div class="n">6</div><div>오늘 급식은 괜찮은 한 끼인가</div><div>영양 요약 3칸</div><div>assess.energy_pct · macro_ratio_ok · mar</div>
-  <div class="n">7</div><div>(교사) 어느 영양소가 부족한가</div><div>접힌 영양소 막대 6개</div><div>assess.micro[]</div>
-  <div class="n">8</div><div>남기면 얼마나 배출되나 · 나는?</div><div>탄소 카드 — 전량 잔반 시 CO₂e, 비교 2칸, 내 선택 4버튼</div><div><code>/api/meal</code> carbon · 브라우저 저장</div>
-  <div class="n">9</div><div>오늘 기후 이슈</div><div>링크 3개 (제목·출처·날짜)</div><div><code>/api/news</code></div>
+  <div class="n">1</div><div>지금 서면 몇 분?</div><div>히어로 — 104px 숫자 + 판정 칩(여유/보통/혼잡)</div><div><code>/api/status</code> wait_min, state</div>
+  <div class="n">2</div><div>그럼 몇 시에 먹나?</div><div>판정 칩 오른쪽 "배식대 도착 12:21"</div><div>wait_min + 현재 시각 (계산만)</div>
+  <div class="n">3</div><div>왜? (줄 길이, 빠지는 속도)</div><div>히어로 하단 두 타일</div><div>queue_len, rate_per_min</div>
+  <div class="n">4</div><div>지금이 평소보다 붐비나</div><div>추이 — 오늘 곡선 + 평소 파선 + 결론 한 줄</div><div><code>/api/history</code> · <code>/api/typical</code></div>
+  <div class="n">5</div><div>줄이 어디까지 늘어섰나</div><div>평면도 위 익명 위치 마커 (영상 아님)</div><div><code>/api/positions</code> n, points</div>
+  <div class="n">6</div><div>오늘 뭐 나와? · 내가 못 먹는 게 있나</div><div>메뉴 한 줄 리스트 + 알레르기 번호·칩</div><div><code>/api/meal</code> today.menu[] (번호가 이미 들어 있다)</div>
+  <div class="n">7</div><div>오늘 급식은 괜찮은 한 끼인가</div><div>영양 요약 3칸</div><div>assess.energy_pct · macro_ratio_ok · mar</div>
+  <div class="n">8</div><div>어느 영양소가 모자라나</div><div>영양소 칩 6개 — 권장섭취량 대비 ±%</div><div>assess.micro[] pct · band</div>
+  <div class="n">9</div><div>내일은 뭐 나와?</div><div>이번 주 식단 5행 (오늘 강조)</div><div><code>/api/meal</code> week[] · week_avg</div>
+  <div class="n">10</div><div>남기면 얼마나 배출되나</div><div>탄소 카드 — 전량 잔반 시 CO₂e, 비교 2칸</div><div><code>/api/meal</code> today.carbon</div>
+  <div class="n">11</div><div>오늘 기후 이슈</div><div>링크 3개 (제목·출처·날짜)</div><div><code>/api/news</code></div>
 </div>
 
 <h2>모바일 도면 <small>390 × 844 · 세로 1스크롤</small></h2>
-<p class="sub">번호 ①~⑦ 은 오른쪽 주석과 대응합니다. 색은 실제 팔레트를 적용한 상태입니다.</p>
+<p class="sub">번호 1~11 은 오른쪽 주석과 대응합니다. 목업 안은 실제 v5 값을 그대로 적용한 상태이고, 바깥 문서 크롬은 도면용 v4 를 유지합니다.</p>
 <div class="board">
   <div class="phone">
-    <div class="dim w">390px · 좌우 여백 16px · 카드 간격 10px</div>
-    <div class="statusbar"><span>12:07</span><span>●●●</span></div>
+    <div class="dim w">390px · 좌우 여백 16px · 카드 간격 12px</div>
+    <div class="statusbar"><span>12:14</span><span>●●●</span></div>
 
     <div style="position:relative"><span class="tag" style="left:-11px;top:2px">1</span><div class="card ticket"><span class="dot"></span>
       <div class="eyebrow">지금 줄을 서면</div>
-      <div class="big"><span class="num">4</span><span class="unit">분</span></div>
-      <span class="verdict">여유 · 바로 가세요</span>
-      <div class="foot"><div><b>38</b>명 <span>대기 중</span></div><div><b>9.5</b>명/분 <span>배식 속도</span></div></div>
+      <div class="big"><span class="num">7</span><span class="unit">분</span></div>
+      <div class="vrow"><span class="verdict">여유 · 바로 가세요</span>
+        <div class="arrive"><span class="tag" style="left:-24px;top:6px">2</span><em>배식대 도착</em><b>12:21</b></div></div>
+      <div class="foot"><div><b>38</b><span>명 대기 중</span></div><div><b>5.2</b><span>명/분 배식 속도</span></div></div>
     </div></div>
-    <div class="meta"><span class="tag" style="left:-27px;top:-2px">2</span><span>12:07:10 갱신 · 30초마다</span><span>추정치 · 배식 초반 오차 큼</span></div>
+    <div class="meta"><span class="tag" style="left:-27px;top:2px">3</span><span>갱신 12:14:30 · 30초마다</span><span>추정치 · 배식 초반 오차 큼</span></div>
 
-    <div style="background:#EAF6F5" class="card"><span class="tag" style="left:-11px;top:-11px">3</span>
+    <div class="card"><span class="tag" style="left:-11px;top:-11px">4</span>
       <div class="eyebrow">최근 2시간 예상 대기</div>
+      <div class="lead2">평소 이 시각보다 <b>3분 짧습니다</b></div>
       <div class="spark">
-        <svg viewBox="0 0 340 72" preserveAspectRatio="none"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#129793" stop-opacity=".9"/><stop offset=".55" stop-color="#129793" stop-opacity=".35"/><stop offset="1" stop-color="#9BD7D5" stop-opacity="0"/></linearGradient></defs><path d="M0 68 L30 66 L60 58 L80 40 L100 18 L120 12 L140 22 L160 38 L185 48 L210 44 L235 30 L260 34 L285 46 L310 58 L340 60 L340 72 L0 72Z" fill="url(#g)"/><path d="M0 68 L30 66 L60 58 L80 40 L100 18 L120 12 L140 22 L160 38 L185 48 L210 44 L235 30 L260 34 L285 46 L310 58 L340 60" fill="none" stroke="#129793" stroke-width="2"/></svg>
-        <div class="now"></div><div class="lab">10:07</div><div class="lab r">지금</div>
+        <svg viewBox="0 0 352 88" preserveAspectRatio="none" aria-label="오늘과 평소 대기 곡선">
+          <defs><linearGradient id="g5" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#129793" stop-opacity=".24"/><stop offset="1" stop-color="#129793" stop-opacity="0"/></linearGradient></defs>
+          <path d="M4.0,79.7 L16.3,79.7 L28.7,75.3 L41.0,71.0 L53.3,58.0 L65.7,36.3 L78.0,14.7 L90.3,6.0 L102.7,14.7 L115.0,27.7 L127.3,36.3 L139.7,45.0 L152.0,49.3 L164.3,53.7 L176.7,53.7 L189.0,58.0 L201.3,58.0 L213.7,53.7 L226.0,45.0 L238.3,40.7 L250.7,45.0 L263.0,49.3 L275.3,49.3 L287.7,53.7 L300.0,53.7 L300,88 L4,88Z" fill="url(#g5)"/>
+          <path d="M4.0,75.3 L16.3,75.3 L28.7,71.0 L41.0,62.3 L53.3,49.3 L65.7,32.0 L78.0,19.0 L90.3,14.7 L102.7,19.0 L115.0,27.7 L127.3,32.0 L139.7,36.3 L152.0,40.7 L164.3,40.7 L176.7,45.0 L189.0,45.0 L201.3,45.0 L213.7,40.7 L226.0,40.7 L238.3,40.7 L250.7,45.0 L263.0,45.0 L275.3,49.3 L287.7,49.3 L300.0,40.7" fill="none" stroke="#B9B1A0" stroke-width="1.5" stroke-dasharray="4 4"/>
+          <path d="M4.0,79.7 L16.3,79.7 L28.7,75.3 L41.0,71.0 L53.3,58.0 L65.7,36.3 L78.0,14.7 L90.3,6.0 L102.7,14.7 L115.0,27.7 L127.3,36.3 L139.7,45.0 L152.0,49.3 L164.3,53.7 L176.7,53.7 L189.0,58.0 L201.3,58.0 L213.7,53.7 L226.0,45.0 L238.3,40.7 L250.7,45.0 L263.0,49.3 L275.3,49.3 L287.7,53.7 L300.0,53.7" fill="none" stroke="#129793" stroke-width="2"/>
+          <line x1="300" y1="2" x2="300" y2="88" stroke="#D14A38" stroke-width="1.5" stroke-dasharray="3 3" opacity=".5"/>
+          <circle cx="300" cy="53.7" r="4" fill="#129793" stroke="#FFFCF6" stroke-width="2"/>
+          <text x="308" y="56" font-size="9" font-weight="700" fill="#0C6D6A">오늘</text>
+          <text x="308" y="37" font-size="9" font-weight="700" fill="#A9A296">평소</text>
+        </svg>
       </div>
-      <div style="height:14px"></div>
+      <div class="lg"><span><em>오늘</em><em class="r">평소 · 같은 요일 8일</em></span><span>2시간 전 → <b>지금</b></span></div>
     </div>
 
-    <div class="card" style="position:relative;background:#F3F1E4"><span class="tag" style="left:-11px;top:-11px">10</span>
+    <div class="card" style="position:relative"><span class="tag" style="left:-11px;top:-11px">5</span>
       <div class="eyebrow">급식실 현황</div>
-      <span style="position:absolute;right:14px;top:12px;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:var(--aqua);color:var(--char)">38명</span>
-      <svg viewBox="0 0 300 180" style="width:100%;display:block;margin-top:8px" aria-label="평면도 목업">
-        <rect x="8" y="8" width="284" height="164" fill="#FFFBE4" stroke="#505050" stroke-width="1.5"/>
-        <rect x="8" y="8" width="45" height="164" fill="rgba(80,80,80,.06)"/>
-        <rect x="14" y="156" width="136" height="12" fill="none" stroke="#FF7260" stroke-width="2" stroke-dasharray="6 4"/>
-        <rect x="246" y="150" width="40" height="18" fill="none" stroke="#505050" stroke-width="1.5" stroke-dasharray="6 4"/>
-        <line x1="25" y1="8" x2="48" y2="8" stroke="#FFFBE4" stroke-width="3"/><line x1="292" y1="80" x2="292" y2="100" stroke="#FFFBE4" stroke-width="3"/>
-        <text x="59" y="20" font-size="11" font-weight="700" fill="#505050">입구</text>
-        <text x="16" y="92" font-size="10" font-weight="700" fill="#6B6B5E">통로</text>
-        <text x="82" y="166" font-size="11" font-weight="700" fill="#FF7260" text-anchor="middle">배식대</text>
-        <text x="284" y="146" font-size="11" font-weight="700" fill="#505050" text-anchor="end">퇴식구</text>
-        <text x="284" y="93" font-size="11" font-weight="700" fill="#505050" text-anchor="end">출구</text>
-        <g fill="#129793" stroke="#505050" stroke-width="1">
-          <circle cx="36" cy="24" r="5"/><circle cx="34" cy="46" r="5"/><circle cx="31" cy="68" r="5"/><circle cx="29" cy="90" r="5"/>
-          <circle cx="30" cy="112" r="5"/><circle cx="33" cy="134" r="5"/><circle cx="52" cy="146" r="5"/><circle cx="76" cy="149" r="5"/>
-          <circle cx="100" cy="151" r="5"/><circle cx="124" cy="152" r="5"/>
+      <span style="position:absolute;right:14px;top:12px;font-size:11px;font-weight:800;padding:5px 10px;border-radius:999px;background:#DEF0EF;color:#0C6D6A">14명</span>
+      <svg viewBox="0 0 318 191" style="width:100%;display:block;margin-top:10px" aria-label="평면도 목업">
+        <rect x="8" y="8" width="302" height="175" rx="14" fill="#FBF8F0"/>
+        <path d="M22,8 h34 v175 h-48 V22 a14 14 0 0 1 14,-14Z" fill="rgba(51,49,45,.045)"/>
+        <rect x="8" y="8" width="302" height="175" rx="14" fill="none" stroke="#D5CDBA" stroke-width="1.5"/>
+        <rect x="14" y="165.5" width="145" height="14" rx="7" fill="#FFF0EC" stroke="#FF7260" stroke-width="2" stroke-dasharray="6 4"/>
+        <rect x="261.7" y="158.5" width="42.3" height="21" rx="7" fill="#F3F0E7" stroke="#B9B1A0" stroke-width="1.5" stroke-dasharray="5 4"/>
+        <line x1="26.1" y1="8" x2="50.3" y2="8" stroke="#FFFCF6" stroke-width="3.5"/><line x1="310" y1="85" x2="310" y2="106" stroke="#FFFCF6" stroke-width="3.5"/>
+        <text x="60" y="21" font-size="11" font-weight="700" fill="#6E6A61">입구</text>
+        <text x="18" y="99" font-size="10.5" font-weight="700" fill="#A9A296">통로</text>
+        <text x="86" y="176" font-size="11" font-weight="700" fill="#D14A38" text-anchor="middle">배식대</text>
+        <text x="300" y="150" font-size="11" font-weight="700" fill="#6E6A61" text-anchor="end">퇴식구</text>
+        <text x="300" y="99" font-size="11" font-weight="700" fill="#6E6A61" text-anchor="end">출구</text>
+        <g fill="#129793" stroke="#FFFCF6" stroke-width="1.8">
+          <circle cx="35.2" cy="25.5" r="5"/><circle cx="32.2" cy="43" r="5"/><circle cx="35.2" cy="60.5" r="5"/><circle cx="32.2" cy="78" r="5"/>
+          <circle cx="35.2" cy="95.5" r="5"/><circle cx="32.2" cy="113" r="5"/><circle cx="35.2" cy="130.5" r="5"/><circle cx="38.2" cy="148" r="5"/>
+          <circle cx="56.3" cy="158.5" r="5"/><circle cx="80.5" cy="158.5" r="5"/><circle cx="104.6" cy="156.8" r="5"/><circle cx="128.8" cy="155" r="5"/>
+          <circle cx="159" cy="148" r="5"/><circle cx="195.2" cy="134" r="5"/>
         </g>
       </svg>
       <div class="foot-note">영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다</div>
     </div>
 
-    <div class="card"><span class="tag" style="left:-11px;top:-11px">4</span>
-      <div class="eyebrow">오늘 중식 · 8/26 (수)</div>
-      <ul class="menu">
-        <li class="main">돼지고기 김치찌개</li>
-        <li>현미밥</li><li>계란말이</li><li>시금치나물</li><li>깍두기</li><li>사과</li><li>우유</li>
-      </ul>
-      <span class="tag" style="left:-11px;top:118px">5</span>
+    <div class="card"><span class="tag" style="left:-11px;top:-11px">6</span>
+      <div class="eyebrow">오늘 중식</div>
+      <ul class="menu"><li class="main hit"><span>돼지고기 김치찜</span><span class="atag">내 알레르기</span><span class="codes">5·6·<b>10</b></span></li><li class=""><span>기장밥</span></li><li class=""><span>근대된장국</span><span class="codes">5·6</span></li><li class=""><span>계란말이</span><span class="codes">1·5</span></li><li class="hit"><span>배추김치</span><span class="atag">내 알레르기</span><span class="codes"><b>9</b>·13</span></li><li class=""><span>오렌지</span></li></ul>
+      <div class="chips"><span>1 난류</span><span>5 대두</span><span>6 밀</span><span class="on">9 새우</span><span class="on">10 돼지고기</span><span>13 아황산류</span></div>
+      <div class="foot-note" style="margin-top:8px">내 알레르기 <b style="color:#C9452F">새우 · 돼지고기</b> 와 겹치는 메뉴를 표시했습니다 · 설정 변경</div>
+      <span class="tag" style="left:-11px;top:236px">7</span>
       <div class="kpi">
-        <div><b>112<small>%</small></b><span>에너지 충족</span><span class="flag">많음</span></div>
+        <div><b>104%</b><span>에너지 충족</span></div>
         <div><b>적정</b><span>탄·단·지 비율</span></div>
-        <div><b>94<small>%</small></b><span>미량영양소</span><span class="flag">부족 1</span></div>
+        <div><b>88%</b><span>미량영양소</span><span class="flag">부족 1</span></div>
       </div>
-      <details><summary>영양소별 보기<span class="tag" style="left:-27px;top:-1px">6</span></summary>
-        <div class="bars">
-          <div class="bar short"><span>비타민A</span><div class="track"><i style="width:48%"></i></div><b>72%</b></div>
-          <div class="bar"><span>티아민</span><div class="track"><i style="width:100%"></i></div><b>159%</b></div>
-          <div class="bar"><span>리보플라빈</span><div class="track"><i style="width:70%"></i></div><b>105%</b></div>
-          <div class="bar"><span>비타민C</span><div class="track"><i style="width:96%"></i></div><b>144%</b></div>
-          <div class="bar"><span>칼슘</span><div class="track"><i style="width:63%"></i></div><b>95%</b></div>
-          <div class="bar"><span>철</span><div class="track"><i style="width:65%"></i></div><b>98%</b></div>
-        </div>
-      </details>
-      <div class="foot-note"><span class="tag" style="left:-27px;top:-2px">7</span>기준: 고등학생 남 1식 · 학교급식법 시행규칙 [별표 3] · 세로선 = 권장섭취량 · 영양교사 산출값 기준 참고 지표</div>
+      <div class="eyebrow" style="margin-top:14px">영양소별 · 권장섭취량 대비<span class="tag" style="left:-27px;top:-2px">8</span></div>
+      <div class="micro"><div data-b="lo"><div class="v">−8%</div><div class="n">비타민A</div></div><div data-b="hi"><div class="v">+18%</div><div class="n">티아민</div></div><div data-b="mid"><div class="v">+4%</div><div class="n">리보플라빈</div></div><div data-b="short"><div class="v">−26%<em>부족</em></div><div class="n">비타민C</div></div><div data-b="lo"><div class="v">−4%</div><div class="n">칼슘</div></div><div data-b="hi"><div class="v">+10%</div><div class="n">철</div></div></div>
     </div>
 
-    <div style="background:#E7F5F1" class="card carbon"><span class="tag" style="left:-11px;top:-11px">8</span>
+    <div class="card"><span class="tag" style="left:-11px;top:-11px">9</span>
+      <div class="eyebrow">이번 주 식단</div>
+      <div class="week"><div data-w="past"><div class="day"><em>월</em><b>24</b></div><div class="t"><b>치킨마요덮밥</b><span>외 4가지 · 892 kcal</span></div></div><div data-w="past"><div class="day"><em>화</em><b>25</b></div><div class="t"><b>순두부찌개</b><span>외 4가지 · 838 kcal</span></div></div><div data-w="today"><div class="day"><em>수</em><b>26</b></div><div class="t"><b>돼지고기 김치찜</b><span>외 4가지 · 936 kcal</span></div></div><div data-w="future"><div class="day"><em>목</em><b>27</b></div><div class="t"><b>닭갈비</b><span>외 4가지 · 905 kcal</span></div></div><div data-w="future"><div class="day"><em>금</em><b>28</b></div><div class="t"><b>카레라이스</b><span>외 4가지 · 874 kcal</span></div></div></div>
+      <div class="foot-note">이번 주 평균 에너지 충족 <b style="color:#6E6A61">97%</b> · 미량영양소 <b style="color:#6E6A61">91%</b></div>
+    </div>
+
+    <div class="card carbon"><span class="tag" style="left:-11px;top:-11px">10</span>
       <div class="eyebrow">오늘 급식을 다 남기면</div>
-      <div class="big"><span class="num">1.4</span><span class="unit">kg CO₂e · 1인분 약 560 g 기준</span></div>
+      <div class="big"><span class="num">1.9</span><span class="unit">kg CO₂e · 1인분 약 480 g 기준</span></div>
       <div class="cmp">
-        <div><b>11%</b>세계 1인 하루 평균 배출 대비</div>
-        <div><b>5%</b>한국 1인 하루 평균 배출 대비</div>
+        <div><b>15%</b>세계 1인 하루 평균 배출 대비</div>
+        <div><b>6%</b>한국 1인 하루 평균 배출 대비</div>
       </div>
-      <div class="pick"><div class="on">다 먹음</div><div>¼ 남김</div><div>½ 남김</div><div>다 남김</div></div>
-      <div class="mine"><div>이번 달 내가 남긴 급식 <b>2.1 kg CO₂e</b><br><span class="muted" style="font-size:11px">≈ 승용차 12 km · 12일 기록</span></div><div class="ring"><i>78%</i></div></div>
+      <div class="foot-note">추정치입니다 · 산정 기준 보기</div>
     </div>
 
-    <div style="background:#FFF1EC" class="card"><span class="tag" style="left:-11px;top:-11px">9</span>
+    <div class="card"><span class="tag" style="left:-11px;top:-11px">11</span>
       <div class="eyebrow">오늘의 기후 이슈 <span style="color:var(--melon)">(아래 제목은 레이아웃용 예시)</span></div>
       <ul class="news">
-        <li>2030 국가 감축목표 이행점검 결과 발표<em>환경부</em><small>08-27 · 보도자료</small></li>
-        <li>학교 급식 잔반 감량 시범사업 2학기 확대<em>교육부</em><small>08-26 · 보도자료</small></li>
-        <li>8월 폭염일수 관측 이래 최다<em>기상청</em><small>08-25 · 기후정보</small></li>
+        <li><span>학교 급식 잔반 줄이기, 탄소중립 교육으로 확산</span><div><em>구글뉴스</em><small>2026-08-26</small></div></li>
+        <li><span>폭염 장기화에 급식 식재료 수급 대책 논의</span><div><em>구글뉴스</em><small>2026-08-25</small></div></li>
+        <li><span>청소년 기후행동, 급식실에서 시작하는 탄소 줄이기</span><div><em>구글뉴스</em><small>2026-08-24</small></div></li>
       </ul>
     </div>
   </div>
 
   <div class="notes">
-    <div class="note"><b>1</b><strong>식권(食券) 카드.</strong> 급식 줄의 실물 은유. 숫자 92px/800, 판정 칩이 색과 문장으로 같은 뜻을 두 번 말합니다(색약 대응). 평소엔 차콜, 혼잡이면 카드 전체가 멜론이라 화면을 켜는 순간 구분됩니다. 우상단 틸 점은 "라이브" 표시.<span class="api">wait_min → 숫자 · state+wait_min → 칩 문구/색 (여유 ≤5분 · 보통 5~12 · 혼잡 &gt;12, 임계값은 .env)</span></div>
-    <div class="note"><b>2</b><strong>갱신 메타.</strong> 카드 밖 11px. "추정치" 문구는 지우지 않습니다 — Little's law 가 배식 초반에 과대추정되는 한계를 사용자에게 알리는 유일한 자리.<span class="api">updated_at · stale</span></div>
-    <div class="note"><b>3</b><strong>스파크라인.</strong> 축·눈금 없음, 오른쪽 끝이 "지금". 학생이 보는 건 "지금이 봉우리 앞인가 뒤인가"이지 수치가 아닙니다. 데이터가 2점 미만이면 카드 자체를 숨깁니다.<span class="api">/api/history?minutes=120 · wait_min 만</span></div>
-    <div class="note"><b>4</b><strong>메뉴.</strong> 첫 항목(주요리)만 굵게, 나머지 2열. NEIS 순서를 그대로 쓰되 알레르기 번호 "(5.9.10)" 는 탭하면 보이게 접습니다.<span class="api">today.menu[]</span></div>
-    <div class="note"><b>5</b><strong>영양 요약 3칸.</strong> 법정 기준의 구조(양·비율·충족)를 그대로 3칸으로. 숫자 하나가 아니라 세 질문에 세 답.<span class="api">energy_pct · macro_ratio_ok · mar</span></div>
-    <div class="note"><b>6</b><strong>접힌 상세.</strong> 기본은 닫힘. 교사·영양교사용. 막대마다 고유색(seaborn pastel, 영양소 key 에 고정), 멜론 세로선이 권장섭취량(100%), 트랙 끝이 150%. 부족은 멜론 외곽선 + 라벨. 수용성 비타민(B1·B2·C)은 과다 판정 없음.<span class="api">micro[].pct · band</span></div>
-    <div class="note"><b>7</b><strong>기준 출처.</strong> 판정 표현("미달")을 쓰지 않고 "참고 지표"로 남기는 문장. 학교와의 신뢰를 지키는 장치.<span class="api">std.group · std.source</span></div>
-    <div class="note"><b>8</b><strong>탄소 카드.</strong> 오늘 식단 1인분을 전부 버렸을 때의 배출량. 1인분 무게는 NEIS 에 없어 kcal ÷ 1.8 kcal/g 로 추정하고, 배출계수·비교 기준은 <code>data/carbon_std.json</code> 한 파일에 출처와 함께 둔다. 4버튼은 학생 본인의 선택 — 서버에 보내지 않고 브라우저에만 저장(localStorage). 링은 이번 달 "다 먹음" 비율.각주는 기본 한 줄("추정치입니다 · 선택 기록은 이 브라우저에만 저장 · 산정 기준 보기")이고, "산정 기준 보기"를 펼치면 무게 환산·배출계수(FAO)·1인 평균(OWID)·승용차 환산 전문이 나온다.<span class="api">/api/meal today.carbon · 브라우저 localStorage</span></div>
-    <div class="note"><b>9</b><strong>이슈 링크.</strong> 제목·출처·날짜만. 본문 요약은 넣지 않는다(저작권·LLM 은 로드맵 ⑦). <code>jobs/fetch_news.py</code> 가 RSS 2~3개에서 최신 3건을 골라 <code>news.json</code> 에 캐시, 하루 1회.<span class="api">/api/news items[]</span></div>
-    <div class="note"><b>10</b><strong>급식실 현황.</strong> 빈 평면도(벡터) 위에 익명 위치 마커만 — 영상·실사·이력이 전혀 없다(CLAUDE.md §2, 사용자 승인). 배치는 <em>실제 카메라 시점</em> 기준: 입구 = 좌측 상단(외곽선 틈 + 라벨), 통로 = 좌측변을 따라 아래로(옅은 띠), 배식대 = 하단변 좌측 끝~중앙(멜론 점선 x .02~.50 · y .90~.98), 퇴식구 = 우측 하단(차콜 점선 x .84~.98 · y .86~.98), 출구 = 우측 중앙(외곽선 틈 + 라벨). 대기열은 입구에서 통로를 타고 내려와 배식대 앞으로 이어진다. 마커는 틸 원 r=5 + 차콜 테두리 1px, 우상단 칩에 "N명". 데스크톱은 추이 아래(왼쪽 컬럼), 모바일은 추이 다음. 2분 넘게 새 파일이 없으면 평면도만 흐리게(opacity .35) + "표시할 위치 없음". 30초 폴링은 식권 카드의 refresh 에 편승.<span class="api">/api/positions state · n · points[{x,y} 0~1] — mock 폴리라인 (0.10,0.08)→(0.07,0.50)→(0.09,0.82)→(0.45,0.88) · 파일 하나를 덮어쓸 뿐 이력 없음</span></div>
+    <div class="note"><b>1</b><strong>히어로.</strong> 급식 줄의 실물 은유. 숫자 104px/800, 판정 칩이 색과 문장으로 같은 뜻을 두 번 말합니다(색약 대응). 평소엔 차콜, 혼잡이면 카드 전체가 멜론이라 화면을 켜는 순간 구분됩니다. 우상단 틸 점은 "라이브".<span class="api">wait_min → 숫자 · state+wait_min → 칩 문구/색 (여유 ≤5분 · 보통 5~12 · 혼잡 &gt;12)</span></div>
+    <div class="note"><b>2</b><strong>배식대 도착 시각.</strong> "7분"은 머릿속에서 한 번 더 계산해야 하지만 "12:21"은 5교시 시각과 곧바로 견줍니다. 판정 칩 오른쪽의 비어 있던 자리를 써서 히어로 높이는 그대로입니다. 계산만이므로 API 변경 없음.<span class="api">wait_min + 현재 시각</span></div>
+    <div class="note"><b>3</b><strong>갱신 메타.</strong> 카드 밖 11px. "추정치" 문구는 지우지 않습니다 — Little's law 가 배식 초반에 과대추정되는 한계를 알리는 유일한 자리.<span class="api">updated_at · stale</span></div>
+    <div class="note"><b>4</b><strong>추이 + 평소 곡선.</strong> 오늘 곡선만으로는 "지금이 평소보다 붐비는지"를 알 수 없습니다. 같은 요일 최근 N주 평균을 회색 파선으로 겹치고, 결론을 카드 머리에 한 문장으로 적습니다 — 곡선을 읽지 않아도 답이 나와야 합니다. 데이터 색은 틸 하나, 비교 기준선은 <em>색이 아니라 선 스타일</em>로 구분합니다. x 축은 인덱스가 아니라 '자정부터 몇 분' — 표본 수가 다른 두 곡선을 같은 시각에 얹으려면 그래야 합니다. 표본이 모자라면 최근 7일로 물러서고 범례 문구도 함께 바뀝니다.<span class="api">/api/history?minutes=120 · /api/typical?minutes=120 (state · basis · days · rows[minute_of_day, wait_min])</span></div>
+    <div class="note"><b>5</b><strong>급식실 현황.</strong> 빈 평면도(벡터) 위에 익명 위치 마커만 — 영상·실사·이력이 전혀 없습니다(CLAUDE.md §2). 배치는 <em>실제 카메라 시점</em> 기준: 입구 = 좌측 상단(외곽선 틈 + 라벨), 통로 = 좌측변 옅은 띠, 배식대 = 하단변 좌측 끝~중앙(멜론 점선), 퇴식구 = 우측 하단, 출구 = 우측 중앙. v5 에서 외곽선을 #D5CDBA 로 낮추고 마커 테두리를 차콜에서 흰색으로 바꿔, 점이 바닥에서 떠 보이게 했습니다.<span class="api">/api/positions state · n · points[{x,y} 0~1] — 파일 하나를 덮어쓸 뿐 이력 없음</span></div>
+    <div class="note"><b>6</b><strong>메뉴 + 알레르기.</strong> 2열 격자를 한 줄 리스트로 바꿨습니다 — 번호가 붙으면 2열은 좁습니다. 이름은 왼쪽, 번호는 오른쪽 끝 정렬이라 번호만 세로로 훑을 수 있습니다. NEIS 의 <code>DDISH_NM</code> 은 <code>돼지고기김치찜 (5.6.10.13)</code> 형태로 번호를 붙여 보내므로 <strong>이 값은 이미 meal.json 안에 있었고 화면에서 버려지고 있었습니다</strong>. 내 항목과 겹치는 메뉴는 행 전체를 옅은 멜론으로 덮고 해당 번호만 굵은 멜론 — 테두리 대신 면으로 처리해 카드 안에 선이 늘지 않습니다. 선택은 브라우저에만 저장합니다.<span class="api">today.menu[] 의 꼬리 숫자 · localStorage mb_allergy</span></div>
+    <div class="note"><b>7</b><strong>영양 요약 3칸.</strong> 법정 기준의 구조(양·비율·충족)를 그대로 3칸으로. 색은 칸의 정체성(01 틸 · 02 아쿠아 · 03 멜론 틴트), 상태는 우상단 플래그 — 둘을 섞지 않습니다.<span class="api">energy_pct · macro_ratio_ok · mar</span></div>
+    <div class="note"><b>8</b><strong>영양소 칩.</strong> v4 의 접힌 막대 6개를 <em>항상 펼친</em> 칩 한 행으로 바꿨습니다. 칩은 권장섭취량(RNI) 대비 과부족만 말합니다. 푸른 계열 = 충족(평균필요량 이상), 붉은 계열 = 부족. 판정 경계는 화면이 아니라 <code>fetch_neis.py</code> 의 <code>band</code> 를 따르므로, 100% 아래여도 EAR 위면 푸른 계열입니다 — 그래야 3칸의 "부족 N" 플래그와 어긋나지 않습니다. 색만으로 판정하지 않도록 ±% 와 "부족" 글자를 함께 둡니다.<span class="api">micro[].pct · band (부족 = EAR 미만)</span></div>
+    <div class="note"><b>9</b><strong>이번 주 식단.</strong> <code>fetch_neis.py</code> 는 처음부터 월~금 5일치를 <code>week[]</code> 로 저장해 왔는데 화면은 <code>today</code> 만 썼습니다. 지난 날·오늘·예정일을 <em>색이 아니라 명도</em>로 가릅니다 — 색맹 여부와 무관하고, 틸·멜론에 이미 준 의미와도 충돌하지 않습니다. 서버 변경 없음.<span class="api">week[] · week_avg</span></div>
+    <div class="note"><b>10</b><strong>탄소 카드.</strong> 오늘 1인분을 전부 버렸을 때의 배출량. 1인분 무게는 NEIS 에 없어 kcal ÷ 1.8 kcal/g 로 추정하고, 계수는 <code>data/carbon_std.json</code> 한 파일에 출처와 함께 둡니다. v5 에서 잔반 4버튼과 "이번 달 내가 남긴 급식"을 <strong>지웠습니다</strong> — 자기 신고 값은 정확할 수 없고, 정확하지 않은 수를 개인별로 누적해 보여 주면 측정한 것처럼 읽힙니다. 남은 것은 읽기 전용 사실뿐입니다.<span class="api">/api/meal today.carbon · carbon_std</span></div>
+    <div class="note"><b>11</b><strong>이슈 링크.</strong> 제목·출처·날짜만. 본문 요약은 넣지 않습니다(저작권·LLM 은 로드맵 ⑦). v5 에서 항목 테두리를 없애고 헤어라인 구분선으로 바꿨습니다 — 좌측 컬러 바는 흔한 상투구라 함께 뺐습니다.<span class="api">/api/news items[]</span></div>
   </div>
 </div>
 
@@ -345,25 +389,25 @@ tr:last-child td{border-bottom:0}
 <tr><td>한국 1인 일평균</td><td>≈ 30 kg / 일 (연 11 t 내외)</td><td>같은 출처. 두 비교를 나란히 두는 이유: 세계 평균으로는 11%, 한국 평균으로는 5% — 어느 기준이냐로 인상이 달라짐을 그대로 보여준다</td></tr>
 <tr><td>환산</td><td>1 kg CO₂e ≈ 승용차 6 km</td><td>약 170 g/km 가정. 학생이 감을 잡는 용도, 정밀치 아님</td></tr>
 </table>
-<div class="warn"><b>하지 말 것.</b> "당신은 오늘 지구를 X만큼 망쳤다"식 문구. 카드의 목적은 인식이지 죄책감이 아니고, 4버튼의 기본값은 "다 먹음"이다. 학교 전체 잔반량(급식실 계량 데이터)이 확보되면 개인 선택 대신 그 실측을 쓰는 것이 다음 단계 — 그때는 데이터 입력 경로(쓰기 주체)가 새로 생기므로 설계 재검토 대상.</div>
+<div class="warn"><b>하지 말 것.</b> "당신은 오늘 지구를 X만큼 망쳤다"식 문구. 카드의 목적은 인식이지 죄책감이 아닙니다. v5 에서 잔반 자기신고 4버튼과 개인 월간 누적을 <b>지웠습니다</b> — 자기 신고 값을 누적해 보여 주면 측정한 것처럼 읽히기 때문입니다. 학교 전체 잔반량(급식실 계량 데이터)이 확보되면 그 실측을 쓰는 것이 다음 단계이고, 그때는 데이터 입력 경로(쓰기 주체)가 새로 생기므로 설계 재검토 대상입니다.</div>
 <h2>상태 변형 <small>식권 카드는 4가지 얼굴을 가진다</small></h2>
 <p class="sub">API 의 <code>state</code> 와 <code>wait_min</code> 조합으로 결정됩니다. 숫자가 없을 때 빈 숫자 대신 <em>무엇을 해야 하는지</em>를 씁니다.</p>
 <div class="variants">
   <div class="phone-mini">
-    <div class="card ticket"><span class="dot"></span><div class="eyebrow">지금 줄을 서면</div><div class="big"><span class="num">4</span><span class="unit">분</span></div><span class="verdict">여유 · 바로 가세요</span><div class="foot"><div><b>38</b>명</div><div><b>9.5</b>/분</div></div></div>
+    <div class="card ticket"><span class="dot"></span><div class="eyebrow">지금 줄을 서면</div><div class="big"><span class="num">4</span><span class="unit">분</span></div><div class="vrow"><span class="verdict">여유 · 바로</span><div class="arrive"><em>도착</em><b>12:18</b></div></div><div class="foot"><div><b>21</b><span>명</span></div><div><b>5.6</b><span>/분</span></div></div></div>
     <div class="cap"><b>ok · ≤5분</b><br>차콜 카드 + 아쿠아 칩. 가장 흔한 상태.</div>
   </div>
   <div class="phone-mini">
-    <div class="card ticket bad"><span class="dot"></span><div class="eyebrow">지금 줄을 서면</div><div class="big"><span class="num">15</span><span class="unit">분</span></div><span class="verdict">혼잡 · 10분 뒤 추천</span><div class="foot"><div><b>140</b>명</div><div><b>9.2</b>/분</div></div></div>
-    <div class="cap"><b>ok · &gt;12분</b><br>카드 전체가 멜론, 칩은 차콜. "10분 뒤"는 history 의 하강 추세에서 계산. 없으면 "잠시 후".</div>
+    <div class="card ticket bad"><span class="dot"></span><div class="eyebrow">지금 줄을 서면</div><div class="big"><span class="num">18</span><span class="unit">분</span></div><div class="vrow"><span class="verdict">혼잡 · 잠시 후</span><div class="arrive"><em>도착</em><b>12:32</b></div></div><div class="foot"><div><b>84</b><span>명</span></div><div><b>4.6</b><span>/분</span></div></div></div>
+    <div class="cap"><b>ok · &gt;12분</b><br>카드 전체가 멜론, 칩은 차콜. 화면을 켜는 순간 구분된다.</div>
   </div>
   <div class="phone-mini">
-    <div class="card ticket mid"><span class="dot"></span><div class="eyebrow">지금 줄을 서면</div><div class="big"><span class="num" style="font-size:34px;line-height:1.2">계산 중</span></div><span class="verdict">배식 시작 대기</span><div class="foot"><div><b>22</b>명</div><div><b>0.3</b>/분</div></div></div>
-    <div class="cap"><b>insufficient_rate</b><br>차콜 카드 + 멜론 외곽선 칩(채움 없음 = 아직 아님). λ 가 하한 미만 — 배식 직전. 대기 인원은 그대로 보여준다.</div>
+    <div class="card ticket mid"><span class="dot"></span><div class="eyebrow">지금 줄을 서면</div><div class="big"><span class="num">—</span><span class="unit">분</span></div><div class="vrow"><span class="verdict">배식 시작 대기</span></div><div class="foot"><div><b>12</b><span>명</span></div><div><b>—</b><span>/분</span></div></div></div>
+    <div class="cap"><b>insufficient_rate</b><br>차콜 카드 + 멜론 외곽선 칩(채움 없음 = 아직 아님). λ 가 하한 미만 — 배식 직전. 도착 시각은 낼 수 없으므로 감춘다.</div>
   </div>
   <div class="phone-mini">
-    <div class="card ticket off"><span class="dot"></span><div class="eyebrow">지금 줄을 서면</div><div class="big"><span class="num" style="font-size:34px;line-height:1.2">—</span></div><span class="verdict">정보 없음</span><div class="foot"><div>마지막 12:03</div><div>점심 11:30~14:00</div></div></div>
-    <div class="cap"><b>no_data / stale</b><br>에그셸 바탕에 점선 외곽 — "비어 있음". 카메라 정지 또는 점심시간 외. 마지막 시각을 남겨 "언제부터" 를 알린다.</div>
+    <div class="card ticket off"><span class="dot"></span><div class="eyebrow">지금 줄을 서면</div><div class="big"><span class="num">—</span><span class="unit">분</span></div><div class="vrow"><span class="verdict">정보 없음</span></div><div class="foot"><div><b>—</b><span>명</span></div><div><b>—</b><span>/분</span></div></div></div>
+    <div class="cap"><b>no_data / stale</b><br>밝은 바탕에 점선 외곽 — "비어 있음". 그림자도 없앤다(떠 있지 않다). 카메라 정지 또는 점심시간 외.</div>
   </div>
 </div>
 
@@ -382,67 +426,78 @@ tr:last-child td{border-bottom:0}
 
 <h2>디자인 토큰 <small>static/css 에 그대로 옮길 값</small></h2>
 <div class="tokens">
-  <div class="tok"><i style="background:#505050"></i>차콜 <code>--char #505050</code><br>히어로·외곽선·제목·기기 테두리</div>
-  <div class="tok"><i style="background:#FFF5C3;border:1.5px solid #505050"></i>에그셸 <code>--egg #FFF5C3 / 카드 FFFDF5</code><br>바탕</div>
-  <div class="tok"><i style="background:#129793"></i>틸 <code>--teal #129793</code><br>라이브 점·그래프·영양 01·탄소 카드·정상</div>
-  <div class="tok"><i style="background:#9BD7D5"></i>아쿠아 <code>--aqua #9BD7D5</code><br>여유 칩·영양 02·비교 박스</div>
-  <div class="tok"><i style="background:#FF7260"></i>멜론 <code>--melon #FF7260</code><br>혼잡·부족·권장선·"지금"·주석 번호</div>
-  <div class="tok"><i style="background:linear-gradient(90deg,#A1C9F4,#FFB482,#8DE5A1,#FF9F9B,#D0BBFF,#DEBB9B)"></i>영양소 막대 6색 · seaborn pastel <code>vitA A1C9F4 · b1 FFB482 · b2 8DE5A1 · vitC FF9F9B · ca D0BBFF · fe DEBB9B</code><br>영양소 key 에 고정 — 순서가 바뀌어도 색은 따라간다</div>
-  <div class="tok"><i style="background:linear-gradient(180deg,rgba(18,151,147,.9),rgba(18,151,147,.35) 55%,rgba(155,215,213,0))"></i>그래프 채움 <code>틸 .9 → .35 → 아쿠아 0</code><br>위가 진함 = 높은 값 강조</div>
-  <div class="tok"><i style="background:#BDBDB5"></i>정보 없음 <code>--off #BDBDB5</code><br>팔레트 밖 유일한 예외</div>
-  <div class="tok"><i style="background:linear-gradient(90deg,#EAF6F5 0 20%,#F3F1E4 0 40%,#FFFDF5 0 60%,#E7F5F1 0 80%,#FFF1EC 0);border:1.5px solid #505050"></i>섹션 틴트 <code>추이 EAF6F5 · 현황 F3F1E4 · 중식 FFFDF5 · 탄소 E7F5F1 · 이슈 FFF1EC</code><br>카드마다 옅은 고유 배경. 히어로·KPI 3칸은 제외, 외곽선 1.5px 차콜은 유지</div>
-  <div class="tok"><i style="background:linear-gradient(90deg,#0E7A76 0 33%,#D14A38 0 66%,#6B6B5E 0)"></i>틴트 위 글자 <code>eyebrow 틸 0E7A76 (추이·탄소) · 멜론 D14A38 (이슈) · 나머지 차콜 / --mute 6B6B5E</code><br>옅은 배경에서 보조 텍스트 대비 확보</div>
+  <div class="tok"><i style="background:#33312D"></i>차콜 <code>--ink #33312D</code><br>히어로·제목·오늘 배지</div>
+  <div class="tok"><i style="background:#F5F2E9;border:1px solid #E4DFD1"></i>바탕 <code>--ground #F5F2E9</code><br>페이지. 카드가 흰색이라 여기가 진하면 그림자가 죽는다</div>
+  <div class="tok"><i style="background:#FFFCF6;border:1px solid #E4DFD1"></i>카드 <code>--surface #FFFCF6</code><br>전 카드. 탄소 카드만 예외</div>
+  <div class="tok"><i style="background:linear-gradient(90deg,#6E6A61 0 50%,#9A958A 0)"></i>글자 <code>--ink2 #6E6A61 · --ink3 #9A958A</code><br>보조 / 메타·eyebrow</div>
+  <div class="tok"><i style="background:#F0EDE3;border:1px solid #E4DFD1"></i>헤어라인 <code>--hair #F0EDE3</code><br>이슈 링크 구분선. v5 의 유일한 선</div>
+  <div class="tok"><i style="background:#129793"></i>틸 <code>--teal #129793</code><br>그래프·라이브 점·마커·충족</div>
+  <div class="tok"><i style="background:linear-gradient(90deg,#0C6D6A 0 33%,#DEF0EF 0 66%,#EAF5F4 0)"></i>틸 계열 <code>ink 0C6D6A · tint DEF0EF · tint2 EAF5F4</code><br>틴트 위 글자 / 칩 / 탄소 카드 바탕</div>
+  <div class="tok"><i style="background:#9BD7D5"></i>아쿠아 <code>--aqua #9BD7D5</code><br>여유 판정 칩 — v5 에서 남은 유일한 용처</div>
+  <div class="tok"><i style="background:#FF7260"></i>멜론 <code>--melon #FF7260</code><br>혼잡 카드·부족 칩 외곽·주요리 점·배식대</div>
+  <div class="tok"><i style="background:linear-gradient(90deg,#C9452F 0 33%,#FFE9E4 0 66%,#FFF4F1 0)"></i>멜론 계열 <code>ink C9452F · tint FFE9E4 · tint2 FFF4F1</code><br>부족 글자 / 플래그·알레르기 칩 / 일치 메뉴 행</div>
+  <div class="tok"><i style="background:linear-gradient(90deg,#BFE0DE 0 25%,#DEF0EF 0 50%,#EAF5F4 0 75%,#FFD3C9 0)"></i>영양소 칩 4단 <code>+10% 이상 BFE0DE · 0~+9% DEF0EF · RNI 미만 EAF5F4 · 부족 FFD3C9</code><br>seaborn pastel 6색을 대체. 색은 상태만 말한다</div>
+  <div class="tok"><i style="background:linear-gradient(180deg,rgba(18,151,147,.24),rgba(18,151,147,0))"></i>그래프 채움 <code>틸 .24 → 0</code><br>오늘 곡선만. 평소는 채우지 않는다</div>
+  <div class="tok"><i style="background:#B9B1A0"></i>비교 기준선 <code>#B9B1A0 파선 1.5px</code><br>평소 곡선. 데이터가 아니라 기준이므로 중립색 + 선 스타일로 구분</div>
+  <div class="tok"><i style="background:#C9C2B2"></i>정보 없음 <code>--off #C9C2B2</code><br>팔레트 밖 유일한 예외</div>
 </div>
 <h2>컴포넌트 스펙 <small>구현 시 그대로 참조</small></h2>
 <table>
 <tr><th>요소</th><th>크기·타이포</th><th>동작</th><th>비고</th></tr>
-<tr><td>식권 숫자</td><td>92px / 800 / letter-spacing −0.04em / line-height .9 (흰색, 차콜 위)</td><td>값 바뀔 때 0.2s 페이드(reduced-motion 시 즉시)</td><td>3자리(100분+)면 72px 로 축소</td></tr>
-<tr><td>판정 칩</td><td>13px / 800 / 999px radius / 1.5px 선</td><td>여유=아쿠아 채움 · 대기=멜론 선 · 혼잡=차콜 채움(카드는 멜론) · 없음=회색 선</td><td>임계 5·12분은 학교마다 다를 수 있어 .env</td></tr>
-<tr><td>하단 두 수치</td><td>16px 숫자 + 13px 라벨</td><td>—</td><td>점선 위 = 판단, 아래 = 근거</td></tr>
-<tr><td>스파크라인</td><td>높이 72px, 틸 선 2px, 세로 그라데이션 채움(위 .9 → 아래 0)</td><td>데이터 &lt;2점이면 카드 숨김</td><td>축·범례 없음</td></tr>
-<tr><td>메뉴</td><td>15px 주요리 / 14px 2열</td><td>알레르기 번호는 항목 탭 시 표시</td><td>7개 넘으면 2열 유지, 카드가 길어짐</td></tr>
-<tr><td>영양 3칸</td><td>20px / 800 숫자 + 11px 라벨, 칸 고유색</td><td>우상단 플래그(많음/부족 N)로 상태</td><td>색은 칸의 정체성, 상태는 플래그 — 둘을 섞지 않음</td></tr>
-<tr><td>탄소 카드</td><td>40px 틸 숫자, 비교 2칸, 4버튼 44px, 링 44px</td><td>버튼 선택 → localStorage 에 날짜별 저장 → 월간 합산</td><td>기본 선택 "다 먹음". 서버 쓰기 없음</td></tr>
-<tr><td>이슈 링크</td><td>13px 제목 1줄 + 10.5px 메타</td><td>탭 시 새 창</td><td>최대 3건, 제목 40자 말줄임</td></tr>
-<tr><td>영양소 막대</td><td>트랙 10px + 1.5px 선, 멜론 세로선 66.7% = 100%</td><td>기본 접힘</td><td>막대 고유색 6색(seaborn pastel, key 매핑) · 부족은 멜론 외곽선+라벨 · 수용성은 과다 없음</td></tr>
-<tr><td>카드</td><td>radius 14px, 1.5px 차콜 선, 여백 14×16px</td><td>hover 시 3px 상승</td><td>깊이는 고도 체계(--e1~e3, 아래 절) 로. 외곽선은 유지</td></tr>
-<tr><td>터치 영역</td><td>최소 44×44px</td><td>접기 summary 전체가 탭 대상</td><td>—</td></tr>
-<tr><td>급식실 현황 ⑩</td><td>canvas 5:3 (600×360), 바닥 egg2 · 외곽 1.5px 차콜 · 통로 띠(좌측 x 0~.16) · 배식대 = 하단 좌측 끝~중앙 멜론 점선(x .02~.50, y .90~.98) · 퇴식구 = 우측 하단 차콜 점선(x .84~.98, y .86~.98) · 입구(상단 x .06~.14)·출구(우측 y .44~.56) = 외곽선 틈 + 라벨</td><td>30초 폴링(refresh 편승) · no_data 면 canvas opacity .35 + "표시할 위치 없음"</td><td>마커 틸 r=5 + 차콜 1px · 좌표 0~1 정규화 · 우상단 "N명" 칩 · 이력 저장 없음</td></tr>
+<tr><td>히어로 숫자</td><td>104px / 700 / letter-spacing −0.045em / line-height .86 (데스크톱 120px)</td><td>값이 실제로 바뀔 때만 0.25s 스케일 펄스 1 → 1.03 → 1</td><td>모든 숫자는 tabular-nums — 값이 바뀌어도 폭이 흔들리지 않게</td></tr>
+<tr><td>판정 칩</td><td>13px / 700 / 999px radius / 패딩 9×16</td><td>여유·보통 = 아쿠아 채움 · 배식 대기 = 멜론 1.5px 선 · 혼잡 = 차콜 채움(카드는 멜론) · 없음 = 회색 선</td><td>임계 5·12분은 학교마다 다를 수 있음</td></tr>
+<tr><td>배식대 도착 시각</td><td>11.5px 라벨 + 18px / 700 시각, 우측 정렬</td><td><code>wait_min</code> 이 null 이면 통째로 감춤</td><td>판정 칩과 같은 행 — 히어로 높이가 늘지 않는다</td></tr>
+<tr><td>히어로 하단 두 타일</td><td>radius 16, 배경 rgba(255,253,246,.07), 20px 숫자 + 11.5px 라벨</td><td>—</td><td>v4 의 점선 구분을 타일로 대체</td></tr>
+<tr><td>추이</td><td>높이 92px(데스크톱 130px), 오늘 = 틸 2px + 채움 .24→0, 평소 = #B9B1A0 파선 1.5px</td><td>데이터 &lt;2점이면 카드 숨김. 평소 표본이 없으면 파선·범례·결론 문장을 함께 감춤</td><td>x 축 = 자정부터 몇 분. 오른쪽 34px 은 선 끝 라벨 자리</td></tr>
+<tr><td>추이 결론 문장</td><td>14px / 600, eyebrow 바로 아래</td><td>|차이| &lt; 1분이면 "평소 이 시각과 비슷합니다"</td><td>그래프를 읽지 않아도 답이 나와야 한다</td></tr>
+<tr><td>메뉴</td><td>주요리 16px / 700, 나머지 14px, 한 줄 리스트</td><td>알레르기 번호는 오른쪽 끝 정렬로 항상 표시</td><td>2열 격자는 번호가 붙으면 좁다 — v5 에서 폐기</td></tr>
+<tr><td>알레르기</td><td>번호 10px · 칩 10px / 700 / radius 6</td><td>내 항목과 겹치면 행 배경 #FFF4F1 + 해당 번호 굵은 멜론 + "내 알레르기" 태그</td><td>식약처 19종. 선택은 localStorage <code>mb_allergy</code>, 서버는 모른다</td></tr>
+<tr><td>영양 3칸</td><td>21px / 700 숫자 + 11px 라벨, 칸 고유 틴트</td><td>우상단 플래그(많음/부족 N)로 상태</td><td>색은 칸의 정체성, 상태는 플래그 — 둘을 섞지 않음</td></tr>
+<tr><td>영양소 칩</td><td>6열 그리드, 칩 높이 52 / radius 14 / 14px 숫자 + 9.5px 라벨</td><td>항상 펼침 (v4 의 details 토글 폐기)</td><td>부족 칩만 멜론 1.5px 인셋 링 + "부족" 글자. 판정은 <code>band</code> 를 따름(EAR 미만)</td></tr>
+<tr><td>이번 주 식단</td><td>배지 42×42 / radius 14, 대표 메뉴 14px, 부제 11px</td><td>오늘 행은 틸 틴트 블록 + 차콜 배지</td><td>지난·오늘·예정을 명도로 가른다 (색 아님)</td></tr>
+<tr><td>탄소 카드</td><td>46px 틸 숫자, 비교 2칸 (배경 흰 카드색)</td><td>읽기 전용 — 입력 없음</td><td>카드 배경만 틸 틴트 — "다른 종류의 카드"임을 알리는 유일한 신호</td></tr>
+<tr><td>이슈 링크</td><td>13.5px 제목 1줄 + 출처 칩 10px + 날짜 11px</td><td>탭 시 새 창</td><td>최대 3건, 제목 40자 말줄임. 항목 테두리 없이 헤어라인 구분선</td></tr>
+<tr><td>급식실 현황</td><td>canvas 318:191, 바닥 #FBF8F0 · 외곽 #D5CDBA 1.5px · 통로 띠(좌측 x 0~.16) · 배식대 멜론 점선(x .02~.50, y .90~.98) · 퇴식구 회색 점선(x .84~.98, y .86~.98) · 입구(상단 x .06~.14)·출구(우측 y .44~.56) = 외곽선 틈 + 라벨</td><td>30초 폴링 · no_data 면 opacity .4 + "표시할 위치 없음"</td><td>마커 틸 r=5 + <b>흰</b> 테두리 1.8px(v4 는 차콜) · 좌표 0~1 정규화 · 우상단 "N명" 칩</td></tr>
+<tr><td>카드</td><td>radius 24px, 여백 20px(데스크톱 24×26), 그림자 <code>0 1px 2px .04 + 0 10px 26px .055</code></td><td>hover 시 2px 상승</td><td><b>외곽선 없음</b> — v4 의 1.5px 차콜 선을 전부 제거</td></tr>
+<tr><td>캔버스 전반</td><td>배경 저장소를 <code>devicePixelRatio</code> 배로 잡고 <code>setTransform</code></td><td>리사이즈 시 다시 그리되 다시 받지는 않음(150ms 디바운스)</td><td>고해상도 화면에서 선이 뭉개지지 않게</td></tr>
+<tr><td>터치 영역</td><td>최소 44×44px</td><td>알레르기 선택 버튼은 34px — 목록형 보조 컨트롤</td><td>주요 동선에는 44px 미만을 두지 않는다</td></tr>
 </table>
 
 <h2>데스크톱·모션 스펙 <small>반응형 · 고도 체계 · 마이크로 인터랙션</small></h2>
-<p class="sub">모바일 도면이 기준이고, 넓은 화면과 포인터가 있는 기기에서만 아래가 더해집니다. 외곽선 1.5px 은 어떤 경우에도 유지 — 플랫한 정체성 위에 깊이를 얹는 방식입니다.</p>
+<p class="sub">모바일 도면이 기준이고, 넓은 화면과 포인터가 있는 기기에서만 아래가 더해집니다. v5 에서는 외곽선이 없으므로 깊이를 만드는 일이 전적으로 그림자에 있습니다.</p>
 <table>
 <tr><th>뷰포트</th><th>레이아웃</th><th>비고</th></tr>
-<tr><td>≤ 899px (모바일)</td><td>단일 컬럼, max-width 640, 카드 간격 10px — 모바일 도면 그대로</td><td>기본</td></tr>
-<tr><td>≥ 900px (데스크톱)</td><td>max-width 1100, grid 2컬럼 <code>1.1fr 1fr</code>, gap 20px. 왼쪽 = 식권 카드 + 갱신 메타 + 추이 + 급식실 현황 ⑩ / 오른쪽 = 급식 + 탄소 + 이슈</td><td>식권 숫자 120px. 마크업은 <code>.col</code> 두 개로 묶어 두고, 모바일에서는 그 래퍼가 그냥 블록</td></tr>
+<tr><td>≤ 899px (모바일)</td><td>단일 컬럼, max-width 390, 카드 간격 12px — 모바일 도면 그대로</td><td>기본</td></tr>
+<tr><td>≥ 900px (데스크톱)</td><td>max-width 1120, grid 2컬럼 <code>1.1fr 1fr</code>, gap 24px. 왼쪽 = 히어로 + 갱신 메타 + 추이 + 급식실 현황 / 오른쪽 = 급식 + 이번 주 식단 + 탄소 + 이슈</td><td>히어로 숫자 120px, 추이 130px. 마크업은 <code>.col</code> 두 개로 묶어 두고 모바일에서는 그 래퍼가 그냥 세로 스택</td></tr>
 </table>
 <h4 style="margin:24px 0 8px;font-size:11px;letter-spacing:.18em;color:var(--teal)">고도 체계 (CSS 변수)</h4>
 <div class="tokens">
-  <div class="tok"><i style="background:var(--paper);box-shadow:0 1px 2px rgba(43,43,43,.06);border:1.5px solid var(--line)"></i>--e1 <code>0 1px 2px rgba(43,43,43,.06)</code><br>모든 카드 기본</div>
-  <div class="tok"><i style="background:var(--paper);box-shadow:0 6px 16px rgba(43,43,43,.12);border:1.5px solid var(--line)"></i>--e2 <code>0 6px 16px rgba(43,43,43,.12)</code><br>식권 카드 · 탄소 카드 (판단과 행동)</div>
-  <div class="tok"><i style="background:var(--paper);box-shadow:0 12px 28px rgba(43,43,43,.16);border:1.5px solid var(--line)"></i>--e3 <code>0 12px 28px rgba(43,43,43,.16)</code><br>hover 시 — 카드가 3px 떠오를 때</div>
+  <div class="tok"><i style="background:#FFFCF6;box-shadow:0 1px 2px rgba(51,49,45,.04),0 10px 26px rgba(51,49,45,.055)"></i>--e1 <code>0 1px 2px .04 + 0 10px 26px .055</code><br>모든 카드 기본. 2단으로 겹쳐야 가까운 접촉면과 먼 그림자가 같이 보인다</div>
+  <div class="tok"><i style="background:#33312D;box-shadow:0 16px 36px rgba(51,49,45,.24)"></i>--e2 <code>0 16px 36px rgba(51,49,45,.24)</code><br>히어로. 화면에서 가장 앞에 있는 한 장</div>
+  <div class="tok"><i style="background:#FFFCF6;box-shadow:0 2px 4px rgba(51,49,45,.05),0 16px 34px rgba(51,49,45,.08)"></i>hover <code>0 2px 4px .05 + 0 16px 34px .08</code><br>카드가 2px 떠오를 때</div>
 </div>
 <h4 style="margin:24px 0 8px;font-size:11px;letter-spacing:.18em;color:var(--teal)">마이크로 인터랙션</h4>
 <table>
 <tr><th>요소</th><th>트리거</th><th>동작</th><th>제약</th></tr>
-<tr><td>카드</td><td>hover</td><td>translateY(−3px) + --e3. transition transform .18s ease, box-shadow .18s ease</td><td><code>@media (hover:hover)</code> 안에서만 — 터치 기기에서 hover 잔상 방지</td></tr>
-<tr><td>버튼류 (탄소 4버튼, details summary)</td><td>hover / :active / :focus-visible</td><td>hover 1px 상승 + --e1 · :active translateY(1px) scale(.98) · :focus-visible 멜론 2px outline(offset 2px)</td><td>4버튼은 role=button + tabindex=0, Enter/Space 로도 선택</td></tr>
-<tr><td>식권 숫자</td><td>값 변경</td><td>0.25s 스케일 펄스 1 → 1.04 → 1 (transform-origin 왼쪽)</td><td>값이 실제로 바뀔 때만. 첫 표시·같은 값 재갱신에는 없음</td></tr>
-<tr><td>이슈 링크 항목</td><td>hover</td><td>배경 aqua2 + 좌측 4px 틸 바가 translateX(−100%) → 0 슬라이드 인 (.18s)</td><td>12단계 마크업이 들어오면 그대로 적용</td></tr>
-<tr><td>details 펼침</td><td>[open]</td><td>내용 opacity 0→1 + translateY(4px→0), .2s ease</td><td>summary 자체는 움직이지 않음</td></tr>
-<tr><td>전부</td><td><code>prefers-reduced-motion: reduce</code></td><td>transform · transition · animation 해제 (<code>!important</code>), 이슈 링크의 슬라이드 바는 숨김</td><td>접근성 설정이 항상 우선</td></tr>
+<tr><td>카드</td><td>hover</td><td>translateY(−2px) + hover 그림자. transition transform .18s ease, box-shadow .18s ease</td><td><code>@media (hover:hover)</code> 안에서만 — 터치 기기에서 hover 잔상 방지</td></tr>
+<tr><td>히어로 숫자</td><td>값 변경</td><td>0.25s 스케일 펄스 1 → 1.03 → 1 (transform-origin 왼쪽)</td><td>값이 실제로 바뀔 때만. 첫 표시·같은 값 재갱신에는 없음</td></tr>
+<tr><td>알레르기 선택 버튼</td><td>클릭 / :focus-visible</td><td>선택 시 멜론 채움. 초점은 틸 2px outline(offset 2px)</td><td>토글 후 <code>/api/meal</code> 을 다시 받지 않고 받아둔 자료로 다시 그린다</td></tr>
+<tr><td>이슈 링크 제목</td><td>hover</td><td>글자색이 틸 잉크로</td><td>v4 의 좌측 슬라이드 바는 흔한 상투구라 폐기</td></tr>
+<tr><td>캔버스 2종</td><td>resize</td><td>150ms 디바운스 후 마지막 응답으로 다시 그림</td><td>다시 <em>받지는</em> 않는다 — 리사이즈마다 API 를 때리면 안 된다</td></tr>
+<tr><td>전부</td><td><code>prefers-reduced-motion: reduce</code></td><td>transform · transition · animation 해제 (<code>!important</code>)</td><td>접근성 설정이 항상 우선</td></tr>
 </table>
 
 <h2>의도적으로 뺀 것 <small>넣고 싶어질 때 다시 읽을 목록</small></h2>
 <table>
 <tr><th>뺀 것</th><th>이유</th></tr>
-<tr><td>급식실 실사·히트맵</td><td>실사는 디버그 뷰 전용. 공개 화면은 빈 평면도 위 익명 마커(⑩, 도입)·히트맵까지만 허용(CLAUDE.md §2). 히트맵은 마커 카드의 평면도를 재사용하는 후순위 확장</td></tr>
-<tr><td>주간 식단표</td><td>학생은 오늘만 본다. 주간은 <code>/api/meal</code> 의 week 를 쓰는 별도 페이지 <code>/week</code></td></tr>
-<tr><td>탄소 카드의 본문 요약·죄책감 문구</td><td>인식용 지표. 산식 절 참조</td></tr>
+<tr><td>급식실 실사·히트맵</td><td>실사는 디버그 뷰 전용. 공개 화면은 빈 평면도 위 익명 마커까지만 허용(CLAUDE.md §2). 히트맵은 같은 평면도를 재사용하는 후순위 확장</td></tr>
+<tr><td>잔반 자기신고 4버튼 · 개인 월간 누적</td><td><b>v5 에서 제거.</b> 자기 신고 값은 정확할 수 없고, 정확하지 않은 수를 개인별로 누적해 보이면 측정한 것처럼 읽힌다. <code>localStorage</code> 의 <code>mb_waste</code> 키도 함께 사라졌다</td></tr>
+<tr><td>영양소 막대 6색 (seaborn pastel)</td><td><b>v5 에서 제거.</b> 명도대·채도 하한·색맹 인접쌍 분리·정상시야 분리 검증에서 전 항목 탈락(최악 인접쌍 ΔE 4.0). 영양소 이름이 이미 글자로 있어 색이 정체성을 나를 필요가 없었다 — 색은 상태만 말하게 바꿨다</td></tr>
+<tr><td>급식 만족도 투표·별점</td><td>서버 집계형은 "DB 쓰기 주체는 vision(또는 mock) 하나"라는 설계 결정(CLAUDE.md §2)을 깨야 한다. 개인 기록형은 위의 잔반 4버튼과 같은 이유로 두지 않는다</td></tr>
+<tr><td>급식 진행률 게이지</td><td>전교생 수라는 학교별 상수가 새로 필요하고, 그 값이 틀리면 진행률이 통째로 틀린다. 실측 이후로 미룸</td></tr>
 <tr><td>코사인 유사도 "밸런스 점수"</td><td>단위 스케일에 지배되어 해석이 안 됨. 3칸 요약으로 대체</td></tr>
 <tr><td>로고·학교 이름 헤더</td><td>QR 로 들어온 사람은 어디인지 안다. 첫 화면 세로 공간은 전부 숫자에</td></tr>
-<tr><td>다크 모드</td><td>에그셸 바탕이 정체성. 차콜 히어로가 이미 어두운 블록 역할을 한다</td></tr>
+<tr><td>다크 모드</td><td>따뜻한 밝은 바탕이 정체성. 차콜 히어로가 이미 어두운 블록 역할을 한다</td></tr>
 </table>
 </main>
 </body>

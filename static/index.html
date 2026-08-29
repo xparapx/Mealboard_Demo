@@ -3,222 +3,300 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#F5F2E9">
 <title>급식실 대기 안내</title>
 <link rel="manifest" href="/manifest.json">
 <style>
-  /* 팔레트: docs/layout.html 도면 v4 — ColorCombos #285 (차콜·에그셸·멜론). 외곽선 1.5px 은 유지하고 깊이는 고도 체계(--e1~e3)로 */
-  :root { --char:#505050; --egg:#FFF5C3; --egg2:#FFFBE4; --paper:#FFFDF5;
-          --teal:#129793; --aqua:#9BD7D5; --aqua2:#D3EDEC; --melon:#FF7260;
-          --ink:#2B2B2B; --mute:#6B6B5E; --soft:#E6DFB8; --off:#BDBDB5;
-          --tint-chart:#EAF6F5; --tint-map:#F3F1E4; --tint-meal:#FFFDF5; --tint-carbon:#E7F5F1; --tint-news:#FFF1EC;   /* 섹션 틴트 */
-          --teal-ink:#0E7A76; --melon-ink:#D14A38;                                                                   /* 틴트 위 eyebrow */
-          --e1: 0 1px 2px rgba(43,43,43,.06);      /* 모든 카드 기본 */
-          --e2: 0 6px 16px rgba(43,43,43,.12);     /* 히어로·탄소 카드 */
-          --e3: 0 12px 28px rgba(43,43,43,.16); }  /* hover */
-  body { font-family: "Pretendard", system-ui, sans-serif; margin: 0; background: var(--egg); color: var(--ink);
-         font-variant-numeric: tabular-nums; }
-  main { max-width: 640px; margin: 0 auto; padding: 16px; }
-  .card { background: var(--paper); border: 1.5px solid var(--char); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px;
-          box-shadow: var(--e1); }
-  .eyebrow { font-size: 10.5px; letter-spacing: .2em; color: var(--char); font-weight: 800; }
-  /* 섹션별 옅은 틴트 + 같은 계열의 진한 eyebrow. 히어로·KPI 3칸은 그대로, 외곽선 1.5px 차콜은 전 카드 유지 */
-  #chartcard { background: var(--tint-chart); }  #chartcard .eyebrow { color: var(--teal-ink); }
-  #plancard  { background: var(--tint-map); }
-  #mealcard  { background: var(--tint-meal); }
-  .carbon    { background: var(--tint-carbon); }  .carbon .eyebrow { color: var(--teal-ink); }
-  #newscard  { background: var(--tint-news); }    #newscard .eyebrow { color: var(--melon-ink); }
-  /* 히어로(식권 카드) 4가지 얼굴: ok=차콜+아쿠아 칩 · wait=차콜+멜론 외곽선 칩 · busy=멜론 카드+차콜 칩 · off=점선 */
-  .hero { background: var(--char); color: var(--egg); position: relative; box-shadow: var(--e2); }
-  .hero .eyebrow { color: var(--egg); opacity: .75; }
-  .hero[data-level="busy"] { background: var(--melon); color: #000; }
-  .hero[data-level="busy"] .eyebrow { color: #000; opacity: .7; }
-  .hero[data-level="off"] { background: var(--egg2); color: var(--ink); border-style: dashed; }
-  .hero[data-level="off"] .eyebrow { color: var(--mute); opacity: 1; }
-  .wait { font-size: 92px; font-weight: 800; line-height: .9; letter-spacing: -.04em; color: #fff; transform-origin: left center; }
-  .wait.pulse { animation: pulse .25s ease; }              /* 값이 실제로 바뀔 때만 JS 가 붙인다 */
-  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.04); } 100% { transform: scale(1); } }
-  .hero[data-level="busy"] .wait { color: #000; }
-  .hero[data-level="off"] .wait { color: var(--off); }
-  .wait small { font-size: 22px; font-weight: 600; margin-left: 4px; opacity: .9; }
-  #state { display: inline-block; margin-top: 14px; padding: 6px 14px; border-radius: 999px; font-size: 13px;
-           font-weight: 800; border: 1.5px solid var(--aqua); background: var(--aqua); color: var(--char); }
-  .hero[data-level="wait"] #state { background: transparent; color: var(--melon); border-color: var(--melon); }
-  .hero[data-level="busy"] #state { background: var(--char); color: var(--egg); border-color: var(--char); }
-  .hero[data-level="off"] #state { background: transparent; color: var(--mute); border-color: var(--off); }
-  .dot { position: absolute; right: 18px; top: 18px; width: 14px; height: 14px; border-radius: 50%; background: var(--teal); }  /* 라이브 */
-  .hero[data-level="busy"] .dot { background: var(--char); }
-  .hero[data-level="off"] .dot { background: var(--off); }
-  .row { display: flex; justify-content: space-between; margin-top: 18px; padding-top: 12px; font-size: 13px; }
-  .hero .row { border-top: 1px dashed rgba(255,245,195,.35); }
-  .hero .row b { color: #fff; }
-  .hero[data-level="busy"] .row { border-top-color: rgba(0,0,0,.3); }
-  .hero[data-level="busy"] .row b { color: #000; }
-  .hero[data-level="off"] .row { border-top-color: var(--soft); }
-  .hero[data-level="off"] .row b { color: var(--ink); }
-  .row b { font-size: 16px; font-weight: 800; }
-  .muted { color: var(--mute); font-size: 11px; }
-  /* 스파크라인: 높이 72px, 틸 선 2px + 세로 그라데이션 채움(위 틸 .9 → 아래 아쿠아 0). 축·범례 없음 */
-  #chart { width: 100%; height: 72px; display: block; border-bottom: 1.5px solid var(--char); margin-top: 8px; }
-  /* ⑩ 급식실 현황: 벡터 평면도 + 익명 위치 마커. 영상 아님 · 순간 상태만 · 이력 없음 (CLAUDE.md §2) */
+  /* 팔레트 v5 — 브랜드 3색(차콜·틸·멜론)은 유지하고, 표면을 1.5px 외곽선에서 '라운드 + 부드러운 그림자'로 옮겼다.
+     도면의 단일 출처는 docs/layout.html. 여기 값과 도면이 어긋나면 도면을 고칠 것 */
+  :root {
+    --ground:#F5F2E9; --surface:#FFFCF6; --hair:#F0EDE3;
+    --ink:#33312D; --ink2:#6E6A61; --ink3:#9A958A; --off:#C9C2B2;
+    --teal:#129793; --teal-ink:#0C6D6A; --teal-tint:#DEF0EF; --teal-tint2:#EAF5F4; --aqua:#9BD7D5;
+    --melon:#FF7260; --melon-ink:#C9452F; --melon-tint:#FFE9E4; --melon-tint2:#FFF4F1;
+    --e1: 0 1px 2px rgba(51,49,45,.04), 0 10px 26px rgba(51,49,45,.055);
+    --e2: 0 16px 36px rgba(51,49,45,.24);
+    --r-card: 24px; --r-tile: 16px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); word-break: keep-all;
+         font-family: "Pretendard", -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+         -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+  main { max-width: 390px; margin: 0 auto; padding: 18px 16px 28px; display: flex; flex-direction: column; gap: 12px; }
+  .col { display: flex; flex-direction: column; gap: 12px; }
+  .card { background: var(--surface); border-radius: var(--r-card); padding: 20px; box-shadow: var(--e1); }
+  .eyebrow { font-size: 11.5px; font-weight: 700; letter-spacing: .10em; color: var(--ink3); }
+  .note { font-size: 11px; color: var(--ink3); line-height: 1.55; }
+  a { color: var(--teal-ink); text-decoration: none; }
+  a.u { border-bottom: 1px solid rgba(12,109,106,.35); }
+  [hidden] { display: none !important; }
+
+  /* ① 히어로 — 상태 4얼굴: ok=차콜+아쿠아 칩 · wait=차콜+멜론 외곽선 칩 · busy=멜론 카드 · off=점선 */
+  .hero { position: relative; background: var(--ink); border-radius: 26px; padding: 22px 22px 18px; box-shadow: var(--e2); }
+  .hero .eyebrow { color: rgba(255,253,246,.52); }
+  .dot { position: absolute; right: 22px; top: 24px; width: 10px; height: 10px; border-radius: 50%;
+         background: #2FB7B3; box-shadow: 0 0 0 5px rgba(47,183,179,.20); }
+  .big { display: flex; align-items: baseline; gap: 7px; margin-top: 8px; transform-origin: left center; }
+  .big b { font-size: 104px; font-weight: 700; letter-spacing: -.045em; line-height: .86; color: var(--surface); }
+  .big i { font-style: normal; font-size: 24px; font-weight: 500; color: rgba(255,253,246,.58); }
+  .big.pulse { animation: pulse .25s ease; }                  /* 값이 실제로 바뀔 때만 JS 가 붙인다 */
+  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
+  .verdictrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
+  #state { display: inline-flex; align-items: center; padding: 9px 16px; border-radius: 999px;
+           background: var(--aqua); color: #223634; font-size: 13px; font-weight: 700; }
+  /* ③ 도착 시각 — 판정 칩 오른쪽 빈 자리. '몇 분'보다 '몇 시'가 즉각적이다 */
+  .arrive { text-align: right; flex: none; }
+  .arrive span { display: block; font-size: 11.5px; color: rgba(255,253,246,.5); }
+  .arrive b { font-size: 18px; font-weight: 700; letter-spacing: -.02em; color: var(--surface); }
+  .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 20px; }
+  .stats > div { background: rgba(255,253,246,.07); border-radius: var(--r-tile); padding: 12px 14px; }
+  .stats b { font-size: 22px; font-weight: 700; color: var(--surface); }
+  .stats em { font-style: normal; font-size: 12.5px; font-weight: 500; color: rgba(255,253,246,.58); margin-left: 2px; }
+  .stats span { display: block; font-size: 11.5px; color: rgba(255,253,246,.5); margin-top: 3px; }
+
+  .hero[data-level="busy"] { background: var(--melon); box-shadow: 0 16px 36px rgba(255,114,96,.32); }
+  .hero[data-level="busy"] .eyebrow, .hero[data-level="busy"] .big i,
+  .hero[data-level="busy"] .arrive span { color: rgba(43,20,16,.62); }
+  .hero[data-level="busy"] .big b, .hero[data-level="busy"] .arrive b, .hero[data-level="busy"] .stats b { color: #2B1410; }
+  .hero[data-level="busy"] .stats > div { background: rgba(43,20,16,.10); }
+  .hero[data-level="busy"] .stats em { color: rgba(43,20,16,.62); }
+  .hero[data-level="busy"] .stats span { color: rgba(43,20,16,.55); }
+  .hero[data-level="busy"] .dot { background: var(--ink); box-shadow: 0 0 0 5px rgba(51,49,45,.18); }
+  .hero[data-level="busy"] #state { background: var(--ink); color: var(--surface); }
+
+  .hero[data-level="wait"] #state { background: transparent; border: 1.5px solid var(--melon); color: #FF9182; }
+  .hero[data-level="wait"] .big b { color: rgba(255,253,246,.28); }
+
+  .hero[data-level="off"] { background: #FBF8F0; border: 1.5px dashed #D5CDBA; box-shadow: none; }
+  .hero[data-level="off"] .eyebrow { color: #A9A296; }
+  .hero[data-level="off"] .big b, .hero[data-level="off"] .big i { color: var(--off); }
+  .hero[data-level="off"] .dot { background: var(--off); box-shadow: none; }
+  .hero[data-level="off"] #state { background: transparent; border: 1.5px solid #D5CDBA; color: var(--ink3); }
+  .hero[data-level="off"] .stats > div { background: #F3F0E7; }
+  .hero[data-level="off"] .stats b, .hero[data-level="off"] .stats em { color: var(--off); }
+  .hero[data-level="off"] .stats span, .hero[data-level="off"] .arrive span { color: #A9A296; }
+  .hero[data-level="off"] .arrive b { color: var(--off); }
+
+  .meta { display: flex; justify-content: space-between; align-items: center; padding: 0 6px;
+          font-size: 11px; color: var(--ink3); }
+
+  /* ③ 추이 — 데이터는 한 색(틸), 비교 기준선은 중립 회색 파선. 색을 둘 쓰면 어느 쪽이 실측인지 흐려진다 */
+  .lead { font-size: 14px; font-weight: 600; color: var(--ink); margin-top: 8px; letter-spacing: -.01em; }
+  .lead b { color: var(--teal-ink); font-weight: 600; }
+  #chart { display: block; width: 100%; height: 92px; margin-top: 12px; }
+  .legend { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 11px; }
+  .legend > span { display: inline-flex; align-items: center; gap: 12px; }
+  .legend i { font-style: normal; display: inline-flex; align-items: center; gap: 6px; color: var(--ink2); }
+  .legend i::before { content: ""; width: 14px; height: 2px; border-radius: 2px; background: var(--teal); flex: none; }
+  .legend i.ref { color: var(--ink3); }
+  .legend i.ref::before { height: 0; background: none; border-top: 1.5px dashed #B9B1A0; }
+  .legend .now { color: var(--ink3); }
+  .legend .now b { color: var(--melon-ink); }
+
+  /* ⑩ 급식실 현황 — 벡터 평면도 + 익명 위치 마커. 영상 아님 · 순간 상태만 · 이력 없음 (CLAUDE.md §2) */
   .plan { position: relative; }
-  .plan .count { position: absolute; right: 14px; top: 12px; font-size: 13px; font-weight: 800; color: var(--char);
-                 background: var(--aqua); border: 1.5px solid var(--aqua); border-radius: 999px; padding: 3px 10px; }
-  #plan { width: 100%; height: auto; aspect-ratio: 5 / 3; display: block; margin-top: 8px; }
-  .plan[data-state="no_data"] #plan { opacity: .35; }
-  .plan .empty { position: absolute; left: 0; right: 0; top: 50%; text-align: center; font-size: 13px; font-weight: 800; color: var(--mute); display: none; }
+  .plan .count { position: absolute; right: 18px; top: 16px; background: var(--teal-tint); color: var(--teal-ink);
+                 font-size: 12.5px; font-weight: 700; padding: 6px 12px; border-radius: 999px; }
+  #plan { display: block; width: 100%; aspect-ratio: 318 / 191; margin-top: 12px; }
+  .plan[data-state="no_data"] #plan { opacity: .4; }
+  .plan .empty { display: none; position: absolute; left: 0; right: 0; top: 52%; text-align: center;
+                 font-size: 13px; font-weight: 700; color: var(--ink3); }
   .plan[data-state="no_data"] .empty { display: block; }
-  ul { margin: 8px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 14px; }
-  li { padding-left: 14px; position: relative; }
-  li::before { content: ""; position: absolute; left: 0; top: .6em; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--char); }
-  li:first-child { grid-column: 1 / -1; font-weight: 800; font-size: 15px; }
-  li:first-child::before { background: var(--melon); border-color: var(--melon); }
-  /* 영양 3칸: 색은 칸의 정체성(01 틸 · 02 아쿠아 · 03 멜론), 상태는 우상단 플래그 — 둘을 섞지 않는다 */
-  .kpi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; counter-reset: k; }
-  .kpi > div { border: 1.5px solid var(--char); border-radius: 12px; padding: 8px 10px; position: relative; counter-increment: k; }
-  .kpi > div:nth-child(1) { background: var(--teal); color: #000; }
-  .kpi > div:nth-child(2) { background: var(--aqua); color: var(--char); }
-  .kpi > div:nth-child(3) { background: var(--melon); color: #000; }
-  .kpi > div::before { content: "0" counter(k); font-size: 10px; font-weight: 800; letter-spacing: .1em; opacity: .7; display: block; }
-  .kpi b { display: block; font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
-  .kpi span { font-size: 11px; opacity: .8; }
-  .kpi .flag { position: absolute; right: 8px; top: 8px; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 999px;
-               background: rgba(0,0,0,.18); opacity: 1; }
+
+  /* ④ 메뉴 — 한 줄 리스트. 알레르기 번호가 붙으므로 2열 격자로는 좁다 */
+  .menu { list-style: none; margin: 10px 0 0; padding: 0; }
+  .menu li { display: flex; align-items: center; gap: 9px; padding: 6px 8px; font-size: 14px; color: #4A4740; }
+  .menu li::before { content: ""; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--off); flex: none; }
+  .menu li.main { font-size: 16px; font-weight: 700; color: var(--ink); letter-spacing: -.01em; }
+  .menu li.main::before { width: 8px; height: 8px; background: var(--melon); border-color: var(--melon); }
+  .menu li.hit { background: var(--melon-tint2); border-radius: 10px; }
+  .menu li .codes { margin-left: auto; font-size: 10px; color: var(--ink3); letter-spacing: .06em; flex: none; }
+  .menu li .codes b { color: var(--melon-ink); }
+  .menu li .tag { font-size: 10px; font-weight: 700; color: var(--melon-ink); background: var(--melon-tint);
+                  border-radius: 6px; padding: 2px 6px; flex: none; }
+  /* ① 알레르기 — NEIS 가 메뉴명에 붙여 보내는 번호(1~19). 내 항목은 브라우저에만 저장한다 */
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+  .chips span { font-size: 10px; font-weight: 700; border-radius: 6px; padding: 3px 7px;
+                background: var(--hair); color: var(--ink2); }
+  .chips span.on { background: var(--melon-tint); color: var(--melon-ink); }
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  .pick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .pick button { font: inherit; font-size: 11.5px; font-weight: 700; border: 0; cursor: pointer;
+                 min-height: 34px; padding: 6px 12px; border-radius: 999px; background: var(--hair); color: var(--ink2); }
+  .pick button[aria-pressed="true"] { background: var(--melon); color: #2B1410; }
+  .pick button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+  /* ⑤ 영양 3칸 — 색은 칸의 정체성, 상태는 우상단 플래그. 둘을 섞지 않는다 */
+  .kpi { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+  .kpi > div { position: relative; border-radius: var(--r-tile); padding: 11px 12px 12px; }
+  .kpi > div:nth-child(1) { background: #CFE9E7; }
+  .kpi > div:nth-child(2) { background: var(--teal-tint2); }
+  .kpi > div:nth-child(3) { background: var(--melon-tint); }
+  .kpi em { font-style: normal; display: block; font-size: 10px; font-weight: 700; letter-spacing: .12em; opacity: .85; }
+  .kpi > div:nth-child(1) em { color: var(--teal-ink); }
+  .kpi > div:nth-child(2) em { color: #3D8583; }
+  .kpi > div:nth-child(3) em { color: var(--melon-ink); }
+  .kpi b { display: block; font-size: 21px; font-weight: 700; letter-spacing: -.02em; color: #22403E; margin-top: 3px; }
+  .kpi > div:nth-child(3) b { color: #4A2A23; }
+  .kpi span { font-size: 11px; color: #4C6564; margin-top: 2px; display: block; }
+  .kpi > div:nth-child(3) span { color: #7A4A3E; }
+  .kpi .flag { position: absolute; right: 9px; top: 9px; font-size: 10px; font-weight: 700; padding: 2px 7px;
+               border-radius: 999px; background: #FFD3C9; color: #A83A28; margin: 0; }
   .kpi .flag:empty { display: none; }
-  details summary { list-style: none; cursor: pointer; font-size: 12px; color: var(--teal); font-weight: 800; letter-spacing: .08em; margin-top: 12px;
-                    display: inline-block; padding: 4px 6px; border-radius: 8px; }
-  details summary::-webkit-details-marker { display: none; }
-  details[open] > :not(summary) { animation: reveal .2s ease; }   /* 펼침: opacity 0→1, 4px 위로 */
-  @keyframes reveal { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-  /* 영양소 막대: seaborn pastel 6색을 영양소 key 에 매핑(순서가 바뀌어도 유지). 부족은 막대색 유지 + 멜론 외곽선 + 라벨. 수용성 비타민은 과다 없음 */
-  .bar { display: grid; grid-template-columns: 90px 1fr 64px; align-items: center; gap: 8px; font-size: 12px; margin: 5px 0; }
-  .track { position: relative; height: 10px; background: var(--egg2); border: 1.5px solid var(--char); border-radius: 6px; }
-  .track i { position: absolute; left: 0; top: 0; bottom: 0; }
-  .bar[data-k="vitA"] .track i { background: #A1C9F4; }
-  .bar[data-k="b1"] .track i { background: #FFB482; }
-  .bar[data-k="b2"] .track i { background: #8DE5A1; }
-  .bar[data-k="vitC"] .track i { background: #FF9F9B; }
-  .bar[data-k="ca"] .track i { background: #D0BBFF; }
-  .bar[data-k="fe"] .track i { background: #DEBB9B; }
-  .bar.short .track { border-color: var(--melon); box-shadow: inset 0 0 0 1px var(--melon); }
-  .bar.short b { color: var(--melon); }
-  .bar.short b::after { content: " 부족"; font-size: 10px; }
-  .track::after { content: ""; position: absolute; left: 66.7%; top: -5px; bottom: -5px; width: 2px; background: var(--melon); }  /* 권장섭취량 100% */
-  .bar b { text-align: right; font-weight: 800; }
-  /* ⑧ 탄소 카드: 틸 외곽선. 4버튼 기본값 "다 먹음", 선택은 localStorage(mb_waste) 에만 — 서버 쓰기 없음 */
-  .carbon { border-color: var(--teal); box-shadow: var(--e2); }
-  .carbon .big { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
-  .carbon .num { font-size: 40px; font-weight: 800; letter-spacing: -.03em; color: var(--teal); line-height: 1; }
-  .carbon .unit { font-size: 13px; color: var(--mute); }
-  .carbon .cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-  .carbon .cmp > div { background: var(--aqua2); border-radius: 10px; padding: 8px 10px; font-size: 11px; color: var(--char); }
-  .carbon .cmp b { display: block; font-size: 18px; font-weight: 800; color: var(--char); }
-  .carbon .pick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 12px; }
-  .carbon .pick > div { border: 1.5px solid var(--char); border-radius: 999px; text-align: center; font-size: 12px; font-weight: 700;
-                        min-height: 44px; display: grid; place-items: center; cursor: pointer; user-select: none; }
-  .carbon .pick > div.on { background: var(--teal); color: #000; border-color: var(--teal); }
-  .carbon .mine { margin-top: 10px; font-size: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-  .carbon .mine b { color: var(--teal); }
-  .carbon .ring { width: 44px; height: 44px; border-radius: 50%; flex: none; background: conic-gradient(var(--teal) 0 0%, var(--egg2) 0%);
-                  display: grid; place-items: center; font-size: 10px; font-weight: 800; border: 1.5px solid var(--char); }
-  .carbon .ring i { width: 32px; height: 32px; border-radius: 50%; background: var(--paper); display: grid; place-items: center; font-style: normal; }
-  .basis { display: inline; }
-  .basis summary { display: inline; margin: 0; padding: 0; font-size: 11px; letter-spacing: 0; color: var(--teal-ink); border-radius: 4px; }
-  .basis[open] > div { margin-top: 4px; }
-  /* ⑨ 이슈 링크: 제목 1줄(40자 말줄임) + 출처 + 날짜, 탭 시 새 창. 본문 요약 없음 */
-  .news { display: grid; grid-template-columns: 1fr; gap: 6px; margin: 8px 0 0; font-size: 13px; }
-  .news li { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 8px 10px 8px 14px; border: 1.5px solid var(--char);
-             border-radius: 10px; background: var(--egg2); overflow: hidden; }
-  .news li:first-child { grid-column: auto; font-weight: inherit; font-size: 13px; }
-  .news li a { color: inherit; text-decoration: none; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .news li em { font-style: normal; font-size: 10px; font-weight: 800; color: var(--teal); letter-spacing: .08em; align-self: start; padding-top: 2px; }
-  .news li small { grid-column: 1 / -1; font-size: 10.5px; color: var(--mute); }
-  .news li::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; height: auto; border: 0; border-radius: 0;
-                     background: var(--teal); transform: translateX(-100%); }
-  /* 버튼류(탄소 4버튼 · details summary): 눌림·키보드 초점 */
-  .carbon .pick > div:active, details summary:active { transform: translateY(1px) scale(.98); }
-  .carbon .pick > div:focus-visible, details summary:focus-visible { outline: 2px solid var(--melon); outline-offset: 2px; }
-  /* 데스크톱(≥900px): 2컬럼 — 왼쪽 히어로+추이 / 오른쪽 급식+탄소+이슈 */
+
+  /* ⑥ 영양소 칩 — 토글 없이 항상 펼침. 권장섭취량(RNI) 대비 과부족만 말한다.
+     푸른 계열 = 충족(평균필요량 이상), 붉은 계열 = 부족. 색만으로 판정하지 않도록 ±% 와 글자를 함께 둔다 */
+  .micro { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+  .micro > div { display: flex; flex-direction: column; gap: 5px; }
+  .micro .v { height: 52px; border-radius: 14px; display: flex; flex-direction: column; align-items: center;
+              justify-content: center; gap: 1px; font-size: 14px; font-weight: 700; letter-spacing: -.02em; }
+  .micro .v em { font-style: normal; font-size: 9px; font-weight: 700; }
+  .micro .n { font-size: 9.5px; color: var(--ink3); text-align: center; letter-spacing: -.03em; }
+  .micro [data-band="hi"]   .v { background: #BFE0DE; color: #0A5F5C; }
+  .micro [data-band="mid"]  .v { background: var(--teal-tint); color: var(--teal-ink); }
+  .micro [data-band="lo"]   .v { background: var(--teal-tint2); color: #3D8583; }
+  .micro [data-band="short"] .v { background: #FFD3C9; color: #A83A28; box-shadow: inset 0 0 0 1.5px var(--melon); }
+  .micro [data-band="short"] .n { color: var(--melon-ink); font-weight: 700; }
+
+  /* ② 이번 주 식단 — meal.json 의 week[] 를 그대로. 지난·오늘·예정을 명도로 가른다 */
+  .week { display: flex; flex-direction: column; gap: 2px; margin-top: 10px; }
+  .week > div { display: flex; align-items: center; gap: 12px; padding: 6px 8px; }
+  .week .day { width: 42px; height: 42px; border-radius: 14px; flex: none; display: flex; flex-direction: column;
+               align-items: center; justify-content: center; background: #F5F2E9; }
+  .week .day em { font-style: normal; font-size: 10px; font-weight: 700; color: var(--ink3); }
+  .week .day b { font-size: 15px; font-weight: 700; color: var(--ink2); line-height: 1.1; }
+  .week .t { min-width: 0; }
+  .week .t b { display: block; font-size: 14px; font-weight: 500; color: var(--ink); letter-spacing: -.01em;
+               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .week .t span { display: block; font-size: 11px; color: var(--ink3); margin-top: 2px; }
+  .week [data-when="past"] .day { background: var(--hair); }
+  .week [data-when="past"] .day em { color: #BDB6A6; }
+  .week [data-when="past"] .day b { color: #A9A296; }
+  .week [data-when="past"] .t b { color: #A9A296; }
+  .week [data-when="today"] { background: var(--teal-tint2); border-radius: var(--r-tile); }
+  .week [data-when="today"] .day { background: var(--ink); }
+  .week [data-when="today"] .day em { color: rgba(255,253,246,.6); }
+  .week [data-when="today"] .day b { color: var(--surface); }
+  .week [data-when="today"] .t b { font-weight: 700; }
+
+  /* ⑧ 잔반 탄소 — 읽기 전용 정보 카드. 개인 기록·선택은 두지 않는다 */
+  .carbon { background: var(--teal-tint2); box-shadow: 0 1px 2px rgba(51,49,45,.04), 0 10px 26px rgba(18,151,147,.09); }
+  .carbon .eyebrow { color: var(--teal-ink); }
+  .co2 { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .co2 b { font-size: 46px; font-weight: 700; letter-spacing: -.035em; line-height: 1; color: var(--teal-ink); }
+  .co2 span { font-size: 12.5px; color: #5C6E6D; }
+  .cmp { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+  .cmp > div { background: var(--surface); border-radius: var(--r-tile); padding: 12px 14px; }
+  .cmp b { display: block; font-size: 19px; font-weight: 700; color: var(--ink); }
+  .cmp span { display: block; font-size: 11px; color: var(--ink2); margin-top: 3px; line-height: 1.45; }
+
+  /* ⑨ 이슈 링크 — 제목 1줄 + 출처 + 날짜. 본문 요약 없음 */
+  .news { list-style: none; margin: 6px 0 0; padding: 0; }
+  .news li { display: flex; flex-direction: column; gap: 7px; padding: 13px 0; border-bottom: 1px solid var(--hair); }
+  .news li:last-child { border-bottom: 0; }
+  .news li a { font-size: 13.5px; font-weight: 600; color: var(--ink);
+               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .news li div { display: flex; align-items: center; gap: 8px; }
+  .news li em { font-style: normal; font-size: 10px; font-weight: 700; color: var(--teal-ink);
+                background: var(--teal-tint); border-radius: 6px; padding: 3px 7px; }
+  .news li small { font-size: 11px; color: var(--ink3); }
+
+  /* 데스크톱 — 왼쪽 히어로·추이·평면도 / 오른쪽 급식·주간·탄소·이슈 */
   @media (min-width: 900px) {
-    main { max-width: 1100px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 20px; align-items: start; padding: 24px; }
-    .wait { font-size: 120px; }
+    main { max-width: 1120px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px;
+           align-items: start; padding: 40px 16px 56px; }
+    .card { padding: 24px 26px; }
+    .big b { font-size: 120px; } .big i { font-size: 28px; }
+    #chart { height: 130px; }
   }
-  /* 마이크로 인터랙션 — 포인터가 있는 기기에서만 */
   @media (hover: hover) {
-    .card { transition: transform .18s ease, box-shadow .18s ease; }
-    .card:hover { transform: translateY(-3px); box-shadow: var(--e3); }
-    .carbon .pick > div, details summary { transition: transform .12s ease, box-shadow .12s ease, background .12s ease; }
-    .carbon .pick > div:hover, details summary:hover { transform: translateY(-1px); box-shadow: var(--e1); }
-    .news li { transition: background .18s ease; }
-    .news li::before { transition: transform .18s ease; }
-    .news li:hover { background: var(--aqua2); }
-    .news li:hover::before { transform: translateX(0); }
+    .card, .hero { transition: transform .18s ease, box-shadow .18s ease; }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(51,49,45,.05), 0 16px 34px rgba(51,49,45,.08); }
+    .pick button { transition: background .12s ease; }
+    .news li a:hover { color: var(--teal-ink); }
   }
-  /* 움직임 줄이기 설정: transform·transition·animation 전부 해제 */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition: none !important; animation: none !important; transform: none !important; }
-    .news li::before { display: none; }
   }
 </style>
 </head>
 <body>
 <main>
   <div class="col">
-    <section class="card hero" id="hero" data-level="ok">
+    <section class="hero" id="hero" data-level="ok">
       <span class="dot"></span>
       <div class="eyebrow">지금 줄을 서면</div>
-      <div class="wait" id="waitbox"><span id="wait">—</span><small>분</small></div>
-      <span id="state">—</span>
-      <div class="row">
-        <div><b id="queue">—</b>명 대기 중</div>
-        <div><b id="rate">—</b>명/분 배식 속도</div>
+      <div class="big" id="bigbox"><b id="wait">—</b><i>분</i></div>
+      <div class="verdictrow">
+        <span id="state">—</span>
+        <div class="arrive" id="arrive" hidden><span>배식대 도착</span><b id="arriveat">—</b></div>
+      </div>
+      <div class="stats">
+        <div><b id="queue">—</b><em>명</em><span>대기 중</span></div>
+        <div><b id="rate">—</b><em>명/분</em><span>배식 속도</span></div>
       </div>
     </section>
-    <div class="muted" style="display:flex;justify-content:space-between;padding:6px 4px 10px">
-      <span>갱신 <span id="updated"></span> · 30초마다</span><span>추정치 · 배식 초반 오차 큼</span>
+
+    <div class="meta">
+      <span>갱신 <span id="updated">—</span> · 30초마다</span><span>추정치 · 배식 초반 오차 큼</span>
     </div>
 
-    <section class="card" id="chartcard">
+    <section class="card" id="chartcard" hidden>
       <div class="eyebrow">최근 2시간 예상 대기</div>
-      <canvas id="chart" width="600" height="120"></canvas>
+      <div class="lead" id="chartlead" hidden></div>
+      <canvas id="chart"></canvas>
+      <div class="legend">
+        <span><i>오늘</i><i class="ref" id="reflab" hidden>평소</i></span>
+        <span class="now">2시간 전 → <b>지금</b></span>
+      </div>
     </section>
 
     <section class="card plan" id="plancard" data-state="no_data">
       <div class="eyebrow">급식실 현황</div>
       <span class="count" id="posn">—</span>
-      <canvas id="plan" width="600" height="360"></canvas>
+      <canvas id="plan"></canvas>
       <div class="empty">표시할 위치 없음</div>
-      <div class="muted" style="margin-top:8px">영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다</div>
+      <div class="note" style="margin-top:10px">영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다</div>
     </section>
   </div>
 
   <div class="col">
     <section class="card" id="mealcard">
       <div class="eyebrow">오늘 중식</div>
-      <ul id="menu"></ul>
+      <ul class="menu" id="menu"></ul>
+      <div class="chips" id="allergens"></div>
+      <details id="allergybox" hidden>
+        <summary class="note" style="margin-top:8px">내 알레르기 <b id="mysummary" style="color:var(--melon-ink)">없음</b> ·
+          <span class="u" style="color:var(--teal-ink)">설정 변경</span></summary>
+        <div class="pick" id="pick"></div>
+        <div class="note" style="margin-top:8px">이 브라우저에만 저장됩니다 · 표시는 참고용이며 최종 확인은 급식실 게시물로 하세요</div>
+      </details>
       <div class="kpi">
-        <div><b id="energy">—</b><span>에너지 충족</span><span class="flag" id="energyflag"></span></div>
-        <div><b id="ratio">—</b><span>탄·단·지 비율</span></div>
-        <div><b id="mar">—</b><span>미량영양소</span><span class="flag" id="marflag"></span></div>
+        <div><em>01</em><b id="energy">—</b><span>에너지 충족</span><span class="flag" id="energyflag"></span></div>
+        <div><em>02</em><b id="ratio">—</b><span>탄·단·지 비율</span></div>
+        <div><em>03</em><b id="mar">—</b><span>미량영양소</span><span class="flag" id="marflag"></span></div>
       </div>
-      <details><summary>▸ 영양소별 보기</summary><div id="micro" style="margin-top:8px"></div></details>
-      <div class="muted" id="stdnote" style="margin-top:8px"></div>
+      <div class="eyebrow" id="microlab" style="margin-top:18px" hidden>영양소별 · 권장섭취량 대비</div>
+      <div class="micro" id="micro"></div>
+    </section>
+
+    <section class="card" id="weekcard" hidden>
+      <div class="eyebrow">이번 주 식단</div>
+      <div class="week" id="week"></div>
+      <div class="note" id="weekavg" style="margin-top:12px"></div>
     </section>
 
     <section class="card carbon" id="carboncard" hidden>
       <div class="eyebrow">오늘 급식을 다 남기면</div>
-      <div class="big"><span class="num" id="co2">—</span><span class="unit" id="co2unit">kg CO₂e</span></div>
+      <div class="co2"><b id="co2">—</b><span id="co2unit">kg CO₂e</span></div>
       <div class="cmp">
-        <div><b id="vsworld">—</b>세계 1인 하루 평균 배출 대비</div>
-        <div><b id="vskorea">—</b>한국 1인 하루 평균 배출 대비</div>
+        <div><b id="vsworld">—</b><span>세계 1인 하루 평균 배출 대비</span></div>
+        <div><b id="vskorea">—</b><span>한국 1인 하루 평균 배출 대비</span></div>
       </div>
-      <div class="pick" id="pick">
-        <div data-f="0" class="on" role="button" tabindex="0">다 먹음</div><div data-f="0.25" role="button" tabindex="0">¼ 남김</div>
-        <div data-f="0.5" role="button" tabindex="0">½ 남김</div><div data-f="1" role="button" tabindex="0">다 남김</div>
-      </div>
-      <div class="mine"><div>이번 달 내가 남긴 급식 <b id="minekg">0 kg CO₂e</b><br><span class="muted" id="minesub"></span></div>
-        <div class="ring" id="ring" title="이번 달 '다 먹음' 비율"><i id="ringpct">—</i></div></div>
-      <div class="muted" style="margin-top:8px">추정치입니다 · 선택 기록은 이 브라우저에만 저장 ·
-        <details class="basis"><summary>산정 기준 보기</summary><div id="carbonnote"></div></details></div>
+      <div class="note" style="margin-top:14px">추정치입니다 ·
+        <details style="display:inline"><summary style="display:inline" class="u">산정 기준 보기</summary>
+          <div id="carbonnote" style="margin-top:6px"></div></details></div>
     </section>
 
     <section class="card" id="newscard" hidden>
@@ -231,27 +309,48 @@
 <script>
 const $ = s => document.querySelector(s);
 const j = async u => (await fetch(u, { cache: "no-store" })).json();
-const BUSY_MIN = 12, EASY_MIN = 5;           // 판정 임계값 (학교마다 다를 수 있음)
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const BUSY_MIN = 12, EASY_MIN = 5;                  // 판정 임계값 (학교마다 다를 수 있음)
+
 function level(st) {
   if (st.state === "no_data") return "off";
   if (st.state === "insufficient_rate") return "wait";
   return st.wait_min > BUSY_MIN ? "busy" : "ok";
 }
 function verdict(st) {
-  return { off: "정보 없음", wait: "배식 시작 대기",
-           busy: "혼잡 · 잠시 후 추천",
+  return { off: "정보 없음", wait: "배식 시작 대기", busy: "혼잡 · 잠시 후 추천",
            ok: st.wait_min <= EASY_MIN ? "여유 · 바로 가세요" : "보통" }[level(st)];
 }
+const minuteOfDay = d => d.getHours() * 60 + d.getMinutes();
+const hhmm = d => String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
 
-let lastWait = null;
+if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
+  CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+    r = Math.min(+r || 0, w / 2, h / 2);
+    this.moveTo(x + r, y); this.arcTo(x + w, y, x + w, y + h, r); this.arcTo(x + w, y + h, x, y + h, r);
+    this.arcTo(x, y + h, x, y, r); this.arcTo(x, y, x + w, y, r); this.closePath();
+  };
+}
+
+/* 캔버스는 배경 저장소를 DPR 에 맞춰 잡아야 선이 뭉개지지 않는다 */
+function fit(c, h) {
+  const dpr = window.devicePixelRatio || 1, w = c.clientWidth || 318;
+  c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+  const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  return { g, w, h };
+}
+
+/* ---------------- 대기 상태 ---------------- */
+let lastWait = null, LAST = null, LASTPOS = null, MEAL = null;
 async function refresh() {
   const st = await j("/api/status");
   const shown = st.wait_min == null ? "—" : String(st.wait_min);
-  if (shown !== lastWait) {                                   // 값이 실제로 바뀔 때만 0.25s 스케일 펄스
+  if (shown !== lastWait) {                          // 값이 실제로 바뀔 때만 0.25s 스케일 펄스
     $("#wait").textContent = shown;
     if (lastWait !== null) {
-      const box = $("#waitbox"); box.classList.remove("pulse"); void box.offsetWidth; box.classList.add("pulse");
-      box.addEventListener("animationend", () => box.classList.remove("pulse"), { once: true });
+      const b = $("#bigbox"); b.classList.remove("pulse"); void b.offsetWidth; b.classList.add("pulse");
+      b.addEventListener("animationend", () => b.classList.remove("pulse"), { once: true });
     }
     lastWait = shown;
   }
@@ -259,132 +358,243 @@ async function refresh() {
   $("#rate").textContent = st.rate_per_min ?? "—";
   $("#state").textContent = verdict(st);
   $("#hero").dataset.level = level(st);
-  $("#updated").textContent = st.updated_at
-    ? new Date(st.updated_at).toLocaleTimeString("ko-KR") : "-";
-  const h = await j("/api/history?minutes=120");
-  drawChart(h.rows);
-  try { drawPlan(await j("/api/positions")); } catch { drawPlan({ state: "no_data" }); }
+  $("#updated").textContent = st.updated_at ? new Date(st.updated_at).toLocaleTimeString("ko-KR") : "—";
+  // ③ 도착 시각 — 지금 줄을 서면 몇 시에 배식대에 닿는가
+  const ok = st.wait_min != null;
+  $("#arrive").hidden = !ok;
+  if (ok) $("#arriveat").textContent = hhmm(new Date(Date.now() + st.wait_min * 60000));
+
+  const [h, t] = await Promise.all([
+    j("/api/history?minutes=120"),
+    j("/api/typical?minutes=120").catch(() => ({ state: "no_data", rows: [] }))]);
+  LAST = { rows: h.rows, typ: t, st };
+  drawChart(h.rows, t, st);
+  try { LASTPOS = await j("/api/positions"); } catch { LASTPOS = { state: "no_data" }; }
+  drawPlan(LASTPOS);
 }
 
-function drawChart(rows) {
-  const c = $("#chart"), g = c.getContext("2d");
-  g.clearRect(0, 0, c.width, c.height);
-  const pts = rows.filter(r => r.wait_min != null);
-  $("#chartcard").hidden = pts.length < 2;                    // 데이터 2점 미만이면 카드 숨김
+/* ---------------- ④ 추이 + 평소 곡선 ----------------
+   x 는 '자정부터 몇 분'. 오늘 이력과 평소 곡선을 같은 축에 얹으려면 인덱스가 아니라 시각이어야 한다 */
+function drawChart(rows, typ, st) {
+  const pts = rows.filter(r => r.wait_min != null)
+                  .map(r => ({ m: minuteOfDay(new Date(r.ts)), v: r.wait_min }));
+  $("#chartcard").hidden = pts.length < 2;
   if (pts.length < 2) return;
-  const max = Math.max(5, ...pts.map(r => r.wait_min));
-  const xy = pts.map((r, i) => [i / (pts.length - 1) * c.width,
-                                c.height - r.wait_min / max * (c.height - 10) - 5]);
-  // 면 채움: 위(높은 값)로 갈수록 진한 틸, 아래는 투명 — 봉우리가 스스로 강조된다
-  const grad = g.createLinearGradient(0, 0, 0, c.height);
-  grad.addColorStop(0, "rgba(18,151,147,.9)");
-  grad.addColorStop(.55, "rgba(18,151,147,.35)");
-  grad.addColorStop(1, "rgba(155,215,213,0)");
-  g.beginPath();
-  xy.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
-  g.lineTo(c.width, c.height); g.lineTo(0, c.height); g.closePath();
+
+  const hi = minuteOfDay(new Date()), lo = Math.max(0, hi - 120);
+  const ref = (typ.state === "ok" ? typ.rows : []).filter(r => r.minute_of_day >= lo && r.minute_of_day <= hi);
+  $("#reflab").hidden = !ref.length;
+  $("#reflab").textContent = ref.length
+    ? (typ.basis === "weekday" ? `평소 · 같은 요일 ${typ.days}일` : `평소 · 최근 ${typ.days}일`) : "";
+
+  const c = $("#chart"), H = c.clientHeight || 92, { g, w } = fit(c, H);
+  const padR = ref.length ? 34 : 8, padT = 6, padB = 4;              // 오른쪽은 선 끝 라벨 자리
+  const plotW = Math.max(1, w - padR - 4), plotH = H - padT - padB;
+  const max = Math.max(5, ...pts.map(p => p.v), ...ref.map(r => r.wait_min));
+  const X = m => 4 + (m - lo) / Math.max(1, hi - lo) * plotW;
+  const Y = v => padT + (1 - v / max) * plotH;
+  const path = (arr, fx, fy) => { g.beginPath(); arr.forEach((d, i) => (i ? g.lineTo : g.moveTo).call(g, fx(d), fy(d))); };
+
+  g.lineJoin = g.lineCap = "round";
+  // 오늘: 위로 갈수록 진한 틸 채움 — 봉우리가 스스로 강조된다
+  const grad = g.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, "rgba(18,151,147,.24)"); grad.addColorStop(1, "rgba(18,151,147,0)");
+  path(pts, p => X(p.m), p => Y(p.v));
+  g.lineTo(X(pts[pts.length - 1].m), H); g.lineTo(X(pts[0].m), H); g.closePath();
   g.fillStyle = grad; g.fill();
-  g.beginPath(); g.strokeStyle = "#129793"; g.lineWidth = 2;
-  xy.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
-  g.stroke();
+
+  if (ref.length) {                                                   // 평소: 중립 회색 파선 (색이 아니라 선으로 구분)
+    g.setLineDash([4, 4]); g.strokeStyle = "#B9B1A0"; g.lineWidth = 1.5;
+    path(ref, r => X(r.minute_of_day), r => Y(r.wait_min)); g.stroke();
+    g.setLineDash([]);
+  }
+  g.strokeStyle = "#129793"; g.lineWidth = 2;
+  path(pts, p => X(p.m), p => Y(p.v)); g.stroke();
+
+  const last = pts[pts.length - 1];
+  g.setLineDash([3, 3]); g.strokeStyle = "rgba(209,74,56,.5)"; g.lineWidth = 1.5;
+  g.beginPath(); g.moveTo(X(last.m), 2); g.lineTo(X(last.m), H); g.stroke(); g.setLineDash([]);
+  g.beginPath(); g.arc(X(last.m), Y(last.v), 4, 0, Math.PI * 2);
+  g.fillStyle = "#129793"; g.fill(); g.strokeStyle = "#FFFCF6"; g.lineWidth = 2; g.stroke();
+
+  if (ref.length) {
+    g.font = "700 9px system-ui, sans-serif"; g.textBaseline = "middle"; g.textAlign = "left";
+    const r = ref[ref.length - 1];
+    g.fillStyle = "#0C6D6A"; g.fillText("오늘", X(last.m) + 8, Y(last.v));
+    g.fillStyle = "#A9A296"; g.fillText("평소", X(r.minute_of_day) + 8, Y(r.wait_min));
+  }
+  // 결론 한 줄 — 곡선을 읽지 않아도 답이 나오게
+  const near = ref.length ? ref.reduce((a, b) =>
+    Math.abs(b.minute_of_day - last.m) < Math.abs(a.minute_of_day - last.m) ? b : a) : null;
+  const lead = $("#chartlead");
+  lead.hidden = !near || st.wait_min == null;
+  if (!lead.hidden) {
+    const d = Math.round(near.wait_min - st.wait_min);
+    lead.innerHTML = Math.abs(d) < 1 ? "평소 이 시각과 <b>비슷합니다</b>"
+      : `평소 이 시각보다 <b>${Math.abs(d)}분 ${d > 0 ? "짧습니다" : "깁니다"}</b>`;
+  }
 }
 
-// ⑩ 급식실 현황: 카메라 시점 기준 벡터 평면도. x,y 는 0~1 정규화 좌표 —
-//    입구 = 좌측 상단, 통로 = 좌측변을 따라 아래로, 배식대 = 하단변 좌측 끝~중앙, 퇴식구 = 우측 하단, 출구 = 우측 중앙
+/* ---------------- ⑩ 평면도 ----------------
+   카메라 시점 기준. x,y 는 0~1 정규화 — 입구=좌상, 통로=좌측변, 배식대=하단 좌측~중앙, 퇴식구=우하, 출구=우측 중앙 */
 function drawPlan(p) {
-  const c = $("#plan"), g = c.getContext("2d"), W = c.width, H = c.height, pad = 14;
   const ok = p.state === "ok";
   $("#plancard").dataset.state = ok ? "ok" : "no_data";
   $("#posn").textContent = ok ? `${p.n}명` : "—";
-  g.clearRect(0, 0, W, H);
-  const X = x => pad + x * (W - 2 * pad), Y = y => pad + y * (H - 2 * pad);
-  g.fillStyle = "#FFFBE4"; g.fillRect(X(0), Y(0), W - 2 * pad, H - 2 * pad);                       // 바닥
-  g.fillStyle = "rgba(80,80,80,.06)"; g.fillRect(X(0), Y(0), X(.16) - X(0), H - 2 * pad);          // 통로: 좌측변 띠
-  g.setLineDash([]); g.lineWidth = 1.5; g.strokeStyle = "#505050"; g.strokeRect(X(0), Y(0), W - 2 * pad, H - 2 * pad);  // 외곽
-  g.setLineDash([6, 4]); g.lineWidth = 2; g.strokeStyle = "#FF7260";                                 // 배식대: 하단 좌측 끝 ~ 중앙, 멜론 점선
-  g.strokeRect(X(.02), Y(.90), X(.50) - X(.02), Y(.98) - Y(.90));
-  g.strokeStyle = "#505050"; g.lineWidth = 1.5;                                                       // 퇴식구: 우측 하단 작은 차콜 점선
-  g.strokeRect(X(.84), Y(.86), X(.98) - X(.84), Y(.98) - Y(.86));
-  g.setLineDash([]);
-  g.strokeStyle = "#FFFBE4"; g.lineWidth = 3;                                                         // 외곽선 틈 = 입구(상단 좌측)·출구(우측 중앙)
-  g.beginPath(); g.moveTo(X(.06), Y(0)); g.lineTo(X(.14), Y(0)); g.stroke();
-  g.beginPath(); g.moveTo(X(1), Y(.44)); g.lineTo(X(1), Y(.56)); g.stroke();
-  g.font = "700 12px system-ui, sans-serif"; g.textBaseline = "middle";
-  g.fillStyle = "#505050"; g.textAlign = "left";  g.fillText("입구", X(.18), Y(.06));
-  g.fillStyle = "#6B6B5E"; g.font = "700 11px system-ui, sans-serif"; g.fillText("통로", X(.03), Y(.5));
-  g.font = "700 12px system-ui, sans-serif";
-  g.fillStyle = "#FF7260"; g.textAlign = "center"; g.fillText("배식대", X(.26), Y(.94));
-  g.fillStyle = "#505050"; g.textAlign = "right";  g.fillText("퇴식구", X(.97), Y(.82));
-  g.fillStyle = "#505050"; g.textAlign = "right";  g.fillText("출구", X(.97), Y(.5));
+  const c = $("#plan"), W = c.clientWidth || 318, H = W * 191 / 318, { g } = fit(c, H);
+  const s = W / 318, X = v => v * s, Y = v => v * s;                  // 도면 좌표(318×191)를 실제 폭에 맞춰 확대
+  const box = (x, y, w, h, r, fill, stroke, dash, lw) => {
+    g.setLineDash(dash || []); g.lineWidth = lw || 1.5;
+    g.beginPath(); g.roundRect(X(x), Y(y), X(w), Y(h), X(r));
+    if (fill) { g.fillStyle = fill; g.fill(); }
+    if (stroke) { g.strokeStyle = stroke; g.stroke(); }
+    g.setLineDash([]);
+  };
+  box(8, 8, 302, 175, 14, "#FBF8F0");
+  g.save(); g.beginPath(); g.roundRect(X(8), Y(8), X(302), Y(175), X(14)); g.clip();
+  g.fillStyle = "rgba(51,49,45,.045)"; g.fillRect(X(8), Y(8), X(48), Y(175)); g.restore();
+  box(8, 8, 302, 175, 14, null, "#D5CDBA");
+  box(14, 165.5, 145, 14, 7, "#FFF0EC", "#FF7260", [6, 4], 2);        // 배식대
+  box(261.7, 158.5, 42.3, 21, 7, "#F3F0E7", "#B9B1A0", [5, 4]);       // 퇴식구
+  g.strokeStyle = "#FFFCF6"; g.lineWidth = 3.5;                       // 외곽선 틈 = 입구·출구
+  g.beginPath(); g.moveTo(X(26.1), Y(8)); g.lineTo(X(50.3), Y(8)); g.stroke();
+  g.beginPath(); g.moveTo(X(310), Y(85)); g.lineTo(X(310), Y(106)); g.stroke();
+  g.textBaseline = "alphabetic"; g.font = `700 ${11 * s}px system-ui, sans-serif`;
+  g.textAlign = "left";   g.fillStyle = "#6E6A61"; g.fillText("입구", X(60), Y(21));
+  g.fillStyle = "#A9A296"; g.fillText("통로", X(18), Y(99));
+  g.textAlign = "center"; g.fillStyle = "#D14A38"; g.fillText("배식대", X(86), Y(176));
+  g.textAlign = "end";    g.fillStyle = "#6E6A61"; g.fillText("퇴식구", X(300), Y(150));
+  g.fillText("출구", X(300), Y(99));
   if (!ok) return;
-  p.points.forEach(({ x, y }) => {                                                                  // 익명 마커: 틸 원 r=5, 차콜 테두리 1px
-    g.beginPath(); g.arc(X(x), Y(y), 5, 0, Math.PI * 2);
-    g.fillStyle = "#129793"; g.fill(); g.lineWidth = 1; g.strokeStyle = "#505050"; g.stroke();
+  p.points.forEach(({ x, y }) => {                                     // 익명 마커: 틸 원 + 흰 테두리
+    g.beginPath(); g.arc(X(8 + x * 302), Y(8 + y * 175), 5 * s, 0, Math.PI * 2);
+    g.fillStyle = "#129793"; g.fill(); g.lineWidth = 1.8 * s; g.strokeStyle = "#FFFCF6"; g.stroke();
   });
 }
 
+/* ---------------- ① 알레르기 ----------------
+   식약처 고시 19종. NEIS 는 DDISH_NM 끝에 "(5.6.10.13)" 형태로 붙여 보낸다 */
+const ALLERGENS = { 1: "난류", 2: "우유", 3: "메밀", 4: "땅콩", 5: "대두", 6: "밀", 7: "고등어",
+  8: "게", 9: "새우", 10: "돼지고기", 11: "복숭아", 12: "토마토", 13: "아황산류", 14: "호두",
+  15: "닭고기", 16: "쇠고기", 17: "오징어", 18: "조개류", 19: "잣" };
+const MY_KEY = "mb_allergy";
+const loadMy = () => { try { return new Set(JSON.parse(localStorage.getItem(MY_KEY)) || []); } catch { return new Set(); } };
+let MY = loadMy();
+
+function splitAllergy(raw) {
+  // 괄호로 묶였거나, 끝에 점으로 이어진 숫자가 둘 이상일 때만 뗀다 ("우유200" 같은 이름을 자르지 않도록)
+  const m = raw.match(/\s*[(（]\s*([\d.,\s]+)\s*[)）]\s*$/) || raw.match(/\s+(\d{1,2}(?:\.\d{1,2})+)\.?\s*$/);
+  if (!m) return { name: raw.trim(), codes: [] };
+  const codes = [...new Set(m[1].split(/\D+/).filter(Boolean).map(Number))].filter(n => n >= 1 && n <= 19);
+  return { name: raw.slice(0, m.index).trim() || raw.trim(), codes: codes.sort((a, b) => a - b) };
+}
+
+function renderPicker() {
+  $("#pick").innerHTML = Object.entries(ALLERGENS).map(([n, label]) =>
+    `<button type="button" data-n="${n}" aria-pressed="${MY.has(+n)}">${label}</button>`).join("");
+  $("#pick").querySelectorAll("button").forEach(b => b.onclick = () => {
+    const n = +b.dataset.n;
+    MY.has(n) ? MY.delete(n) : MY.add(n);
+    try { localStorage.setItem(MY_KEY, JSON.stringify([...MY])); } catch {}
+    if (MEAL) renderMeal(MEAL);
+  });
+  const names = [...MY].sort((a, b) => a - b).map(n => ALLERGENS[n]);
+  $("#mysummary").textContent = names.length ? names.join(" · ") : "없음";
+}
+
+/* ---------------- 급식 ---------------- */
+function bandOf(x) {
+  if (x.band === "부족") return "short";
+  const d = x.pct - 100;
+  return d >= 10 ? "hi" : d >= 0 ? "mid" : "lo";
+}
+const shortLabel = s => s.replace(/\s*\(.*\)\s*$/, "");   // "비타민A (㎍RAE)" → "비타민A"
+const unitOf = s => (s.match(/\(([^)]+)\)/) || [, ""])[1];
+
 async function loadMeal() {
-  const m = await j("/api/meal");
+  MEAL = await j("/api/meal");
+  renderMeal(MEAL);
+}
+
+function renderMeal(m) {
+  const menu = $("#menu");
   if (m.state !== "ok" || !m.today) {
-    $("#menu").innerHTML = "<li>" + (m.state === "no_meal"
-      ? "이번 주 급식 정보가 없습니다" : "급식 정보를 아직 받지 못했습니다") + "</li>";
-    $("#carboncard").hidden = true;
+    menu.innerHTML = `<li class="main">${m.state === "no_meal" ? "이번 주 급식 정보가 없습니다" : "급식 정보를 아직 받지 못했습니다"}</li>`;
+    ["#allergybox", "#carboncard", "#weekcard", "#microlab"].forEach(s => $(s).hidden = true);
+    $("#allergens").innerHTML = ""; $("#micro").innerHTML = "";
     return;
   }
-  $("#menu").innerHTML = m.today.menu.map(x => `<li>${x}</li>`).join("");
+  const dishes = m.today.menu.map(splitAllergy);
+  menu.innerHTML = dishes.map((d, i) => {
+    const hit = d.codes.some(c => MY.has(c));
+    const codes = d.codes.map(c => MY.has(c) ? `<b>${c}</b>` : c).join("·");
+    return `<li class="${i === 0 ? "main" : ""}${hit ? " hit" : ""}"><span>${esc(d.name)}</span>`
+      + (hit ? `<span class="tag">내 알레르기</span>` : "")
+      + (codes ? `<span class="codes">${codes}</span>` : "") + "</li>";
+  }).join("");
+
+  const today = [...new Set(dishes.flatMap(d => d.codes))].sort((a, b) => a - b);
+  $("#allergens").innerHTML = today.map(c =>
+    `<span class="${MY.has(c) ? "on" : ""}">${c} ${ALLERGENS[c]}</span>`).join("");
+  $("#allergybox").hidden = false;
+  renderPicker();
+
   const a = m.today.assess;
   $("#energy").textContent = a.energy_pct == null ? "—" : a.energy_pct + "%";
-  $("#energyflag").textContent = a.energy_pct == null ? ""
-    : a.energy_pct > 110 ? "많음" : a.energy_pct < 90 ? "적음" : "";
+  $("#energyflag").textContent = a.energy_pct == null ? "" : a.energy_pct > 110 ? "많음" : a.energy_pct < 90 ? "적음" : "";
   $("#ratio").textContent = a.macro_ratio_ok ? "적정" : "범위 밖";
   $("#ratio").title = `탄 ${a.macro_ratio.carb} · 단 ${a.macro_ratio.protein} · 지 ${a.macro_ratio.fat} %`;
   $("#mar").textContent = a.mar == null ? "—" : a.mar + "%";
   const short = a.micro.filter(x => x.band === "부족").length;
   $("#marflag").textContent = short ? `부족 ${short}` : "";
-  $("#micro").innerHTML = a.micro.map(x =>
-    `<div class="bar${x.band === "부족" ? " short" : ""}" data-k="${x.key}"><span>${x.label}</span>
-       <div class="track"><i style="width:${Math.min(x.pct, 150) / 1.5}%"></i></div>
-       <b>${x.pct}%</b></div>`).join("");
-  $("#stdnote").textContent =
-    `기준: ${m.std.group} · ${m.std.source} · 멜론 세로선 = 권장섭취량. 영양교사 산출값 기준 참고 지표입니다.`;
+
+  $("#microlab").hidden = !a.micro.length;
+  $("#micro").innerHTML = a.micro.map(x => {
+    const d = x.pct - 100, band = bandOf(x);
+    const tag = band === "short" ? "<em>부족</em>" : x.band === "과다" ? "<em>과다</em>" : "";
+    return `<div data-band="${band}"><div class="v">${d >= 0 ? "+" : "−"}${Math.abs(d)}%${tag}</div>`
+         + `<div class="n" title="${esc(x.label)}">${esc(shortLabel(x.label))}</div></div>`;
+  }).join("");
+
+  renderWeek(m);
   renderCarbon(m);
 }
 
-// ⑧ 탄소 카드. 계수는 /api/meal 의 carbon_std(= data/carbon_std.json), 선택 기록은 이 브라우저의 localStorage 에만
-const WASTE_KEY = "mb_waste";               // { "2026-08-28": { frac: 0.25, kg: 1.41 }, ... }  frac = 남긴 비율
-const loadWaste = () => { try { return JSON.parse(localStorage.getItem(WASTE_KEY)) || {}; } catch { return {}; } };
+/* ② 이번 주 식단 — meal.json 이 이미 월~금을 통째로 담고 있다. 프론트만 있으면 된다 */
+const WD = "일월화수목금토";
+function renderWeek(m) {
+  const card = $("#weekcard"), week = (m.week || []).filter(d => d.menu && d.menu.length);
+  card.hidden = week.length < 2;
+  if (card.hidden) return;
+  const today = m.today.date;
+  $("#week").innerHTML = week.map(d => {
+    const dd = new Date(+d.date.slice(0, 4), +d.date.slice(4, 6) - 1, +d.date.slice(6, 8));
+    const when = d.date === today ? "today" : d.date < today ? "past" : "future";
+    const main = splitAllergy(d.menu[0]).name;
+    return `<div data-when="${when}"><div class="day"><em>${WD[dd.getDay()]}</em><b>${dd.getDate()}</b></div>`
+      + `<div class="t"><b>${esc(main)}</b><span>외 ${d.menu.length - 1}가지`
+      + (d.kcal ? ` · ${Math.round(d.kcal)} kcal` : "") + "</span></div></div>";
+  }).join("");
+  const w = m.week_avg || {};
+  $("#weekavg").innerHTML = w.energy_pct == null ? ""
+    : `이번 주 평균 에너지 충족 <b style="color:var(--ink2)">${w.energy_pct}%</b>`
+      + (w.mar == null ? "" : ` · 미량영양소 <b style="color:var(--ink2)">${w.mar}%</b>`);
+}
+
+/* ⑧ 잔반 탄소 — 계수는 /api/meal 의 carbon_std(= data/carbon_std.json) */
 function renderCarbon(m) {
-  const c = m.today && m.today.carbon, card = $("#carboncard");
-  card.hidden = !c;
+  const c = m.today && m.today.carbon, cs = m.carbon_std || {};
+  $("#carboncard").hidden = !c;
   if (!c) return;
-  const cs = m.carbon_std, day = m.today.date.replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3");
   $("#co2").textContent = c.kgco2e.toFixed(1);
   $("#co2unit").textContent = `kg CO₂e · 1인분 약 ${c.portion_g} g 기준`;
   $("#vsworld").textContent = c.pct_world + "%";
   $("#vskorea").textContent = c.pct_korea + "%";
   $("#carbonnote").textContent = `1인분 무게 = kcal ÷ 에너지밀도 환산(NEIS 는 g 미제공) · 배출계수: ${cs.ef_source}`
     + ` · 1인 평균: ${cs.capita_source} · 승용차 환산 ${c.car_km} km`;
-  const log = loadWaste(), picked = log[day] ? log[day].frac : 0;   // 기본 선택 "다 먹음"
-  $("#pick").querySelectorAll("div").forEach(el => {
-    el.classList.toggle("on", +el.dataset.f === picked);
-    el.onclick = () => {
-      const w = loadWaste(); w[day] = { frac: +el.dataset.f, kg: c.kgco2e };
-      try { localStorage.setItem(WASTE_KEY, JSON.stringify(w)); } catch {}
-      renderCarbon(m);
-    };
-    el.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); el.onclick(); } };
-  });
-  const month = day.slice(0, 7), days = Object.entries(log).filter(([d]) => d.startsWith(month));
-  const kg = days.reduce((s, [, v]) => s + v.frac * v.kg, 0), clean = days.filter(([, v]) => v.frac === 0).length;
-  const pct = days.length ? Math.round(clean / days.length * 100) : 0;
-  $("#minekg").textContent = kg.toFixed(1) + " kg CO₂e";
-  $("#minesub").textContent = `≈ 승용차 ${Math.round(kg * (c.car_km / c.kgco2e))} km · ${days.length}일 기록`;
-  $("#ringpct").textContent = days.length ? pct + "%" : "—";
-  $("#ring").style.background = `conic-gradient(var(--teal) 0 ${pct}%, var(--egg2) ${pct}%)`;
 }
 
-// ⑨ 이슈 링크: /api/news (하루 1회 캐시). 제목·출처·날짜·링크만, 외부 문자열이므로 이스케이프. no_data 면 카드 숨김
-const escapeHtml = s => String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+/* ⑨ 이슈 링크 — 외부 문자열이므로 이스케이프. no_data 면 카드 숨김 */
 async function loadNews() {
   let n;
   try { n = await j("/api/news"); } catch { n = { state: "no_data", items: [] }; }
@@ -393,13 +603,18 @@ async function loadNews() {
   if (card.hidden) return;
   $("#news").innerHTML = n.items.map(x => {
     const t = x.title.length > 40 ? x.title.slice(0, 40) + "…" : x.title;
-    return `<li><a href="${escapeHtml(x.link)}" target="_blank" rel="noopener" title="${escapeHtml(x.title)}">${escapeHtml(t)}</a>`
-         + `<em>${escapeHtml(x.source)}</em><small>${escapeHtml(x.date)}</small></li>`;
+    return `<li><a href="${esc(x.link)}" target="_blank" rel="noopener" title="${esc(x.title)}">${esc(t)}</a>`
+         + `<div><em>${esc(x.source)}</em><small>${esc(x.date)}</small></div></li>`;
   }).join("");
 }
 
 refresh(); loadMeal(); loadNews();
 setInterval(refresh, 30000);
+let rt;                                              // 캔버스는 폭이 바뀌면 다시 그려야 한다 — 다시 받지는 않는다
+addEventListener("resize", () => {
+  clearTimeout(rt);
+  rt = setTimeout(() => { if (LAST) drawChart(LAST.rows, LAST.typ, LAST.st); if (LASTPOS) drawPlan(LASTPOS); }, 150);
+});
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
 </script>
 </body>

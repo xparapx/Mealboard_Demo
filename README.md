@@ -1,7 +1,7 @@
 # Mealboard — 학교 급식실 대기시간·영양 대시보드
 
 급식실 카메라(라즈베리파이 5 + YOLO)로 대기 인원·처리율을 재어 **예상 대기시간**(Little's law, W = L / λ)을 내고,
-NEIS 급식 API 의 메뉴·영양 지표(에너지 충족률·적정비율·MAR)와 잔반 탄소 카드, 익명 위치 마커를 웹 대시보드(PWA)로 보여준다.
+NEIS 급식 API 의 메뉴·알레르기·영양 지표(에너지 충족률·적정비율·MAR)와 주간 식단, 잔반 탄소 카드, 익명 위치 마커를 웹 대시보드(PWA)로 보여준다.
 학생·교사는 QR 로 접속한다. 영상은 어디에도 저장·전송하지 않고 숫자만 SQLite 에 남긴다.
 
 - 구축 매뉴얼(전 단계·코드 수록): [docs/manual.html](docs/manual.html) · 화면 도면(스펙의 단일 출처): [docs/layout.html](docs/layout.html)
@@ -10,8 +10,9 @@ NEIS 급식 API 의 메뉴·영양 지표(에너지 충족률·적정비율·MAR
 ## 구조
 
 ```
-app/        FastAPI — main.py, config.py, db.py, routers/{status,history,meal,positions}.py
+app/        FastAPI — main.py, config.py, db.py, routers/{status,history,meal,positions,news,typical}.py
 vision/     waittime.py (순수 로직). counter·zones 등은 로드맵 ④
+tests/      test_waittime.py (Little's law), test_typical.py (평소 곡선의 시간창)
 jobs/       mock_feed.py (카메라 대역, positions.json 도 씀), fetch_neis.py (하루 1회 → data/meal.json)
 static/     index.html (대시보드 단일 파일), manifest.json, sw.js
 data/       queue.db·meal.json·positions.json (git 제외) / nutrition_std.json·carbon_std.json (기준·계수, 포함)
@@ -29,6 +30,8 @@ setup_pi.sh Pi 최초 설치·유닛 갱신 (멱등) · check_manual.py 매뉴�
 ## 작업 로그
 
 ### 2026-08
+- 08-29 **대시보드 v5** — 전 카드의 1.5px 외곽선을 걷어내고 라운드 24 + 2단 그림자로 재설계(팔레트 3색은 유지). 네 가지 추가: ① 알레르기 표시(NEIS 가 메뉴명에 붙여 보내던 번호를 분리, 내 항목은 브라우저에만 저장) ② 이번 주 식단(`meal.json` 의 `week[]` — 서버 변경 없음) ③ 배식대 도착 시각 ④ 평소 곡선(`/api/typical` 신설, 같은 요일 우선·표본 부족 시 최근 7일 폴백). 뺀 것: 잔반 자기신고 4버튼과 개인 월간 누적, 영양소 막대 6색(색 검증 전 항목 탈락 → 상태 2색 칩으로 대체). 도면 v5(`docs/layout.html`)·매뉴얼 STEP 14 동반 갱신.
+- 08-29 개발 PC → Pi SSH 키 로그인 구성(`mbpi` 별칭), `.env.example` 에 `PI_USER`·`PI_HOST` 추가.
 - 08-28 대시보드 전 구간 완료 — 영양 지표 3종·영양소 막대, 잔반 탄소 카드, 익명 위치 마커(평면도), 팔레트 v4·고도/모션 체계·데스크톱 2컬럼 — 와 Tailscale Funnel 공개(고정 주소) 완료. 남은 것: vision(카메라 카운팅)과 학교 Pi 이전·실측.
 - 08-28 매뉴얼 STEP 11~13(탄소·이슈 링크·위치 마커) 추가, `check_manual.py` 로 코드 블록 ↔ 파일 동기화 자동화.
 - 08-27 저장소 뼈대, systemd 유닛·setup_pi.sh, Little's law 함수+테스트, SQLite 스키마·API 3종, mock_feed, NEIS 급식·영양 지표.
