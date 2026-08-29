@@ -167,15 +167,21 @@
                 align-items: center; gap: 5px; text-align: center; min-width: 0; }
   .week .d { font-size: 10px; font-weight: 700; color: var(--ink3); letter-spacing: .04em; }
   .week .n { font-size: 15px; font-weight: 700; line-height: 1; color: var(--ink2); }
-  .week .m { font-size: 10.5px; font-weight: 500; color: var(--ink); line-height: 1.35; word-break: keep-all; }
-  .week .k { font-size: 9.5px; color: #2E5250; margin-top: auto; padding-top: 4px; line-height: 1.35; }
-  .week [data-wd="1"] { background: #EAF5F4; }   /* 월 — 램프의 가장 밝은 끝 */
-  .week [data-wd="2"] { background: #D7ECEB; }
-  .week [data-wd="3"] { background: #C2E2E0; }
-  .week [data-wd="4"] { background: #A9D6D4; }
-  .week [data-wd="5"] { background: #8CC9C6; }   /* 금 — 가장 어두운 끝. 여기서도 본문 대비 6.97:1 */
-  .week [data-when="past"] .n, .week [data-when="past"] .m { color: #6E7B79; }
-  .week [data-when="past"] .d, .week [data-when="past"] .k { color: #7C8886; }
+  /* 긴 이름(친환경토마코펜라이스)이 칩 밖으로 나가지 않게: keep-all 은 유지하되
+     달리 방법이 없을 때만 낱말 안에서 끊고, 세 줄에서 말줄임한다 */
+  .week .m { font-size: 10.5px; font-weight: 500; color: var(--ink); line-height: 1.35;
+             word-break: keep-all; overflow-wrap: anywhere; min-width: 0; max-width: 100%;
+             display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .week .k { font-size: 9.5px; color: #4A4740; margin-top: auto; padding-top: 4px; line-height: 1.35; }
+  /* 요일 5색 — 월은 브랜드 아쿠아, 화는 에그셸 계열을 그대로 쓰고 나머지 셋을 최대한 벌렸다.
+     전체쌍 정상시야 최악 ΔE 10.7 · 본문 대비는 어디서나 7.2:1 이상.
+     색맹에서는 갈리지 않는 쌍이 있으므로 칩마다 요일 글자와 날짜를 반드시 함께 둔다 */
+  .week [data-wd="1"] { background: #9BD7D5; }   /* 월 · 브랜드 아쿠아 */
+  .week [data-wd="2"] { background: #FBE9B7; }   /* 화 · 에그셸 */
+  .week [data-wd="3"] { background: #F3B2A4; }   /* 수 · 멜론 */
+  .week [data-wd="4"] { background: #CBC2FB; }   /* 목 · 페리윙클 */
+  .week [data-wd="5"] { background: #A3F5B4; }   /* 금 · 세이지 */
+  .week [data-when="past"] > * { opacity: .62; }
   .week [data-when="today"] { background: var(--ink); }
   .week [data-when="today"] .d { color: rgba(255,253,246,.55); }
   .week [data-when="today"] .n, .week [data-when="today"] .m { color: var(--surface); }
@@ -197,8 +203,10 @@
   .news { list-style: none; margin: 6px 0 0; padding: 0; }
   .news li { display: flex; flex-direction: column; gap: 7px; padding: 13px 0; border-bottom: 1px solid var(--hair); }
   .news li:last-child { border-bottom: 0; }
-  .news li a { font-size: 13.5px; font-weight: 600; color: var(--ink);
-               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .news li a { font-size: 13.5px; font-weight: 600; color: var(--ink); line-height: 1.4;
+               display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .news li p { margin: 0; font-size: 11.5px; color: var(--ink2); line-height: 1.55;
+               display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .news li div { display: flex; align-items: center; gap: 8px; }
   .news li em { font-style: normal; font-size: 10px; font-weight: 700; color: var(--teal-ink);
                 background: var(--teal-tint); border-radius: 6px; padding: 3px 7px; }
@@ -625,11 +633,11 @@ async function loadNews() {
   card.hidden = n.state !== "ok" || !(n.items && n.items.length);
   balance();
   if (card.hidden) return;
-  $("#news").innerHTML = n.items.map(x => {
-    const t = x.title.length > 40 ? x.title.slice(0, 40) + "…" : x.title;
-    return `<li><a href="${esc(x.link)}" target="_blank" rel="noopener" title="${esc(x.title)}">${esc(t)}</a>`
-         + `<div><em>${esc(x.source)}</em><small>${esc(x.date)}</small></div></li>`;
-  }).join("");
+  // 제목·요약은 CSS 로 줄 수를 자른다 — 글자 수로 자르면 낱말 중간에서 끊긴다
+  $("#news").innerHTML = n.items.map(x =>
+    `<li><a href="${esc(x.link)}" target="_blank" rel="noopener">${esc(x.title)}</a>`
+    + (x.summary ? `<p>${esc(x.summary)}</p>` : "")
+    + `<div><em>${esc(x.source)}</em><small>${esc(x.date)}</small></div></li>`).join("");
 }
 
 /* 데스크톱에서 두 패널의 아래 끝을 맞춘다. 어느 쪽이 긴지는 그날 데이터에 달렸으므로

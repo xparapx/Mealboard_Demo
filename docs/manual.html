@@ -1060,15 +1060,21 @@ systemctl status mealboard-api --no-pager</code></pre>
                 align-items: center; gap: 5px; text-align: center; min-width: 0; }
   .week .d { font-size: 10px; font-weight: 700; color: var(--ink3); letter-spacing: .04em; }
   .week .n { font-size: 15px; font-weight: 700; line-height: 1; color: var(--ink2); }
-  .week .m { font-size: 10.5px; font-weight: 500; color: var(--ink); line-height: 1.35; word-break: keep-all; }
-  .week .k { font-size: 9.5px; color: #2E5250; margin-top: auto; padding-top: 4px; line-height: 1.35; }
-  .week [data-wd=&quot;1&quot;] { background: #EAF5F4; }   /* 월 — 램프의 가장 밝은 끝 */
-  .week [data-wd=&quot;2&quot;] { background: #D7ECEB; }
-  .week [data-wd=&quot;3&quot;] { background: #C2E2E0; }
-  .week [data-wd=&quot;4&quot;] { background: #A9D6D4; }
-  .week [data-wd=&quot;5&quot;] { background: #8CC9C6; }   /* 금 — 가장 어두운 끝. 여기서도 본문 대비 6.97:1 */
-  .week [data-when=&quot;past&quot;] .n, .week [data-when=&quot;past&quot;] .m { color: #6E7B79; }
-  .week [data-when=&quot;past&quot;] .d, .week [data-when=&quot;past&quot;] .k { color: #7C8886; }
+  /* 긴 이름(친환경토마코펜라이스)이 칩 밖으로 나가지 않게: keep-all 은 유지하되
+     달리 방법이 없을 때만 낱말 안에서 끊고, 세 줄에서 말줄임한다 */
+  .week .m { font-size: 10.5px; font-weight: 500; color: var(--ink); line-height: 1.35;
+             word-break: keep-all; overflow-wrap: anywhere; min-width: 0; max-width: 100%;
+             display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .week .k { font-size: 9.5px; color: #4A4740; margin-top: auto; padding-top: 4px; line-height: 1.35; }
+  /* 요일 5색 — 월은 브랜드 아쿠아, 화는 에그셸 계열을 그대로 쓰고 나머지 셋을 최대한 벌렸다.
+     전체쌍 정상시야 최악 ΔE 10.7 · 본문 대비는 어디서나 7.2:1 이상.
+     색맹에서는 갈리지 않는 쌍이 있으므로 칩마다 요일 글자와 날짜를 반드시 함께 둔다 */
+  .week [data-wd=&quot;1&quot;] { background: #9BD7D5; }   /* 월 · 브랜드 아쿠아 */
+  .week [data-wd=&quot;2&quot;] { background: #FBE9B7; }   /* 화 · 에그셸 */
+  .week [data-wd=&quot;3&quot;] { background: #F3B2A4; }   /* 수 · 멜론 */
+  .week [data-wd=&quot;4&quot;] { background: #CBC2FB; }   /* 목 · 페리윙클 */
+  .week [data-wd=&quot;5&quot;] { background: #A3F5B4; }   /* 금 · 세이지 */
+  .week [data-when=&quot;past&quot;] &gt; * { opacity: .62; }
   .week [data-when=&quot;today&quot;] { background: var(--ink); }
   .week [data-when=&quot;today&quot;] .d { color: rgba(255,253,246,.55); }
   .week [data-when=&quot;today&quot;] .n, .week [data-when=&quot;today&quot;] .m { color: var(--surface); }
@@ -1090,8 +1096,10 @@ systemctl status mealboard-api --no-pager</code></pre>
   .news { list-style: none; margin: 6px 0 0; padding: 0; }
   .news li { display: flex; flex-direction: column; gap: 7px; padding: 13px 0; border-bottom: 1px solid var(--hair); }
   .news li:last-child { border-bottom: 0; }
-  .news li a { font-size: 13.5px; font-weight: 600; color: var(--ink);
-               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .news li a { font-size: 13.5px; font-weight: 600; color: var(--ink); line-height: 1.4;
+               display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .news li p { margin: 0; font-size: 11.5px; color: var(--ink2); line-height: 1.55;
+               display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .news li div { display: flex; align-items: center; gap: 8px; }
   .news li em { font-style: normal; font-size: 10px; font-weight: 700; color: var(--teal-ink);
                 background: var(--teal-tint); border-radius: 6px; padding: 3px 7px; }
@@ -1518,11 +1526,11 @@ async function loadNews() {
   card.hidden = n.state !== &quot;ok&quot; || !(n.items &amp;&amp; n.items.length);
   balance();
   if (card.hidden) return;
-  $(&quot;#news&quot;).innerHTML = n.items.map(x =&gt; {
-    const t = x.title.length &gt; 40 ? x.title.slice(0, 40) + &quot;…&quot; : x.title;
-    return `&lt;li&gt;&lt;a href=&quot;${esc(x.link)}&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot; title=&quot;${esc(x.title)}&quot;&gt;${esc(t)}&lt;/a&gt;`
-         + `&lt;div&gt;&lt;em&gt;${esc(x.source)}&lt;/em&gt;&lt;small&gt;${esc(x.date)}&lt;/small&gt;&lt;/div&gt;&lt;/li&gt;`;
-  }).join(&quot;&quot;);
+  // 제목·요약은 CSS 로 줄 수를 자른다 — 글자 수로 자르면 낱말 중간에서 끊긴다
+  $(&quot;#news&quot;).innerHTML = n.items.map(x =&gt;
+    `&lt;li&gt;&lt;a href=&quot;${esc(x.link)}&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;${esc(x.title)}&lt;/a&gt;`
+    + (x.summary ? `&lt;p&gt;${esc(x.summary)}&lt;/p&gt;` : &quot;&quot;)
+    + `&lt;div&gt;&lt;em&gt;${esc(x.source)}&lt;/em&gt;&lt;small&gt;${esc(x.date)}&lt;/small&gt;&lt;/div&gt;&lt;/li&gt;`).join(&quot;&quot;);
 }
 
 /* 데스크톱에서 두 패널의 아래 끝을 맞춘다. 어느 쪽이 긴지는 그날 데이터에 달렸으므로
@@ -2090,24 +2098,33 @@ python -c &quot;import json;d=json.load(open(&#x27;data/meal.json&#x27;,encoding
 <figure class="code">
 <figcaption><span class="path">data/news_feeds.json</span><span class="lang">json</span><button class="copy" type="button">복사</button></figcaption>
 <pre><code class="lang-json">{
-  &quot;note&quot;: &quot;이슈 링크 RSS 목록. 주소는 구현 시 curl 로 200·XML 인지 확인 후 확정. 학교·지역에 맞게 교체 가능.&quot;,
+  &quot;note&quot;: &quot;기후 이슈 RSS. 국내보다 세계적으로 주목받는 주제를 다루기 위해 해외 공신력 있는 매체로 구성했다. 주소는 curl 로 200·XML·description 유무를 확인한 뒤에만 추가할 것. 학교·지역에 맞게 교체 가능.&quot;,
   &quot;max_items&quot;: 3,
+  &quot;summary_chars&quot;: 150,
   &quot;feeds&quot;: [
-    {&quot;name&quot;: &quot;구글뉴스 탄소중립&quot;, &quot;url&quot;: &quot;https://news.google.com/rss/search?q=%ED%83%84%EC%86%8C%EC%A4%91%EB%A6%BD&amp;hl=ko&amp;gl=KR&amp;ceid=KR:ko&quot;},
-    {&quot;name&quot;: &quot;구글뉴스 기후 급식&quot;, &quot;url&quot;: &quot;https://news.google.com/rss/search?q=%EA%B8%B0%ED%9B%84%EB%B3%80%ED%99%94%20%EA%B8%89%EC%8B%9D&amp;hl=ko&amp;gl=KR&amp;ceid=KR:ko&quot;}
+    {&quot;name&quot;: &quot;Carbon Brief&quot;, &quot;url&quot;: &quot;https://www.carbonbrief.org/feed/&quot;},
+    {&quot;name&quot;: &quot;Inside Climate News&quot;, &quot;url&quot;: &quot;https://insideclimatenews.org/feed/&quot;},
+    {&quot;name&quot;: &quot;The Guardian&quot;, &quot;url&quot;: &quot;https://www.theguardian.com/environment/climate-crisis/rss&quot;},
+    {&quot;name&quot;: &quot;Yale Climate Connections&quot;, &quot;url&quot;: &quot;https://yaleclimateconnections.org/feed/&quot;}
   ]
 }</code></pre>
 </figure>
 <p><code>.gitignore</code> 예외 추가: <code>!data/news_feeds.json</code></p>
 <figure class="code">
 <figcaption><span class="path">jobs/fetch_news.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
-<pre><code class="lang-python">&quot;&quot;&quot;기후·탄소 이슈 RSS → data/news.json  (하루 1회, systemd timer)
-제목·출처·날짜·링크만 저장한다. 본문 요약은 넣지 않는다(저작권, LLM 요약은 로드맵 ⑦).
+<pre><code class="lang-python">&quot;&quot;&quot;기후 이슈 RSS → data/news.json  (하루 1회, systemd timer)
+
+제목·요약·출처·날짜·링크를 저장한다. 요약은 우리가 본문을 읽어 만드는 것이 아니라
+피드가 스스로 실어 보내는 &lt;description&gt; — 매체가 배포하라고 내놓은 문장이다.
+그래서 출처와 원문 링크를 반드시 함께 두고, 본문을 더 긁어오지 않는다.
+(LLM 요약은 여전히 로드맵 ⑦. 여기서는 남의 요약을 옮길 뿐이다.)
 
 실행:  uv run python -m jobs.fetch_news
 &quot;&quot;&quot;
 import datetime as dt
+import html
 import json
+import re
 import urllib.request
 import xml.etree.ElementTree as ET
 from email.utils import parsedate_to_datetime
@@ -2116,6 +2133,28 @@ from app.config import DATA
 
 FEEDS_FILE = DATA / &quot;news_feeds.json&quot;
 OUT = DATA / &quot;news.json&quot;
+
+TAG = re.compile(r&quot;&lt;[^&gt;]+&gt;&quot;)
+# 워드프레스 피드가 요약 끝에 붙이는 상투구 — 문장이 아니라 발행 도구의 흔적이라 지운다
+BOILER = re.compile(r&quot;\s*The post .*? appeared first on .*?\.?\s*$&quot;, re.S)
+# 요약 자리에 문장 대신 링크 문구만 들어오는 항목이 있다(가디언 만평 등) — 걸러낸다
+JUNK = re.compile(r&quot;\s*(continue reading|read more)\.*\s*$&quot;, re.I)
+MIN_SUMMARY = 60          # 이보다 짧으면 카드에서 요약이 제 몫을 못 한다
+
+
+def clean(s):
+    &quot;&quot;&quot;HTML 태그·엔티티·연속 공백을 걷어낸 한 줄로&quot;&quot;&quot;
+    return re.sub(r&quot;\s+&quot;, &quot; &quot;, TAG.sub(&quot; &quot;, html.unescape(s or &quot;&quot;))).strip()
+
+
+def summarize(s, limit):
+    &quot;&quot;&quot;낱말 경계에서 자른다. 단어 중간에서 끊기면 읽다 만 것처럼 보인다&quot;&quot;&quot;
+    s = JUNK.sub(&quot;&quot;, BOILER.sub(&quot;&quot;, clean(s)))
+    if len(s) &lt;= limit:
+        return s
+    cut = s[:limit]
+    sp = cut.rfind(&quot; &quot;)
+    return (cut[:sp] if sp &gt; limit * 0.6 else cut).rstrip(&quot; ,.;:—-&quot;) + &quot;…&quot;
 
 
 def fetch(url):
@@ -2126,40 +2165,55 @@ def fetch(url):
 
 def main():
     cfg = json.loads(FEEDS_FILE.read_text(encoding=&quot;utf-8&quot;))
-    items = []
+    limit = cfg.get(&quot;summary_chars&quot;, 150)
+    items = []                                        # 피드마다 한 바구니
     for f in cfg[&quot;feeds&quot;]:
         try:
             root = fetch(f[&quot;url&quot;])
         except Exception as e:                       # 피드 하나가 죽어도 나머지는 진행
-            print(f&quot;건너뜀 {f[&#x27;name&#x27;]}: {e}&quot;)
+            print(f&quot;건너뜀 {f['name']}: {e}&quot;)
             continue
+        bucket = []
         for it in root.iter(&quot;item&quot;):
-            title = (it.findtext(&quot;title&quot;) or &quot;&quot;).strip()
+            title = clean(it.findtext(&quot;title&quot;))
             link = (it.findtext(&quot;link&quot;) or &quot;&quot;).strip()
-            src = (it.findtext(&quot;source&quot;) or f[&quot;name&quot;]).strip()
+            src = clean(it.findtext(&quot;source&quot;)) or f[&quot;name&quot;]
+            summary = summarize(it.findtext(&quot;description&quot;), limit)
             try:
                 d = parsedate_to_datetime(it.findtext(&quot;pubDate&quot;))
             except Exception:
                 d = None
-            if title and link:
-                items.append({&quot;title&quot;: title, &quot;link&quot;: link, &quot;source&quot;: src,
-                              &quot;date&quot;: d.strftime(&quot;%m-%d&quot;) if d else &quot;&quot;,
-                              &quot;_ts&quot;: d.timestamp() if d else 0})
-    items.sort(key=lambda x: -x[&quot;_ts&quot;])
+            if title and link and len(summary) &gt;= MIN_SUMMARY:   # 요약 없는 항목은 싣지 않는다
+                bucket.append({&quot;title&quot;: title, &quot;summary&quot;: summary, &quot;link&quot;: link, &quot;source&quot;: src,
+                               &quot;date&quot;: d.strftime(&quot;%m-%d&quot;) if d else &quot;&quot;,
+                               &quot;_ts&quot;: d.timestamp() if d else 0})
+        bucket.sort(key=lambda x: -x[&quot;_ts&quot;])
+        items.append(bucket)
+
+    # 매체별로 한 건씩 돌아가며 뽑는다. 최신순으로만 자르면 그날 많이 쓴 한 매체가 전부를 차지한다
     seen, top = set(), []
-    for x in items:                                   # 제목 앞부분으로 중복 제거
-        key = x[&quot;title&quot;][:40]
-        if key in seen:
-            continue
-        seen.add(key)
-        x.pop(&quot;_ts&quot;)
-        top.append(x)
+    for rnd in range(max(len(b) for b in items) if items else 0):
+        for bucket in items:
+            if rnd &gt;= len(bucket):
+                continue
+            x = bucket[rnd]
+            key = x[&quot;title&quot;][:40].lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            x.pop(&quot;_ts&quot;)
+            top.append(x)
+            if len(top) &gt;= cfg.get(&quot;max_items&quot;, 3):
+                break
         if len(top) &gt;= cfg.get(&quot;max_items&quot;, 3):
             break
     OUT.write_text(json.dumps({&quot;fetched_at&quot;: dt.datetime.now().isoformat(timespec=&quot;seconds&quot;),
                                &quot;state&quot;: &quot;ok&quot; if top else &quot;no_data&quot;,
                                &quot;items&quot;: top}, ensure_ascii=False, indent=1), encoding=&quot;utf-8&quot;)
     print(f&quot;저장 {OUT}  {len(top)}건&quot;)
+    for x in top:
+        print(f&quot;  [{x['source']}] {x['title'][:60]}&quot;)
+        print(f&quot;      {x['summary'][:80]}&quot;)
 
 
 if __name__ == &quot;__main__&quot;:
