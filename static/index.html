@@ -518,10 +518,15 @@ async function loadMeal() {
 
 function renderMeal(m) {
   const menu = $("#menu");
+  renderWeek(m);                                     // 주말·공휴일에도 "그럼 언제 뭐가 나오나"는 답할 수 있다
   if (m.state !== "ok" || !m.today) {
-    menu.innerHTML = `<li class="main">${m.state === "no_meal" ? "이번 주 급식 정보가 없습니다" : "급식 정보를 아직 받지 못했습니다"}</li>`;
-    ["#allergybox", "#carboncard", "#weekcard", "#microlab"].forEach(s => $(s).hidden = true);
+    // state 는 ok 인데 today 만 없는 날 = 주말·공휴일. 받아오지 못한 것과 구별해서 말한다
+    menu.innerHTML = `<li class="main">${m.state === "no_meal" ? "이번 주 급식 정보가 없습니다"
+      : m.state === "ok" ? "오늘은 급식이 없습니다" : "급식 정보를 아직 받지 못했습니다"}</li>`;
+    ["#allergybox", "#carboncard", "#microlab"].forEach(s => $(s).hidden = true);
     $("#allergens").innerHTML = ""; $("#micro").innerHTML = "";
+    ["#energy", "#ratio", "#mar"].forEach(s => $(s).textContent = "—");
+    ["#energyflag", "#marflag"].forEach(s => $(s).textContent = "");
     return;
   }
   const dishes = m.today.menu.map(splitAllergy);
@@ -556,7 +561,6 @@ function renderMeal(m) {
          + `<div class="n" title="${esc(x.label)}">${esc(shortLabel(x.label))}</div></div>`;
   }).join("");
 
-  renderWeek(m);
   renderCarbon(m);
 }
 
@@ -566,7 +570,8 @@ function renderWeek(m) {
   const card = $("#weekcard"), week = (m.week || []).filter(d => d.menu && d.menu.length);
   card.hidden = week.length < 2;
   if (card.hidden) return;
-  const today = m.today.date;
+  const n = new Date();                              // 오늘은 브라우저 시계로 정한다 — meal.json 은 05:40 캐시라 today 가 비는 날이 있다
+  const today = `${n.getFullYear()}${String(n.getMonth() + 1).padStart(2, "0")}${String(n.getDate()).padStart(2, "0")}`;
   $("#week").innerHTML = week.map(d => {
     const dd = new Date(+d.date.slice(0, 4), +d.date.slice(4, 6) - 1, +d.date.slice(6, 8));
     const when = d.date === today ? "today" : d.date < today ? "past" : "future";
