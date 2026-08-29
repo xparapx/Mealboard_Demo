@@ -3,13 +3,17 @@
 제목·요약·출처·날짜·링크를 저장한다. 요약은 우리가 본문을 읽어 만드는 것이 아니라
 피드가 스스로 실어 보내는 <description> — 매체가 배포하라고 내놓은 문장이다.
 그래서 출처와 원문 링크를 반드시 함께 두고, 본문을 더 긁어오지 않는다.
-(LLM 요약은 여전히 로드맵 ⑦. 여기서는 남의 요약을 옮길 뿐이다.)
+
+읽는 사람은 고등학생이고 매체는 전부 해외라, 저장 직전에 한 번 한국어로 옮긴다.
+번역은 하루 한 번 세 건뿐이라 호출도 비용도 미미하다. 키가 없거나 호출이 실패하면
+원문 영어를 그대로 싣는다 — 번역이 안 됐다고 카드를 비우지는 않는다.
 
 실행:  uv run python -m jobs.fetch_news
 """
 import datetime as dt
 import html
 import json
+import os
 import re
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -41,6 +45,54 @@ def summarize(s, limit):
     cut = s[:limit]
     sp = cut.rfind(" ")
     return (cut[:sp] if sp > limit * 0.6 else cut).rstrip(" ,.;:—-") + "…"
+
+
+MODEL = "claude-opus-5"
+TRANSLATE_SYSTEM = """학교 급식 대시보드에 실을 해외 기후 뉴스를 한국어로 옮긴다. 읽는 사람은 고등학생이다.
+
+- 제목은 신문 헤드라인처럼 간결하게. 40자 이내.
+- 요약은 두 문장 이내, 90자 이내.
+- 원문에 없는 사실을 더하지 않는다. 모르는 것은 옮기지 않고 지운다.
+- 기관·지명·인명은 널리 쓰이는 한국어 표기를 쓰고, 없으면 원문 표기를 그대로 둔다.
+- 입력과 같은 순서·같은 개수의 JSON 배열만 출력한다. 설명도 코드펜스도 붙이지 않는다.
+  [{"i": 0, "title": "...", "summary": "..."}, ...]"""
+
+
+def translate(items):
+    """제목·요약에 한국어(title_ko·summary_ko)를 붙인다. 어디서 실패하든 원문은 그대로 남는다."""
+    if not items:
+        return False
+    if not (os.getenv("ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_AUTH_TOKEN")):
+        print("  번역 건너뜀: ANTHROPIC_API_KEY 없음 — 원문 영어로 싣는다")
+        return False
+    try:
+        import anthropic
+    except ImportError:
+        print("  번역 건너뜀: anthropic 미설치 (uv sync)")
+        return False
+    payload = [{"i": i, "title": x["title"], "summary": x["summary"]} for i, x in enumerate(items)]
+    try:
+        res = anthropic.Anthropic().messages.create(
+            model=MODEL,
+            max_tokens=16000,
+            output_config={"effort": "low"},          # 번역은 단순 작업 — 깊이보다 비용
+            system=TRANSLATE_SYSTEM,
+            messages=[{"role": "user", "content": json.dumps(payload, ensure_ascii=False)}],
+        )
+        raw = "".join(b.text for b in res.content if b.type == "text").strip()
+        raw = re.sub(r"^```(?:json)?|```$", "", raw, flags=re.M).strip()   # 코드펜스가 붙어 와도 견딘다
+        out = json.loads(raw)
+        by_i = {int(x["i"]): x for x in out}
+        if set(by_i) != set(range(len(items))):
+            raise ValueError(f"항목 수가 어긋남: {sorted(by_i)}")
+        for i, x in enumerate(items):
+            ko = by_i[i]
+            x["title_ko"] = clean(ko.get("title")) or x["title"]
+            x["summary_ko"] = clean(ko.get("summary")) or x["summary"]
+        return True
+    except Exception as e:                            # 번역이 실패해도 뉴스는 나가야 한다
+        print(f"  번역 실패({type(e).__name__}: {e}) — 원문 영어로 싣는다")
+        return False
 
 
 def fetch(url):
@@ -93,13 +145,15 @@ def main():
                 break
         if len(top) >= cfg.get("max_items", 3):
             break
+    translated = translate(top)
     OUT.write_text(json.dumps({"fetched_at": dt.datetime.now().isoformat(timespec="seconds"),
                                "state": "ok" if top else "no_data",
+                               "translated": translated,
                                "items": top}, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(f"저장 {OUT}  {len(top)}건")
+    print(f"저장 {OUT}  {len(top)}건  번역 {'O' if translated else 'X'}")
     for x in top:
-        print(f"  [{x['source']}] {x['title'][:60]}")
-        print(f"      {x['summary'][:80]}")
+        print(f"  [{x['source']}] {x.get('title_ko', x['title'])[:60]}")
+        print(f"      {x.get('summary_ko', x['summary'])[:80]}")
 
 
 if __name__ == "__main__":
