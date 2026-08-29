@@ -159,26 +159,28 @@
   .micro [data-band="short"] .v { background: #FFD3C9; color: #A83A28; box-shadow: inset 0 0 0 1.5px var(--melon); }
   .micro [data-band="short"] .n { color: var(--melon-ink); font-weight: 700; }
 
-  /* ② 이번 주 식단 — meal.json 의 week[] 를 그대로. 지난·오늘·예정을 명도로 가른다 */
-  .week { display: flex; flex-direction: column; gap: 2px; margin-top: 10px; }
-  .week > div { display: flex; align-items: center; gap: 12px; padding: 6px 8px; }
-  .week .day { width: 42px; height: 42px; border-radius: 14px; flex: none; display: flex; flex-direction: column;
-               align-items: center; justify-content: center; background: #F5F2E9; }
-  .week .day em { font-style: normal; font-size: 10px; font-weight: 700; color: var(--ink3); }
-  .week .day b { font-size: 15px; font-weight: 700; color: var(--ink2); line-height: 1.1; }
-  .week .t { min-width: 0; }
-  .week .t b { display: block; font-size: 14px; font-weight: 500; color: var(--ink); letter-spacing: -.01em;
-               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .week .t span { display: block; font-size: 11px; color: var(--ink3); margin-top: 2px; }
-  .week [data-when="past"] .day { background: var(--hair); }
-  .week [data-when="past"] .day em { color: #BDB6A6; }
-  .week [data-when="past"] .day b { color: #A9A296; }
-  .week [data-when="past"] .t b { color: #A9A296; }
-  .week [data-when="today"] { background: var(--teal-tint2); border-radius: var(--r-tile); }
-  .week [data-when="today"] .day { background: var(--ink); }
-  .week [data-when="today"] .day em { color: rgba(255,253,246,.6); }
-  .week [data-when="today"] .day b { color: var(--surface); }
-  .week [data-when="today"] .t b { font-weight: 700; }
+  /* ② 이번 주 식단 — 요일이 컬럼. 색은 무관한 5색이 아니라 월→금 단일 색상 램프다
+     (요일은 순서 있는 범주 · 명도 단조 감소 검증: L .962 → .794, 인접 ΔL ≥ .034) */
+  .week { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 10px;
+          align-items: stretch; }
+  .week > div { border-radius: 14px; padding: 10px 5px 11px; display: flex; flex-direction: column;
+                align-items: center; gap: 5px; text-align: center; min-width: 0; }
+  .week .d { font-size: 10px; font-weight: 700; color: var(--ink3); letter-spacing: .04em; }
+  .week .n { font-size: 15px; font-weight: 700; line-height: 1; color: var(--ink2); }
+  .week .m { font-size: 10.5px; font-weight: 500; color: var(--ink); line-height: 1.35; word-break: keep-all; }
+  .week .k { font-size: 9.5px; color: #2E5250; margin-top: auto; padding-top: 4px; line-height: 1.35; }
+  .week [data-wd="1"] { background: #EAF5F4; }   /* 월 — 램프의 가장 밝은 끝 */
+  .week [data-wd="2"] { background: #D7ECEB; }
+  .week [data-wd="3"] { background: #C2E2E0; }
+  .week [data-wd="4"] { background: #A9D6D4; }
+  .week [data-wd="5"] { background: #8CC9C6; }   /* 금 — 가장 어두운 끝. 여기서도 본문 대비 6.97:1 */
+  .week [data-when="past"] .n, .week [data-when="past"] .m { color: #6E7B79; }
+  .week [data-when="past"] .d, .week [data-when="past"] .k { color: #7C8886; }
+  .week [data-when="today"] { background: var(--ink); }
+  .week [data-when="today"] .d { color: rgba(255,253,246,.55); }
+  .week [data-when="today"] .n, .week [data-when="today"] .m { color: var(--surface); }
+  .week [data-when="today"] .m { font-weight: 700; }
+  .week [data-when="today"] .k { color: rgba(255,253,246,.55); }
 
   /* ⑧ 잔반 탄소 — 읽기 전용 정보 카드. 개인 기록·선택은 두지 않는다 */
   .carbon { background: var(--teal-tint2); box-shadow: 0 1px 2px rgba(51,49,45,.04), 0 10px 26px rgba(18,151,147,.09); }
@@ -204,8 +206,14 @@
 
   /* 데스크톱 — 왼쪽 히어로·추이·평면도 / 오른쪽 급식·주간·탄소·이슈 */
   @media (min-width: 900px) {
+    /* 두 패널의 아래 끝을 맞춘다 — 그리드는 stretch 로 두고, 짧은 쪽의 마지막 카드가 남는 높이를 흡수 */
     main { max-width: 1120px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px;
-           align-items: start; padding: 40px 16px 56px; }
+           align-items: stretch; padding: 40px 16px 56px; }
+    .col > .grow { flex: 1 1 auto; }
+    #newscard.grow { display: flex; flex-direction: column; }
+    #newscard.grow .news { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+    #plancard.grow { display: flex; flex-direction: column; }
+    #plancard.grow #plan { margin-top: auto; margin-bottom: auto; }
     .card { padding: 24px 26px; }
     .big b { font-size: 120px; } .big i { font-size: 28px; }
     #chart { height: 130px; }
@@ -466,9 +474,16 @@ function drawPlan(p) {
   g.textAlign = "end";    g.fillStyle = "#6E6A61"; g.fillText("퇴식구", X(300), Y(150));
   g.fillText("출구", X(300), Y(99));
   if (!ok) return;
-  p.points.forEach(({ x, y }) => {                                     // 익명 마커: 틸 원 + 흰 테두리
-    g.beginPath(); g.arc(X(8 + x * 302), Y(8 + y * 175), 5 * s, 0, Math.PI * 2);
-    g.fillStyle = "#129793"; g.fill(); g.lineWidth = 1.8 * s; g.strokeStyle = "#FFFCF6"; g.stroke();
+  // 익명 마커: 틸 원 + 흰 테두리 위에 눈 둘과 웃는 입. 얼굴을 얹어도 좌표 두 개일 뿐, 식별 정보는 없다
+  p.points.forEach(({ x, y }) => {
+    const cx = X(8 + x * 302), cy = Y(8 + y * 175), r = 7 * s;
+    g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2);
+    g.fillStyle = "#129793"; g.fill(); g.lineWidth = 1.6 * s; g.strokeStyle = "#FFFCF6"; g.stroke();
+    g.fillStyle = "#FFFCF6";
+    g.beginPath(); g.arc(cx - r * .33, cy - r * .22, r * .155, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.arc(cx + r * .33, cy - r * .22, r * .155, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.lineWidth = Math.max(1, r * .17); g.strokeStyle = "#FFFCF6"; g.lineCap = "round";
+    g.arc(cx, cy + r * .06, r * .44, .16 * Math.PI, .84 * Math.PI); g.stroke();
   });
 }
 
@@ -576,9 +591,11 @@ function renderWeek(m) {
     const dd = new Date(+d.date.slice(0, 4), +d.date.slice(4, 6) - 1, +d.date.slice(6, 8));
     const when = d.date === today ? "today" : d.date < today ? "past" : "future";
     const main = splitAllergy(d.menu[0]).name;
-    return `<div data-when="${when}"><div class="day"><em>${WD[dd.getDay()]}</em><b>${dd.getDate()}</b></div>`
-      + `<div class="t"><b>${esc(main)}</b><span>외 ${d.menu.length - 1}가지`
-      + (d.kcal ? ` · ${Math.round(d.kcal)} kcal` : "") + "</span></div></div>";
+    // 램프는 인덱스가 아니라 실제 요일에 건다 — 주가 화요일부터 시작해도 색이 밀리지 않게
+    return `<div data-wd="${dd.getDay()}" data-when="${when}">`
+      + `<span class="d">${WD[dd.getDay()]}</span><span class="n">${dd.getDate()}</span>`
+      + `<span class="m">${esc(main)}</span>`
+      + `<span class="k">외 ${d.menu.length - 1}가지` + (d.kcal ? `<br>${Math.round(d.kcal)} kcal` : "") + "</span></div>";
   }).join("");
   const w = m.week_avg || {};
   $("#weekavg").innerHTML = w.energy_pct == null ? ""
@@ -590,6 +607,7 @@ function renderWeek(m) {
 function renderCarbon(m) {
   const c = m.today && m.today.carbon, cs = m.carbon_std || {};
   $("#carboncard").hidden = !c;
+  setTimeout(balance, 0);
   if (!c) return;
   $("#co2").textContent = c.kgco2e.toFixed(1);
   $("#co2unit").textContent = `kg CO₂e · 1인분 약 ${c.portion_g} g 기준`;
@@ -605,6 +623,7 @@ async function loadNews() {
   try { n = await j("/api/news"); } catch { n = { state: "no_data", items: [] }; }
   const card = $("#newscard");
   card.hidden = n.state !== "ok" || !(n.items && n.items.length);
+  balance();
   if (card.hidden) return;
   $("#news").innerHTML = n.items.map(x => {
     const t = x.title.length > 40 ? x.title.slice(0, 40) + "…" : x.title;
@@ -613,12 +632,27 @@ async function loadNews() {
   }).join("");
 }
 
+/* 데스크톱에서 두 패널의 아래 끝을 맞춘다. 어느 쪽이 긴지는 그날 데이터에 달렸으므로
+   양쪽 모두 마지막으로 '보이는' 카드에 .grow 를 걸어 둔다 — 긴 쪽은 흡수할 여백이 없어 그대로다 */
+function balance() {
+  document.querySelectorAll("main > .col").forEach(col => {
+    const kids = [...col.children];
+    kids.forEach(el => el.classList.remove("grow"));
+    const vis = kids.filter(el => !el.hidden && el.classList.contains("card"));
+    if (vis.length) vis[vis.length - 1].classList.add("grow");
+  });
+}
+
 refresh(); loadMeal(); loadNews();
 setInterval(refresh, 30000);
 let rt;                                              // 캔버스는 폭이 바뀌면 다시 그려야 한다 — 다시 받지는 않는다
 addEventListener("resize", () => {
   clearTimeout(rt);
-  rt = setTimeout(() => { if (LAST) drawChart(LAST.rows, LAST.typ, LAST.st); if (LASTPOS) drawPlan(LASTPOS); }, 150);
+  rt = setTimeout(() => {
+    balance();
+    if (LAST) drawChart(LAST.rows, LAST.typ, LAST.st);
+    if (LASTPOS) drawPlan(LASTPOS);
+  }, 150);
 });
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
 </script>
