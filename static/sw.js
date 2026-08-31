@@ -3,7 +3,7 @@
 // 화면(HTML)은 반드시 네트워크 우선. 캐시 우선으로 두면 배포를 해도 예전 화면이 계속 뜬다 —
 // v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = "mealboard-v5";
+const CACHE = "mealboard-v6";
 const SHELL = ["/", "/index.html", "/manifest.json"];
 
 self.addEventListener("install", e =>
@@ -22,7 +22,9 @@ self.addEventListener("fetch", e => {
   if (url.pathname.startsWith("/api/")) return;           // 네트워크로 그냥 통과
 
   if (isPage(e.request, url)) {                           // 화면: 네트워크 우선, 실패하면 캐시(오프라인)
-    e.respondWith(fetch(e.request)
+    // cache:"no-cache" 는 브라우저 HTTP 캐시를 건너뛰지 않고 '반드시 검사'하게 한다.
+    // 이게 없으면 네트워크 우선이어도 그 fetch 가 디스크 캐시의 옛 HTML 로 조용히 채워진다
+    e.respondWith(fetch(e.request, { cache: "no-cache" })
       .then(res => {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, copy));

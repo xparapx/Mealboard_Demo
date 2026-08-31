@@ -667,7 +667,7 @@ def meal():
 </figure>
 <figure class="code">
 <figcaption><span class="path">app/main.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
-<pre><code class="lang-python">from fastapi import FastAPI
+<pre><code class="lang-python">from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from .config import BASE
 from .routers import status, history, meal, positions, news, typical
@@ -679,6 +679,22 @@ app.include_router(meal.router)
 app.include_router(positions.router)
 app.include_router(news.router)
 app.include_router(typical.router)
+# 화면과 서비스워커는 캐시하더라도 쓰기 전에 반드시 서버에 물어보게 한다.
+# StaticFiles 는 Cache-Control 을 붙이지 않는데, 그러면 브라우저가 Last-Modified 로 신선도를 '추측'한다
+# (경험칙: 파일이 묵은 기간의 10%). 이틀 된 index.html 은 약 5시간 동안 새로 받지 않으므로
+# 배포가 브라우저에 도달하지 못한다 — v5 에서 서비스워커를 고치고도 같은 증상이 남았던 이유.
+# no-cache 는 '캐시 금지'가 아니라 '쓰기 전 검사'다. ETag 가 같으면 304 라 비용은 거의 없다.
+REVALIDATE = (&quot;/&quot;, &quot;/index.html&quot;, &quot;/sw.js&quot;, &quot;/manifest.json&quot;)
+
+
+@app.middleware(&quot;http&quot;)
+async def revalidate_shell(request: Request, call_next):
+    res = await call_next(request)
+    if request.url.path in REVALIDATE:
+        res.headers[&quot;Cache-Control&quot;] = &quot;no-cache&quot;
+    return res
+
+
 # 정적 파일은 마지막에 mount — /api/* 가 먼저 잡히도록
 app.mount(&quot;/&quot;, StaticFiles(directory=BASE / &quot;static&quot;, html=True), name=&quot;static&quot;)</code></pre>
 </figure>
@@ -1617,7 +1633,7 @@ if (&quot;serviceWorker&quot; in navigator) navigator.serviceWorker.register(&qu
 // 화면(HTML)은 반드시 네트워크 우선. 캐시 우선으로 두면 배포를 해도 예전 화면이 계속 뜬다 —
 // v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v5&quot;;
+const CACHE = &quot;mealboard-v6&quot;;
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;];
 
 self.addEventListener(&quot;install&quot;, e =&gt;
@@ -1636,7 +1652,9 @@ self.addEventListener(&quot;fetch&quot;, e =&gt; {
   if (url.pathname.startsWith(&quot;/api/&quot;)) return;           // 네트워크로 그냥 통과
 
   if (isPage(e.request, url)) {                           // 화면: 네트워크 우선, 실패하면 캐시(오프라인)
-    e.respondWith(fetch(e.request)
+    // cache:&quot;no-cache&quot; 는 브라우저 HTTP 캐시를 건너뛰지 않고 '반드시 검사'하게 한다.
+    // 이게 없으면 네트워크 우선이어도 그 fetch 가 디스크 캐시의 옛 HTML 로 조용히 채워진다
+    e.respondWith(fetch(e.request, { cache: &quot;no-cache&quot; })
       .then(res =&gt; {
         const copy = res.clone();
         caches.open(CACHE).then(c =&gt; c.put(e.request, copy));
@@ -2473,7 +2491,7 @@ def positions():
 
 <figure class="code">
 <figcaption><span class="path">app/main.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
-<pre><code class="lang-python">from fastapi import FastAPI
+<pre><code class="lang-python">from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from .config import BASE
 from .routers import status, history, meal, positions, news, typical
@@ -2485,6 +2503,22 @@ app.include_router(meal.router)
 app.include_router(positions.router)
 app.include_router(news.router)
 app.include_router(typical.router)
+# 화면과 서비스워커는 캐시하더라도 쓰기 전에 반드시 서버에 물어보게 한다.
+# StaticFiles 는 Cache-Control 을 붙이지 않는데, 그러면 브라우저가 Last-Modified 로 신선도를 '추측'한다
+# (경험칙: 파일이 묵은 기간의 10%). 이틀 된 index.html 은 약 5시간 동안 새로 받지 않으므로
+# 배포가 브라우저에 도달하지 못한다 — v5 에서 서비스워커를 고치고도 같은 증상이 남았던 이유.
+# no-cache 는 '캐시 금지'가 아니라 '쓰기 전 검사'다. ETag 가 같으면 304 라 비용은 거의 없다.
+REVALIDATE = (&quot;/&quot;, &quot;/index.html&quot;, &quot;/sw.js&quot;, &quot;/manifest.json&quot;)
+
+
+@app.middleware(&quot;http&quot;)
+async def revalidate_shell(request: Request, call_next):
+    res = await call_next(request)
+    if request.url.path in REVALIDATE:
+        res.headers[&quot;Cache-Control&quot;] = &quot;no-cache&quot;
+    return res
+
+
 # 정적 파일은 마지막에 mount — /api/* 가 먼저 잡히도록
 app.mount(&quot;/&quot;, StaticFiles(directory=BASE / &quot;static&quot;, html=True), name=&quot;static&quot;)</code></pre>
 </figure>
