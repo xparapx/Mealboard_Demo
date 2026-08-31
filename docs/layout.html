@@ -138,10 +138,10 @@ code{font-family:"D2Coding","Cascadia Code",ui-monospace,monospace;background:va
 .micro .v{height:46px;border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;font-size:12.5px;font-weight:800;letter-spacing:-.02em}
 .micro .v em{font-style:normal;font-size:8.5px;font-weight:800}
 .micro .n{font-size:8.5px;color:var(--i3);text-align:center;letter-spacing:-.03em}
-.micro [data-b="hi"] .v{background:#BFE0DE;color:#0A5F5C}
-.micro [data-b="mid"] .v{background:var(--tlt);color:var(--tli)}
-.micro [data-b="lo"] .v{background:var(--tlt2);color:#3D8583}
-.micro [data-b="short"] .v{background:#FFD3C9;color:#A83A28;box-shadow:inset 0 0 0 1.5px var(--ml)}
+.micro [data-b="hi"] .v{background:linear-gradient(180deg,#CDE9E7,#B5DAD8);color:#0A5F5C}
+.micro [data-b="mid"] .v{background:linear-gradient(180deg,var(--tlt2),var(--tlt));color:var(--tli)}
+.micro [data-b="lo"] .v{background:linear-gradient(180deg,#FFF1EC,#FFDCD3);color:#C9452F}
+.micro [data-b="short"] .v{background:linear-gradient(180deg,#FFD9CF,#FFB2A1);color:#8E2E1E;box-shadow:inset 0 0 0 1.5px var(--ml)}
 .micro [data-b="short"] .n{color:var(--mli);font-weight:800}
 
 /* ② 이번 주 식단 — 요일이 컬럼. 색은 요일마다 다르고, 오늘만 램프 밖으로 빠져 차콜 */
@@ -372,7 +372,7 @@ tr:last-child td{border-bottom:0}
     <div class="note"><b>5</b><strong>급식실 현황.</strong> 빈 평면도(벡터) 위에 익명 위치 마커만 — 영상·실사·이력이 전혀 없습니다(CLAUDE.md §2). 배치는 <em>실제 카메라 시점</em> 기준: 입구 = 좌측 상단(외곽선 틈 + 라벨), 통로 = 좌측변 옅은 띠, 배식대 = 하단변 좌측 끝~중앙(멜론 점선), 퇴식구 = 우측 하단, 출구 = 우측 중앙. v5 에서 외곽선을 #D5CDBA 로 낮추고 마커 테두리를 차콜에서 흰색으로 바꿔, 점이 바닥에서 떠 보이게 했습니다. 마커는 <strong>스마일</strong>입니다 — 틸 원(r 7) 위에 눈 둘과 웃는 입을 흰색으로 얹습니다. 얼굴을 그려도 저장되는 것은 여전히 0~1 좌표 두 개뿐이라 익명성은 그대로입니다.<span class="api">/api/positions state · n · points[{x,y} 0~1] — 파일 하나를 덮어쓸 뿐 이력 없음</span></div>
     <div class="note"><b>6</b><strong>메뉴 + 알레르기.</strong> 2열 격자를 한 줄 리스트로 바꿨습니다 — 번호가 붙으면 2열은 좁습니다. 이름은 왼쪽, 번호는 오른쪽 끝 정렬이라 번호만 세로로 훑을 수 있습니다. NEIS 의 <code>DDISH_NM</code> 은 <code>돼지고기김치찜 (5.6.10.13)</code> 형태로 번호를 붙여 보내므로 <strong>이 값은 이미 meal.json 안에 있었고 화면에서 버려지고 있었습니다</strong>. 내 항목과 겹치는 메뉴는 행 전체를 옅은 멜론으로 덮고 해당 번호만 굵은 멜론 — 테두리 대신 면으로 처리해 카드 안에 선이 늘지 않습니다. 선택은 브라우저에만 저장합니다.<span class="api">today.menu[] 의 꼬리 숫자 · localStorage mb_allergy</span></div>
     <div class="note"><b>7</b><strong>영양 요약 3칸.</strong> 법정 기준의 구조(양·비율·충족)를 그대로 3칸으로. 색은 칸의 정체성(01 틸 · 02 아쿠아 · 03 멜론 틴트), 상태는 우상단 플래그 — 둘을 섞지 않습니다.<span class="api">energy_pct · macro_ratio_ok · mar</span></div>
-    <div class="note"><b>8</b><strong>영양소 칩.</strong> v4 의 접힌 막대 6개를 <em>항상 펼친</em> 칩 한 행으로 바꿨습니다. 칩은 권장섭취량(RNI) 대비 과부족만 말합니다. 푸른 계열 = 충족(평균필요량 이상), 붉은 계열 = 부족. 판정 경계는 화면이 아니라 <code>fetch_neis.py</code> 의 <code>band</code> 를 따르므로, 100% 아래여도 EAR 위면 푸른 계열입니다 — 그래야 3칸의 "부족 N" 플래그와 어긋나지 않습니다. 색만으로 판정하지 않도록 ±% 와 "부족" 글자를 함께 둡니다.<span class="api">micro[].pct · band (부족 = EAR 미만)</span></div>
+    <div class="note"><b>8</b><strong>영양소 칩.</strong> v4 의 접힌 막대 6개를 <em>항상 펼친</em> 칩 한 행으로 바꿨습니다. 칩은 권장섭취량(RNI) 대비 과부족만 말합니다. <strong>±% 의 부호가 곧 색</strong>입니다 — 0 이상은 푸른 계열, 음수는 붉은 계열 그라데이션. 그중 평균필요량(EAR)에도 못 미치는 칸(<code>fetch_neis.py</code> 의 <code>band</code>)만 멜론 외곽선과 "부족" 글자를 더해, 3칸의 "부족 N" 플래그가 가리키는 대상을 분명히 합니다. 색만으로 판정하지 않도록 ±% 와 글자를 함께 둡니다.<span class="api">micro[].pct · band (부족 = EAR 미만)</span></div>
     <div class="note"><b>9</b><strong>이번 주 식단.</strong> <code>fetch_neis.py</code> 는 처음부터 월~금 5일치를 <code>week[]</code> 로 저장해 왔는데 화면은 <code>today</code> 만 썼습니다. 서버 변경 없이 카드 하나로 답이 됩니다. <strong>요일이 컬럼</strong>이고 요일마다 색이 다릅니다 — 월 아쿠아 · 화 에그셸 · 수 멜론 · 목 페리윙클 · 금 세이지. 앞의 둘은 브랜드 색을 그대로 쓰고 나머지 셋을 최대한 벌렸습니다(전체쌍 정상시야 최악 ΔE 10.7, 본문 대비 7.2:1 이상). <em>색맹에서는 갈리지 않는 쌍이 남습니다</em> — 다섯 색을 같은 명도대에 놓으면 원리상 그렇습니다. 그래서 칩마다 요일 글자와 날짜를 찍어 색이 유일한 단서가 되지 않게 합니다. 오늘만 램프 밖으로 빠져 차콜입니다. 메뉴 이름은 <code>overflow-wrap:anywhere</code> 로 띄어쓰기 없는 긴 이름(친환경토마코펜라이스)이 칩 밖으로 나가지 않게 하고 세 줄에서 말줄임합니다.<span class="api">week[] · week_avg</span></div>
     <div class="note"><b>10</b><strong>탄소 카드.</strong> 오늘 1인분을 전부 버렸을 때의 배출량. 1인분 무게는 NEIS 에 없어 kcal ÷ 1.8 kcal/g 로 추정하고, 계수는 <code>data/carbon_std.json</code> 한 파일에 출처와 함께 둡니다. v5 에서 잔반 4버튼과 "이번 달 내가 남긴 급식"을 <strong>지웠습니다</strong> — 자기 신고 값은 정확할 수 없고, 정확하지 않은 수를 개인별로 누적해 보여 주면 측정한 것처럼 읽힙니다. 남은 것은 읽기 전용 사실뿐입니다.<span class="api">/api/meal today.carbon · carbon_std</span></div>
     <div class="note"><b>11</b><strong>이슈 링크.</strong> 제목·요약·출처·날짜. 요약은 우리가 본문을 읽어 만든 것이 아니라 피드가 스스로 실어 보내는 <code>&lt;description&gt;</code> 이고, 저장 직전에 DeepL 로 한국어로 옮깁니다(실패하면 원문 영어). 기계 번역임을 출처 옆 "번역" 칩으로 밝힙니다. v5 에서 항목 테두리를 없애고 헤어라인 구분선으로 바꿨습니다 — 좌측 컬러 바는 흔한 상투구라 함께 뺐습니다.<span class="api">/api/news items[]</span></div>

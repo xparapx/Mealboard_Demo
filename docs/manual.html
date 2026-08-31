@@ -1043,17 +1043,18 @@ systemctl status mealboard-api --no-pager</code></pre>
   .kpi .flag:empty { display: none; }
 
   /* ⑥ 영양소 칩 — 토글 없이 항상 펼침. 권장섭취량(RNI) 대비 과부족만 말한다.
-     푸른 계열 = 충족(평균필요량 이상), 붉은 계열 = 부족. 색만으로 판정하지 않도록 ±% 와 글자를 함께 둔다 */
+     ±% 의 부호가 곧 색이다 — 0 이상은 푸른 계열, 음수(권장섭취량 미달)는 붉은 계열 그라데이션.
+     그중 평균필요량(EAR)에도 못 미치는 칸만 멜론 외곽선 + &quot;부족&quot; 글자를 더해 3칸의 &quot;부족 N&quot; 과 맞춘다 */
   .micro { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
   .micro &gt; div { display: flex; flex-direction: column; gap: 5px; }
   .micro .v { height: 52px; border-radius: 14px; display: flex; flex-direction: column; align-items: center;
               justify-content: center; gap: 1px; font-size: 14px; font-weight: 700; letter-spacing: -.02em; }
   .micro .v em { font-style: normal; font-size: 9px; font-weight: 700; }
   .micro .n { font-size: 9.5px; color: var(--ink3); text-align: center; letter-spacing: -.03em; }
-  .micro [data-band=&quot;hi&quot;]   .v { background: #BFE0DE; color: #0A5F5C; }
-  .micro [data-band=&quot;mid&quot;]  .v { background: var(--teal-tint); color: var(--teal-ink); }
-  .micro [data-band=&quot;lo&quot;]   .v { background: var(--teal-tint2); color: #3D8583; }
-  .micro [data-band=&quot;short&quot;] .v { background: #FFD3C9; color: #A83A28; box-shadow: inset 0 0 0 1.5px var(--melon); }
+  .micro [data-band=&quot;hi&quot;]   .v { background: linear-gradient(180deg, #CDE9E7, #B5DAD8); color: #0A5F5C; }
+  .micro [data-band=&quot;mid&quot;]  .v { background: linear-gradient(180deg, var(--teal-tint2), var(--teal-tint)); color: var(--teal-ink); }
+  .micro [data-band=&quot;lo&quot;]   .v { background: linear-gradient(180deg, #FFF1EC, #FFDCD3); color: #C9452F; }
+  .micro [data-band=&quot;short&quot;] .v { background: linear-gradient(180deg, #FFD9CF, #FFB2A1); color: #8E2E1E; box-shadow: inset 0 0 0 1.5px var(--melon); }
   .micro [data-band=&quot;short&quot;] .n { color: var(--melon-ink); font-weight: 700; }
 
   /* ② 이번 주 식단 — 요일이 컬럼. 색은 무관한 5색이 아니라 월→금 단일 색상 램프다
