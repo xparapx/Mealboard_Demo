@@ -30,7 +30,12 @@
 - **QR·PWA 아이콘은 할 일이 아니다(09-03 확인)**: Pi 의 `qr.png`·`static/icons/qr.png` 는 매뉴얼 STEP 9 의 `qrencode` 로
   만든 접속용 QR(내용 = Funnel 주소)이며 git 미추적이 맞다 — 한 줄로 재생성 가능. `static/icons/icon-192.png` 는 Pi 에도
   원래 없고(404) 매뉴얼대로 없어도 동작한다. 재설치 시 "깨지는" 것은 없다.
-- **다음 할 일**: ① 평소 곡선(`/api/typical`)은 mock 이 170분 사이클을 반복해 써서 스테이징에서는 값이 바닥이다. 실측 이후 확인.
+- **확장 계획서 `docs/PLAN-2026-09.md`(09-03 승인)가 다음 작업의 단일 출처.** 단계: 0 규칙 개정 → 1 집계 DB·`/api/insight/*` →
+  2 프론트 5화면(모바일 하단 dock `#wait #room #week #today #news`, 데스크톱 보드+좌측 레일, 인사이트 카드는 주제별 화면 아래) →
+  3 tailnet 전용 관리 앱(8101, Serve 8443, 허용목록) → 4 로컬 LLM(Hailo GenAI) 리포트·기사 본문 요약 → 5 문서. 단계마다 사용자 확인.
+  파일당 쓰기 주체 하나(§2 DB 행), 개별 좌표·프레임 저장 금지는 그대로다.
+- **다음 할 일**: PLAN §6 순서대로 — 지금은 **Phase 1a**(config·lunch·zones·zone_samples). 아래 ①~④ 는 그 안에 흡수된다.
+  ① 평소 곡선(`/api/typical`)은 mock 이 170분 사이클을 반복해 써서 스테이징에서는 값이 바닥이다. 실측 이후 확인.
   ② Inside Climate News 는 미국 지역 전력·정치 보도가 많아 "세계적 기후 이슈"와 결이 다른 기사가 섞인다 —
   며칠 지켜본 뒤 교체 여부 판단(후보: UNEP · Climate Home News). ③ 급식 있는 평일에 데스크톱 2컬럼 높이 맞춤 실물 확인.
   ④ 로드맵 ④ vision 프로토타입.
@@ -45,19 +50,20 @@ NEIS 급식 API의 메뉴·영양 정보와 함께 웹 대시보드(PWA)로 제�
 | 항목 | 결정 | 근거 |
 |---|---|---|
 | 실행 위치 | 전부 Pi (셀프 호스팅, 모델 B) | 카메라가 Pi에 물리적으로 있음. Netlify 등 호스팅으로 대체 불가(서버가 Pi 안) |
-| DB | SQLite (WAL 모드) | 단일 기기. **쓰기 주체는 vision(또는 mock) 하나**, app은 SELECT만 |
+| DB | SQLite (WAL 모드), **파일당 쓰기 주체 하나** | `queue.db`=vision(또는 mock) · `insights.db`=`jobs/rollup.py` · `reports.db`=`jobs/report.py` · `admin.db`·`data/zones.json`=관리 앱. **공개 app 은 SELECT 만** |
 | 백엔드 | FastAPI 단일 Python 스택 | vision 프로세스와 언어 통일. **Pi에 Node.js 설치 금지** |
-| API 포트 | **8100** (.env `API_PORT`), 127.0.0.1 바인딩 | 8000은 Plant `setup_camera.py`가 사용. 외부 노출은 Funnel/cloudflared 가 8100 만 내보낸다 |
+| API 포트 | **8100** (.env `API_PORT`), 127.0.0.1 바인딩. 관리 앱 **8101**(`ADMIN_PORT`), vision 디버그 MJPEG **8102**(`DEBUG_PORT`), 메타데이터 소켓 `/run/mealboard/meta.sock` — 전부 127.0.0.1 | 8000·8501·1883 은 Plant. **Funnel(공개)은 8100 만**, 관리 앱은 `tailscale serve --https=8443`(tailnet 전용)으로만 내보낸다. `serve reset`·`funnel reset` 금지(Funnel 443 까지 지워진다) |
 | 프론트 | static/ 정적 파일 + fetch 폴링(30초) | React 필요 시 개발 PC에서 빌드한 dist만 복사 |
 | 외부 노출 | 스테이징·시범 운영: **Tailscale Funnel**(고정 주소, 443 아웃바운드). 정식 배포: Cloudflare Tunnel + 유료 도메인 | 학교망 인바운드 차단 대응. 포트포워딩 금지. 둘 다 Pi 가 밖으로 연결을 여는 방식. 팀 SSH 는 tailnet 내부(Funnel 은 공개, 용도 구분) |
 | 대기시간 | Little's law: W = L / λ | L=ROI 점유 인원, λ=배식대 가상선 통과율(5분 이동평균). **ROI 출구변 = λ 측정선**(같은 경계). λ < 0.5명/분이면 `insufficient_rate`로 산출 불가 처리 |
 | 카운팅 | YOLOv8n/11n + ByteTrack, 기준점은 bbox 바닥 중앙 | 라인크로싱은 부호 변화 + ±20px 완충띠. `imgsz`·프레임 스킵은 설정으로 뺀다(Pi 5 CPU 수 fps) |
-| 영상 취급 | **프레임 저장·전송 절대 금지. 숫자만 DB에** | 개인정보 원칙. 학교 협의의 전제 조건 |
-| 디버그 뷰 | 카운트 프로세스 내장, 127.0.0.1 전용 MJPEG, 터치파일(/tmp/debug_on)로 on/off | 관리자만 SSH 터널로 열람. 켜짐 이력을 DB에 기록 |
-| 히트맵 | 공개 화면은 빈 평면도 위 히트맵·익명 위치 마커(순간 상태만, 개별 위치 이력 저장 없음). 실사+마커는 디버그 뷰 전용. **공간 인사이트는 집계 숫자만**(구역별 점유율·통로 점유 등, 09-03 승인) — 개별 좌표·궤적은 어떤 형태로도 저장하지 않는다 | 마커는 `data/positions.json` 한 파일을 덮어쓰기만 하며 `/api/positions` 가 120초 stale 규칙으로 내준다. 집계는 `jobs/rollup.py` 가 `data/insights.db` 에 쓴다(예정) |
+| 영상 취급 | **프레임 저장·전송 절대 금지. 숫자만 DB에** | 개인정보 원칙. 학교 협의의 전제 조건. 유일한 예외 = 승인된 디버그 경로(09-03): 관리 앱이 tailnet 안에서만 중계하는 MJPEG(뷰어 1명, ≤10분, 감사 기록, 디스크 접촉 없음) |
+| 디버그 뷰 | 카운트 프로세스 내장, 127.0.0.1 전용 MJPEG, 터치파일(/tmp/debug_on)로 on/off(관리 앱이 켜고 끈다, ≤10분 자동 off, vision 도 mtime 10분 초과면 스스로 끈다. 두 유닛 모두 `PrivateTmp` 금지) | 관리자만 **SSH 터널 또는 tailnet 전용 관리 앱**(Serve 8443 + `ADMIN_USERS` 허용목록)으로 열람. 켜짐 이력(누가·언제·얼마나)은 `data/admin.db` |
+| 히트맵 | 공개 화면은 빈 평면도 위 히트맵·익명 위치 마커(순간 상태만, 개별 위치 이력 저장 없음). 실사+마커는 디버그 뷰 전용. **공간 인사이트는 집계 숫자만**(구역별 점유율·통로 점유 등, 09-03 승인) — 개별 좌표·궤적은 어떤 형태로도 저장하지 않는다 | 마커는 `data/positions.json` 한 파일을 덮어쓰기만 하며 `/api/positions` 가 120초 stale 규칙으로 내준다. 집계는 `jobs/rollup.py` 가 `data/insights.db` 에 쓴다(구역 인원수는 vision/mock 이 `queue.db.zone_samples` 에 숫자만 기록). 관리 앱의 **메타데이터 스트림**(bbox·트랙 ID·바닥 좌표)은 인증된 관리자가 구독 중일 때만 실시간 중계 — 저장·버퍼 없음, 구독 이력은 admin.db |
 | NEIS | `jobs/fetch_neis.py`가 하루 1회(systemd timer 05:40) `data/meal.json` 캐시 → 프론트는 `/api/meal`만 | 키 노출·호출 제한 방지. **프론트에서 NEIS 직접 호출 금지**. 주말·방학의 INFO-200은 오류가 아닌 `no_meal` |
 | 영양 지표 | **에너지 충족률 · 에너지 적정비율(탄55~65/단7~20/지15~30%) · MAR** 세 가지. 코사인 유사도 사용 안 함 | 코사인은 단위 큰 성분(kcal·칼슘·비타민A)이 지배하고 크기 불변. 기준은 `data/nutrition_std.json`(학교별 1행), 영양소별 판정은 EAR~RNI 범위 |
-| 해석 AI | 기본은 숫자→텍스트 LLM(이벤트 트리거). VLM은 예외 경로 | 카운팅 트랙과 SQLite로 완전 분리 |
+| 해석 AI | 기본은 숫자→텍스트 LLM. **1순위 로컬 LLM(Hailo-10H GenAI, `jobs/llm.py`)**, 실패·미설치 시 규칙 템플릿. VLM은 예외 경로(디버그·calibrate 보조) | 카운팅 트랙과 SQLite로 완전 분리. 입력은 숫자·정제된 메뉴명·(기사 요약에 한해) 본문뿐 — 프레임·좌표는 절대 넣지 않는다. 출력은 스키마 검증(숫자 부분집합 규칙) 후에만 저장. **점심시간 밖에서만 실행**(HAT·CPU 경합 회피) |
+| 뉴스 | `jobs/fetch_news.py` 가 하루 1회(06:10) 본문을 확보(RSS 전문 → Guardian API → HTML 단락 → 피드 요약)해 **로컬 LLM 한국어 요약(`digest`)** 을 만들고, 실패 시 DeepL 도입부 번역, 그마저 실패면 원문 영어 | 본문은 메모리에서만 쓰고 저장하지 않는다. 화면에는 짧은 자체 요약 + 출처 링크만(저작권). 헤드라인 번역기는 `TRANSLATOR`(deepl · local · none, 기본 deepl) |
 
 ## 3. 저장소 구조 (선행 레포 계승)
 
@@ -73,12 +79,12 @@ Mealboard_Demo/
 ├── README.md                     # 개요·구조·셋업·작업 로그 (선행 레포 형식)
 ├── setup_pi.sh                   # Pi 최초 설치 + 유닛 갱신 (멱등)
 ├── docs/                         # GitHub Pages (index.html + manual.html)
-├── app/                          # FastAPI: main.py, config.py, db.py, routers/{status,history,meal,positions,heatmap}.py
+├── app/                          # FastAPI: main.py, config.py, db.py, lunch.py, insight_calc.py, insights_db.py, routers/{status,history,meal,positions,news,typical,insight}.py, admin/(관리 앱, 별도 프로세스)
 ├── vision/                       # counter.py(진입점), source.py(webcam|file|picamera), zones.py, waittime.py, heatmap.py, debug_stream.py, calibrate.py
-├── jobs/                         # fetch_neis.py, mock_feed.py
-├── static/                       # index.html, css/, js/, manifest.json, sw.js, icons/
-├── data/                         # queue.db, meal.json, heatmap.png, zones.json (git 제외 / plan_bg.png·nutrition_std.json만 포함)
-├── deploy/                       # mealboard-{api,mock,vision,neis}.service, mealboard-neis.timer, cloudflared-config.yml(견본)
+├── jobs/                         # fetch_neis.py, fetch_news.py, mock_feed.py, rollup.py(→insights.db), report.py(→reports.db), llm.py, translators.py, newsbody.py
+├── static/                       # index.html(셸), css/{base,screens,insight}.css, js/{core,floor,wait,room,week,today,news}.js, manifest.json, sw.js
+├── data/                         # queue.db, insights.db, reports.db, admin.db, meal.json, news.json, positions.json (git 제외) / 포함: plan_bg.png, nutrition_std.json, carbon_std.json, news_feeds.json, zones.json
+├── deploy/                       # mealboard-{api,mock,vision,admin,neis,news,rollup,report}.service, *.timer, sudoers-mealboard, cloudflared-config.yml(견본)
 ├── tests/                        # test_waittime.py 등 순수 로직 테스트
 ├── .env.example                  # 키 이름만 (실제 .env는 git 제외)
 ├── .gitignore                    # data/*(예외 2개), .env, .venv/, __pycache__/, *.db*
@@ -87,7 +93,7 @@ Mealboard_Demo/
 
 **파일 명명 규칙 (Plant 레포 계승)** — 접두어가 실행 주체를 뜻한다:
 - `run_*` = systemd가 자동 실행 / `setup_*`, `calibrate_*` = 사람이 최초 1회 / `check_*` = 검증 도구 / 무접두어 = 라이브러리
-- 설정의 단일 출처는 파일 하나(`data/zones.json`, `data/nutrition_std.json`, `.env`) — **스크립트에 좌표·키·기준치 하드코딩 금지**
+- 설정의 단일 출처는 파일 하나(`data/zones.json`(git 추적, 관리 앱만 쓴다), `data/nutrition_std.json`, `.env`) — **스크립트에 좌표·키·기준치 하드코딩 금지**
 
 ## 4. 개발 환경 규칙
 
@@ -115,12 +121,13 @@ Mealboard_Demo/
 - `mealboard-vision` 재시작: 점심 운영 시간(11:30~14:00)에는 카운팅 공백이 생긴다 — 시간을 확인하고 물을 것
 - 카메라는 **배타적 자원**: calibrate.py·디버그 도구를 띄우려면 vision 서비스를 먼저 내려야 한다 (Plant 프로젝트 실증)
 - systemd 유닛 수정, cloudflared 설정 변경, apt 설치, 타임존 변경(Plant 타이머 시각에 영향)
+- sudoers 드롭인(`/etc/sudoers.d/mealboard`) 설치·변경, `tailscale serve` 설정 변경. **`tailscale serve reset`·`funnel reset` 은 절대 실행하지 않는다**(공개 Funnel 443 까지 함께 지워진다)
 
 **금지 (사용자 명시 지시 없이는 절대 불가)**
 - `/opt/mealboard` 안에서 파일 직접 편집 — 코드는 PC에서 커밋해 pull한다
 - `data/` 내 파일 삭제·초기화, DB의 DELETE/DROP/UPDATE — 정리 도구를 만들 때는 반드시 ①빈 조건이면 실행 거부 ②실행 전 `queue.db.bak-<시각>` 자동 백업 ③되돌리는 명령 출력, 세 겹을 갖출 것 (Plant 프로젝트에서 `--fix`로 220행을 잃은 사고의 재발 방지 규칙)
 - `~/plant/` 및 Plant 유닛(planthub·plantdash·plantsnap) 접근·수정
-- 프레임 이미지를 디스크에 저장하거나 외부로 전송하는 코드 작성 — 어떤 디버깅 목적이라도 사용자 승인 필요
+- 프레임 이미지를 디스크에 저장하거나 외부로 전송하는 코드 작성 — 어떤 디버깅 목적이라도 사용자 승인 필요(승인된 예외는 §2 영상 취급·디버그 뷰 행뿐)
 - `rm -rf`, 전원 관련(`shutdown`, `reboot`) — reboot는 확인 후에만
 - .env, 인증키, 터널 자격증명(`~/.cloudflared/*.json`, `/etc/cloudflared/config.yml`)을 로그·커밋·채팅에 노출
 
@@ -133,7 +140,7 @@ Mealboard_Demo/
 - 원격: `github.com/xparapx/Mealboard_Demo` (main 단일 브랜치, 선행 레포와 동일). GitHub 조작은 `gh` CLI(설치·로그인은 사용자가)
 - 커밋 단위: 기능 하나 = 커밋 하나. 메시지는 한국어 명령형 요약 한 줄 + 필요 시 본문
   (예: `vision: 라인크로싱 완충띠 ±20px 추가`)
-- **커밋 전 확인**: `git status`에 data/(예외 2개 제외)·.env가 없을 것 (있다면 .gitignore부터 수정)
+- **커밋 전 확인**: `git status`에 data/(.gitignore 예외 5개 제외)·.env가 없을 것 (있다면 .gitignore부터 수정)
 - 코드와 매뉴얼 동기화: `<pre>` 수록 코드를 바꾼 커밋은 docs/manual.html도 같은 커밋에서 갱신,
   `check_manual.py`류 대조 도구가 생기면 커밋 전 실행
 - push는 매 작업 세션 종료 시. 사용자가 요청하면 중간에도. Pi는 자동으로 pull하지 않는다 — 배포는 사람(또는 `/deploy`)이 명시적으로
@@ -160,5 +167,6 @@ Mealboard_Demo/
 ⑤ Pi 이전: uv 셋업(§4 순서 엄수) → systemd → 외부 공개(Tailscale Funnel) **[홈 Pi에서 완료]** → calibrate → 실측 **[학교 Pi]**
 ⑥ PWA + QR (공개 주소는 ⑤의 Funnel. 정식 배포 시 Cloudflare Tunnel + 유료 도메인으로 전환)
 ⑦ (선택) 해석 LLM, 히트맵 고도화, AI HAT 도입
+⑧ **확장(진행 중, `docs/PLAN-2026-09.md`)**: 집계 DB·인사이트 API → 5화면 프론트 → 관리 앱 → 로컬 LLM·기사 요약 → 문서
 
 각 단계는 독립 실행 가능해야 하며, 다음 단계로 넘어가기 전 사용자에게 동작 확인을 받는다.

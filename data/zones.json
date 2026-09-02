@@ -1,0 +1,84 @@
+{
+ "version": 1,
+ "updated_at": null,
+ "updated_by": null,
+ "note": "바닥 0~1 정규화. x=폭 15.55m(원점=창가 통로 벽), y=길이 24.65m(원점=배식구 벽). static 탑뷰·mock·vision·rollup·관리 앱이 공유. 관리 앱만 쓴다(PC 에서 직접 편집은 초기값뿐).",
+ "floor": {
+  "width_m": 15.55,
+  "length_m": 24.65,
+  "origin": "배식구 벽 ∧ 창가 통로 구석"
+ },
+ "camera": null,
+ "calib_points": null,
+ "image_to_floor": null,
+ "buffer_px": 20,
+ "roi": null,
+ "zones": [
+  {
+   "id": "counter",
+   "name": "배식대 앞",
+   "polygon": [
+    [
+     0,
+     0
+    ],
+    [
+     1,
+     0
+    ],
+    [
+     1,
+     0.1
+    ],
+    [
+     0,
+     0.1
+    ]
+   ]
+  },
+  {
+   "id": "aisle",
+   "name": "창가 통로",
+   "polygon": [
+    [
+     0,
+     0.1
+    ],
+    [
+     0.1415,
+     0.1
+    ],
+    [
+     0.1415,
+     1
+    ],
+    [
+     0,
+     1
+    ]
+   ]
+  },
+  {
+   "id": "seating",
+   "name": "좌석",
+   "polygon": [
+    [
+     0.1415,
+     0.1
+    ],
+    [
+     1,
+     0.1
+    ],
+    [
+     1,
+     1
+    ],
+    [
+     0.1415,
+     1
+    ]
+   ]
+  }
+ ]
+}

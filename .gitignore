@@ -1,9 +1,10 @@
-# 데이터·비밀은 절대 커밋하지 않는다 (예외 두 파일만 포함)
+# 데이터·비밀은 절대 커밋하지 않는다 (예외 다섯 파일만 포함)
 data/*
 !data/plan_bg.png
 !data/nutrition_std.json
 !data/carbon_std.json
 !data/news_feeds.json
+!data/zones.json
 .env
 .venv/
 __pycache__/
