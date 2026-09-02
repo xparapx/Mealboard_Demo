@@ -1,4 +1,4 @@
-# 데이터·비밀은 절대 커밋하지 않는다 (예외 다섯 파일만 포함)
+# 데이터·비밀은 절대 커밋하지 않는다 (예외 네 파일만 포함 — zones.local.json 은 Pi 보정값이라 제외)
 data/*
 !data/plan_bg.png
 !data/nutrition_std.json

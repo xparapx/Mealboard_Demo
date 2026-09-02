@@ -98,8 +98,13 @@
   .plan { position: relative; }
   .plan .count { position: absolute; right: 18px; top: 16px; background: var(--teal-tint); color: var(--teal-ink);
                  font-size: 12.5px; font-weight: 700; padding: 6px 12px; border-radius: 999px; }
-  #plan { display: block; width: 100%; aspect-ratio: 318 / 460; margin-top: 12px; }
+  .plan .stage { position: relative; margin-top: 12px; }
+  #plan { display: block; width: 100%; aspect-ratio: 318 / 460; }
+  #marks { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+           animation: blink 1.4s ease-in-out infinite; }         /* 점멸은 CSS 가 맡는다 — JS 루프·전체 재그리기 없음 */
+  @keyframes blink { 50% { opacity: .55; } }
   .plan[data-state="no_data"] #plan { opacity: .4; }
+  .plan[data-state="no_data"] #marks { display: none; }
   .plan .empty { display: none; position: absolute; left: 0; right: 0; top: 52%; text-align: center;
                  font-size: 13px; font-weight: 700; color: var(--ink3); }
   .plan[data-state="no_data"] .empty { display: block; }
@@ -277,7 +282,7 @@
     <section class="card plan" id="plancard" data-state="no_data">
       <div class="eyebrow">급식실 현황</div>
       <span class="count" id="posn">—</span>
-      <canvas id="plan"></canvas>
+      <div class="stage"><canvas id="plan"></canvas><canvas id="marks"></canvas></div>
       <div class="empty">표시할 위치 없음</div>
       <div class="note" style="margin-top:10px">영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다</div>
     </section>
@@ -460,26 +465,23 @@ function drawChart(rows, typ, st) {
 }
 
 const ROOM = { W: 15.55, D: 24.65, H: 2.68 };
-function renderPlan(p, alpha = 1) {
-  try { drawPlan(p, alpha); } catch (e) { console.error("drawPlan", e); }
+function renderPlan(p) {
+  try { drawPlan(p); } catch (e) { console.error("drawPlan", e); }
 }
-// 마커 점멸 — 1.4초 주기로 밝기만 오르내린다. 탭이 숨겨지거나 마커가 없으면 쉬고, 모션 축소 설정이면 아예 켜지 않는다
-if (!matchMedia("(prefers-reduced-motion: reduce)").matches) setInterval(() => {
-  if (document.hidden || !LASTPOS || LASTPOS.state !== "ok" || !LASTPOS.points?.length) return;
-  renderPlan(LASTPOS, .35 + .65 * (.5 + .5 * Math.sin(Date.now() / 1400 * Math.PI * 2)));
-}, 90);
 /* ---------------- ⑩ 급식실 현황 (탑뷰 2D) ----------------
    실측 기반 평면 탑뷰(세로형) — 방 15.55m(폭 x) × 24.65m(길이 y), 원점 = 배식구 벽 ∧ 창가 통로 구석.
    /api/positions 의 x,y 는 이 바닥의 0~1 정규화 값 — zones.json 과 공유하는 좌표계.
    화면 방향은 확정 도면: 배식대 위(카메라는 그 오른쪽 끝) · 퇴식구→출구 왼쪽(위부터) ·
    대기통로(창가) 오른쪽 · 입구 아래(통로 쪽). 투영: sx=(W−x)·k, sy=y·k — 왜곡 없음.
-   테이블 6열 × [6인×3 | 6인×2 | 6인×4+4인], 의자는 도면 기호처럼 테이블 가장자리에 살짝만 */
-function drawPlan(p, alpha = 1) {
+   테이블 6열 × [6인×3 | 6인×2 | 6인×4+4인], 의자는 도면 기호처럼 테이블 가장자리에 살짝만.
+   두 겹 캔버스: #plan 에 정적 평면도, 그 위 #marks 에 마커만 — 점멸은 #marks 의 CSS opacity 애니메이션(1.4초, 0.55~1).
+   평면도는 데이터·크기가 바뀔 때만 그리고, 모션 축소 설정은 기존 @media 규칙이 자동으로 애니메이션을 끈다 */
+function drawPlan(p) {
   const ok = p.state === "ok";
   $("#plancard").dataset.state = ok ? "ok" : "no_data";
   $("#posn").textContent = ok ? `${p.n}명` : "—";
   const c = $("#plan"), W = c.clientWidth || 318;
-  const H = c.clientHeight || Math.round(W * 508 / 318);
+  const H = c.clientHeight || Math.round(W * 460 / 318);
   const { g } = fit(c, H);
   const u = W / 318;
   const ML = 50 * u, MR = 10 * u, MT = 22 * u, MB = 8 * u;          // 좌측은 퇴식구·출구 라벨 자리
@@ -549,19 +551,7 @@ function drawPlan(p, alpha = 1) {
       y += 1.2;                                                      // 가로 통로
     });
   }
-  // 익명 마커 — 틸 스마일 (좌표 두 개뿐, 식별 정보 없음)
-  // 마커 — 노란 스마일(테두리 없음), r=5.2u. alpha 는 점멸 루프가 준다(0.35~1)
-  if (ok) { g.save(); g.globalAlpha = alpha; p.points.forEach(({ x, y }) => {
-    const sx = X(x * ROOM.W), sy = Yy(y * ROOM.D), r = 5.2 * u;
-    g.beginPath(); g.arc(sx, sy, r, 0, Math.PI * 2);
-    g.fillStyle = "#F6C445"; g.fill();
-    g.fillStyle = "#33312D";
-    g.beginPath(); g.arc(sx - r * .33, sy - r * .22, r * .155, 0, Math.PI * 2); g.fill();
-    g.beginPath(); g.arc(sx + r * .33, sy - r * .22, r * .155, 0, Math.PI * 2); g.fill();
-    g.beginPath(); g.lineWidth = Math.max(1, r * .17); g.strokeStyle = "#33312D"; g.lineCap = "round";
-    g.arc(sx, sy + r * .06, r * .44, .16 * Math.PI, .84 * Math.PI); g.stroke();
-  }); g.restore(); }
-  // 라벨 — 흰 halo 를 둘러 마커 위에서도 읽힌다
+  // 라벨 — 흰 halo. 평면도 층에 그리므로 통로 라벨 위로 마커가 지나갈 수 있다(마커가 우선)
   g.textBaseline = "alphabetic"; g.font = `700 ${Math.max(9, 10.5 * u)}px system-ui, sans-serif`;
   g.lineJoin = "round"; g.lineWidth = 3 * u; g.strokeStyle = "#FFFCF6";
   const label = (t, x, y, col) => { g.strokeText(t, x, y); g.fillStyle = col; g.fillText(t, x, y); };
@@ -573,6 +563,18 @@ function drawPlan(p, alpha = 1) {
   label("출구", X(ROOM.W) - T - 4 * u, Yy((gapExit[0] + gapExit[1]) / 2) + 4 * u, "#6E6A61");
   g.textAlign = "center";
   label("통로", X(1.1), Yy(ROOM.D * .5), "#A9A296");
+  // 익명 마커 — 노란 스마일(테두리 없음), r=5.2u. 좌표 두 개뿐, 식별 정보 없음. 위 겹 #marks 에만 그린다
+  const { g: m } = fit($("#marks"), H);
+  if (ok) (p.points || []).forEach(({ x, y }) => {
+    const sx = X(x * ROOM.W), sy = Yy(y * ROOM.D), r = 5.2 * u;
+    m.beginPath(); m.arc(sx, sy, r, 0, Math.PI * 2);
+    m.fillStyle = "#F6C445"; m.fill();
+    m.fillStyle = "#33312D";
+    m.beginPath(); m.arc(sx - r * .33, sy - r * .22, r * .155, 0, Math.PI * 2); m.fill();
+    m.beginPath(); m.arc(sx + r * .33, sy - r * .22, r * .155, 0, Math.PI * 2); m.fill();
+    m.beginPath(); m.lineWidth = Math.max(1, r * .17); m.strokeStyle = "#33312D"; m.lineCap = "round";
+    m.arc(sx, sy + r * .06, r * .44, .16 * Math.PI, .84 * Math.PI); m.stroke();
+  });
 }
 
 /* ---------------- ① 알레르기 ----------------
@@ -738,8 +740,12 @@ function balance() {
   if (LASTPOS) renderPlan(LASTPOS);    // 카드의 상자가 바뀌었으니 그 크기로 다시 그린다 (3D 는 ResizeObserver 가 맡는다)
 }
 
-refresh(); loadMeal(); loadNews();
-setInterval(refresh, 30000);
+async function tick() {                              // 서버에 닿지 못하면 옛 위치를 '지금'처럼 두지 않는다
+  try { await refresh(); }
+  catch (e) { console.error("refresh", e); LASTPOS = { state: "no_data" }; renderPlan(LASTPOS); }
+}
+tick(); loadMeal(); loadNews();
+setInterval(tick, 30000);
 let rt;                                              // 캔버스는 폭이 바뀌면 다시 그려야 한다 — 다시 받지는 않는다
 addEventListener("resize", () => {
   clearTimeout(rt);

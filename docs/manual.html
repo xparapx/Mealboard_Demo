@@ -245,7 +245,7 @@ pythonpath = [&quot;.&quot;]</code></pre>
 </figure>
 <figure class="code">
 <figcaption><span class="path">.gitignore</span><span class="lang">text</span><button class="copy" type="button">복사</button></figcaption>
-<pre><code class="lang-text"># 데이터·비밀은 절대 커밋하지 않는다 (예외 다섯 파일만 포함)
+<pre><code class="lang-text"># 데이터·비밀은 절대 커밋하지 않는다 (예외 네 파일만 포함 — zones.local.json 은 Pi 보정값이라 제외)
 data/*
 !data/plan_bg.png
 !data/nutrition_std.json
@@ -1033,8 +1033,13 @@ systemctl status mealboard-api --no-pager</code></pre>
   .plan { position: relative; }
   .plan .count { position: absolute; right: 18px; top: 16px; background: var(--teal-tint); color: var(--teal-ink);
                  font-size: 12.5px; font-weight: 700; padding: 6px 12px; border-radius: 999px; }
-  #plan { display: block; width: 100%; aspect-ratio: 318 / 460; margin-top: 12px; }
+  .plan .stage { position: relative; margin-top: 12px; }
+  #plan { display: block; width: 100%; aspect-ratio: 318 / 460; }
+  #marks { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+           animation: blink 1.4s ease-in-out infinite; }         /* 점멸은 CSS 가 맡는다 — JS 루프·전체 재그리기 없음 */
+  @keyframes blink { 50% { opacity: .55; } }
   .plan[data-state=&quot;no_data&quot;] #plan { opacity: .4; }
+  .plan[data-state=&quot;no_data&quot;] #marks { display: none; }
   .plan .empty { display: none; position: absolute; left: 0; right: 0; top: 52%; text-align: center;
                  font-size: 13px; font-weight: 700; color: var(--ink3); }
   .plan[data-state=&quot;no_data&quot;] .empty { display: block; }
@@ -1212,7 +1217,7 @@ systemctl status mealboard-api --no-pager</code></pre>
     &lt;section class=&quot;card plan&quot; id=&quot;plancard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;급식실 현황&lt;/div&gt;
       &lt;span class=&quot;count&quot; id=&quot;posn&quot;&gt;—&lt;/span&gt;
-      &lt;canvas id=&quot;plan&quot;&gt;&lt;/canvas&gt;
+      &lt;div class=&quot;stage&quot;&gt;&lt;canvas id=&quot;plan&quot;&gt;&lt;/canvas&gt;&lt;canvas id=&quot;marks&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
       &lt;div class=&quot;empty&quot;&gt;표시할 위치 없음&lt;/div&gt;
       &lt;div class=&quot;note&quot; style=&quot;margin-top:10px&quot;&gt;영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다&lt;/div&gt;
     &lt;/section&gt;
@@ -1395,26 +1400,23 @@ function drawChart(rows, typ, st) {
 }
 
 const ROOM = { W: 15.55, D: 24.65, H: 2.68 };
-function renderPlan(p, alpha = 1) {
-  try { drawPlan(p, alpha); } catch (e) { console.error(&quot;drawPlan&quot;, e); }
+function renderPlan(p) {
+  try { drawPlan(p); } catch (e) { console.error(&quot;drawPlan&quot;, e); }
 }
-// 마커 점멸 — 1.4초 주기로 밝기만 오르내린다. 탭이 숨겨지거나 마커가 없으면 쉬고, 모션 축소 설정이면 아예 켜지 않는다
-if (!matchMedia(&quot;(prefers-reduced-motion: reduce)&quot;).matches) setInterval(() =&gt; {
-  if (document.hidden || !LASTPOS || LASTPOS.state !== &quot;ok&quot; || !LASTPOS.points?.length) return;
-  renderPlan(LASTPOS, .35 + .65 * (.5 + .5 * Math.sin(Date.now() / 1400 * Math.PI * 2)));
-}, 90);
 /* ---------------- ⑩ 급식실 현황 (탑뷰 2D) ----------------
    실측 기반 평면 탑뷰(세로형) — 방 15.55m(폭 x) × 24.65m(길이 y), 원점 = 배식구 벽 ∧ 창가 통로 구석.
    /api/positions 의 x,y 는 이 바닥의 0~1 정규화 값 — zones.json 과 공유하는 좌표계.
    화면 방향은 확정 도면: 배식대 위(카메라는 그 오른쪽 끝) · 퇴식구→출구 왼쪽(위부터) ·
    대기통로(창가) 오른쪽 · 입구 아래(통로 쪽). 투영: sx=(W−x)·k, sy=y·k — 왜곡 없음.
-   테이블 6열 × [6인×3 | 6인×2 | 6인×4+4인], 의자는 도면 기호처럼 테이블 가장자리에 살짝만 */
-function drawPlan(p, alpha = 1) {
+   테이블 6열 × [6인×3 | 6인×2 | 6인×4+4인], 의자는 도면 기호처럼 테이블 가장자리에 살짝만.
+   두 겹 캔버스: #plan 에 정적 평면도, 그 위 #marks 에 마커만 — 점멸은 #marks 의 CSS opacity 애니메이션(1.4초, 0.55~1).
+   평면도는 데이터·크기가 바뀔 때만 그리고, 모션 축소 설정은 기존 @media 규칙이 자동으로 애니메이션을 끈다 */
+function drawPlan(p) {
   const ok = p.state === &quot;ok&quot;;
   $(&quot;#plancard&quot;).dataset.state = ok ? &quot;ok&quot; : &quot;no_data&quot;;
   $(&quot;#posn&quot;).textContent = ok ? `${p.n}명` : &quot;—&quot;;
   const c = $(&quot;#plan&quot;), W = c.clientWidth || 318;
-  const H = c.clientHeight || Math.round(W * 508 / 318);
+  const H = c.clientHeight || Math.round(W * 460 / 318);
   const { g } = fit(c, H);
   const u = W / 318;
   const ML = 50 * u, MR = 10 * u, MT = 22 * u, MB = 8 * u;          // 좌측은 퇴식구·출구 라벨 자리
@@ -1484,19 +1486,7 @@ function drawPlan(p, alpha = 1) {
       y += 1.2;                                                      // 가로 통로
     });
   }
-  // 익명 마커 — 틸 스마일 (좌표 두 개뿐, 식별 정보 없음)
-  // 마커 — 노란 스마일(테두리 없음), r=5.2u. alpha 는 점멸 루프가 준다(0.35~1)
-  if (ok) { g.save(); g.globalAlpha = alpha; p.points.forEach(({ x, y }) =&gt; {
-    const sx = X(x * ROOM.W), sy = Yy(y * ROOM.D), r = 5.2 * u;
-    g.beginPath(); g.arc(sx, sy, r, 0, Math.PI * 2);
-    g.fillStyle = &quot;#F6C445&quot;; g.fill();
-    g.fillStyle = &quot;#33312D&quot;;
-    g.beginPath(); g.arc(sx - r * .33, sy - r * .22, r * .155, 0, Math.PI * 2); g.fill();
-    g.beginPath(); g.arc(sx + r * .33, sy - r * .22, r * .155, 0, Math.PI * 2); g.fill();
-    g.beginPath(); g.lineWidth = Math.max(1, r * .17); g.strokeStyle = &quot;#33312D&quot;; g.lineCap = &quot;round&quot;;
-    g.arc(sx, sy + r * .06, r * .44, .16 * Math.PI, .84 * Math.PI); g.stroke();
-  }); g.restore(); }
-  // 라벨 — 흰 halo 를 둘러 마커 위에서도 읽힌다
+  // 라벨 — 흰 halo. 평면도 층에 그리므로 통로 라벨 위로 마커가 지나갈 수 있다(마커가 우선)
   g.textBaseline = &quot;alphabetic&quot;; g.font = `700 ${Math.max(9, 10.5 * u)}px system-ui, sans-serif`;
   g.lineJoin = &quot;round&quot;; g.lineWidth = 3 * u; g.strokeStyle = &quot;#FFFCF6&quot;;
   const label = (t, x, y, col) =&gt; { g.strokeText(t, x, y); g.fillStyle = col; g.fillText(t, x, y); };
@@ -1508,6 +1498,18 @@ function drawPlan(p, alpha = 1) {
   label(&quot;출구&quot;, X(ROOM.W) - T - 4 * u, Yy((gapExit[0] + gapExit[1]) / 2) + 4 * u, &quot;#6E6A61&quot;);
   g.textAlign = &quot;center&quot;;
   label(&quot;통로&quot;, X(1.1), Yy(ROOM.D * .5), &quot;#A9A296&quot;);
+  // 익명 마커 — 노란 스마일(테두리 없음), r=5.2u. 좌표 두 개뿐, 식별 정보 없음. 위 겹 #marks 에만 그린다
+  const { g: m } = fit($(&quot;#marks&quot;), H);
+  if (ok) (p.points || []).forEach(({ x, y }) =&gt; {
+    const sx = X(x * ROOM.W), sy = Yy(y * ROOM.D), r = 5.2 * u;
+    m.beginPath(); m.arc(sx, sy, r, 0, Math.PI * 2);
+    m.fillStyle = &quot;#F6C445&quot;; m.fill();
+    m.fillStyle = &quot;#33312D&quot;;
+    m.beginPath(); m.arc(sx - r * .33, sy - r * .22, r * .155, 0, Math.PI * 2); m.fill();
+    m.beginPath(); m.arc(sx + r * .33, sy - r * .22, r * .155, 0, Math.PI * 2); m.fill();
+    m.beginPath(); m.lineWidth = Math.max(1, r * .17); m.strokeStyle = &quot;#33312D&quot;; m.lineCap = &quot;round&quot;;
+    m.arc(sx, sy + r * .06, r * .44, .16 * Math.PI, .84 * Math.PI); m.stroke();
+  });
 }
 
 /* ---------------- ① 알레르기 ----------------
@@ -1673,8 +1675,12 @@ function balance() {
   if (LASTPOS) renderPlan(LASTPOS);    // 카드의 상자가 바뀌었으니 그 크기로 다시 그린다 (3D 는 ResizeObserver 가 맡는다)
 }
 
-refresh(); loadMeal(); loadNews();
-setInterval(refresh, 30000);
+async function tick() {                              // 서버에 닿지 못하면 옛 위치를 '지금'처럼 두지 않는다
+  try { await refresh(); }
+  catch (e) { console.error(&quot;refresh&quot;, e); LASTPOS = { state: &quot;no_data&quot; }; renderPlan(LASTPOS); }
+}
+tick(); loadMeal(); loadNews();
+setInterval(tick, 30000);
 let rt;                                              // 캔버스는 폭이 바뀌면 다시 그려야 한다 — 다시 받지는 않는다
 addEventListener(&quot;resize&quot;, () =&gt; {
   clearTimeout(rt);
@@ -2610,7 +2616,7 @@ app.mount(&quot;/&quot;, StaticFiles(directory=BASE / &quot;static&quot;, html=T
 </figure>
 
 <h3>13-4. 화면 — 카드 ⑩</h3>
-<p>도면 v4 의 주석 ⑩·컴포넌트 스펙을 따릅니다. canvas(600×360, 5:3)에 실제 카메라 시점 기준의 벡터 평면도 — 바닥(egg2)·외곽 1.5px 차콜, 입구 = 좌측 상단(외곽선 틈+라벨), 통로 = 좌측변의 옅은 띠, 배식대 = 하단변 좌측 끝~중앙의 멜론 점선, 퇴식구 = 우측 하단의 작은 차콜 점선, 출구 = 우측 중앙(외곽선 틈+라벨) — 를 그리고 점을 틸 원(r=5, 차콜 테두리 1px)으로 찍습니다. 우상단 칩에 "N명", 각주에 "영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다". <code>no_data</code> 면 평면도만 흐리게(opacity .35) 두고 "표시할 위치 없음"을 띄웁니다. 폴링은 식권 카드의 <code>refresh()</code> 에 한 줄로 편승하고(30초), 고도·hover 는 다른 카드와 같습니다. 데스크톱 2컬럼에서는 왼쪽 컬럼 맨 아래, 모바일에서는 추이 다음입니다. 코드는 7단계 <code>static/index.html</code> 블록의 <code>#plancard</code> · <code>drawPlan</code> 부분입니다.</p>
+<p>도면 v4 의 주석 ⑩·컴포넌트 스펙을 따릅니다. canvas(318:460 세로형)에 실측 기반 탑뷰 평면도 — 배식대 = 위, 퇴식구→출구 = 좌측 벽, 대기통로 = 창가 우측 띠, 입구 = 통로 끝단(아래 벽), 테이블 6열, 벽은 두께 띠(모서리까지) — 를 그리고, 그 위에 겹친 두 번째 canvas(#marks)에 점을 노란 스마일(#F6C445, r=5.2u, 테두리 없음, 눈·입 차콜)로 찍습니다. 위 겹은 CSS 로 1.4초마다 옅어졌다 밝아지고(0.55~1), 모션 축소 설정이면 멈춥니다. (초기 v4 의 600×360 카메라 시점 도면과 틸 마커는 09-02·09-03 에 이 형태로 바뀌었습니다.) 우상단 칩에 "N명", 각주에 "영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다". <code>no_data</code> 면 평면도만 흐리게(opacity .35) 두고 "표시할 위치 없음"을 띄웁니다. 폴링은 식권 카드의 <code>refresh()</code> 에 한 줄로 편승하고(30초), 고도·hover 는 다른 카드와 같습니다. 데스크톱 2컬럼에서는 왼쪽 컬럼 맨 아래, 모바일에서는 추이 다음입니다. 코드는 7단계 <code>static/index.html</code> 블록의 <code>#plancard</code> · <code>drawPlan</code> 부분입니다.</p>
 
 <h3>확인</h3>
 <figure class="code">

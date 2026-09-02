@@ -17,7 +17,7 @@
 - NEIS 인증키(개발계정) 발급 완료. 학교코드 8140036(공주고, 남고), 교육청 N10.
 - **화면은 v5 확정**(2026-08-29 배포). 도면의 단일 출처는 `docs/layout.html`(v5), 구축 절차는 매뉴얼 STEP 14.
   카드에 외곽선을 두지 않는다 — 깊이는 radius 24 + 2단 그림자로. 바탕 `#F5F2E9` / 카드 `#FFFCF6`, 브랜드 3색은 유지.
-  위치 마커는 노란 스마일(테두리 없음, 1.4초 점멸), 이번 주 식단은 요일이 컬럼(요일 5색, 오늘만 차콜), 데스크톱 두 패널은 아래 끝을 맞춘다.
+  위치 마커는 노란 스마일(테두리 없음, 위 겹 캔버스 #marks 의 CSS 점멸 1.4초 0.55~1 — JS 루프로 되돌리지 말 것), 이번 주 식단은 요일이 컬럼(요일 5색, 오늘만 차콜), 데스크톱 두 패널은 아래 끝을 맞춘다.
 - **`static/sw.js` 는 화면을 네트워크 우선으로 받는다.** 캐시 우선으로 되돌리지 말 것 — v1 이 그랬다가 배포가
   브라우저에 도달하지 못했다. 화면이 크게 바뀌면 `CACHE` 이름을 올린다(이름이 곧 무효화 스위치).
 - **이슈 링크는 해외 기후 매체 4곳**(Carbon Brief · Inside Climate News · The Guardian · Yale Climate Connections)에서
@@ -50,7 +50,7 @@ NEIS 급식 API의 메뉴·영양 정보와 함께 웹 대시보드(PWA)로 제�
 | 항목 | 결정 | 근거 |
 |---|---|---|
 | 실행 위치 | 전부 Pi (셀프 호스팅, 모델 B) | 카메라가 Pi에 물리적으로 있음. Netlify 등 호스팅으로 대체 불가(서버가 Pi 안) |
-| DB | SQLite (WAL 모드), **파일당 쓰기 주체 하나** | `queue.db`=vision(또는 mock) · `insights.db`=`jobs/rollup.py` · `reports.db`=`jobs/report.py` · `admin.db`·`data/zones.json`=관리 앱. **공개 app 은 SELECT 만** |
+| DB | SQLite (WAL 모드), **파일당 쓰기 주체 하나** | `queue.db`=vision(또는 mock) · `insights.db`=`jobs/rollup.py` · `reports.db`=`jobs/report.py` · `admin.db`·`data/zones.local.json`=관리 앱. `data/zones.json` 은 git 템플릿(Pi 에서 쓰지 않는다 — 'Pi 는 git pull 만' 유지), 읽는 쪽은 zones.json 위에 zones.local.json 을 덮어 쓴다(overlay). **공개 app 은 SELECT 만** |
 | 백엔드 | FastAPI 단일 Python 스택 | vision 프로세스와 언어 통일. **Pi에 Node.js 설치 금지** |
 | API 포트 | **8100** (.env `API_PORT`), 127.0.0.1 바인딩. 관리 앱 **8101**(`ADMIN_PORT`), vision 디버그 MJPEG **8102**(`DEBUG_PORT`), 메타데이터 소켓 `/run/mealboard/meta.sock` — 전부 127.0.0.1 | 8000·8501·1883 은 Plant. **Funnel(공개)은 8100 만**, 관리 앱은 `tailscale serve --https=8443`(tailnet 전용)으로만 내보낸다. `serve reset`·`funnel reset` 금지(Funnel 443 까지 지워진다) |
 | 프론트 | static/ 정적 파일 + fetch 폴링(30초) | React 필요 시 개발 PC에서 빌드한 dist만 복사 |
@@ -83,17 +83,17 @@ Mealboard_Demo/
 ├── vision/                       # counter.py(진입점), source.py(webcam|file|picamera), zones.py, waittime.py, heatmap.py, debug_stream.py, calibrate.py
 ├── jobs/                         # fetch_neis.py, fetch_news.py, mock_feed.py, rollup.py(→insights.db), report.py(→reports.db), llm.py, translators.py, newsbody.py
 ├── static/                       # index.html(셸), css/{base,screens,insight}.css, js/{core,floor,wait,room,week,today,news}.js, manifest.json, sw.js
-├── data/                         # queue.db, insights.db, reports.db, admin.db, meal.json, news.json, positions.json (git 제외) / 포함: plan_bg.png, nutrition_std.json, carbon_std.json, news_feeds.json, zones.json
+├── data/                         # queue.db, insights.db, reports.db, admin.db, meal.json, news.json, positions.json (git 제외) / 포함: nutrition_std.json, carbon_std.json, news_feeds.json, zones.json(템플릿). 관리 앱의 보정 결과는 미추적 zones.local.json
 ├── deploy/                       # mealboard-{api,mock,vision,admin,neis,news,rollup,report}.service, *.timer, sudoers-mealboard, cloudflared-config.yml(견본)
 ├── tests/                        # test_waittime.py 등 순수 로직 테스트
 ├── .env.example                  # 키 이름만 (실제 .env는 git 제외)
-├── .gitignore                    # data/*(예외 2개), .env, .venv/, __pycache__/, *.db*
+├── .gitignore                    # data/*(예외 4개), .env, .venv/, __pycache__/, *.db*
 └── pyproject.toml                # uv 관리
 ```
 
 **파일 명명 규칙 (Plant 레포 계승)** — 접두어가 실행 주체를 뜻한다:
 - `run_*` = systemd가 자동 실행 / `setup_*`, `calibrate_*` = 사람이 최초 1회 / `check_*` = 검증 도구 / 무접두어 = 라이브러리
-- 설정의 단일 출처는 파일 하나(`data/zones.json`(git 추적, 관리 앱만 쓴다), `data/nutrition_std.json`, `.env`) — **스크립트에 좌표·키·기준치 하드코딩 금지**
+- 설정의 단일 출처는 파일 하나(`data/zones.json`(git 템플릿) + `data/zones.local.json`(Pi 보정값, 관리 앱만 쓴다, 미추적), `data/nutrition_std.json`, `.env`) — **스크립트에 좌표·키·기준치 하드코딩 금지**
 
 ## 4. 개발 환경 규칙
 
@@ -140,7 +140,7 @@ Mealboard_Demo/
 - 원격: `github.com/xparapx/Mealboard_Demo` (main 단일 브랜치, 선행 레포와 동일). GitHub 조작은 `gh` CLI(설치·로그인은 사용자가)
 - 커밋 단위: 기능 하나 = 커밋 하나. 메시지는 한국어 명령형 요약 한 줄 + 필요 시 본문
   (예: `vision: 라인크로싱 완충띠 ±20px 추가`)
-- **커밋 전 확인**: `git status`에 data/(.gitignore 예외 5개 제외)·.env가 없을 것 (있다면 .gitignore부터 수정)
+- **커밋 전 확인**: `git status`에 data/(.gitignore 예외 4개 제외)·.env가 없을 것 (있다면 .gitignore부터 수정)
 - 코드와 매뉴얼 동기화: `<pre>` 수록 코드를 바꾼 커밋은 docs/manual.html도 같은 커밋에서 갱신,
   `check_manual.py`류 대조 도구가 생기면 커밋 전 실행
 - push는 매 작업 세션 종료 시. 사용자가 요청하면 중간에도. Pi는 자동으로 pull하지 않는다 — 배포는 사람(또는 `/deploy`)이 명시적으로
