@@ -240,7 +240,8 @@ tr:last-child td{border-bottom:0}
 <div><h4>색 → 역할</h4><ul>
 <li><b>#33312D 차콜</b> — 구조. 히어로 카드, 제목, 오늘 배지, 기기 테두리 (v4 의 #505050 보다 한 단계 깊게)</li>
 <li><b>#F5F2E9 바탕 / #FFFCF6 카드</b> — 채도를 뺀 에그셸. 카드가 흰색이라 바탕이 진하면 그림자가 일을 못 한다</li>
-<li><b>#129793 틸</b> — 정상·충족·"살아 있음". 라이브 점, 그래프, 영양 01칸, 탄소 카드, 위치 마커</li>
+<li><b>#129793 틸</b> — 정상·충족·"살아 있음". 라이브 점, 그래프, 영양 01칸, 탄소 카드</li>
+<li><b>#F6C445 옐로</b> — 위치 마커(스마일) 전용. 평면도의 크림·연두·틸 사이에서 사람만 튀어 보이게</li>
 <li><b>#9BD7D5 아쿠아</b> — 보조·균형. 여유 판정 칩</li>
 <li><b>#FF7260 멜론</b> — "지금 봐야 할 것". 혼잡 카드, 부족 칩, 알레르기 일치, 주요리 점, 주석 번호</li>
 </ul></div>
@@ -743,18 +744,18 @@ tr:last-child td{border-bottom:0}
         <rect x="88.7" y="407.4" width="4.6" height="7.3" rx="2.5" fill="#BCD98C"/>
         <rect x="104.3" y="407.4" width="4.6" height="7.3" rx="2.5" fill="#BCD98C"/>
         <rect x="92.0" y="395.5" width="13.6" height="20.7" rx="2.5" fill="#FFFEF8" stroke="#EAE3D2"/>
-        <circle cx="289.9" cy="400.6" r="6.5" fill="#129793" stroke="#FFFCF6" stroke-width="1.6"/>
-        <circle cx="287.8" cy="399.2" r="1.01" fill="#FFFCF6"/>
-        <circle cx="292.1" cy="399.2" r="1.01" fill="#FFFCF6"/>
-        <path d="M292.8 401.9 A2.9 2.9 0 0 1 287.1 401.9" fill="none" stroke="#FFFCF6" stroke-width="1.1" stroke-linecap="round"/>
-        <circle cx="292.5" cy="257.4" r="6.5" fill="#129793" stroke="#FFFCF6" stroke-width="1.6"/>
-        <circle cx="290.4" cy="256.0" r="1.01" fill="#FFFCF6"/>
-        <circle cx="294.7" cy="256.0" r="1.01" fill="#FFFCF6"/>
-        <path d="M295.4 258.7 A2.9 2.9 0 0 1 289.7 258.7" fill="none" stroke="#FFFCF6" stroke-width="1.1" stroke-linecap="round"/>
-        <circle cx="287.4" cy="93.9" r="6.5" fill="#129793" stroke="#FFFCF6" stroke-width="1.6"/>
-        <circle cx="285.2" cy="92.4" r="1.01" fill="#FFFCF6"/>
-        <circle cx="289.5" cy="92.4" r="1.01" fill="#FFFCF6"/>
-        <path d="M290.2 95.2 A2.9 2.9 0 0 1 284.5 95.2" fill="none" stroke="#FFFCF6" stroke-width="1.1" stroke-linecap="round"/>
+        <circle cx="289.9" cy="400.6" r="5.2" fill="#F6C445"/>
+        <circle cx="287.8" cy="399.2" r="0.8" fill="#33312D"/>
+        <circle cx="292.1" cy="399.2" r="0.8" fill="#33312D"/>
+        <path d="M292.8 401.9 A2.9 2.9 0 0 1 287.1 401.9" fill="none" stroke="#33312D" stroke-width="1.1" stroke-linecap="round"/>
+        <circle cx="292.5" cy="257.4" r="5.2" fill="#F6C445"/>
+        <circle cx="290.4" cy="256.0" r="0.8" fill="#33312D"/>
+        <circle cx="294.7" cy="256.0" r="0.8" fill="#33312D"/>
+        <path d="M295.4 258.7 A2.9 2.9 0 0 1 289.7 258.7" fill="none" stroke="#33312D" stroke-width="1.1" stroke-linecap="round"/>
+        <circle cx="287.4" cy="93.9" r="5.2" fill="#F6C445"/>
+        <circle cx="285.2" cy="92.4" r="0.8" fill="#33312D"/>
+        <circle cx="289.5" cy="92.4" r="0.8" fill="#33312D"/>
+        <path d="M290.2 95.2 A2.9 2.9 0 0 1 284.5 95.2" fill="none" stroke="#33312D" stroke-width="1.1" stroke-linecap="round"/>
         <text x="184" y="21" font-size="11" font-weight="700" fill="#D14A38" text-anchor="middle">배식대</text>
         <text x="280" y="436" font-size="11" font-weight="700" fill="#6E6A61" text-anchor="middle">입구</text>
         <text x="39" y="86" font-size="11" font-weight="700" fill="#6E6A61" text-anchor="end">퇴식구</text>
@@ -872,7 +873,7 @@ tr:last-child td{border-bottom:0}
   <div class="tok"><i style="background:#FFFCF6;border:1px solid #E4DFD1"></i>카드 <code>--surface #FFFCF6</code><br>전 카드. 탄소 카드만 예외</div>
   <div class="tok"><i style="background:linear-gradient(90deg,#6E6A61 0 50%,#9A958A 0)"></i>글자 <code>--ink2 #6E6A61 · --ink3 #9A958A</code><br>보조 / 메타·eyebrow</div>
   <div class="tok"><i style="background:#F0EDE3;border:1px solid #E4DFD1"></i>헤어라인 <code>--hair #F0EDE3</code><br>이슈 링크 구분선. v5 의 유일한 선</div>
-  <div class="tok"><i style="background:#129793"></i>틸 <code>--teal #129793</code><br>그래프·라이브 점·마커·충족</div>
+  <div class="tok"><i style="background:#129793"></i>틸 <code>--teal #129793</code><br>그래프·라이브 점·충족</div>
   <div class="tok"><i style="background:linear-gradient(90deg,#0C6D6A 0 33%,#DEF0EF 0 66%,#EAF5F4 0)"></i>틸 계열 <code>ink 0C6D6A · tint DEF0EF · tint2 EAF5F4</code><br>틴트 위 글자 / 칩 / 탄소 카드 바탕</div>
   <div class="tok"><i style="background:#9BD7D5"></i>아쿠아 <code>--aqua #9BD7D5</code><br>여유 판정 칩 — v5 에서 남은 유일한 용처</div>
   <div class="tok"><i style="background:#FF7260"></i>멜론 <code>--melon #FF7260</code><br>혼잡 카드·부족 칩 외곽·주요리 점·배식대</div>
@@ -899,7 +900,7 @@ tr:last-child td{border-bottom:0}
 <tr><td>이번 주 식단</td><td>5열 그리드, 칩 radius 14 / 요일 10px · 날짜 15px · 메뉴 10.5px · 부제 9.5px</td><td>오늘 칩만 차콜 + 흰 글자. 지난 날은 내용 전체 opacity .62</td><td>요일 5색(월 9BD7D5 · 화 FBE9B7 · 수 F3B2A4 · 목 CBC2FB · 금 A3F5B4). 메뉴명은 3줄 말줄임 + overflow-wrap:anywhere</td></tr>
 <tr><td>탄소 카드</td><td>46px 틸 숫자, 비교 2칸 (배경 흰 카드색)</td><td>읽기 전용 — 입력 없음</td><td>카드 배경만 틸 틴트 — "다른 종류의 카드"임을 알리는 유일한 신호</td></tr>
 <tr><td>이슈 링크</td><td>제목 13.5px 2줄 + 요약 11.5px 3줄 + 출처 칩 10px + 날짜 11px</td><td>탭 시 새 창</td><td>최대 3건, 매체별로 한 건씩. 글자 수가 아니라 CSS 줄 수로 자른다. 기계 번역이면 출처 옆에 회색 "번역" 칩</td></tr>
-<tr><td>급식실 현황</td><td>canvas — <b>실측 기반 탑뷰 2D 평면(세로형)</b>. 방 15.55m(폭 x)×24.65m(길이 y), 원점 = 배식구 벽∧창가 통로 구석, <code>/api/positions</code> 의 x,y 는 이 바닥의 0~1 정규화(zones.json 과 공유). 투영 sx=(W−x)·k, sy=y·k — 왜곡이 없어 마커 가독성 최우선. 여백: 좌 50u(퇴식구·출구 라벨 자리)·우 10u·상 22u·하 8u, 카드 비율 318:460. 방향(확정 도면): 배식대 위(y=0 벽 앞 카운터 x 1.5~13.5m 멜론, 카메라는 그 오른쪽 끝=통로 쪽) · 좌측 벽(x=W)에 위부터 퇴식구(y 1.6~4.4m, 안쪽에 회색 싱크대 카운터 3.2×0.85m)→출구(y 5.6~8.4m 틸) · 대기통로 = 창가(x&lt;2.2m) 우측 띠, 창은 우측 벽 하늘빛 세 칸 · <b>입구 = 통로 끝단</b>(아래 벽 x 0.2~3.2m 틸). 테이블 6열(x0 3.2m·간격 1.8m·폭 0.82m)×[6인×3|6인×2|6인×4+4인](블록 사이 통로 1.2m), 의자는 도면 기호식 연두 탭(0.44×0.28m, 테이블 밑 0.08m 걸침), 상판은 부드러운 그림자. 벽은 두께 0.45m 띠, 바닥 타일 줄눈 · 기둥 없음. 라벨은 흰 halo(3u) — 마커 위에서도 읽힌다; 퇴식구·출구는 레이아웃 바깥 좌측, 배식대는 위, 입구는 방 안쪽</td><td>30초 폴링 · no_data 면 opacity .4 + "표시할 위치 없음"</td><td>마커는 스마일 — 틸 원(#129793) r=6.5u + 흰 테두리 1.6px, 눈·입 흰색. 좌표 0~1 정규화 · 우상단 "N명" 칩</td></tr>
+<tr><td>급식실 현황</td><td>canvas — <b>실측 기반 탑뷰 2D 평면(세로형)</b>. 방 15.55m(폭 x)×24.65m(길이 y), 원점 = 배식구 벽∧창가 통로 구석, <code>/api/positions</code> 의 x,y 는 이 바닥의 0~1 정규화(zones.json 과 공유). 투영 sx=(W−x)·k, sy=y·k — 왜곡이 없어 마커 가독성 최우선. 여백: 좌 50u(퇴식구·출구 라벨 자리)·우 10u·상 22u·하 8u, 카드 비율 318:460. 방향(확정 도면): 배식대 위(y=0 벽 앞 카운터 x 1.5~13.5m 멜론, 카메라는 그 오른쪽 끝=통로 쪽) · 좌측 벽(x=W)에 위부터 퇴식구(y 1.6~4.4m, 안쪽에 회색 싱크대 카운터 3.2×0.85m)→출구(y 5.6~8.4m 틸) · 대기통로 = 창가(x&lt;2.2m) 우측 띠, 창은 우측 벽 하늘빛 세 칸 · <b>입구 = 통로 끝단</b>(아래 벽 x 0.2~3.2m 틸). 테이블 6열(x0 3.2m·간격 1.8m·폭 0.82m)×[6인×3|6인×2|6인×4+4인](블록 사이 통로 1.2m), 의자는 도면 기호식 연두 탭(0.44×0.28m, 테이블 밑 0.08m 걸침), 상판은 부드러운 그림자. 벽은 두께 0.45m 띠, 바닥 타일 줄눈 · 기둥 없음. 라벨은 흰 halo(3u) — 마커 위에서도 읽힌다; 퇴식구·출구는 레이아웃 바깥 좌측, 배식대는 위, 입구는 방 안쪽</td><td>30초 폴링 · no_data 면 opacity .4 + "표시할 위치 없음"</td><td>마커는 스마일 — 노란 원(#F6C445) r=5.2u, 테두리 없음, 눈·입 차콜(#33312D). 1.4초 주기 점멸(알파 0.35~1, 모션 축소 설정이면 정지). 좌표 0~1 정규화 · 우상단 "N명" 칩</td></tr>
 <tr><td>카드</td><td>radius 24px, 여백 20px(데스크톱 24×26), 그림자 <code>0 1px 2px .04 + 0 10px 26px .055</code></td><td>hover 시 2px 상승</td><td><b>외곽선 없음</b> — v4 의 1.5px 차콜 선을 전부 제거</td></tr>
 <tr><td>캔버스 전반</td><td>배경 저장소를 <code>devicePixelRatio</code> 배로 잡고 <code>setTransform</code></td><td>리사이즈 시 다시 그리되 다시 받지는 않음(150ms 디바운스)</td><td>고해상도 화면에서 선이 뭉개지지 않게</td></tr>
 <tr><td>터치 영역</td><td>최소 44×44px</td><td>알레르기 선택 버튼은 34px — 목록형 보조 컨트롤</td><td>주요 동선에는 44px 미만을 두지 않는다</td></tr>

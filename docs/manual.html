@@ -1374,16 +1374,21 @@ function drawChart(rows, typ, st) {
 }
 
 const ROOM = { W: 15.55, D: 24.65, H: 2.68 };
-function renderPlan(p) {
-  try { drawPlan(p); } catch (e) { console.error(&quot;drawPlan&quot;, e); }
+function renderPlan(p, alpha = 1) {
+  try { drawPlan(p, alpha); } catch (e) { console.error(&quot;drawPlan&quot;, e); }
 }
+// 마커 점멸 — 1.4초 주기로 밝기만 오르내린다. 탭이 숨겨지거나 마커가 없으면 쉬고, 모션 축소 설정이면 아예 켜지 않는다
+if (!matchMedia(&quot;(prefers-reduced-motion: reduce)&quot;).matches) setInterval(() =&gt; {
+  if (document.hidden || !LASTPOS || LASTPOS.state !== &quot;ok&quot; || !LASTPOS.points?.length) return;
+  renderPlan(LASTPOS, .35 + .65 * (.5 + .5 * Math.sin(Date.now() / 1400 * Math.PI * 2)));
+}, 90);
 /* ---------------- ⑩ 급식실 현황 (탑뷰 2D) ----------------
    실측 기반 평면 탑뷰(세로형) — 방 15.55m(폭 x) × 24.65m(길이 y), 원점 = 배식구 벽 ∧ 창가 통로 구석.
    /api/positions 의 x,y 는 이 바닥의 0~1 정규화 값 — zones.json 과 공유하는 좌표계.
    화면 방향은 확정 도면: 배식대 위(카메라는 그 오른쪽 끝) · 퇴식구→출구 왼쪽(위부터) ·
    대기통로(창가) 오른쪽 · 입구 아래(통로 쪽). 투영: sx=(W−x)·k, sy=y·k — 왜곡 없음.
    테이블 6열 × [6인×3 | 6인×2 | 6인×4+4인], 의자는 도면 기호처럼 테이블 가장자리에 살짝만 */
-function drawPlan(p) {
+function drawPlan(p, alpha = 1) {
   const ok = p.state === &quot;ok&quot;;
   $(&quot;#plancard&quot;).dataset.state = ok ? &quot;ok&quot; : &quot;no_data&quot;;
   $(&quot;#posn&quot;).textContent = ok ? `${p.n}명` : &quot;—&quot;;
@@ -1459,16 +1464,17 @@ function drawPlan(p) {
     });
   }
   // 익명 마커 — 틸 스마일 (좌표 두 개뿐, 식별 정보 없음)
-  if (ok) p.points.forEach(({ x, y }) =&gt; {
-    const sx = X(x * ROOM.W), sy = Yy(y * ROOM.D), r = 6.5 * u;
+  // 마커 — 노란 스마일(테두리 없음), r=5.2u. alpha 는 점멸 루프가 준다(0.35~1)
+  if (ok) { g.save(); g.globalAlpha = alpha; p.points.forEach(({ x, y }) =&gt; {
+    const sx = X(x * ROOM.W), sy = Yy(y * ROOM.D), r = 5.2 * u;
     g.beginPath(); g.arc(sx, sy, r, 0, Math.PI * 2);
-    g.fillStyle = &quot;#129793&quot;; g.fill(); g.lineWidth = 1.6 * u; g.strokeStyle = &quot;#FFFCF6&quot;; g.stroke();
-    g.fillStyle = &quot;#FFFCF6&quot;;
+    g.fillStyle = &quot;#F6C445&quot;; g.fill();
+    g.fillStyle = &quot;#33312D&quot;;
     g.beginPath(); g.arc(sx - r * .33, sy - r * .22, r * .155, 0, Math.PI * 2); g.fill();
     g.beginPath(); g.arc(sx + r * .33, sy - r * .22, r * .155, 0, Math.PI * 2); g.fill();
-    g.beginPath(); g.lineWidth = Math.max(1, r * .17); g.strokeStyle = &quot;#FFFCF6&quot;; g.lineCap = &quot;round&quot;;
+    g.beginPath(); g.lineWidth = Math.max(1, r * .17); g.strokeStyle = &quot;#33312D&quot;; g.lineCap = &quot;round&quot;;
     g.arc(sx, sy + r * .06, r * .44, .16 * Math.PI, .84 * Math.PI); g.stroke();
-  });
+  }); g.restore(); }
   // 라벨 — 흰 halo 를 둘러 마커 위에서도 읽힌다
   g.textBaseline = &quot;alphabetic&quot;; g.font = `700 ${Math.max(9, 10.5 * u)}px system-ui, sans-serif`;
   g.lineJoin = &quot;round&quot;; g.lineWidth = 3 * u; g.strokeStyle = &quot;#FFFCF6&quot;;
