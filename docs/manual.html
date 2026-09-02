@@ -772,7 +772,9 @@ from vision.waittime import estimate_wait
 TICK = 10           # 시뮬레이션 1틱 = 10초
 CAPACITY = 20.0     # 배식대 처리 능력 (명/분)
 CYCLE_MIN = 170     # 11:20 ~ 14:10 을 한 사이클로 보고 반복
-PATH = [(0.10, 0.08), (0.07, 0.50), (0.09, 0.82), (0.45, 0.88)]   # 입구(좌상) → 좌측 통로 아래로 → 배식대 앞(하단 중앙) — 0~1 정규화
+# 실측 좌표계(x=폭 15.55m, y=배식구 벽→출입문 24.65m 의 0~1 정규화, static 탑뷰·zones.json 과 공유):
+# 입구는 통로 끝단(출입문 벽의 창가 쪽) — 문 → 창가 통로 직진 → 배식구 벽(y=0)의 배식대 앞
+PATH = [(0.08, 0.97), (0.05, 0.30), (0.10, 0.07), (0.55, 0.05)]
 POSITIONS = DATA / &quot;positions.json&quot;
 
 
@@ -1010,7 +1012,7 @@ systemctl status mealboard-api --no-pager</code></pre>
   .plan { position: relative; }
   .plan .count { position: absolute; right: 18px; top: 16px; background: var(--teal-tint); color: var(--teal-ink);
                  font-size: 12.5px; font-weight: 700; padding: 6px 12px; border-radius: 999px; }
-  #plan { display: block; width: 100%; aspect-ratio: 318 / 191; margin-top: 12px; }
+  #plan { display: block; width: 100%; aspect-ratio: 318 / 460; margin-top: 12px; }
   .plan[data-state=&quot;no_data&quot;] #plan { opacity: .4; }
   .plan .empty { display: none; position: absolute; left: 0; right: 0; top: 52%; text-align: center;
                  font-size: 13px; font-weight: 700; color: var(--ink3); }
@@ -1138,7 +1140,7 @@ systemctl status mealboard-api --no-pager</code></pre>
     #newscard.grow .news { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
     /* 짧은 쪽 컬럼이 흡수하는 높이는 빈 여백이 아니라 더 큰 평면도가 된다 */
     #plancard.grow { display: flex; flex-direction: column; }
-    #plancard.grow #plan { flex: 1 1 0; min-height: 191px; aspect-ratio: auto; }
+    #plancard.grow #plan { flex: 1 1 0; min-height: 320px; aspect-ratio: auto; }
     .card { padding: 24px 26px; }
     .big b { font-size: 120px; } .big i { font-size: 28px; }
     #chartcard { padding-top: 32px; padding-bottom: 32px; }
@@ -1304,7 +1306,7 @@ async function refresh() {
   LAST = { rows: h.rows, typ: t, st };
   drawChart(h.rows, t, st);
   try { LASTPOS = await j(&quot;/api/positions&quot;); } catch { LASTPOS = { state: &quot;no_data&quot; }; }
-  drawPlan(LASTPOS);
+  renderPlan(LASTPOS);
 }
 
 /* ---------------- ④ 추이 + 평소 곡선 ----------------
@@ -1324,7 +1326,9 @@ function drawChart(rows, typ, st) {
   const c = $(&quot;#chart&quot;), H = c.clientHeight || 92, { g, w } = fit(c, H);
   const padR = ref.length ? 34 : 8, padT = 6, padB = 4;              // 오른쪽은 선 끝 라벨 자리
   const plotW = Math.max(1, w - padR - 4), plotH = H - padT - padB;
-  const max = Math.max(5, ...pts.map(p =&gt; p.v), ...ref.map(r =&gt; r.wait_min));
+  // 스프레드(...)로 넘기면 행이 수만 개일 때(고배속 mock) 호출 스택이 터진다 — reduce 로
+  const max = Math.max(5, pts.reduce((a, p) =&gt; Math.max(a, p.v), 0),
+                       ref.reduce((a, r) =&gt; Math.max(a, r.wait_min), 0));
   const X = m =&gt; 4 + (m - lo) / Math.max(1, hi - lo) * plotW;
   const Y = v =&gt; padT + (1 - v / max) * plotH;
   const path = (arr, fx, fy) =&gt; { g.beginPath(); arr.forEach((d, i) =&gt; (i ? g.lineTo : g.moveTo).call(g, fx(d), fy(d))); };
@@ -1369,60 +1373,114 @@ function drawChart(rows, typ, st) {
   }
 }
 
-/* ---------------- ⑩ 평면도 ----------------
-   카메라 시점 기준. x,y 는 0~1 정규화 — 입구=좌상, 통로=좌측변, 배식대=하단 좌측~중앙, 퇴식구=우하, 출구=우측 중앙.
-   방(외곽)은 카드가 주는 상자를 그대로 채우고, 안쪽 설비의 크기는 '가로 폭'만으로 잰다(u) —
-   카드가 세로로 길어질 때 배식대까지 두꺼워지면 도면이 아니라 막대그래프가 된다.
-   퇴식구만은 예외로, 출구 틈 아래에서 시작해 배식대 아랫변에서 끝나는 세로 띠다 */
+const ROOM = { W: 15.55, D: 24.65, H: 2.68 };
+function renderPlan(p) {
+  try { drawPlan(p); } catch (e) { console.error(&quot;drawPlan&quot;, e); }
+}
+/* ---------------- ⑩ 급식실 현황 (탑뷰 2D) ----------------
+   실측 기반 평면 탑뷰(세로형) — 방 15.55m(폭 x) × 24.65m(길이 y), 원점 = 배식구 벽 ∧ 창가 통로 구석.
+   /api/positions 의 x,y 는 이 바닥의 0~1 정규화 값 — zones.json 과 공유하는 좌표계.
+   화면 방향은 확정 도면: 배식대 위(카메라는 그 오른쪽 끝) · 퇴식구→출구 왼쪽(위부터) ·
+   대기통로(창가) 오른쪽 · 입구 아래(통로 쪽). 투영: sx=(W−x)·k, sy=y·k — 왜곡 없음.
+   테이블 6열 × [6인×3 | 6인×2 | 6인×4+4인], 의자는 도면 기호처럼 테이블 가장자리에 살짝만 */
 function drawPlan(p) {
   const ok = p.state === &quot;ok&quot;;
   $(&quot;#plancard&quot;).dataset.state = ok ? &quot;ok&quot; : &quot;no_data&quot;;
   $(&quot;#posn&quot;).textContent = ok ? `${p.n}명` : &quot;—&quot;;
   const c = $(&quot;#plan&quot;), W = c.clientWidth || 318;
-  const H = c.clientHeight || Math.round(W * 191 / 318);
+  const H = c.clientHeight || Math.round(W * 508 / 318);
   const { g } = fit(c, H);
-  const PAD = 6;                                                    // 상자와 방 사이 여백(px)
-  const rx = PAD, ry = PAD, rw = Math.max(1, W - PAD * 2), rh = Math.max(1, H - PAD * 2);
-  const u = rw / 302;                                               // 원도면 302 폭 = 방 폭. 세로와 무관한 단위
-  const box = (x, y, w, h, r, fill, stroke, dash, lw) =&gt; {
-    g.setLineDash(dash || []); g.lineWidth = lw || 1.5 * u;
-    g.beginPath(); g.roundRect(x, y, w, h, r);
-    if (fill) { g.fillStyle = fill; g.fill(); }
-    if (stroke) { g.strokeStyle = stroke; g.stroke(); }
-    g.setLineDash([]);
+  const u = W / 318;
+  const ML = 50 * u, MR = 10 * u, MT = 22 * u, MB = 8 * u;          // 좌측은 퇴식구·출구 라벨 자리
+  const k = Math.min((W - ML - MR) / ROOM.W, (H - MT - MB) / ROOM.D);
+  const ox = ML + (W - ML - MR - ROOM.W * k) / 2;
+  const oy = MT + (H - MT - MB - ROOM.D * k) / 2;
+  const X = x =&gt; ox + (ROOM.W - x) * k, Yy = y =&gt; oy + y * k;       // 세계좌표 → 화면
+  const rect = (y0, x0, dy, dx, r, fill) =&gt; {                       // 세계 y0..y0+dy × x0..x0+dx
+    g.beginPath(); g.roundRect(X(x0 + dx), Yy(y0), dx * k, dy * k, r);
+    g.fillStyle = fill; g.fill();
   };
-  const R = 14 * u;
-  box(rx, ry, rw, rh, R, &quot;#FBF8F0&quot;);
-  g.save(); g.beginPath(); g.roundRect(rx, ry, rw, rh, R); g.clip();
-  g.fillStyle = &quot;rgba(51,49,45,.045)&quot;; g.fillRect(rx, ry, 48 * u, rh); g.restore();   // 통로 띠
-  box(rx, ry, rw, rh, R, null, &quot;#D5CDBA&quot;);
-  const svH = 14 * u, svY = ry + rh - 3.5 * u - svH;                // 배식대 — 두께도 바닥 여백도 u 로만
-  box(rx + 6 * u, svY, 145 * u, svH, 7 * u, &quot;#FFF0EC&quot;, &quot;#FF7260&quot;, [6 * u, 4 * u], 2 * u);
-  const exT = ry + rh * .44, exB = ry + rh * .56;                   // 출구 = 우측 벽의 틈
-  const dsT = exB + 20 * u, dsB = svY + svH;                        // 퇴식구 = 출구 아래 ~ 배식대 아랫변
-  box(rx + 253.7 * u, dsT, 42.3 * u, Math.max(14 * u, dsB - dsT), 7 * u, &quot;#F3F0E7&quot;, &quot;#B9B1A0&quot;, [5 * u, 4 * u]);
-  g.strokeStyle = &quot;#FFFCF6&quot;; g.lineWidth = 3.5 * u;                 // 외곽선 틈 = 입구·출구
-  g.beginPath(); g.moveTo(rx + 18.1 * u, ry); g.lineTo(rx + 42.3 * u, ry); g.stroke();
-  g.beginPath(); g.moveTo(rx + rw, exT); g.lineTo(rx + rw, exB); g.stroke();
-  g.textBaseline = &quot;alphabetic&quot;; g.font = `700 ${11 * u}px system-ui, sans-serif`;
-  g.textAlign = &quot;left&quot;;   g.fillStyle = &quot;#6E6A61&quot;; g.fillText(&quot;입구&quot;, rx + 52 * u, ry + 13 * u);
-  g.fillStyle = &quot;#A9A296&quot;; g.fillText(&quot;통로&quot;, rx + 10 * u, ry + rh * .52);
-  g.textAlign = &quot;center&quot;; g.fillStyle = &quot;#D14A38&quot;; g.fillText(&quot;배식대&quot;, rx + 78 * u, svY + 10.5 * u);
-  g.textAlign = &quot;end&quot;;    g.fillStyle = &quot;#6E6A61&quot;;
-  g.fillText(&quot;출구&quot;, rx + 292 * u, ry + rh * .52);
-  g.fillText(&quot;퇴식구&quot;, rx + 292 * u, dsT - 6 * u);
-  if (!ok) return;
-  // 익명 마커: 틸 원 + 흰 테두리 위에 눈 둘과 웃는 입. 얼굴을 얹어도 좌표 두 개일 뿐, 식별 정보는 없다
-  p.points.forEach(({ x, y }) =&gt; {
-    const cx = rx + x * rw, cy = ry + y * rh, r = 7 * u;
-    g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2);
+  // 바닥 + 통로 띠(우측) + 타일 줄눈
+  rect(0, 0, ROOM.D, ROOM.W, 10 * u, &quot;#FBF8F0&quot;);
+  rect(0, 0, ROOM.D, 2.2, 0, &quot;rgba(51,49,45,.05)&quot;);
+  g.strokeStyle = &quot;rgba(51,49,45,.045)&quot;; g.lineWidth = 1;
+  for (let ty = 2.5; ty &lt; ROOM.D; ty += 2.5) {
+    g.beginPath(); g.moveTo(X(ROOM.W), Yy(ty)); g.lineTo(X(0), Yy(ty)); g.stroke();
+  }
+  for (let tx = 2.65; tx &lt; ROOM.W; tx += 2.65) {
+    g.beginPath(); g.moveTo(X(tx), Yy(0)); g.lineTo(X(tx), Yy(ROOM.D)); g.stroke();
+  }
+  // 벽 네 변 — 두께 띠. 개구부: 배식구 벽(위) · 퇴식구→출구(좌) · 창(우, 하늘빛) · 입구(아래, 통로 쪽)
+  const T = Math.max(3, .45 * k);
+  const gapDoor = [0.2, 3.2], gapDish = [1.6, 4.4], gapExit = [5.6, 8.4];  // 입구 = 통로 끝단(아래 벽, 창가 쪽)
+  g.fillStyle = &quot;#E3DCC9&quot;;
+  g.fillRect(X(ROOM.W), Yy(0) - T, ROOM.W * k, T);                  // 위 (y=0 배식구 벽)
+  g.fillRect(X(ROOM.W), Yy(ROOM.D), ROOM.W * k, T);                 // 아래 (y=D 출입문 벽)
+  g.fillRect(X(ROOM.W) - T, Yy(0), T, ROOM.D * k);                  // 좌 (x=W 벽)
+  g.fillRect(X(0), Yy(0), T, ROOM.D * k);                           // 우 (x=0 창가 벽)
+  g.fillStyle = &quot;#B9DBD9&quot;;                                          // 입구 (아래 벽, 통로 쪽)
+  g.fillRect(X(gapDoor[1]), Yy(ROOM.D), (gapDoor[1] - gapDoor[0]) * k, T);
+  g.fillStyle = &quot;#CFC9B8&quot;;                                          // 퇴식구 (좌측, 위부터)
+  g.fillRect(X(ROOM.W) - T, Yy(gapDish[0]), T, (gapDish[1] - gapDish[0]) * k);
+  g.fillStyle = &quot;#B9DBD9&quot;;                                          // 출구 (퇴식구 아래)
+  g.fillRect(X(ROOM.W) - T, Yy(gapExit[0]), T, (gapExit[1] - gapExit[0]) * k);
+  g.fillStyle = &quot;#D9E7EE&quot;;                                          // 창 (우측 벽 세 칸)
+  [[2.6, 7.4], [9.2, 14], [15.8, 20.6]].forEach(([a, b]) =&gt;
+    g.fillRect(X(0), Yy(a), T, (b - a) * k));
+  // 배식대 — 위 벽 안쪽의 긴 카운터 (카메라는 그 오른쪽 끝, 통로 쪽 구석)
+  rect(0.15, 1.5, 0.85, 12.0, 3 * u, &quot;#FFD9D0&quot;);
+  g.strokeStyle = &quot;#F0A897&quot;; g.lineWidth = 1;
+  g.strokeRect(X(13.5), Yy(0.15), 12.0 * k, 0.85 * k);
+  // 퇴식구 싱크대 — 좌측 벽 안쪽의 회색 카운터 (배식대와 같은 표기법)
+  rect(1.4, ROOM.W - 0.97, 3.2, 0.85, 3 * u, &quot;#E4DFD3&quot;);
+  g.strokeStyle = &quot;#C7C0AE&quot;; g.lineWidth = 1;
+  g.strokeRect(X(ROOM.W - 0.12), Yy(1.4), 0.85 * k, 3.2 * k);
+  // 테이블 6열(세로) — 흰 상판 + 도면 기호식 의자(양옆에 살짝)
+  const pitch = 1.8, x0 = 3.2, tw = 0.82;
+  const blocks = [[1.8, 1.8, 1.8], [1.8, 1.8], [1.8, 1.8, 1.8, 1.8, 1.25]];
+  for (let r = 0; r &lt; 6; r++) {
+    const xr = x0 + r * pitch;
+    let y = 2.2;
+    blocks.forEach(bl =&gt; {
+      bl.forEach(len =&gt; {
+        const nc = len &gt; 1.5 ? 3 : 2, step = len / nc;              // 6인 = 양측 의자 3개, 4인 = 2개
+        for (let i = 0; i &lt; nc; i++) {                              // 의자 먼저 — 테이블이 안쪽을 덮는다
+          const cy = y + step * (i + 0.5), cw = .44, cd = .28;
+          rect(cy - cw / 2, xr + tw - .08, cw, cd, 2.5 * u, &quot;#BCD98C&quot;);
+          rect(cy - cw / 2, xr - cd + .08, cw, cd, 2.5 * u, &quot;#BCD98C&quot;);
+        }
+        g.save(); g.shadowColor = &quot;rgba(51,49,45,.18)&quot;; g.shadowBlur = 3 * u;
+        g.shadowOffsetY = 1.2 * u;
+        rect(y, xr, len, tw, 2.5 * u, &quot;#FFFEF8&quot;);
+        g.restore();
+        y += len + 0.12;
+      });
+      y += 1.2;                                                      // 가로 통로
+    });
+  }
+  // 익명 마커 — 틸 스마일 (좌표 두 개뿐, 식별 정보 없음)
+  if (ok) p.points.forEach(({ x, y }) =&gt; {
+    const sx = X(x * ROOM.W), sy = Yy(y * ROOM.D), r = 6.5 * u;
+    g.beginPath(); g.arc(sx, sy, r, 0, Math.PI * 2);
     g.fillStyle = &quot;#129793&quot;; g.fill(); g.lineWidth = 1.6 * u; g.strokeStyle = &quot;#FFFCF6&quot;; g.stroke();
     g.fillStyle = &quot;#FFFCF6&quot;;
-    g.beginPath(); g.arc(cx - r * .33, cy - r * .22, r * .155, 0, Math.PI * 2); g.fill();
-    g.beginPath(); g.arc(cx + r * .33, cy - r * .22, r * .155, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.arc(sx - r * .33, sy - r * .22, r * .155, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.arc(sx + r * .33, sy - r * .22, r * .155, 0, Math.PI * 2); g.fill();
     g.beginPath(); g.lineWidth = Math.max(1, r * .17); g.strokeStyle = &quot;#FFFCF6&quot;; g.lineCap = &quot;round&quot;;
-    g.arc(cx, cy + r * .06, r * .44, .16 * Math.PI, .84 * Math.PI); g.stroke();
+    g.arc(sx, sy + r * .06, r * .44, .16 * Math.PI, .84 * Math.PI); g.stroke();
   });
+  // 라벨 — 흰 halo 를 둘러 마커 위에서도 읽힌다
+  g.textBaseline = &quot;alphabetic&quot;; g.font = `700 ${Math.max(9, 10.5 * u)}px system-ui, sans-serif`;
+  g.lineJoin = &quot;round&quot;; g.lineWidth = 3 * u; g.strokeStyle = &quot;#FFFCF6&quot;;
+  const label = (t, x, y, col) =&gt; { g.strokeText(t, x, y); g.fillStyle = col; g.fillText(t, x, y); };
+  g.textAlign = &quot;center&quot;;
+  label(&quot;배식대&quot;, X(7.5), Yy(0) - T - 4 * u, &quot;#D14A38&quot;);
+  label(&quot;입구&quot;, X((gapDoor[0] + gapDoor[1]) / 2), Yy(ROOM.D) - 5 * u, &quot;#6E6A61&quot;);
+  g.textAlign = &quot;right&quot;;                                            // 레이아웃 바깥(좌측 여백)에
+  label(&quot;퇴식구&quot;, X(ROOM.W) - T - 4 * u, Yy((gapDish[0] + gapDish[1]) / 2) + 4 * u, &quot;#6E6A61&quot;);
+  label(&quot;출구&quot;, X(ROOM.W) - T - 4 * u, Yy((gapExit[0] + gapExit[1]) / 2) + 4 * u, &quot;#6E6A61&quot;);
+  g.textAlign = &quot;center&quot;;
+  label(&quot;통로&quot;, X(1.1), Yy(ROOM.D * .5), &quot;#A9A296&quot;);
 }
 
 /* ---------------- ① 알레르기 ----------------
@@ -1585,7 +1643,7 @@ function balance() {
     const vis = kids.filter(el =&gt; !el.hidden &amp;&amp; el.classList.contains(&quot;card&quot;));
     if (vis.length) vis[vis.length - 1].classList.add(&quot;grow&quot;);
   });
-  if (LASTPOS) drawPlan(LASTPOS);      // 평면도 카드의 상자가 바뀌었으니 그 크기로 다시 그린다
+  if (LASTPOS) renderPlan(LASTPOS);    // 카드의 상자가 바뀌었으니 그 크기로 다시 그린다 (3D 는 ResizeObserver 가 맡는다)
 }
 
 refresh(); loadMeal(); loadNews();
@@ -1596,7 +1654,7 @@ addEventListener(&quot;resize&quot;, () =&gt; {
   rt = setTimeout(() =&gt; {
     balance();
     if (LAST) drawChart(LAST.rows, LAST.typ, LAST.st);
-    if (LASTPOS) drawPlan(LASTPOS);
+    if (LASTPOS) renderPlan(LASTPOS);
   }, 150);
 });
 if (&quot;serviceWorker&quot; in navigator) navigator.serviceWorker.register(&quot;/sw.js&quot;);
@@ -1604,6 +1662,7 @@ if (&quot;serviceWorker&quot; in navigator) navigator.serviceWorker.register(&qu
 &lt;/body&gt;
 &lt;/html&gt;</code></pre>
 </figure>
+
 <p>색과 구조는 <code>docs/layout.html</code> 의 레이아웃 도면 v4(ColorCombos #285 — 차콜·에그셸·멜론, 보조로 틸·아쿠아)를 따릅니다. 식권 카드는 상태에 따라 네 얼굴을 갖고(여유=차콜+아쿠아 칩, 배식 대기=멜론 외곽선 칩, 혼잡=멜론 카드+차콜 칩, 정보 없음=점선), 최근 2시간 추이는 도면 스펙대로 틸 선 2px + 세로 그라데이션 채움(위 틸 .9 → 아래 아쿠아 0)의 스파크라인이며 축·범례가 없습니다. 900px 이상에서는 2컬럼(왼쪽 식권+추이 / 오른쪽 급식+탄소)이 되고, 카드 깊이(--e1~e3)·hover 상승·숫자 펄스 같은 모션은 도면의 "데스크톱·모션 스펙" 절을 따르되 <code>prefers-reduced-motion</code> 이면 전부 꺼집니다. 급식 카드의 영양 3칸은 고유색(01 틸·02 아쿠아·03 멜론)이 칸의 정체성이고 상태는 우상단 플래그(많음·적음·부족 N)로만 표시합니다. 영양소 막대는 6개가 각각 고유색이며, 멜론 세로선(66.7% 위치)이 권장섭취량 100%, 부족이면 막대색은 그대로 두고 트랙에 멜론 외곽선과 "부족" 라벨을 붙입니다. 미리 만들어 두는 이유는 8단계 결과를 바로 눈으로 보기 위해서입니다.</p>
 
 <h3>7-2. PWA 파일 두 개</h3>
@@ -1633,7 +1692,7 @@ if (&quot;serviceWorker&quot; in navigator) navigator.serviceWorker.register(&qu
 // 화면(HTML)은 반드시 네트워크 우선. 캐시 우선으로 두면 배포를 해도 예전 화면이 계속 뜬다 —
 // v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v6&quot;;
+const CACHE = &quot;mealboard-v7&quot;;
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;];
 
 self.addEventListener(&quot;install&quot;, e =&gt;
