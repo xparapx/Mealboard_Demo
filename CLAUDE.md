@@ -24,13 +24,16 @@
   제목·피드 요약을 받아 **DeepL API Free** 로 한국어로 옮긴다. 키는 Pi `.env` 의 `DEEPL_API_KEY`(동작 확인 완료).
   키가 없거나 호출이 실패하면 원문 영어로 나갈 뿐 아무것도 깨지지 않는다. 요약은 반드시 문장 경계에서 자른다 —
   조각난 문장을 번역기에 주면 끊긴 한국어가 나온다.
-- **개발 PC → Pi 는 키 로그인.** `ssh mbpi` 한 마디로 붙는다(`~/.ssh/config`, User `xparapx`, HostName `rsp`,
-  전용 키 `id_ed25519_mealboard`, 패스프레이즈 없음). `.env` 의 `PI_USER`·`PI_HOST` 와 같은 값.
-- **다음 할 일**: ① `static/icons/`·`qr.png` 가 Pi 에만 있고 저장소에 없다 — 학교 Pi 재설치 시 PWA 아이콘이 깨진다.
-  ② 평소 곡선(`/api/typical`)은 mock 이 170분 사이클을 반복해 써서 스테이징에서는 값이 바닥이다. 실측 이후 확인.
-  ③ Inside Climate News 는 미국 지역 전력·정치 보도가 많아 "세계적 기후 이슈"와 결이 다른 기사가 섞인다 —
-  며칠 지켜본 뒤 교체 여부 판단(후보: UNEP · Climate Home News). ④ 급식 있는 평일에 데스크톱 2컬럼 높이 맞춤 실물 확인.
-  ⑤ 로드맵 ④ vision 프로토타입.
+- **개발 PC → Pi 는 키 로그인.** 어느 PC든 `ssh mbpi` 한 마디로 붙는다(`~/.ssh/config`, User `xparapx`, HostName `rsp`).
+  키 파일은 PC 마다 다르다(맥북 `id_ed25519_mealboard`, jh-home PC `id_ed25519`) — Pi 의 `authorized_keys` 에 PC 별로 한 줄씩.
+  새 PC 는 공개키를 Pi 콘솔에서 `authorized_keys` 에 추가한 뒤 위 별칭을 만든다. `.env` 의 `PI_USER`·`PI_HOST` 와 같은 값.
+- **QR·PWA 아이콘은 할 일이 아니다(09-03 확인)**: Pi 의 `qr.png`·`static/icons/qr.png` 는 매뉴얼 STEP 9 의 `qrencode` 로
+  만든 접속용 QR(내용 = Funnel 주소)이며 git 미추적이 맞다 — 한 줄로 재생성 가능. `static/icons/icon-192.png` 는 Pi 에도
+  원래 없고(404) 매뉴얼대로 없어도 동작한다. 재설치 시 "깨지는" 것은 없다.
+- **다음 할 일**: ① 평소 곡선(`/api/typical`)은 mock 이 170분 사이클을 반복해 써서 스테이징에서는 값이 바닥이다. 실측 이후 확인.
+  ② Inside Climate News 는 미국 지역 전력·정치 보도가 많아 "세계적 기후 이슈"와 결이 다른 기사가 섞인다 —
+  며칠 지켜본 뒤 교체 여부 판단(후보: UNEP · Climate Home News). ③ 급식 있는 평일에 데스크톱 2컬럼 높이 맞춤 실물 확인.
+  ④ 로드맵 ④ vision 프로토타입.
 
 ## 1. 프로젝트 한 줄 정의
 
