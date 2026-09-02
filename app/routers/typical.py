@@ -9,10 +9,10 @@
 import datetime as dt
 from fastapi import APIRouter, Query
 from ..db import connect
+from ..lunch import BUCKET_MIN          # 5분 구간 — 집계(rollup)와 같은 눈금
 
 router = APIRouter()
 
-BUCKET_MIN = 5        # 5분 단위로 묶는다. 30초 폴링 노이즈를 지우고 곡선을 읽히게
 MIN_BUCKETS = 6       # 이보다 적게 모이면 그 기준은 쓸모없다고 보고 다음 단계로
 
 

@@ -1,11 +1,10 @@
 import datetime as dt
 import json
 from fastapi import APIRouter
-from ..config import DATA
+from ..config import DATA, STALE_SEC    # status.py 와 같은 규칙: 이 시간 넘게 새 파일이 없으면 '데이터 없음'
 
 router = APIRouter()
 POSITIONS = DATA / "positions.json"
-STALE_SEC = 120   # status.py 와 같은 규칙: 이 시간 넘게 새 파일이 없으면 '데이터 없음'
 
 
 @router.get("/api/positions")

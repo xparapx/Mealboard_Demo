@@ -593,16 +593,23 @@ load_dotenv(BASE / &quot;.env&quot;)
 
 DATA = BASE / &quot;data&quot;
 DATA.mkdir(exist_ok=True)
-DB_PATH = DATA / &quot;queue.db&quot;
+DB_PATH = DATA / &quot;queue.db&quot;                 # 쓰기 주체: vision(또는 mock)
+INSIGHTS_DB_PATH = DATA / &quot;insights.db&quot;     # 쓰기 주체: jobs/rollup.py
+REPORTS_DB_PATH = DATA / &quot;reports.db&quot;       # 쓰기 주체: jobs/report.py
 MEAL_JSON = DATA / &quot;meal.json&quot;
+ZONES_JSON = DATA / &quot;zones.json&quot;            # git 템플릿. Pi 보정값은 같은 폴더의 미추적 zones.local.json (vision/zones.py 가 overlay)
 
 API_PORT = int(os.getenv(&quot;API_PORT&quot;, &quot;8100&quot;))
 LUNCH_START = os.getenv(&quot;LUNCH_START&quot;, &quot;11:30&quot;)
-LUNCH_END = os.getenv(&quot;LUNCH_END&quot;, &quot;14:00&quot;)</code></pre>
+LUNCH_END = os.getenv(&quot;LUNCH_END&quot;, &quot;14:00&quot;)
+STALE_SEC = 120                             # 이 시간 넘게 새 행·새 파일이 없으면 '데이터 없음' (status·positions·집계 커버리지 공통)
+ROLLUP_WINDOW = os.getenv(&quot;ROLLUP_WINDOW&quot;, &quot;lunch&quot;)   # lunch | all — 집계 창 (스테이징 mock 은 종일 돌므로 all)
+FEED_SOURCE = os.getenv(&quot;FEED_SOURCE&quot;, &quot;vision&quot;)      # mock | vision — 집계 행의 출처 표기</code></pre>
 </figure>
 <figure class="code">
 <figcaption><span class="path">app/db.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
-<pre><code class="lang-python">&quot;&quot;&quot;SQLite 연결. 쓰기는 mock_feed(또는 vision) 하나뿐, app 은 SELECT 만 한다.&quot;&quot;&quot;
+<pre><code class="lang-python">&quot;&quot;&quot;queue.db 연결. 쓰기는 mock_feed(또는 vision) 하나뿐, app 은 SELECT 만 한다.
+samples 와 zone_samples 는 같은 시각(ts)에 한 트랜잭션으로 들어온다 — 어느 한쪽만 남는 표본이 없게.&quot;&quot;&quot;
 import sqlite3
 from .config import DB_PATH
 
@@ -613,6 +620,12 @@ CREATE TABLE IF NOT EXISTS samples (
   rate_per_min REAL,               -- λ : 배식대 통과율 (5분 이동평균, 명/분)
   wait_min     REAL,               -- W = L / λ  (산출 불가면 NULL)
   state        TEXT NOT NULL       -- ok | no_data | insufficient_rate
+);
+CREATE TABLE IF NOT EXISTS zone_samples (
+  ts   TEXT    NOT NULL,           -- samples.ts 와 같은 시각
+  zone TEXT    NOT NULL,           -- data/zones.json 의 zones[].id
+  n    INTEGER NOT NULL,           -- 그 순간 구역 안 인원수. 숫자만 — 개별 좌표는 남기지 않는다 (CLAUDE.md §2)
+  PRIMARY KEY (ts, zone)
 );
 &quot;&quot;&quot;
 
@@ -631,10 +644,10 @@ def connect():
 <figcaption><span class="path">app/routers/status.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
 <pre><code class="lang-python">import datetime as dt
 from fastapi import APIRouter
+from ..config import STALE_SEC          # 이 시간 넘게 새 행이 없으면 '데이터 없음'으로 본다
 from ..db import connect
 
 router = APIRouter()
-STALE_SEC = 120   # 이 시간 넘게 새 행이 없으면 &#x27;데이터 없음&#x27;으로 본다
 
 
 @router.get(&quot;/api/status&quot;)
@@ -770,7 +783,8 @@ GET /api/meal      → 8단계 fetch_neis 가 만든 meal.json 그대로</code><
 <figure class="code">
 <figcaption><span class="path">jobs/mock_feed.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
 <pre><code class="lang-python">&quot;&quot;&quot;vision/counter.py 의 대역.
-점심시간 인파 곡선을 흉내내어 samples 테이블에 쓴다.
+점심시간 인파 곡선을 흉내내어 samples 테이블에 쓰고, 같은 틱의 위치를 data/zones.json 구역으로 세어
+zone_samples 에 인원수만 남긴다(같은 트랜잭션). 구역 정의는 시작할 때 한 번 읽는다(바뀌면 재시작).
 실제 vision 과 동시에 켜지 말 것 — SQLite 쓰기 주체는 항상 하나.
 
 실행:  uv run python -m jobs.mock_feed --speed 30
@@ -786,9 +800,10 @@ import random
 import time
 from collections import deque
 
-from app.config import DATA
+from app.config import DATA, ZONES_JSON
 from app.db import connect
 from vision.waittime import estimate_wait
+from vision.zones import count_by_zone, load_zones
 
 TICK = 10           # 시뮬레이션 1틱 = 10초
 CAPACITY = 20.0     # 배식대 처리 능력 (명/분)
@@ -822,11 +837,11 @@ def layout_points(n):
     return pts
 
 
-def write_positions(ts, queue):
+def write_positions(ts, queue, pts):
     &quot;&quot;&quot;data/positions.json 을 원자적으로 덮어쓴다 (tmp 에 쓰고 os.replace). 순간 상태만, 이력 없음.
     Windows 에서는 API 가 읽는 순간 os.replace 가 거부될 수 있어 잠깐 재시도하고, 끝내 안 되면 이번 틱은 건너뛴다(옛 파일 유지).&quot;&quot;&quot;
     tmp = POSITIONS.parent / (POSITIONS.name + &quot;.tmp&quot;)
-    tmp.write_text(json.dumps({&quot;updated_at&quot;: ts, &quot;n&quot;: queue, &quot;points&quot;: layout_points(queue)}), encoding=&quot;utf-8&quot;)
+    tmp.write_text(json.dumps({&quot;updated_at&quot;: ts, &quot;n&quot;: queue, &quot;points&quot;: pts}), encoding=&quot;utf-8&quot;)
     for _ in range(5):
         try:
             os.replace(tmp, POSITIONS)
@@ -848,9 +863,10 @@ def main():
     a = ap.parse_args()
 
     con = connect()
+    zones = load_zones(ZONES_JSON)[&quot;zones&quot;]                   # 템플릿 + zones.local.json overlay. 깨져 있으면 여기서 멈춘다
     served_log = deque()        # (sim_sec, 처리 인원) — 5분 이동평균 계산용
     queue, sim = 0, 0.0
-    print(f&quot;mock_feed 시작  speed={a.speed}  scenario={a.scenario}&quot;)
+    print(f&quot;mock_feed 시작  speed={a.speed}  scenario={a.scenario}  zones={[z['id'] for z in zones]}&quot;)
 
     while True:
         m = sim / 60
@@ -866,13 +882,19 @@ def main():
         rate = sum(n for _, n in served_log) / 5.0            # λ (명/분)
         wait, state = estimate_wait(queue, rate)              # W = L / λ
 
+        counts = {}
         if not (a.scenario == &quot;gap&quot; and 80 &lt;= m &lt; 90):
             ts = dt.datetime.now().isoformat(timespec=&quot;milliseconds&quot;)
+            pts = layout_points(queue)
+            counts = count_by_zone(pts, zones)                # 구역별 인원수 — DB 에는 이 숫자만 간다
             con.execute(&quot;INSERT OR REPLACE INTO samples VALUES (?,?,?,?,?)&quot;,
                         (ts, queue, round(rate, 2), wait, state))
-            con.commit()
-            write_positions(ts, queue)                        # 카메라(=mock) 가 멈추면 이 파일도 멈춘다 → API 가 stale 로 판단
-        print(f&quot;{m:6.1f}분  대기 {queue:3d}명  처리 {rate:5.1f}/분  예상 {wait}분  {state}&quot;)
+            con.executemany(&quot;INSERT OR REPLACE INTO zone_samples VALUES (?,?,?)&quot;,
+                            [(ts, z, n) for z, n in counts.items()])
+            con.commit()                                      # samples 와 zone_samples 를 한 트랜잭션으로 — 반쪽 표본이 남지 않게
+            write_positions(ts, queue, pts)                   # 카메라(=mock) 가 멈추면 이 파일도 멈춘다 → API 가 stale 로 판단
+        zone_txt = &quot; &quot;.join(f&quot;{z}={n}&quot; for z, n in counts.items())
+        print(f&quot;{m:6.1f}분  대기 {queue:3d}명  처리 {rate:5.1f}/분  예상 {wait}분  {state}  {zone_txt}&quot;)
 
         sim += TICK
         if sim &gt;= CYCLE_MIN * 60:                             # 한 사이클 끝 → 처음부터
@@ -2558,11 +2580,10 @@ def write_positions(ts, queue):
 <pre><code class="lang-python">import datetime as dt
 import json
 from fastapi import APIRouter
-from ..config import DATA
+from ..config import DATA, STALE_SEC    # status.py 와 같은 규칙: 이 시간 넘게 새 파일이 없으면 '데이터 없음'
 
 router = APIRouter()
 POSITIONS = DATA / &quot;positions.json&quot;
-STALE_SEC = 120   # status.py 와 같은 규칙: 이 시간 넘게 새 파일이 없으면 '데이터 없음'
 
 
 @router.get(&quot;/api/positions&quot;)
@@ -2578,8 +2599,7 @@ def positions():
     age = (dt.datetime.now() - dt.datetime.fromisoformat(p[&quot;updated_at&quot;])).total_seconds()
     if age &gt; STALE_SEC:
         return {**empty, &quot;updated_at&quot;: p[&quot;updated_at&quot;], &quot;stale&quot;: True}
-    return {&quot;state&quot;: &quot;ok&quot;, &quot;updated_at&quot;: p[&quot;updated_at&quot;], &quot;stale&quot;: False, &quot;n&quot;: p[&quot;n&quot;], &quot;points&quot;: p[&quot;points&quot;]}
-</code></pre>
+    return {&quot;state&quot;: &quot;ok&quot;, &quot;updated_at&quot;: p[&quot;updated_at&quot;], &quot;stale&quot;: False, &quot;n&quot;: p[&quot;n&quot;], &quot;points&quot;: p[&quot;points&quot;]}</code></pre>
 </figure>
 
 <figure class="code">
@@ -2679,10 +2699,10 @@ ls data/positions.json*                                 # .tmp 가 남아 있지
 import datetime as dt
 from fastapi import APIRouter, Query
 from ..db import connect
+from ..lunch import BUCKET_MIN          # 5분 구간 — 집계(rollup)와 같은 눈금
 
 router = APIRouter()
 
-BUCKET_MIN = 5        # 5분 단위로 묶는다. 30초 폴링 노이즈를 지우고 곡선을 읽히게
 MIN_BUCKETS = 6       # 이보다 적게 모이면 그 기준은 쓸모없다고 보고 다음 단계로
 
 

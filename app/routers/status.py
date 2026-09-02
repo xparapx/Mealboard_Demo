@@ -1,9 +1,9 @@
 import datetime as dt
 from fastapi import APIRouter
+from ..config import STALE_SEC          # 이 시간 넘게 새 행이 없으면 '데이터 없음'으로 본다
 from ..db import connect
 
 router = APIRouter()
-STALE_SEC = 120   # 이 시간 넘게 새 행이 없으면 '데이터 없음'으로 본다
 
 
 @router.get("/api/status")

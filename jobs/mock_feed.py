@@ -1,5 +1,6 @@
 """vision/counter.py 의 대역.
-점심시간 인파 곡선을 흉내내어 samples 테이블에 쓴다.
+점심시간 인파 곡선을 흉내내어 samples 테이블에 쓰고, 같은 틱의 위치를 data/zones.json 구역으로 세어
+zone_samples 에 인원수만 남긴다(같은 트랜잭션). 구역 정의는 시작할 때 한 번 읽는다(바뀌면 재시작).
 실제 vision 과 동시에 켜지 말 것 — SQLite 쓰기 주체는 항상 하나.
 
 실행:  uv run python -m jobs.mock_feed --speed 30
@@ -15,9 +16,10 @@ import random
 import time
 from collections import deque
 
-from app.config import DATA
+from app.config import DATA, ZONES_JSON
 from app.db import connect
 from vision.waittime import estimate_wait
+from vision.zones import count_by_zone, load_zones
 
 TICK = 10           # 시뮬레이션 1틱 = 10초
 CAPACITY = 20.0     # 배식대 처리 능력 (명/분)
@@ -51,11 +53,11 @@ def layout_points(n):
     return pts
 
 
-def write_positions(ts, queue):
+def write_positions(ts, queue, pts):
     """data/positions.json 을 원자적으로 덮어쓴다 (tmp 에 쓰고 os.replace). 순간 상태만, 이력 없음.
     Windows 에서는 API 가 읽는 순간 os.replace 가 거부될 수 있어 잠깐 재시도하고, 끝내 안 되면 이번 틱은 건너뛴다(옛 파일 유지)."""
     tmp = POSITIONS.parent / (POSITIONS.name + ".tmp")
-    tmp.write_text(json.dumps({"updated_at": ts, "n": queue, "points": layout_points(queue)}), encoding="utf-8")
+    tmp.write_text(json.dumps({"updated_at": ts, "n": queue, "points": pts}), encoding="utf-8")
     for _ in range(5):
         try:
             os.replace(tmp, POSITIONS)
@@ -77,9 +79,10 @@ def main():
     a = ap.parse_args()
 
     con = connect()
+    zones = load_zones(ZONES_JSON)["zones"]                   # 템플릿 + zones.local.json overlay. 깨져 있으면 여기서 멈춘다
     served_log = deque()        # (sim_sec, 처리 인원) — 5분 이동평균 계산용
     queue, sim = 0, 0.0
-    print(f"mock_feed 시작  speed={a.speed}  scenario={a.scenario}")
+    print(f"mock_feed 시작  speed={a.speed}  scenario={a.scenario}  zones={[z['id'] for z in zones]}")
 
     while True:
         m = sim / 60
@@ -95,13 +98,19 @@ def main():
         rate = sum(n for _, n in served_log) / 5.0            # λ (명/분)
         wait, state = estimate_wait(queue, rate)              # W = L / λ
 
+        counts = {}
         if not (a.scenario == "gap" and 80 <= m < 90):
             ts = dt.datetime.now().isoformat(timespec="milliseconds")
+            pts = layout_points(queue)
+            counts = count_by_zone(pts, zones)                # 구역별 인원수 — DB 에는 이 숫자만 간다
             con.execute("INSERT OR REPLACE INTO samples VALUES (?,?,?,?,?)",
                         (ts, queue, round(rate, 2), wait, state))
-            con.commit()
-            write_positions(ts, queue)                        # 카메라(=mock) 가 멈추면 이 파일도 멈춘다 → API 가 stale 로 판단
-        print(f"{m:6.1f}분  대기 {queue:3d}명  처리 {rate:5.1f}/분  예상 {wait}분  {state}")
+            con.executemany("INSERT OR REPLACE INTO zone_samples VALUES (?,?,?)",
+                            [(ts, z, n) for z, n in counts.items()])
+            con.commit()                                      # samples 와 zone_samples 를 한 트랜잭션으로 — 반쪽 표본이 남지 않게
+            write_positions(ts, queue, pts)                   # 카메라(=mock) 가 멈추면 이 파일도 멈춘다 → API 가 stale 로 판단
+        zone_txt = " ".join(f"{z}={n}" for z, n in counts.items())
+        print(f"{m:6.1f}분  대기 {queue:3d}명  처리 {rate:5.1f}/분  예상 {wait}분  {state}  {zone_txt}")
 
         sim += TICK
         if sim >= CYCLE_MIN * 60:                             # 한 사이클 끝 → 처음부터
