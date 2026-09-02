@@ -270,12 +270,12 @@
     </div>
 
     <section class="card" id="chartcard" hidden>
-      <div class="eyebrow">최근 2시간 예상 대기</div>
+      <div class="eyebrow">최근 30분 예상 대기</div>
       <div class="lead" id="chartlead" hidden></div>
       <canvas id="chart"></canvas>
       <div class="legend">
         <span><i>오늘</i><i class="ref" id="reflab" hidden>평소</i></span>
-        <span class="now">2시간 전 → <b>지금</b></span>
+        <span class="now">30분 전 → <b>지금</b></span>
       </div>
     </section>
 
@@ -337,7 +337,8 @@
 const $ = s => document.querySelector(s);
 const j = async u => (await fetch(u, { cache: "no-store" })).json();
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const BUSY_MIN = 12, EASY_MIN = 5;                  // 판정 임계값 (학교마다 다를 수 있음)
+const BUSY_MIN = 12, EASY_MIN = 5;
+const CHART_MIN = 30;                 // 추이 카드의 시간창(분) — 카드 제목·축 라벨과 함께 바꾼다                  // 판정 임계값 (학교마다 다를 수 있음)
 
 function level(st) {
   if (st.state === "no_data") return "off";
@@ -392,8 +393,8 @@ async function refresh() {
   if (ok) $("#arriveat").textContent = hhmm(new Date(Date.now() + st.wait_min * 60000));
 
   const [h, t] = await Promise.all([
-    j("/api/history?minutes=120"),
-    j("/api/typical?minutes=120").catch(() => ({ state: "no_data", rows: [] }))]);
+    j(`/api/history?minutes=${CHART_MIN}`),
+    j(`/api/typical?minutes=${CHART_MIN}`).catch(() => ({ state: "no_data", rows: [] }))]);
   LAST = { rows: h.rows, typ: t, st };
   drawChart(h.rows, t, st);
   try { LASTPOS = await j("/api/positions"); } catch { LASTPOS = { state: "no_data" }; }
@@ -408,7 +409,7 @@ function drawChart(rows, typ, st) {
   $("#chartcard").hidden = pts.length < 2;
   if (pts.length < 2) return;
 
-  const hi = minuteOfDay(new Date()), lo = Math.max(0, hi - 120);
+  const hi = minuteOfDay(new Date()), lo = Math.max(0, hi - CHART_MIN);
   const ref = (typ.state === "ok" ? typ.rows : []).filter(r => r.minute_of_day >= lo && r.minute_of_day <= hi);
   $("#reflab").hidden = !ref.length;
   $("#reflab").textContent = ref.length

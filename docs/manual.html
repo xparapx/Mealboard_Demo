@@ -927,7 +927,7 @@ systemctl status mealboard-api --no-pager</code></pre>
   <div class="lane"><em>공개</em><div class="node on" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div><i>→</i><div class="node" data-k="cf"><b>cloudflared</b><span>학교망 밖으로 내보내는 터널</span></div><i>→ 인터넷 →</i><div class="node" data-k="user"><b>학생·교사</b><span>QR → 휴대폰</span></div><i>· 전부</i><div class="node" data-k="sysd"><b>systemd</b><span>부팅 시 자동 실행 · 재시작</span></div><i>가 관리</i></div>
 </div>
 
-<p class="goal">목표: 휴대폰 브라우저에서 예상 대기시간·대기 인원·최근 2시간 그래프·오늘 급식이 보이고, 30초마다 스스로 갱신되는 화면.</p>
+<p class="goal">목표: 휴대폰 브라우저에서 예상 대기시간·대기 인원·최근 30분 그래프·오늘 급식이 보이고, 30초마다 스스로 갱신되는 화면.</p>
 
 <h3>7-1. 설계 선택</h3>
 <p>React 같은 프레임워크 없이 HTML 파일 하나입니다. Pi 에 Node.js 를 깔지 않는다는 결정(CLAUDE.md §2)의 결과이고, 이 규모에는 충분합니다. 30초 폴링(주기적으로 <code>/api/status</code> 를 다시 읽음)은 실시간 통신보다 단순하고 학교망 프록시를 잘 통과합니다.</p>
@@ -1205,12 +1205,12 @@ systemctl status mealboard-api --no-pager</code></pre>
     &lt;/div&gt;
 
     &lt;section class=&quot;card&quot; id=&quot;chartcard&quot; hidden&gt;
-      &lt;div class=&quot;eyebrow&quot;&gt;최근 2시간 예상 대기&lt;/div&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;최근 30분 예상 대기&lt;/div&gt;
       &lt;div class=&quot;lead&quot; id=&quot;chartlead&quot; hidden&gt;&lt;/div&gt;
       &lt;canvas id=&quot;chart&quot;&gt;&lt;/canvas&gt;
       &lt;div class=&quot;legend&quot;&gt;
         &lt;span&gt;&lt;i&gt;오늘&lt;/i&gt;&lt;i class=&quot;ref&quot; id=&quot;reflab&quot; hidden&gt;평소&lt;/i&gt;&lt;/span&gt;
-        &lt;span class=&quot;now&quot;&gt;2시간 전 → &lt;b&gt;지금&lt;/b&gt;&lt;/span&gt;
+        &lt;span class=&quot;now&quot;&gt;30분 전 → &lt;b&gt;지금&lt;/b&gt;&lt;/span&gt;
       &lt;/div&gt;
     &lt;/section&gt;
 
@@ -1272,7 +1272,8 @@ systemctl status mealboard-api --no-pager</code></pre>
 const $ = s =&gt; document.querySelector(s);
 const j = async u =&gt; (await fetch(u, { cache: &quot;no-store&quot; })).json();
 const esc = s =&gt; String(s).replace(/[&amp;&lt;&gt;&quot;']/g, c =&gt; ({ &quot;&amp;&quot;: &quot;&amp;amp;&quot;, &quot;&lt;&quot;: &quot;&amp;lt;&quot;, &quot;&gt;&quot;: &quot;&amp;gt;&quot;, '&quot;': &quot;&amp;quot;&quot;, &quot;'&quot;: &quot;&amp;#39;&quot; }[c]));
-const BUSY_MIN = 12, EASY_MIN = 5;                  // 판정 임계값 (학교마다 다를 수 있음)
+const BUSY_MIN = 12, EASY_MIN = 5;
+const CHART_MIN = 30;                 // 추이 카드의 시간창(분) — 카드 제목·축 라벨과 함께 바꾼다                  // 판정 임계값 (학교마다 다를 수 있음)
 
 function level(st) {
   if (st.state === &quot;no_data&quot;) return &quot;off&quot;;
@@ -1327,8 +1328,8 @@ async function refresh() {
   if (ok) $(&quot;#arriveat&quot;).textContent = hhmm(new Date(Date.now() + st.wait_min * 60000));
 
   const [h, t] = await Promise.all([
-    j(&quot;/api/history?minutes=120&quot;),
-    j(&quot;/api/typical?minutes=120&quot;).catch(() =&gt; ({ state: &quot;no_data&quot;, rows: [] }))]);
+    j(`/api/history?minutes=${CHART_MIN}`),
+    j(`/api/typical?minutes=${CHART_MIN}`).catch(() =&gt; ({ state: &quot;no_data&quot;, rows: [] }))]);
   LAST = { rows: h.rows, typ: t, st };
   drawChart(h.rows, t, st);
   try { LASTPOS = await j(&quot;/api/positions&quot;); } catch { LASTPOS = { state: &quot;no_data&quot; }; }
@@ -1343,7 +1344,7 @@ function drawChart(rows, typ, st) {
   $(&quot;#chartcard&quot;).hidden = pts.length &lt; 2;
   if (pts.length &lt; 2) return;
 
-  const hi = minuteOfDay(new Date()), lo = Math.max(0, hi - 120);
+  const hi = minuteOfDay(new Date()), lo = Math.max(0, hi - CHART_MIN);
   const ref = (typ.state === &quot;ok&quot; ? typ.rows : []).filter(r =&gt; r.minute_of_day &gt;= lo &amp;&amp; r.minute_of_day &lt;= hi);
   $(&quot;#reflab&quot;).hidden = !ref.length;
   $(&quot;#reflab&quot;).textContent = ref.length
@@ -1696,7 +1697,7 @@ if (&quot;serviceWorker&quot; in navigator) navigator.serviceWorker.register(&qu
 &lt;/html&gt;</code></pre>
 </figure>
 
-<p>색과 구조는 <code>docs/layout.html</code> 의 레이아웃 도면 v4(ColorCombos #285 — 차콜·에그셸·멜론, 보조로 틸·아쿠아)를 따릅니다. 식권 카드는 상태에 따라 네 얼굴을 갖고(여유=차콜+아쿠아 칩, 배식 대기=멜론 외곽선 칩, 혼잡=멜론 카드+차콜 칩, 정보 없음=점선), 최근 2시간 추이는 도면 스펙대로 틸 선 2px + 세로 그라데이션 채움(위 틸 .9 → 아래 아쿠아 0)의 스파크라인이며 축·범례가 없습니다. 900px 이상에서는 2컬럼(왼쪽 식권+추이 / 오른쪽 급식+탄소)이 되고, 카드 깊이(--e1~e3)·hover 상승·숫자 펄스 같은 모션은 도면의 "데스크톱·모션 스펙" 절을 따르되 <code>prefers-reduced-motion</code> 이면 전부 꺼집니다. 급식 카드의 영양 3칸은 고유색(01 틸·02 아쿠아·03 멜론)이 칸의 정체성이고 상태는 우상단 플래그(많음·적음·부족 N)로만 표시합니다. 영양소 막대는 6개가 각각 고유색이며, 멜론 세로선(66.7% 위치)이 권장섭취량 100%, 부족이면 막대색은 그대로 두고 트랙에 멜론 외곽선과 "부족" 라벨을 붙입니다. 미리 만들어 두는 이유는 8단계 결과를 바로 눈으로 보기 위해서입니다.</p>
+<p>색과 구조는 <code>docs/layout.html</code> 의 레이아웃 도면 v4(ColorCombos #285 — 차콜·에그셸·멜론, 보조로 틸·아쿠아)를 따릅니다. 식권 카드는 상태에 따라 네 얼굴을 갖고(여유=차콜+아쿠아 칩, 배식 대기=멜론 외곽선 칩, 혼잡=멜론 카드+차콜 칩, 정보 없음=점선), 최근 30분 추이(09-03, 이전 2시간)는 도면 스펙대로 틸 선 2px + 세로 그라데이션 채움(위 틸 .9 → 아래 아쿠아 0)의 스파크라인이며 축·범례가 없습니다. 900px 이상에서는 2컬럼(왼쪽 식권+추이 / 오른쪽 급식+탄소)이 되고, 카드 깊이(--e1~e3)·hover 상승·숫자 펄스 같은 모션은 도면의 "데스크톱·모션 스펙" 절을 따르되 <code>prefers-reduced-motion</code> 이면 전부 꺼집니다. 급식 카드의 영양 3칸은 고유색(01 틸·02 아쿠아·03 멜론)이 칸의 정체성이고 상태는 우상단 플래그(많음·적음·부족 N)로만 표시합니다. 영양소 막대는 6개가 각각 고유색이며, 멜론 세로선(66.7% 위치)이 권장섭취량 100%, 부족이면 막대색은 그대로 두고 트랙에 멜론 외곽선과 "부족" 라벨을 붙입니다. 미리 만들어 두는 이유는 8단계 결과를 바로 눈으로 보기 위해서입니다.</p>
 
 <h3>7-2. PWA 파일 두 개</h3>
 <p>PWA 는 "홈 화면에 추가"가 되는 웹페이지입니다. <code>manifest.json</code> 이 이름·아이콘을, <code>sw.js</code> 가 오프라인 캐시를 맡습니다. <strong>sw.js 에서 <code>/api/</code> 를 캐시하면 30초 폴링이 캐시된 옛 값만 돌려주는 함정</strong>이 있어, API 요청은 통과시키고 정적 파일만 캐시합니다.</p>
