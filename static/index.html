@@ -500,8 +500,8 @@ function drawPlan(p) {
   const T = Math.max(3, .45 * k);
   const gapDoor = [0.2, 3.2], gapDish = [1.6, 4.4], gapExit = [5.6, 8.4];  // 입구 = 통로 끝단(아래 벽, 창가 쪽)
   g.fillStyle = "#E3DCC9";
-  g.fillRect(X(ROOM.W), Yy(0) - T, ROOM.W * k, T);                  // 위 (y=0 배식구 벽)
-  g.fillRect(X(ROOM.W), Yy(ROOM.D), ROOM.W * k, T);                 // 아래 (y=D 출입문 벽)
+  g.fillRect(X(ROOM.W) - T, Yy(0) - T, ROOM.W * k + 2 * T, T);      // 위 (y=0 배식구 벽) — 좌우 벽 두께까지 늘려 모서리를 채운다
+  g.fillRect(X(ROOM.W) - T, Yy(ROOM.D), ROOM.W * k + 2 * T, T);     // 아래 (y=D 출입문 벽) — 위와 같이
   g.fillRect(X(ROOM.W) - T, Yy(0), T, ROOM.D * k);                  // 좌 (x=W 벽)
   g.fillRect(X(0), Yy(0), T, ROOM.D * k);                           // 우 (x=0 창가 벽)
   g.fillStyle = "#B9DBD9";                                          // 입구 (아래 벽, 통로 쪽)
