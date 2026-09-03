@@ -1,0 +1,16 @@
+[Unit]
+Description=Mealboard 공개 터널 — Cloudflare Tunnel(원격 관리형, 토큰) → 127.0.0.1:8100 (학교 망이 Tailscale 릴레이를 막아 09-03 부터 정식 경로)
+After=network-online.target mealboard-api.service
+Wants=network-online.target
+
+[Service]
+User=__USER__
+EnvironmentFile=/opt/mealboard/.env
+# CF_TUNNEL_TOKEN 은 Cloudflare Zero Trust → Networks → Tunnels 에서 만든 터널의 토큰. 공개 호스트(예: meal.<도메인> → http://127.0.0.1:8100)는
+# 대시보드에서 매핑한다 — 설정 파일·자격증명 파일이 Pi 에 남지 않는다. 관리 앱(8101)은 절대 매핑하지 않는다(tailnet 전용).
+ExecStart=/usr/bin/cloudflared --no-autoupdate tunnel run --token ${CF_TUNNEL_TOKEN}
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

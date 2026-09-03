@@ -7,8 +7,10 @@
 
 - **홈 Pi 5(64bit, Debian 13 Trixie, 시스템 Python 3.13) = 스테이징.** 학교 Pi도 같은 OS·Python이어야 uv.lock이 그대로 맞는다. 카메라 없음 → `mealboard-vision` 미설치, `mealboard-mock`이 대역.
   로드맵 ④는 개발 PC 웹캠·동영상 파일로 진행. ⑤ 중 uv 셋업·systemd·외부 공개는 홈 Pi 완료, calibrate만 학교 Pi 이전 시.
-- **외부 공개**: 스테이징·시범 운영은 **Tailscale Funnel**(고정 주소 `https://rsp.taild5f11e.ts.net`, `tailscale funnel --bg 8100`, 재부팅 유지).
-  정식 배포 전환 시 Cloudflare Tunnel + 유료 도메인(cloudflared 는 Pi 에 설치 완료). kro.kr 류 무료 하위 도메인은 Cloudflare 에 등록 불가.
+- **외부 공개**: **Cloudflare Tunnel 로 전환 중(09-03 오후 사용자 결정)**. 학교 망이 Tailscale 도쿄·싱가포르 릴레이와 Funnel 입구를 막아 Funnel(`https://rsp.taild5f11e.ts.net`)은
+  학교 안팎의 휴대폰에서 끊긴다(PC 는 tailnet 직결이라 된다). Pi 에서 Cloudflare 엣지 포트 7844 는 열려 있음을 확인. 유닛 `deploy/mealboard-cloudflared.service`(토큰 방식,
+  `.env CF_TUNNEL_TOKEN`), 공개 호스트 매핑은 Cloudflare 대시보드에서 `meal.<도메인>` → `http://127.0.0.1:8100` 만(관리 앱 8101 은 절대 매핑 금지). cloudflared 2026.8.3 은 09-03 에 Pi 에 설치했다.
+  Funnel 은 예비로 남겨 둔다(`serve reset`·`funnel reset` 금지는 그대로). kro.kr 류 무료 하위 도메인은 Cloudflare 에 등록 불가 — 도메인은 사용자가 준비.
 - **PI_HOST는 Tailscale 주소**(.env 참조). 공용 체크아웃은 `/opt/mealboard`. **Pi에서 직접 편집 금지, `git pull`만.**
   개발은 각자 PC의 클론에서 하고 Claude Code도 PC에서 실행해 SSH로 Pi를 제어한다.
 - **같은 Pi에 Plant 프로젝트가 정지 상태로 공존**(`~/plant/`, planthub·plantdash·plantsnap 유닛).

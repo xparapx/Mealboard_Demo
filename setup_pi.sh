@@ -52,4 +52,15 @@ echo ">> tailnet 에만 내보내기(한 번):  sudo tailscale serve --bg --http
 echo ">> .env 의 ADMIN_USERS(Tailscale 로그인, 쉼표) 와 ADMIN_LOCAL_KEY(openssl rand -hex 16) 를 채울 것. 비어 있으면 닫힌다"
 echo ">> 카메라 있는 Pi 에서만:  sudo systemctl disable --now mealboard-mock && sudo systemctl enable --now mealboard-vision"
 
+echo "== 7. 공개 터널 — cloudflared(Cloudflare Tunnel, 토큰 방식). 학교 망은 Tailscale 릴레이를 막으므로 이것이 정식 공개 경로"
+if ! command -v cloudflared >/dev/null; then
+  arch=$(dpkg --print-architecture)      # Pi 5 = arm64
+  curl -sL -o /tmp/cloudflared.deb "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${arch}.deb"     && sudo dpkg -i /tmp/cloudflared.deb && rm -f /tmp/cloudflared.deb
+fi
+if grep -q "^CF_TUNNEL_TOKEN=.\+" .env 2>/dev/null; then
+  sudo systemctl enable --now mealboard-cloudflared && echo "   cloudflared 터널 켬"
+else
+  echo ">> .env 의 CF_TUNNEL_TOKEN 이 비어 있어 터널을 켜지 않았다. Cloudflare Zero Trust 에서 터널을 만들어 토큰을 넣고: sudo systemctl enable --now mealboard-cloudflared"
+fi
+
 echo "== 완료. 확인:  curl -s localhost:\${API_PORT:-8100}/api/status"
