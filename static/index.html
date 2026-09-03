@@ -218,6 +218,14 @@
 </main>
 
 <!-- js/core.js 가 화면 모듈(wait·room·week·today·news)을 불러 등록하고 라우터·폴링을 돌린다 (빌드 도구 없음, ES 모듈) -->
+<script>
+/* 진단: 모듈이 읽히지 않거나(옛 브라우저 문법) 실행 중 오류가 나면 흰 화면 대신 맨 위에 붉은 띠로 오류 문장을 보인다 — 휴대폰에서 원인을 읽을 수 있게 */
+addEventListener("error", function (e) {
+  var d = document.createElement("pre"), t = e.target && e.target.src ? "불러오기 실패: " + e.target.src.split("/").pop() : "오류: " + e.message + " (" + String(e.filename || "").split("/").pop() + ":" + e.lineno + ")";
+  d.textContent = t; d.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99;margin:0;padding:8px 12px;background:#C2452D;color:#fff;font:12px/1.4 monospace;white-space:pre-wrap";
+  document.body.appendChild(d);
+}, true);
+</script>
 <script type="module" src="/js/core.js"></script>
 </body>
 </html>

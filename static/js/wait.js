@@ -78,22 +78,26 @@ export function drawChart(rows, typ, st) {
   const path = (arr, fx, fy) => { g.beginPath(); arr.forEach((d, i) => (i ? g.lineTo : g.moveTo).call(g, fx(d), fy(d))); };
 
   g.lineJoin = g.lineCap = "round";
-  // 오늘: 위로 갈수록 진한 틸 채움 — 봉우리가 스스로 강조된다
-  const grad = g.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, "rgba(18,151,147,.24)"); grad.addColorStop(1, "rgba(18,151,147,0)");
-  path(pts, p => X(p.m), p => Y(p.v));
-  g.lineTo(X(pts[pts.length - 1].m), H); g.lineTo(X(pts[0].m), H); g.closePath();
-  g.fillStyle = grad; g.fill();
+  // 오늘: 1분 막대 — 값이 클수록 진한 틸(09-03 사용자 결정: 선 대신 막대, 그라데이션은 값 크기로).
+  // 표본은 10초 묶음으로 오므로 분마다 평균을 낸다. 막대 폭은 30분 창을 균등 분할, 사이 1px 틈
+  const byMin = new Map();
+  pts.forEach(p => { const k = Math.floor(p.m); const b = byMin.get(k) || { s: 0, n: 0 }; b.s += p.v; b.n++; byMin.set(k, b); });
+  const bars = [...byMin.entries()].filter(([m]) => m >= lo && m <= hi).map(([m, b]) => ({ m, v: b.s / b.n })).sort((a, b) => a.m - b.m);
+  const bw = Math.max(2, plotW / (CHART_MIN + 1) - 1);
+  bars.forEach(b => {
+    const a = .18 + .82 * Math.min(1, b.v / max);                       // 0분 → 옅게, 최대 → 진하게
+    g.fillStyle = `rgba(18,151,147,${a.toFixed(3)})`;
+    const x = X(b.m) - bw / 2, y = Y(b.v), h = Math.max(2, H - padB - y);
+    g.beginPath(); g.roundRect ? g.roundRect(x, y, bw, h, [2, 2, 0, 0]) : g.rect(x, y, bw, h); g.fill();
+  });
 
   if (ref.length) {                                                   // 평소: 중립 회색 파선 (색이 아니라 선으로 구분)
-    g.setLineDash([4, 4]); g.strokeStyle = "#B9B1A0"; g.lineWidth = 1.5;
+    g.setLineDash([4, 4]); g.strokeStyle = "#8F877A"; g.lineWidth = 1.5;
     path(ref, r => X(r.minute_of_day), r => Y(r.wait_min)); g.stroke();
     g.setLineDash([]);
   }
-  g.strokeStyle = "#129793"; g.lineWidth = 2;
-  path(pts, p => X(p.m), p => Y(p.v)); g.stroke();
 
-  const last = pts[pts.length - 1];
+  const last = bars[bars.length - 1] || pts[pts.length - 1];
   g.setLineDash([3, 3]); g.strokeStyle = "rgba(209,74,56,.5)"; g.lineWidth = 1.5;
   g.beginPath(); g.moveTo(X(last.m), 2); g.lineTo(X(last.m), H); g.stroke(); g.setLineDash([]);
   g.beginPath(); g.arc(X(last.m), Y(last.v), 4, 0, Math.PI * 2);
