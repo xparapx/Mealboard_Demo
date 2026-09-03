@@ -17,8 +17,10 @@
   <symbol id="i-room" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M7 7.5h10"/>
     <circle class="fill" cx="8.5" cy="13" r="1.4"/><circle class="fill" cx="12.5" cy="16.2" r="1.4"/><circle class="fill" cx="15.6" cy="12" r="1.4"/></symbol>
   <symbol id="i-week" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
-  <symbol id="i-today" viewBox="0 0 24 24"><ellipse cx="8.5" cy="6.6" rx="2.6" ry="3.6"/><path d="M8.5 10.2V21"/>
-    <path d="M13 3v4.5a2.5 2.5 0 0 0 5 0V3M15.5 3v4.5M15.5 10V21"/></symbol>
+  <!-- 오늘급식: 숟가락·포크 나란히. 손잡이는 굵은 선(3.4)·둥근 끝으로 알약처럼 두툼하게 — 09-04 사용자 요청('앙증맞게') -->
+  <symbol id="i-today" viewBox="0 0 24 24"><ellipse class="fill" cx="8" cy="6.4" rx="3.1" ry="3.9"/><path d="M8 11.2V20" stroke-width="3.4"/>
+    <path d="M14 3.2v4.4M16.8 3.2v4.4M19.6 3.2v4.4" stroke-width="2"/><path d="M14 7.6a2.8 2.8 0 0 0 5.6 0" stroke-width="2"/>
+    <path d="M16.8 10.6V20" stroke-width="3.4"/></symbol>
   <symbol id="i-news" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="3"/><path d="M7.5 9h9M7.5 12.5h9M7.5 16h5.5"/></symbol>
 </svg>
 
@@ -26,7 +28,7 @@
 <nav class="dock" role="tablist" aria-label="화면">
   <i class="mark" aria-hidden="true"></i>
   <a href="#wait" data-go="wait" role="tab"><svg><use href="#i-wait"/></svg>대기시간</a>
-  <a href="#room" data-go="room" role="tab"><svg><use href="#i-room"/></svg>실시간</a>
+  <a href="#room" data-go="room" role="tab"><svg><use href="#i-room"/></svg>실시간뷰</a>
   <a href="#week" data-go="week" role="tab"><svg><use href="#i-week"/></svg>주간식단</a>
   <a href="#today" data-go="today" role="tab"><svg><use href="#i-today"/></svg>오늘급식</a>
   <a href="#news" data-go="news" role="tab"><svg><use href="#i-news"/></svg>이슈피드</a>
@@ -34,7 +36,7 @@
 <!-- 데스크톱 좌측 레일 (≥ 900px). 다섯 화면을 한 보드에 펼치고, 레일은 그 카드로 스크롤 + 스크롤 스파이 -->
 <aside class="rail" aria-label="화면">
   <a href="#wait" data-go="wait"><svg><use href="#i-wait"/></svg>대기시간</a>
-  <a href="#room" data-go="room"><svg><use href="#i-room"/></svg>실시간</a>
+  <a href="#room" data-go="room"><svg><use href="#i-room"/></svg>실시간뷰</a>
   <a href="#week" data-go="week"><svg><use href="#i-week"/></svg>주간식단</a>
   <a href="#today" data-go="today"><svg><use href="#i-today"/></svg>오늘급식</a>
   <a href="#news" data-go="news"><svg><use href="#i-news"/></svg>이슈피드</a>
@@ -115,8 +117,8 @@
     </section>
   </section>
 
-  <!-- ② 실시간 — 탑뷰 평면도 + 익명 위치 마커 (영상 아님) -->
-  <section class="view" id="room" role="tabpanel" aria-label="실시간">
+  <!-- ② 실시간뷰 — 탑뷰 평면도 + 익명 위치 마커 (영상 아님) -->
+  <section class="view" id="room" role="tabpanel" aria-label="실시간뷰">
     <section class="card plan" id="plancard" data-state="no_data">
       <div class="eyebrow">급식실 현황</div>
       <span class="count" id="posn">—</span>
@@ -124,14 +126,19 @@
       <div class="empty">표시할 위치 없음</div>
       <div class="note" style="margin-top:10px">영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다</div>
     </section>
-    <!-- 실시간 화면의 카드 — 최근 30분 밀집도(격자 셀 인원수 합계, 좌표 없음) · 오늘 리포트(로컬 LLM) -->
+    <!-- 실시간뷰 화면의 카드 — 최근 30분 밀집도(육각 타일별 인원수 합계, 좌표 없음; 데스크톱은 글이 평면도 오른쪽 여백에) · 오늘 리포트(로컬 LLM, 맨 아래) -->
     <section class="card insight" id="zonecard" data-state="no_data">
       <div class="eyebrow">최근 30분 밀집도</div>
       <div class="body">
-        <div class="lead" id="zonelead"></div>
-        <div class="stage zonestage"><canvas id="zoneplan"></canvas></div>
-        <div class="chips2 zones" id="zonechips"></div>
-        <div class="note foot" id="zonefoot"></div>
+        <div class="zonewrap">
+          <div class="stage zonestage"><canvas id="zoneplan"></canvas></div>
+          <div class="zoneside">
+            <div class="lead" id="zonelead"></div>
+            <div class="chips2 zones" id="zonechips"></div>
+            <div class="flarelegend"><span>적음</span><i></i><span>많음</span></div>
+            <div class="note foot" id="zonefoot"></div>
+          </div>
+        </div>
       </div>
       <div class="empty" id="zoneempty">최근 30분 표본이 아직 없습니다</div>
     </section>

@@ -139,14 +139,38 @@ export function drawZones(g, G, zones, occ = {}, labels = true) {
   });
 }
 
-/* 밀집도 격자 — cells = [{i, w}] (i = row*cols+col, w 0~1). 평면도 위에 셀을 틸로 채운다: 값이 클수록 진하게.
-   구역 이름·마커 없음. 최근 30분의 셀별 합계이지 개별 위치가 아니다 */
+/* 밀집도 팔레트 — seaborn "flare"(09-04 사용자 결정) 를 9단으로 뜬 값(cmap 을 0, 1/8, …, 1 에서 표본). 옅은 살구 → 진한 자주 */
+export const FLARE = ["#edb081", "#ea916e", "#e5715e", "#d9535d", "#c14168", "#a3386f", "#863071", "#672a6b", "#4b2362"];
+export function flare(t) {
+  const u = Math.min(1, Math.max(0, t)) * (FLARE.length - 1), i = Math.min(FLARE.length - 2, Math.floor(u)), f = u - i;
+  const a = FLARE[i].match(/\w\w/g).map(h => parseInt(h, 16)), b = FLARE[i + 1].match(/\w\w/g).map(h => parseInt(h, 16));
+  return `rgb(${a.map((v, k) => Math.round(v + (b[k] - v) * f)).join(",")})`;
+}
+
+/* 밀집도 육각 타일 — cells = [{i, w}] (i = row*cols+col, w 0~1). 기하는 vision/zones.py(hex_center)와 같다:
+   뾰족한 꼭짓점이 위, 홀수 행은 반 칸 오른쪽, 반지름은 x 로 1/(cols·√3) · y 로 1/(rows·1.5). 값이 있는 타일만 flare 색으로 채우고
+   나머지는 벌집 윤곽만 아주 옅게. 구역 이름·마커 없음. 최근 30분의 타일별 합계이지 개별 위치가 아니다 */
 export function drawHeat(g, G, cells, cols, rows) {
+  const { X, Y } = G, S3 = Math.sqrt(3);
+  const rx = 1 / (cols * S3), ry = 1 / (rows * 1.5);                // 정규화 반지름(x·y)
+  const hex = (col, row, s) => {                                     // s = 타일 축소 비율(사이 틈)
+    const cx = (col + .5 + .5 * (row & 1)) / cols, cy = (1 + 1.5 * row) / (rows * 1.5);
+    g.beginPath();
+    for (let k = 0; k < 6; k++) {
+      const th = Math.PI / 6 + k * Math.PI / 3;
+      const [sx, sy] = G.P(cx + rx * s * Math.cos(th), cy + ry * s * Math.sin(th));
+      (k ? g.lineTo : g.moveTo).call(g, sx, sy);
+    }
+    g.closePath();
+  };
+  g.save();
+  g.beginPath(); g.rect(X(ROOM.W), Y(0), ROOM.W * G.k, ROOM.D * G.k); g.clip();   // 홀수 행 오른쪽 반 칸·마지막 행 아랫단은 벽에서 자른다
+  g.strokeStyle = "rgba(51,49,45,.07)"; g.lineWidth = 1;
+  for (let row = 0; row < rows; row++) for (let col = 0; col < cols; col++) { hex(col, row, .96); g.stroke(); }
   (cells || []).forEach(c => {
-    const col = c.i % cols, row = Math.floor(c.i / cols);
-    const [x0, y0] = G.P(col / cols, row / rows), [x1, y1] = G.P((col + 1) / cols, (row + 1) / rows);
-    const x = Math.min(x0, x1), y = Math.min(y0, y1), w = Math.abs(x1 - x0), h = Math.abs(y1 - y0);
-    g.fillStyle = `rgba(12,109,106,${(.06 + .74 * Math.min(1, Math.max(0, c.w))).toFixed(3)})`;
-    g.fillRect(x + 1, y + 1, Math.max(1, w - 2), Math.max(1, h - 2));
+    const w = Math.min(1, Math.max(0, c.w));
+    hex(c.i % cols, Math.floor(c.i / cols), .9);
+    g.fillStyle = flare(w); g.globalAlpha = .55 + .4 * w; g.fill();
   });
+  g.restore();
 }

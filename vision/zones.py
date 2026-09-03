@@ -243,17 +243,39 @@ def count_by_zone(points, zones):
     return counts
 
 
-# ---- 밀집도 격자 (09-03 사용자 요청: 최근 30분 히트맵) --------------------------------------
-# 바닥을 GRID_COLS × GRID_ROWS 셀로 나눈 인원수 — 약 3.1m × 3.1m. 구역 인원수와 같은 성격의 집계 숫자이며(CLAUDE.md §2 히트맵 행),
-# 셀 번호 = row * GRID_COLS + col. 개별 좌표·궤적은 여기서도 남지 않는다.
-GRID_COLS, GRID_ROWS = 5, 8
+# ---- 밀집도 육각 격자 (09-03 사용자 요청: 최근 30분 히트맵 · 09-04 정사각 셀 → 육각 타일, 해상도 4배) ---------
+# 바닥을 뾰족한 꼭짓점이 위로 오는 육각 타일로 덮는다(홀수 행은 반 칸 오른쪽). 폭 방향 GRID_COLS 개가 바닥 폭을 채우고 행 간격은
+# 타일 반지름의 1.5 배 — 실측 바닥 15.55 × 24.65 m 에서 타일 하나 ≈ 2.1 m²(이전 3.1 m 정사각 셀의 약 1/4.6). 구역 인원수와 같은 성격의
+# 집계 숫자이며(CLAUDE.md §2 히트맵 행) 셀 번호 = row * GRID_COLS + col. 개별 좌표·궤적은 여기서도 남지 않는다.
+# 화면(static/js/floor.js drawHeat)이 같은 기하로 타일을 그린다 — 여기와 그쪽의 상수·중심 공식이 어긋나면 그림이 어긋난다.
+GRID_COLS, GRID_ROWS = 10, 18   # rows ≈ 24.65 / (1.5 × 15.55 / (10 × √3)) = 18.3 → 18 (타일이 정육각에 가장 가깝다)
+_SQRT3 = 3 ** 0.5
+
+
+def hex_center(cell, cols=GRID_COLS, rows=GRID_ROWS):
+    """셀 번호 → 타일 중심의 정규화 좌표 (x, y). 반지름은 x 로 1/(cols·√3), y 로 1/(rows·1.5)"""
+    row, col = divmod(int(cell), cols)
+    return ((col + 0.5 + 0.5 * (row & 1)) / cols, (1 + 1.5 * row) / (rows * 1.5))
 
 
 def cell_of(x, y, cols=GRID_COLS, rows=GRID_ROWS):
-    """정규화 좌표 → 셀 번호. 1.0 은 마지막 셀에 넣는다(경계 밖으로 새지 않게)"""
-    c = min(cols - 1, max(0, int(x * cols)))
-    r = min(rows - 1, max(0, int(y * rows)))
-    return r * cols + c
+    """정규화 좌표 → 육각 타일 번호. 반지름 1 단위로 옮겨 axial 좌표를 cube 반올림한다(Red Blob Games 의 표준 절차).
+    바닥 가장자리(위·아래 띠, 홀수 행 오른쪽 반 칸)는 가장 가까운 안쪽 타일로 — 경계 밖으로 새지 않게"""
+    px = x * cols * _SQRT3 - _SQRT3 / 2                      # 행 0 첫 타일의 중심이 원점
+    py = y * rows * 1.5 - 1
+    q, r = _SQRT3 / 3 * px - py / 3, 2 / 3 * py
+    rx, ry, rz = round(q), round(-q - r), round(r)
+    dx, dy, dz = abs(rx - q), abs(ry + q + r), abs(rz - r)
+    if dx > dy and dx > dz:
+        rx = -ry - rz
+    elif dz >= dy:
+        rz = -rx - ry
+    row = rz
+    col = rx + (rz - (rz & 1)) // 2
+    if not 0 <= row < rows:                                   # 위·아래 띠: 행을 안쪽으로 당기고 그 행의 가장 가까운 열
+        row = min(rows - 1, max(0, row))
+        col = round(px / _SQRT3 - 0.5 * (row & 1))
+    return row * cols + min(cols - 1, max(0, col))
 
 
 def count_by_cell(points, cols=GRID_COLS, rows=GRID_ROWS):

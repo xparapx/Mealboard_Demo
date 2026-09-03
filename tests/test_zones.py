@@ -137,9 +137,12 @@ def test_템플릿이_객체가_아니어도_ValueError(tmp_path):
         load_zones(tmp_path / "zones.json")
 
 
-def test_격자_셀_번호와_셀별_인원수():
-    from vision.zones import GRID_COLS, GRID_ROWS, cell_of, count_by_cell
+def test_육각_타일_번호와_셀별_인원수():
+    from vision.zones import GRID_COLS, GRID_ROWS, cell_of, count_by_cell, hex_center
     assert cell_of(0, 0) == 0 and cell_of(1, 1) == GRID_COLS * GRID_ROWS - 1 and cell_of(0.99, 0) == GRID_COLS - 1
-    assert cell_of(0.5, 0.5, 4, 4) == 2 * 4 + 2
-    c = count_by_cell([{"x": 0.1, "y": 0.05}, {"x": 0.15, "y": 0.02}, (0.9, 0.9)])
+    assert all(cell_of(*hex_center(c)) == c for c in range(GRID_COLS * GRID_ROWS))     # 타일 중심은 자기 타일로
+    assert cell_of(0.5, 0.5, 4, 4) == 1 * 4 + 1                                          # 홀수 행은 반 칸 오른쪽 — 정사각 격자(2,2)와 다르다
+    cx, cy = hex_center(GRID_COLS + 1)                                                   # 행 1 열 1 의 중심은 행 0 열 1 보다 반 칸 오른쪽
+    assert abs(cx - (hex_center(1)[0] + 0.5 / GRID_COLS)) < 1e-9 and cy > hex_center(1)[1]
+    c = count_by_cell([{"x": 0.03, "y": 0.02}, {"x": 0.05, "y": 0.03}, (0.9, 0.9)])   # 타일이 작아져 첫 두 점은 같은 타일 안에서 골랐다
     assert c == {0: 2, cell_of(0.9, 0.9): 1} and sum(c.values()) == 3

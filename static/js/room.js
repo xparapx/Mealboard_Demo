@@ -1,8 +1,8 @@
-/* 실시간 화면 — 탑뷰 평면도 + 익명 위치 마커. 영상 아님 · 순간 상태만 · 이력 없음 (CLAUDE.md §2)
+/* 실시간뷰 화면 — 탑뷰 평면도 + 익명 위치 마커. 영상 아님 · 순간 상태만 · 이력 없음 (CLAUDE.md §2)
    두 겹 캔버스: #plan 에 정적 평면도(floor.js)는 상자 크기가 바뀔 때만(canvasAuto), 그 위 #marks 에 마커만 30초마다.
    점멸은 #marks 의 CSS opacity 애니메이션(1.4초, 0.55~1)이며 이 화면이 활성일 때만 돈다(.plan.live).
    /api/positions 는 이 화면이 보일 때만 30초마다 — 다른 화면에서는 요청이 나가지 않는다.
-   아래 카드: 최근 30분 밀집도(격자 셀별 인원수 합계 — 같은 평면도 위에 히트맵, 30초마다) · 오늘 리포트(로컬 LLM 글, 30분마다) */
+   아래 카드: 최근 30분 밀집도(육각 타일별 인원수 합계 — 같은 평면도 위에 flare 히트맵, 30초마다) · 오늘 리포트(로컬 LLM 글, 30분마다) */
 import { $, j, jSoft, S, esc, fit, hm, canvasAuto, setState } from "./core.js";
 import { drawFloor, drawHeat, drawMarkers, geom } from "./floor.js";
 
@@ -39,7 +39,7 @@ function drawZoneCard() {
   const { g } = fit(c, H);
   const Gz = geom(W, H);
   drawFloor(g, Gz);
-  drawHeat(g, Gz, d.cells, d.grid.cols, d.grid.rows);   // 셀이 진할수록 최근 30분에 사람이 많았던 자리 — 이름·마커 없음
+  drawHeat(g, Gz, d.cells, d.grid.cols, d.grid.rows);   // 타일이 진할수록(flare) 최근 30분에 사람이 많았던 자리 — 이름·마커 없음
 }
 
 /* 최근 30분 밀집도(09-03 사용자 결정: 최근 4주 구역 평균 대신 당일 최근 30분, 히트맵). 30초마다 poll 로 */
@@ -52,7 +52,7 @@ function renderZones(d) {
   $("#zonelead").innerHTML = top ? `최근 ${d.minutes}분, <b>${esc(top.label)}</b>에 사람이 가장 많았습니다 (${top.share_pct}%)` : `최근 ${d.minutes}분 밀집도`;
   $("#zonechips").innerHTML = d.zones.map((z, i) =>
     `<span class="${i ? "ghost" : ""}">${esc(z.label)}<small>${z.share_pct}% · 평균 ${z.avg_n}명</small></span>`).join("");
-  $("#zonefoot").textContent = `${hm(d.since)} 이후 표본 ${d.ticks}개 · 격자 ${d.grid.cols}×${d.grid.rows} 셀별 인원수 합계 · 개별 위치는 저장하지 않습니다`;
+  $("#zonefoot").textContent = `${hm(d.since)} 이후 표본 ${d.ticks}개 · 육각 타일 ${d.grid.cols}×${d.grid.rows} 타일별 인원수 합계 · 개별 위치는 저장하지 않습니다`;
 }
 
 function renderReport(d) {

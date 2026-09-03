@@ -78,7 +78,7 @@ export function drawChart(rows, typ, st) {
   const path = (arr, fx, fy) => { g.beginPath(); arr.forEach((d, i) => (i ? g.lineTo : g.moveTo).call(g, fx(d), fy(d))); };
 
   g.lineJoin = g.lineCap = "round";
-  // 오늘: 1분 막대 — 값이 클수록 진한 틸(09-03 사용자 결정: 선 대신 막대, 그라데이션은 값 크기로).
+  // 오늘: 1분 막대 — 값이 클수록 진한 멜론 #FF7260(09-04 사용자 결정, 이전 틸). 선 대신 막대, 그라데이션은 값 크기로.
   // 표본은 10초 묶음으로 오므로 분마다 평균을 낸다. 막대 폭은 30분 창을 균등 분할, 사이 1px 틈
   const byMin = new Map();
   pts.forEach(p => { const k = Math.floor(p.m); const b = byMin.get(k) || { s: 0, n: 0 }; b.s += p.v; b.n++; byMin.set(k, b); });
@@ -86,7 +86,7 @@ export function drawChart(rows, typ, st) {
   const bw = Math.max(2, plotW / (CHART_MIN + 1) - 1);
   bars.forEach(b => {
     const a = .18 + .82 * Math.min(1, b.v / max);                       // 0분 → 옅게, 최대 → 진하게
-    g.fillStyle = `rgba(18,151,147,${a.toFixed(3)})`;
+    g.fillStyle = `rgba(255,114,96,${a.toFixed(3)})`;
     const x = X(b.m) - bw / 2, y = Y(b.v), h = Math.max(2, H - padB - y);
     g.beginPath(); g.roundRect ? g.roundRect(x, y, bw, h, [2, 2, 0, 0]) : g.rect(x, y, bw, h); g.fill();
   });
@@ -101,12 +101,12 @@ export function drawChart(rows, typ, st) {
   g.setLineDash([3, 3]); g.strokeStyle = "rgba(209,74,56,.5)"; g.lineWidth = 1.5;
   g.beginPath(); g.moveTo(X(last.m), 2); g.lineTo(X(last.m), H); g.stroke(); g.setLineDash([]);
   g.beginPath(); g.arc(X(last.m), Y(last.v), 4, 0, Math.PI * 2);
-  g.fillStyle = "#129793"; g.fill(); g.strokeStyle = "#FFFCF6"; g.lineWidth = 2; g.stroke();
+  g.fillStyle = "#C9452F"; g.fill(); g.strokeStyle = "#FFFCF6"; g.lineWidth = 2; g.stroke();
 
   if (ref.length) {
     g.font = "700 9px system-ui, sans-serif"; g.textBaseline = "middle"; g.textAlign = "left";
     const r = ref[ref.length - 1];
-    g.fillStyle = "#0C6D6A"; g.fillText("오늘", X(last.m) + 8, Y(last.v));
+    g.fillStyle = "#C9452F"; g.fillText("오늘", X(last.m) + 8, Y(last.v));
     g.fillStyle = "#A9A296"; g.fillText("평소", X(r.minute_of_day) + 8, Y(r.wait_min));
   }
   // 결론 한 줄 — 곡선을 읽지 않아도 답이 나오게
@@ -161,7 +161,7 @@ function renderHeat(d) {
   heat.dataset.step = step;
   $("#heatlead").textContent = "셀을 누르면 그 시각의 평소 대기를 읽습니다";
   $("#heatgolden").textContent = `${golden}분 이하 · 황금`;
-  $("#heatfoot").textContent = (d.basis === "weekday" ? `같은 요일 최근 ${d.weeks}주` : `최근 ${d.days}일`) + ` · ${step}분 단위 · 틸이 진할수록 오래 기다렸습니다`;
+  $("#heatfoot").textContent = (d.basis === "weekday" ? `같은 요일 최근 ${d.weeks}주` : `최근 ${d.days}일`) + ` · ${step}분 단위 · 붉을수록 오래 기다렸습니다`;
 }
 function heatClick(e) {                       // 셀 180개에 리스너를 달지 않고 한 번만 위임
   const b = e.target.closest(".c[data-min]"); if (!b) return;

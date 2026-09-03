@@ -7,7 +7,7 @@
 .insight[data-state="no_data"] .body { display: none; }
 .insight[data-state="no_data"] .empty { display: block; }
 
-/* 요일×시각 히트맵 — CSS grid. 셀 색은 --t(0~1)로 틸 한 램프: rgba(var(--heat), .08 + .84·t). 오늘 행 라벨은 차콜, 황금 셀은 차콜 inset 링 */
+/* 요일×시각 히트맵 — CSS grid. 셀 색은 --t(0~1)로 멜론 #FF7260 한 램프(09-04, 이전 틸): rgba(var(--heat), .08 + .84·t). 오늘 행 라벨은 차콜, 황금 셀은 차콜 inset 링 */
 .heat { display: grid; grid-template-columns: 22px 1fr; gap: 4px 6px; margin-top: 12px; align-items: stretch; }
 .heat .wd { font-size: 10px; font-weight: 700; color: var(--ink3); display: flex; align-items: center; justify-content: center;
             border-radius: 6px; }
@@ -65,11 +65,17 @@
 .rank li small { font-size: 10.5px; color: var(--ink3); font-weight: 500; }
 .rank li b { font-size: 13px; color: var(--teal-ink); }
 
-/* 구역 점유율 — 같은 평면도(floor.js) 위에 구역 틴트, 마커 없음. 칩은 구역별 점유율 */
+/* 최근 30분 밀집도 — 같은 평면도(floor.js) 위에 육각 타일(flare 팔레트), 마커 없음. 칩은 구역별 점유율.
+   모바일은 평면도 아래에 글이 이어지고, 데스크톱(screens.css)은 .zonewrap 이 가로로 놓여 글이 평면도 오른쪽에 온다 */
+.zonewrap { display: flex; flex-direction: column; }
 .zonestage { position: relative; margin-top: 12px; }
 #zoneplan { display: block; width: 100%; aspect-ratio: 318 / 460; }
-.chips2.zones span { background: var(--teal-tint); color: var(--teal-ink); }
-.chips2.zones span.ghost { background: transparent; box-shadow: inset 0 0 0 1.5px var(--hair); color: var(--ink2); }
+.zoneside { display: flex; flex-direction: column; }
+.chips2.zones span { background: #FBE6DC; color: #7A2F55; }                       /* flare 의 양 끝 — 옅은 살구 바탕에 자주 글자 */
+.chips2.zones span.ghost { background: transparent; box-shadow: inset 0 0 0 1.5px #EBD5C8; color: var(--ink2); }
+.flarelegend { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 10.5px; color: var(--ink3); }
+.flarelegend i { flex: 1 1 0; max-width: 140px; height: 8px; border-radius: 4px;
+                 background: linear-gradient(90deg, #edb081, #e5715e, #c14168, #863071, #4b2362); }   /* floor.js FLARE 와 같은 값 */
 
 /* 오늘 리포트 — 본문 + "AI 작성 · 모델" 칩 */
 .report { margin: 8px 0 0; font-size: 14px; line-height: 1.6; color: #4A4740; }
@@ -79,7 +85,5 @@
 .spark { display: block; width: 100%; height: 64px; margin-top: 14px; }
 .sparkaxis { display: flex; justify-content: space-between; font-size: 10px; color: var(--ink3); margin-top: 4px; }
 
-/* 데스크톱 보드 — 인사이트 카드 자리(5행부터 자동 배치). 폭만 정한다 */
 /* 데스크톱 자리는 screens.css 끝의 미디어 쿼리 한 곳에서 정한다(09-03) — 이 파일이 뒤에 읽히므로 여기서 다시 정하면 그것이 이긴다 */
-  #zoneplan { aspect-ratio: 318 / 400; }
-}
+

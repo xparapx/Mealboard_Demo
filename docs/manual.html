@@ -1129,8 +1129,10 @@ systemctl status mealboard-api --no-pager</code></pre>
   &lt;symbol id=&quot;i-room&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;rect x=&quot;3.5&quot; y=&quot;3.5&quot; width=&quot;17&quot; height=&quot;17&quot; rx=&quot;3&quot;/&gt;&lt;path d=&quot;M7 7.5h10&quot;/&gt;
     &lt;circle class=&quot;fill&quot; cx=&quot;8.5&quot; cy=&quot;13&quot; r=&quot;1.4&quot;/&gt;&lt;circle class=&quot;fill&quot; cx=&quot;12.5&quot; cy=&quot;16.2&quot; r=&quot;1.4&quot;/&gt;&lt;circle class=&quot;fill&quot; cx=&quot;15.6&quot; cy=&quot;12&quot; r=&quot;1.4&quot;/&gt;&lt;/symbol&gt;
   &lt;symbol id=&quot;i-week&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;rect x=&quot;3.5&quot; y=&quot;5&quot; width=&quot;17&quot; height=&quot;15.5&quot; rx=&quot;2.5&quot;/&gt;&lt;path d=&quot;M3.5 10h17M8 3v4M16 3v4&quot;/&gt;&lt;/symbol&gt;
-  &lt;symbol id=&quot;i-today&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;ellipse cx=&quot;8.5&quot; cy=&quot;6.6&quot; rx=&quot;2.6&quot; ry=&quot;3.6&quot;/&gt;&lt;path d=&quot;M8.5 10.2V21&quot;/&gt;
-    &lt;path d=&quot;M13 3v4.5a2.5 2.5 0 0 0 5 0V3M15.5 3v4.5M15.5 10V21&quot;/&gt;&lt;/symbol&gt;
+  &lt;!-- 오늘급식: 숟가락·포크 나란히. 손잡이는 굵은 선(3.4)·둥근 끝으로 알약처럼 두툼하게 — 09-04 사용자 요청('앙증맞게') --&gt;
+  &lt;symbol id=&quot;i-today&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;ellipse class=&quot;fill&quot; cx=&quot;8&quot; cy=&quot;6.4&quot; rx=&quot;3.1&quot; ry=&quot;3.9&quot;/&gt;&lt;path d=&quot;M8 11.2V20&quot; stroke-width=&quot;3.4&quot;/&gt;
+    &lt;path d=&quot;M14 3.2v4.4M16.8 3.2v4.4M19.6 3.2v4.4&quot; stroke-width=&quot;2&quot;/&gt;&lt;path d=&quot;M14 7.6a2.8 2.8 0 0 0 5.6 0&quot; stroke-width=&quot;2&quot;/&gt;
+    &lt;path d=&quot;M16.8 10.6V20&quot; stroke-width=&quot;3.4&quot;/&gt;&lt;/symbol&gt;
   &lt;symbol id=&quot;i-news&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;rect x=&quot;3.5&quot; y=&quot;4&quot; width=&quot;17&quot; height=&quot;16&quot; rx=&quot;3&quot;/&gt;&lt;path d=&quot;M7.5 9h9M7.5 12.5h9M7.5 16h5.5&quot;/&gt;&lt;/symbol&gt;
 &lt;/svg&gt;
 
@@ -1138,7 +1140,7 @@ systemctl status mealboard-api --no-pager</code></pre>
 &lt;nav class=&quot;dock&quot; role=&quot;tablist&quot; aria-label=&quot;화면&quot;&gt;
   &lt;i class=&quot;mark&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;
   &lt;a href=&quot;#wait&quot; data-go=&quot;wait&quot; role=&quot;tab&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-wait&quot;/&gt;&lt;/svg&gt;대기시간&lt;/a&gt;
-  &lt;a href=&quot;#room&quot; data-go=&quot;room&quot; role=&quot;tab&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-room&quot;/&gt;&lt;/svg&gt;실시간&lt;/a&gt;
+  &lt;a href=&quot;#room&quot; data-go=&quot;room&quot; role=&quot;tab&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-room&quot;/&gt;&lt;/svg&gt;실시간뷰&lt;/a&gt;
   &lt;a href=&quot;#week&quot; data-go=&quot;week&quot; role=&quot;tab&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-week&quot;/&gt;&lt;/svg&gt;주간식단&lt;/a&gt;
   &lt;a href=&quot;#today&quot; data-go=&quot;today&quot; role=&quot;tab&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-today&quot;/&gt;&lt;/svg&gt;오늘급식&lt;/a&gt;
   &lt;a href=&quot;#news&quot; data-go=&quot;news&quot; role=&quot;tab&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-news&quot;/&gt;&lt;/svg&gt;이슈피드&lt;/a&gt;
@@ -1146,7 +1148,7 @@ systemctl status mealboard-api --no-pager</code></pre>
 &lt;!-- 데스크톱 좌측 레일 (≥ 900px). 다섯 화면을 한 보드에 펼치고, 레일은 그 카드로 스크롤 + 스크롤 스파이 --&gt;
 &lt;aside class=&quot;rail&quot; aria-label=&quot;화면&quot;&gt;
   &lt;a href=&quot;#wait&quot; data-go=&quot;wait&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-wait&quot;/&gt;&lt;/svg&gt;대기시간&lt;/a&gt;
-  &lt;a href=&quot;#room&quot; data-go=&quot;room&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-room&quot;/&gt;&lt;/svg&gt;실시간&lt;/a&gt;
+  &lt;a href=&quot;#room&quot; data-go=&quot;room&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-room&quot;/&gt;&lt;/svg&gt;실시간뷰&lt;/a&gt;
   &lt;a href=&quot;#week&quot; data-go=&quot;week&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-week&quot;/&gt;&lt;/svg&gt;주간식단&lt;/a&gt;
   &lt;a href=&quot;#today&quot; data-go=&quot;today&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-today&quot;/&gt;&lt;/svg&gt;오늘급식&lt;/a&gt;
   &lt;a href=&quot;#news&quot; data-go=&quot;news&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-news&quot;/&gt;&lt;/svg&gt;이슈피드&lt;/a&gt;
@@ -1227,8 +1229,8 @@ systemctl status mealboard-api --no-pager</code></pre>
     &lt;/section&gt;
   &lt;/section&gt;
 
-  &lt;!-- ② 실시간 — 탑뷰 평면도 + 익명 위치 마커 (영상 아님) --&gt;
-  &lt;section class=&quot;view&quot; id=&quot;room&quot; role=&quot;tabpanel&quot; aria-label=&quot;실시간&quot;&gt;
+  &lt;!-- ② 실시간뷰 — 탑뷰 평면도 + 익명 위치 마커 (영상 아님) --&gt;
+  &lt;section class=&quot;view&quot; id=&quot;room&quot; role=&quot;tabpanel&quot; aria-label=&quot;실시간뷰&quot;&gt;
     &lt;section class=&quot;card plan&quot; id=&quot;plancard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;급식실 현황&lt;/div&gt;
       &lt;span class=&quot;count&quot; id=&quot;posn&quot;&gt;—&lt;/span&gt;
@@ -1236,14 +1238,19 @@ systemctl status mealboard-api --no-pager</code></pre>
       &lt;div class=&quot;empty&quot;&gt;표시할 위치 없음&lt;/div&gt;
       &lt;div class=&quot;note&quot; style=&quot;margin-top:10px&quot;&gt;영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다&lt;/div&gt;
     &lt;/section&gt;
-    &lt;!-- 실시간 화면의 카드 — 최근 30분 밀집도(격자 셀 인원수 합계, 좌표 없음) · 오늘 리포트(로컬 LLM) --&gt;
+    &lt;!-- 실시간뷰 화면의 카드 — 최근 30분 밀집도(육각 타일별 인원수 합계, 좌표 없음; 데스크톱은 글이 평면도 오른쪽 여백에) · 오늘 리포트(로컬 LLM, 맨 아래) --&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;zonecard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;최근 30분 밀집도&lt;/div&gt;
       &lt;div class=&quot;body&quot;&gt;
-        &lt;div class=&quot;lead&quot; id=&quot;zonelead&quot;&gt;&lt;/div&gt;
-        &lt;div class=&quot;stage zonestage&quot;&gt;&lt;canvas id=&quot;zoneplan&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
-        &lt;div class=&quot;chips2 zones&quot; id=&quot;zonechips&quot;&gt;&lt;/div&gt;
-        &lt;div class=&quot;note foot&quot; id=&quot;zonefoot&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;zonewrap&quot;&gt;
+          &lt;div class=&quot;stage zonestage&quot;&gt;&lt;canvas id=&quot;zoneplan&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+          &lt;div class=&quot;zoneside&quot;&gt;
+            &lt;div class=&quot;lead&quot; id=&quot;zonelead&quot;&gt;&lt;/div&gt;
+            &lt;div class=&quot;chips2 zones&quot; id=&quot;zonechips&quot;&gt;&lt;/div&gt;
+            &lt;div class=&quot;flarelegend&quot;&gt;&lt;span&gt;적음&lt;/span&gt;&lt;i&gt;&lt;/i&gt;&lt;span&gt;많음&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;note foot&quot; id=&quot;zonefoot&quot;&gt;&lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
       &lt;/div&gt;
       &lt;div class=&quot;empty&quot; id=&quot;zoneempty&quot;&gt;최근 30분 표본이 아직 없습니다&lt;/div&gt;
     &lt;/section&gt;
@@ -1373,7 +1380,7 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v10&quot;;   // 09-03 오후: 한 화면 구조·밀집도 — 옛 셸 캐시를 지운다
+const CACHE = &quot;mealboard-v11&quot;;   // 09-04: 육각 밀집도·멜론 램프·실시간뷰 배치 — 옛 셸 캐시를 지운다
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
@@ -2931,17 +2938,39 @@ def count_by_zone(points, zones):
     return counts
 
 
-# ---- 밀집도 격자 (09-03 사용자 요청: 최근 30분 히트맵) --------------------------------------
-# 바닥을 GRID_COLS × GRID_ROWS 셀로 나눈 인원수 — 약 3.1m × 3.1m. 구역 인원수와 같은 성격의 집계 숫자이며(CLAUDE.md §2 히트맵 행),
-# 셀 번호 = row * GRID_COLS + col. 개별 좌표·궤적은 여기서도 남지 않는다.
-GRID_COLS, GRID_ROWS = 5, 8
+# ---- 밀집도 육각 격자 (09-03 사용자 요청: 최근 30분 히트맵 · 09-04 정사각 셀 → 육각 타일, 해상도 4배) ---------
+# 바닥을 뾰족한 꼭짓점이 위로 오는 육각 타일로 덮는다(홀수 행은 반 칸 오른쪽). 폭 방향 GRID_COLS 개가 바닥 폭을 채우고 행 간격은
+# 타일 반지름의 1.5 배 — 실측 바닥 15.55 × 24.65 m 에서 타일 하나 ≈ 2.1 m²(이전 3.1 m 정사각 셀의 약 1/4.6). 구역 인원수와 같은 성격의
+# 집계 숫자이며(CLAUDE.md §2 히트맵 행) 셀 번호 = row * GRID_COLS + col. 개별 좌표·궤적은 여기서도 남지 않는다.
+# 화면(static/js/floor.js drawHeat)이 같은 기하로 타일을 그린다 — 여기와 그쪽의 상수·중심 공식이 어긋나면 그림이 어긋난다.
+GRID_COLS, GRID_ROWS = 10, 18   # rows ≈ 24.65 / (1.5 × 15.55 / (10 × √3)) = 18.3 → 18 (타일이 정육각에 가장 가깝다)
+_SQRT3 = 3 ** 0.5
+
+
+def hex_center(cell, cols=GRID_COLS, rows=GRID_ROWS):
+    &quot;&quot;&quot;셀 번호 → 타일 중심의 정규화 좌표 (x, y). 반지름은 x 로 1/(cols·√3), y 로 1/(rows·1.5)&quot;&quot;&quot;
+    row, col = divmod(int(cell), cols)
+    return ((col + 0.5 + 0.5 * (row &amp; 1)) / cols, (1 + 1.5 * row) / (rows * 1.5))
 
 
 def cell_of(x, y, cols=GRID_COLS, rows=GRID_ROWS):
-    &quot;&quot;&quot;정규화 좌표 → 셀 번호. 1.0 은 마지막 셀에 넣는다(경계 밖으로 새지 않게)&quot;&quot;&quot;
-    c = min(cols - 1, max(0, int(x * cols)))
-    r = min(rows - 1, max(0, int(y * rows)))
-    return r * cols + c
+    &quot;&quot;&quot;정규화 좌표 → 육각 타일 번호. 반지름 1 단위로 옮겨 axial 좌표를 cube 반올림한다(Red Blob Games 의 표준 절차).
+    바닥 가장자리(위·아래 띠, 홀수 행 오른쪽 반 칸)는 가장 가까운 안쪽 타일로 — 경계 밖으로 새지 않게&quot;&quot;&quot;
+    px = x * cols * _SQRT3 - _SQRT3 / 2                      # 행 0 첫 타일의 중심이 원점
+    py = y * rows * 1.5 - 1
+    q, r = _SQRT3 / 3 * px - py / 3, 2 / 3 * py
+    rx, ry, rz = round(q), round(-q - r), round(r)
+    dx, dy, dz = abs(rx - q), abs(ry + q + r), abs(rz - r)
+    if dx &gt; dy and dx &gt; dz:
+        rx = -ry - rz
+    elif dz &gt;= dy:
+        rz = -rx - ry
+    row = rz
+    col = rx + (rz - (rz &amp; 1)) // 2
+    if not 0 &lt;= row &lt; rows:                                   # 위·아래 띠: 행을 안쪽으로 당기고 그 행의 가장 가까운 열
+        row = min(rows - 1, max(0, row))
+        col = round(px / _SQRT3 - 0.5 * (row &amp; 1))
+    return row * cols + min(cols - 1, max(0, col))
 
 
 def count_by_cell(points, cols=GRID_COLS, rows=GRID_ROWS):
@@ -4289,11 +4318,14 @@ def test_템플릿이_객체가_아니어도_ValueError(tmp_path):
         load_zones(tmp_path / &quot;zones.json&quot;)
 
 
-def test_격자_셀_번호와_셀별_인원수():
-    from vision.zones import GRID_COLS, GRID_ROWS, cell_of, count_by_cell
+def test_육각_타일_번호와_셀별_인원수():
+    from vision.zones import GRID_COLS, GRID_ROWS, cell_of, count_by_cell, hex_center
     assert cell_of(0, 0) == 0 and cell_of(1, 1) == GRID_COLS * GRID_ROWS - 1 and cell_of(0.99, 0) == GRID_COLS - 1
-    assert cell_of(0.5, 0.5, 4, 4) == 2 * 4 + 2
-    c = count_by_cell([{&quot;x&quot;: 0.1, &quot;y&quot;: 0.05}, {&quot;x&quot;: 0.15, &quot;y&quot;: 0.02}, (0.9, 0.9)])
+    assert all(cell_of(*hex_center(c)) == c for c in range(GRID_COLS * GRID_ROWS))     # 타일 중심은 자기 타일로
+    assert cell_of(0.5, 0.5, 4, 4) == 1 * 4 + 1                                          # 홀수 행은 반 칸 오른쪽 — 정사각 격자(2,2)와 다르다
+    cx, cy = hex_center(GRID_COLS + 1)                                                   # 행 1 열 1 의 중심은 행 0 열 1 보다 반 칸 오른쪽
+    assert abs(cx - (hex_center(1)[0] + 0.5 / GRID_COLS)) &lt; 1e-9 and cy &gt; hex_center(1)[1]
+    c = count_by_cell([{&quot;x&quot;: 0.03, &quot;y&quot;: 0.02}, {&quot;x&quot;: 0.05, &quot;y&quot;: 0.03}, (0.9, 0.9)])   # 타일이 작아져 첫 두 점은 같은 타일 안에서 골랐다
     assert c == {0: 2, cell_of(0.9, 0.9): 1} and sum(c.values()) == 3</code></pre>
 </figure>
 <figure class="code">
@@ -4626,7 +4658,7 @@ export const S = { last: null, lastPos: null, meal: null, typ: null };
 
 /* ---------------- 화면 등록 · 라우터 ---------------- */
 const ORDER = [&quot;wait&quot;, &quot;room&quot;, &quot;week&quot;, &quot;today&quot;, &quot;news&quot;];
-const NAMES = { wait: &quot;대기시간&quot;, room: &quot;실시간&quot;, week: &quot;주간식단&quot;, today: &quot;오늘급식&quot;, news: &quot;이슈피드&quot; };
+const NAMES = { wait: &quot;대기시간&quot;, room: &quot;실시간뷰&quot;, week: &quot;주간식단&quot;, today: &quot;오늘급식&quot;, news: &quot;이슈피드&quot; };
 const SCREENS = { wait: wait.screen, room: room.screen, week: week.screen, today: today.screen, news: news.screen };
 const lastPoll = {}, lastSlow = {};                    // name → 마지막 폴링 시각 (라이브 / 느린 인사이트)
 const scrollYs = {};                                   // 화면별 세로 스크롤 위치 — 돌아오면 그 자리
@@ -4721,11 +4753,11 @@ try {
 <p>평면도는 두 겹 캔버스입니다. <code>#plan</code> 에 정적 평면도(<code>floor.js</code>)는 상자 크기가 바뀔 때만(ResizeObserver), 그 위 <code>#marks</code> 에 익명 마커만 30초마다. 점멸은 <code>#marks</code> 의 CSS opacity 애니메이션이고 이 화면이 활성일 때만 돕니다 — 전체를 다시 그리는 JS 루프로 되돌리지 않습니다(리뷰에서 걷어낸 패턴). 아래 인사이트 카드 둘(구역 점유율 · 오늘 리포트)은 <code>slow</code> 박자입니다.</p>
 <figure class="code">
 <figcaption><span class="path">static/js/room.js</span><span class="lang">js</span><button class="copy" type="button">복사</button></figcaption>
-<pre><code class="lang-js">/* 실시간 화면 — 탑뷰 평면도 + 익명 위치 마커. 영상 아님 · 순간 상태만 · 이력 없음 (CLAUDE.md §2)
+<pre><code class="lang-js">/* 실시간뷰 화면 — 탑뷰 평면도 + 익명 위치 마커. 영상 아님 · 순간 상태만 · 이력 없음 (CLAUDE.md §2)
    두 겹 캔버스: #plan 에 정적 평면도(floor.js)는 상자 크기가 바뀔 때만(canvasAuto), 그 위 #marks 에 마커만 30초마다.
    점멸은 #marks 의 CSS opacity 애니메이션(1.4초, 0.55~1)이며 이 화면이 활성일 때만 돈다(.plan.live).
    /api/positions 는 이 화면이 보일 때만 30초마다 — 다른 화면에서는 요청이 나가지 않는다.
-   아래 카드: 최근 30분 밀집도(격자 셀별 인원수 합계 — 같은 평면도 위에 히트맵, 30초마다) · 오늘 리포트(로컬 LLM 글, 30분마다) */
+   아래 카드: 최근 30분 밀집도(육각 타일별 인원수 합계 — 같은 평면도 위에 flare 히트맵, 30초마다) · 오늘 리포트(로컬 LLM 글, 30분마다) */
 import { $, j, jSoft, S, esc, fit, hm, canvasAuto, setState } from &quot;./core.js&quot;;
 import { drawFloor, drawHeat, drawMarkers, geom } from &quot;./floor.js&quot;;
 
@@ -4762,7 +4794,7 @@ function drawZoneCard() {
   const { g } = fit(c, H);
   const Gz = geom(W, H);
   drawFloor(g, Gz);
-  drawHeat(g, Gz, d.cells, d.grid.cols, d.grid.rows);   // 셀이 진할수록 최근 30분에 사람이 많았던 자리 — 이름·마커 없음
+  drawHeat(g, Gz, d.cells, d.grid.cols, d.grid.rows);   // 타일이 진할수록(flare) 최근 30분에 사람이 많았던 자리 — 이름·마커 없음
 }
 
 /* 최근 30분 밀집도(09-03 사용자 결정: 최근 4주 구역 평균 대신 당일 최근 30분, 히트맵). 30초마다 poll 로 */
@@ -4775,7 +4807,7 @@ function renderZones(d) {
   $(&quot;#zonelead&quot;).innerHTML = top ? `최근 ${d.minutes}분, &lt;b&gt;${esc(top.label)}&lt;/b&gt;에 사람이 가장 많았습니다 (${top.share_pct}%)` : `최근 ${d.minutes}분 밀집도`;
   $(&quot;#zonechips&quot;).innerHTML = d.zones.map((z, i) =&gt;
     `&lt;span class=&quot;${i ? &quot;ghost&quot; : &quot;&quot;}&quot;&gt;${esc(z.label)}&lt;small&gt;${z.share_pct}% · 평균 ${z.avg_n}명&lt;/small&gt;&lt;/span&gt;`).join(&quot;&quot;);
-  $(&quot;#zonefoot&quot;).textContent = `${hm(d.since)} 이후 표본 ${d.ticks}개 · 격자 ${d.grid.cols}×${d.grid.rows} 셀별 인원수 합계 · 개별 위치는 저장하지 않습니다`;
+  $(&quot;#zonefoot&quot;).textContent = `${hm(d.since)} 이후 표본 ${d.ticks}개 · 육각 타일 ${d.grid.cols}×${d.grid.rows} 타일별 인원수 합계 · 개별 위치는 저장하지 않습니다`;
 }
 
 function renderReport(d) {
@@ -4949,16 +4981,40 @@ export function drawZones(g, G, zones, occ = {}, labels = true) {
   });
 }
 
-/* 밀집도 격자 — cells = [{i, w}] (i = row*cols+col, w 0~1). 평면도 위에 셀을 틸로 채운다: 값이 클수록 진하게.
-   구역 이름·마커 없음. 최근 30분의 셀별 합계이지 개별 위치가 아니다 */
+/* 밀집도 팔레트 — seaborn &quot;flare&quot;(09-04 사용자 결정) 를 9단으로 뜬 값(cmap 을 0, 1/8, …, 1 에서 표본). 옅은 살구 → 진한 자주 */
+export const FLARE = [&quot;#edb081&quot;, &quot;#ea916e&quot;, &quot;#e5715e&quot;, &quot;#d9535d&quot;, &quot;#c14168&quot;, &quot;#a3386f&quot;, &quot;#863071&quot;, &quot;#672a6b&quot;, &quot;#4b2362&quot;];
+export function flare(t) {
+  const u = Math.min(1, Math.max(0, t)) * (FLARE.length - 1), i = Math.min(FLARE.length - 2, Math.floor(u)), f = u - i;
+  const a = FLARE[i].match(/\w\w/g).map(h =&gt; parseInt(h, 16)), b = FLARE[i + 1].match(/\w\w/g).map(h =&gt; parseInt(h, 16));
+  return `rgb(${a.map((v, k) =&gt; Math.round(v + (b[k] - v) * f)).join(&quot;,&quot;)})`;
+}
+
+/* 밀집도 육각 타일 — cells = [{i, w}] (i = row*cols+col, w 0~1). 기하는 vision/zones.py(hex_center)와 같다:
+   뾰족한 꼭짓점이 위, 홀수 행은 반 칸 오른쪽, 반지름은 x 로 1/(cols·√3) · y 로 1/(rows·1.5). 값이 있는 타일만 flare 색으로 채우고
+   나머지는 벌집 윤곽만 아주 옅게. 구역 이름·마커 없음. 최근 30분의 타일별 합계이지 개별 위치가 아니다 */
 export function drawHeat(g, G, cells, cols, rows) {
+  const { X, Y } = G, S3 = Math.sqrt(3);
+  const rx = 1 / (cols * S3), ry = 1 / (rows * 1.5);                // 정규화 반지름(x·y)
+  const hex = (col, row, s) =&gt; {                                     // s = 타일 축소 비율(사이 틈)
+    const cx = (col + .5 + .5 * (row &amp; 1)) / cols, cy = (1 + 1.5 * row) / (rows * 1.5);
+    g.beginPath();
+    for (let k = 0; k &lt; 6; k++) {
+      const th = Math.PI / 6 + k * Math.PI / 3;
+      const [sx, sy] = G.P(cx + rx * s * Math.cos(th), cy + ry * s * Math.sin(th));
+      (k ? g.lineTo : g.moveTo).call(g, sx, sy);
+    }
+    g.closePath();
+  };
+  g.save();
+  g.beginPath(); g.rect(X(ROOM.W), Y(0), ROOM.W * G.k, ROOM.D * G.k); g.clip();   // 홀수 행 오른쪽 반 칸·마지막 행 아랫단은 벽에서 자른다
+  g.strokeStyle = &quot;rgba(51,49,45,.07)&quot;; g.lineWidth = 1;
+  for (let row = 0; row &lt; rows; row++) for (let col = 0; col &lt; cols; col++) { hex(col, row, .96); g.stroke(); }
   (cells || []).forEach(c =&gt; {
-    const col = c.i % cols, row = Math.floor(c.i / cols);
-    const [x0, y0] = G.P(col / cols, row / rows), [x1, y1] = G.P((col + 1) / cols, (row + 1) / rows);
-    const x = Math.min(x0, x1), y = Math.min(y0, y1), w = Math.abs(x1 - x0), h = Math.abs(y1 - y0);
-    g.fillStyle = `rgba(12,109,106,${(.06 + .74 * Math.min(1, Math.max(0, c.w))).toFixed(3)})`;
-    g.fillRect(x + 1, y + 1, Math.max(1, w - 2), Math.max(1, h - 2));
+    const w = Math.min(1, Math.max(0, c.w));
+    hex(c.i % cols, Math.floor(c.i / cols), .9);
+    g.fillStyle = flare(w); g.globalAlpha = .55 + .4 * w; g.fill();
   });
+  g.restore();
 }</code></pre>
 </figure>
 

@@ -78,7 +78,7 @@ export const S = { last: null, lastPos: null, meal: null, typ: null };
 
 /* ---------------- 화면 등록 · 라우터 ---------------- */
 const ORDER = ["wait", "room", "week", "today", "news"];
-const NAMES = { wait: "대기시간", room: "실시간", week: "주간식단", today: "오늘급식", news: "이슈피드" };
+const NAMES = { wait: "대기시간", room: "실시간뷰", week: "주간식단", today: "오늘급식", news: "이슈피드" };
 const SCREENS = { wait: wait.screen, room: room.screen, week: week.screen, today: today.screen, news: news.screen };
 const lastPoll = {}, lastSlow = {};                    // name → 마지막 폴링 시각 (라이브 / 느린 인사이트)
 const scrollYs = {};                                   // 화면별 세로 스크롤 위치 — 돌아오면 그 자리

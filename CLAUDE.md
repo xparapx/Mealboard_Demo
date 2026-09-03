@@ -44,7 +44,7 @@
   DPR 1)로 픽셀 비교 — 히어로 "배식대 도착" 시각만 시계 값이라 다르다. 미리보기 패널은 서비스워커 등록을 막으므로 그 콘솔 오류는 환경이다.
 - **Phase 2b 완료(09-03)**: 평면도 그리기는 `static/js/floor.js`(geom·drawFloor·drawMarkers·drawZones) 공용. 대기시간 카드 `#waitcard` =
   `.hero` 위 절 + `.trend` 아래 절 한 상자, 오늘급식 카드 하단에 탄소 절 `#carbonsec`(카드 여백 변수 `--px/--py` 음수 여백). 도면 layout.html 동반 갱신.
-- **Phase 2c 완료(09-03)**: 화면은 5장 해시 라우트(`#wait #room #week #today #news`, 라벨 대기시간·실시간·주간식단·오늘급식·이슈피드).
+- **Phase 2c 완료(09-03)**: 화면은 5장 해시 라우트(`#wait #room #week #today #news`, 라벨 대기시간·실시간뷰(09-04, 이전 '실시간')·주간식단·오늘급식·이슈피드).
   모바일은 문서 자체가 가로 스냅 페이저 + 하단 dock, 데스크톱은 좌측 레일 + 12컬럼 보드(`.view{display:contents}`). 화면 모듈은
   `screen={mount, every, poll, fail, activate, deactivate}` 를 내보내고 `js/core.js` 가 보이는 화면만 폴링한다(모듈 최상위에서 core 도구를 쓰면
   순환 import TDZ — `mount()` 에). 헤드리스 Edge 는 500px 최소 창이라 420 캡처는 우측이 잘린다; 미리보기 패널은 fixed 요소를 1680 폭으로 잰다 — 둘 다 환경.
@@ -60,7 +60,7 @@
 - **Phase 3d 완료(09-03, `5ca03e2`)**: `app/admin/zones_store.py` 는 `data/zones.local.json` 에만 쓴다(템플릿 불변, `.bak` 5개). 편집기는 `app/admin/static/zones-editor.js`(별도 모듈). 관리 화면은 등록 직후 `MB.poll("admin", true)`.
 - **Phase 3 완료(09-03, 리뷰 14건 반영 `5725146`)**: 관리 앱은 `--no-access-log`(키가 저널에 남지 않게), 게이트는 GET 포함 모든 교차 사이트 요청 거부, 실사 자리는 `claim()` 을 await 전에, 릴레이는 off `Event` 로 1초 안에 끊김, `zones.local.json` 에는 **템플릿과 다른 키만**(version 은 절대 안 씀), disabled 카운팅 유닛은 재시작 409. SSH 터널 진입은 `http://127.0.0.1:8101/?key=<ADMIN_LOCAL_KEY>` 한 번(쿠키 12시간). 남은 설계 판단은 PLAN §7(loopback 헤더 위조·/tmp 플래그 선점).
 - **Phase 4b·4c 완료(09-03, `69fc4ad`·`29cbca1`)**: `jobs/llm.py`(LocalLLM, 검증기 — **숫자 부분집합 출처에서 날짜·요일 제외**), `jobs/report.py`(reports.db 유일 writer, 템플릿 폴백, 타이머 05:45·14:20), `jobs/newsbody.py`+`translators.py`+`fetch_news.py`(본문은 메모리에서만, digest → DeepL → 영어). Pi 반영됨(리포트 행·news.json engine=deepl). **4a 스파이크는 `.hef` 확보 뒤**(그때까지 engine=template/deepl). 장치 API 모양은 `jobs/llm.py _hailo_backend` 가 추정 — 스파이크 결과로 고친다.
-- **09-03 오후 개정(사용자 요청)**: 화면은 **한 번에 한 화면**(스와이프 페이저·스크롤 스파이 폐기, dock/레일 탭 즉시 전환, 데스크톱은 화면별 12컬럼 그리드 1920×1080 기준 — `docs/layout.html` 네비게이션 절). 실시간 화면의 구역 점유율은 **당일 최근 30분 밀집도 히트맵**(`/api/insight/density`, queue.db 즉석). 추이 그래프는 1분 막대. `/api/history` 는 10초 묶음. mock 은 `--speed 2`(5초 주기 더미). 관리 CSS 의 스테이지는 `.sstage`(공개 `.stage` 와 이름 분리).
+- **09-03 오후 개정(사용자 요청)**: 화면은 **한 번에 한 화면**(스와이프 페이저·스크롤 스파이 폐기, dock/레일 탭 즉시 전환, 데스크톱은 화면별 12컬럼 그리드 1920×1080 기준 — `docs/layout.html` 네비게이션 절). 실시간뷰 화면의 구역 점유율은 **당일 최근 30분 밀집도**(`/api/insight/density`, queue.db 즉석) — **09-04 부터 육각 타일 10×18**(`vision/zones.py cell_of/hex_center`, 화면 `floor.js drawHeat` 가 같은 기하) 에 seaborn flare 팔레트, 글은 데스크톱에서 평면도 오른쪽. 추이 막대와 요일×시각 히트맵은 **멜론 #FF7260 램프**(`--heat`). 추이 그래프는 1분 막대. `/api/history` 는 10초 묶음. mock 은 `--speed 2`(5초 주기 더미). 관리 CSS 의 스테이지는 `.sstage`(공개 `.stage` 와 이름 분리).
 - **다음 할 일**: 4a(사용자가 `.hef` 를 받으면 `check_llm.py`) → PLAN §7 메모 정리. 매뉴얼 STEP 16 의 페이저 설명 문단은 이번 개정에 맞춰 손봤다. 아래 ①~④ 는 이후 단계에 흡수된다.
   ① 평소 곡선(`/api/typical`)은 mock 이 170분 사이클을 반복해 써서 스테이징에서는 값이 바닥이다. 실측 이후 확인.
   ② Inside Climate News 는 미국 지역 전력·정치 보도가 많아 "세계적 기후 이슈"와 결이 다른 기사가 섞인다 —

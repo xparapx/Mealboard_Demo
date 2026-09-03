@@ -6,7 +6,7 @@
   --ink:#33312D; --ink2:#6E6A61; --ink3:#9A958A; --off:#C9C2B2;
   --teal:#129793; --teal-ink:#0C6D6A; --teal-tint:#DEF0EF; --teal-tint2:#EAF5F4; --aqua:#9BD7D5;
   --melon:#FF7260; --melon-ink:#C9452F; --melon-tint:#FFE9E4; --melon-tint2:#FFF4F1;
-  --marker:#F6C445; --heat:12,109,106;
+  --marker:#F6C445; --heat:255,114,96;        /* 히트맵·막대 램프 = 멜론 #FF7260 (09-04, 이전 틸) */
   --e1: 0 1px 2px rgba(51,49,45,.04), 0 10px 26px rgba(51,49,45,.055);
   --e2: 0 16px 36px rgba(51,49,45,.24);
   --r-card: 24px; --r-tile: 16px;
