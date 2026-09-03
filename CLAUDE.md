@@ -71,7 +71,12 @@
   5.1.1 로 컴파일된 YOLO hef 와 Qwen2.5 hef 는 5.3.0 에서도 열린다. **운용 모델은 Qwen3-1.7B-Instruct**(`v5.3.0/blob/…`, 2.88 GB, `.env LLM_HEF`, `LLM_CONTEXT_CHARS=4800`):
   스파이크 go(요약·주입 PASS, 6,000자 OK, 3.6 tok/s), 실제 피드 3/3 요약 성공 + Why 까지. 한국어 직접 생성은 여전히 불가(반복 붕괴) → 영어 → DeepL 2단계 유지. Qwen2.5 파일은 예비로 남겨 둠.
   **`apt install hailo-h10-all` 을 다시 실행하지 말 것**(5.1.1 로 되돌아가며 `hailort` 와 충돌).
-- **다음 할 일**: 로드맵 ④ vision 프로토타입(실사 스트림·카운팅의 마지막 조각) → PLAN §7 메모 정리. 매뉴얼 STEP 16 의 페이저 설명 문단은 이번 개정에 맞춰 손봤다. 아래 ①~④ 는 이후 단계에 흡수된다.
+- **세션 인계(09-04 밤, 이 PC=jh-home)**: 저장소·Pi 모두 최신(`git log -1` 로 확인). 오늘 끝난 것 — 화면 손질(육각 밀집도·plotly 컬러맵·구역 라벨·컬러바 우측 상단), 기본 구역 5개,
+  HailoRT 5.3.0 + Qwen3-1.7B(기사 요약 3/3), 휴대폰 Tailscale 로 관리 화면 접속 확인. **미결 질문 2개(사용자 답 대기)**: ⓐ hailo-ollama(5.3.0 deb 공개) 설치할지 — 우리 파이프라인엔 불필요, 시험용
+  ⓑ Plant 규칙 개정 — 사용자는 "포트 8000 은 이제 안 쓴다, Plant 는 GitHub 에 있다" 고 했으나 §0·§2 의 Plant 금지 규칙은 아직 그대로(파일·DB 삭제는 명시 지시 때만).
+- **다음 할 일**: ① **로드맵 ④ vision 프로토타입** — 실사 스트림·카운팅의 마지막 조각. 계약은 PLAN §4.4(zone_samples·cell_samples 기록, meta 소켓, DEBUG_PORT 8102 MJPEG, zones.local.json mtime 리로드),
+  카메라는 **Camera Module 3 Wide** 기준, YOLO hef 는 5.1.1 컴파일본이 5.3.0 에서 열림(필요 시 5.3.0 model zoo 로 교체). 개발 PC 웹캠·동영상 파일로 먼저.
+  ② Cloudflare Tunnel 전환(도메인·토큰은 사용자 준비, README 09-03 저녁 항목의 5단계). ③ 아래 ①~③ 잔여.
   ① 평소 곡선(`/api/typical`)은 mock 이 170분 사이클을 반복해 써서 스테이징에서는 값이 바닥이다. 실측 이후 확인.
   ② Inside Climate News 는 미국 지역 전력·정치 보도가 많아 "세계적 기후 이슈"와 결이 다른 기사가 섞인다 —
   며칠 지켜본 뒤 교체 여부 판단(후보: UNEP · Climate Home News). ③ 급식 있는 평일에 데스크톱 12컬럼 보드·모바일 dock 실물 확인.
