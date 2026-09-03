@@ -83,14 +83,14 @@ function build(MB) {
     <ul class="cross" id="admincross"><li><small>메타 스트림을 켜면 배식대 통과(λ 선)가 여기 쌓입니다 · 최근 ${CROSS_MAX}건 · 화면에만</small></li></ul>
   </section>
   <section class="card" id="logcard">
-    <div class="eyebrow">로그 테일</div>
+    <details class="fold" id="logfold"><summary><span class="eyebrow">로그 테일</span><i></i></summary>
     <div class="logbar"><select id="adminunit">${UNITS.map(u => `<option value="mealboard-${u}">${u}</option>`).join("")}</select>
       <button type="button" class="pill ghost" id="adminfollow" aria-pressed="false">따라가기</button></div>
-    <pre class="log" id="adminlog">—</pre>
+    <pre class="log" id="adminlog">—</pre></details>
   </section>
   <section class="card" id="auditcard">
-    <div class="eyebrow">감사 로그</div>
-    <ul class="log" id="adminaudit"></ul>
+    <details class="fold" id="auditfold"><summary><span class="eyebrow">감사 로그</span><i></i></summary>
+    <ul class="log" id="adminaudit"></ul></details>
   </section>
 </section>
 <dialog class="confirm" id="adminconfirm"><form method="dialog"><h3></h3><p></p>
@@ -119,6 +119,12 @@ function build(MB) {
     setTimeout(loadServices, 3000); loadAudit();
   });
   $("#adminunit").addEventListener("change", loadLog);
+  // 접기/펼치기(09-04): 펼칠 때만 읽고, 상태는 이 브라우저에 기억
+  for (const [id, load] of [["logfold", loadLog], ["auditfold", loadAudit]]) {
+    const d = $("#" + id);
+    try { d.open = localStorage.getItem("mb_" + id) === "1"; } catch {}
+    d.addEventListener("toggle", () => { try { localStorage.setItem("mb_" + id, d.open ? "1" : "0"); } catch {} if (d.open) load(); });
+  }
   $("#adminfollow").addEventListener("click", e => { const on = e.target.getAttribute("aria-pressed") !== "true"; e.target.setAttribute("aria-pressed", on); if (on) loadLog(); });
   $("#streamseg").addEventListener("click", e => { const b = e.target.closest("[data-mode]"); if (b) setMode(b.dataset.mode); });
   $("#streamview").addEventListener("click", e => { const b = e.target.closest("[data-view]"); if (b) setView(b.dataset.view); });
@@ -317,7 +323,7 @@ export default function (MB) {
   MB.screens.admin = {
     every: 30000,
     async poll() { await Promise.all([loadServices(), loadStreamState()]); if ($("#adminfollow").getAttribute("aria-pressed") === "true") loadLog(); },
-    async slow() { loadAudit(); loadLog(); loadZones(); zonesEditor.load(); },     // 편집 중(더티)이면 편집기는 다시 읽지 않는다
+    async slow() { if ($("#auditfold").open) loadAudit(); if ($("#logfold").open) loadLog(); loadZones(); zonesEditor.load(); },     // 편집 중(더티)이면 편집기는 다시 읽지 않는다
     deactivate() { if (ST.mode !== "off") setMode("off", { keepFlag: true }); },   // 화면을 떠나면 클라이언트 쪽 스트림은 모두 끊는다(플래그는 타이머가)
     render(cardId, data) { if (cardId === "svccard") loadServices(); },
   };

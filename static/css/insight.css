@@ -16,7 +16,7 @@
 .heat .wd[data-wd="3"] { background: #F3B2A4; color: #5C2A20; }
 .heat .wd[data-wd="4"] { background: #CBC2FB; color: #3A2E6E; }
 .heat .wd[data-wd="5"] { background: #A3F5B4; color: #1E4A2A; }
-.heat .wd[data-today] { background: var(--ink); color: var(--surface); }
+.heat .wd[data-today] { box-shadow: inset 0 0 0 1.5px var(--ink); }   /* 오늘은 요일색 그대로 + 차콜 링(09-04, 이전 차콜 채움) */
 .heat .row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 2px; }
 .heat .c { height: 22px; border-radius: 5px; background: rgba(var(--heat), calc(.08 + .84 * var(--t, 0))); cursor: pointer; border: 0; padding: 0; }
 .heat .c[data-none] { background: var(--well); cursor: default; }

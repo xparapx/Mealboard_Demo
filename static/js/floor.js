@@ -16,7 +16,8 @@ export function geom(W, H) {
   const u = W / 318;
   const ML = 50 * u, MR = 10 * u, MT = 22 * u, MB = 8 * u;          // 좌측은 퇴식구·출구 라벨 자리
   const k = Math.min((W - ML - MR) / ROOM.W, (H - MT - MB) / ROOM.D);
-  const ox = ML + (W - ML - MR - ROOM.W * k) / 2;
+  const slack = W - ML - MR - ROOM.W * k;                          // 가로 여유. 편집기처럼 넓은 캔버스면 라벨 여백을 잊고 캔버스 한가운데(09-04)
+  const ox = slack > ML ? (W - ROOM.W * k) / 2 : ML + slack / 2;
   const oy = MT + (H - MT - MB - ROOM.D * k) / 2;
   return { W, H, u, k, T: Math.max(3, .45 * k), fu: Math.min(u, 1.35),   // fu = 글자 배율 상한 — 관리 편집기의 큰 캔버스에서도 사용자 앱과 같은 글자 크기(09-04)
            X: x => ox + (ROOM.W - x) * k, Y: y => oy + y * k,
