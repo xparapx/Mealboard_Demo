@@ -3,7 +3,8 @@ import datetime as dt
 
 import pytest
 
-from app.lunch import BUCKET_MIN, bin_of, bounds, in_window, lunch_bounds, minute_of_day, parse_hhmm, seconds_of_day
+from app.lunch import (BUCKET_MIN, bin_of, bounds, in_window, iso_at, lunch_bounds, minute_of_day, parse_hhmm, seconds_of_day,
+                       weekday_of)
 
 
 def test_시각_문자열을_분으로():
@@ -57,3 +58,14 @@ def test_창_안팎_판정은_끝을_포함하지_않는다():
     assert in_window("2026-09-03T11:30:00", 690, 840)
     assert in_window("2026-09-03T13:59:59", 690, 840)
     assert not in_window("2026-09-03T14:00:00", 690, 840)
+
+
+def test_초를_시각_문자열로_하루_끝은_눌러서():
+    assert iso_at("2026-09-03", 690 * 60) == "2026-09-03T11:30:00"
+    assert iso_at("2026-09-03", 43410.7) == "2026-09-03T12:03:30"
+    assert iso_at("2026-09-03", 86400) == "2026-09-03T23:59:59"
+
+
+def test_요일은_SQLite_규칙_일요일이_0():
+    assert weekday_of("2026-09-03") == 4                     # 목요일
+    assert weekday_of(dt.date(2026, 9, 6)) == 0              # 일요일

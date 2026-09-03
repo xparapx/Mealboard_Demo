@@ -1,12 +1,12 @@
-import json
 from fastapi import APIRouter
-from ..config import MEAL_JSON
+from ..mealjson import read_meal
 
 router = APIRouter()
 
 
 @router.get("/api/meal")
 def meal():
-    if not MEAL_JSON.exists():
+    m = read_meal()
+    if not m:
         return {"state": "no_data", "message": "fetch_neis.py 가 아직 실행되지 않았습니다"}
-    return json.loads(MEAL_JSON.read_text(encoding="utf-8"))
+    return m

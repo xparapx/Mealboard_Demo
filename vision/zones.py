@@ -2,7 +2,7 @@
 vision(counter)·mock·rollup·관리 앱이 같은 규칙으로 data/zones.json 을 읽고 검증한다.
 
 좌표계: 바닥 0~1 정규화. x = 폭(창가 통로 벽이 0), y = 길이(배식구 벽이 0). 실제 m 는 floor.width_m·length_m.
-읽기: load_zones(path) 는 git 템플릿 zones.json 위에 같은 폴더의 미추적 zones.local.json(관리 앱·calibrate 가 쓴다)을
+읽기: load_zones(path) 는 git 템플릿 zones.json 위에 같은 폴더의 미추적 zones.local.json(관리 앱만 쓴다 — calibrate 도 관리 앱의 한 탭)을
       최상위 키 단위로 덮어 쓴다 — Pi 체크아웃을 dirty 로 만들지 않기 위해(CLAUDE.md §2 'Pi 는 git pull 만').
 구역 판정: zones 는 순서 있는 리스트, 첫 일치 우선. 여기서 나가는 것은 구역별 인원수뿐 — 개별 좌표는 어디에도 남기지 않는다.
 """
@@ -31,8 +31,13 @@ def load_zones(path, local=None):
     path = Path(path)
     local = Path(local) if local else path.with_name(LOCAL_NAME)
     doc = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(doc, dict):
+        raise ValueError(f"{path.name}: 문서가 객체가 아니다")
     if local.is_file():
-        doc.update(json.loads(local.read_text(encoding="utf-8")))
+        over = json.loads(local.read_text(encoding="utf-8"))
+        if not isinstance(over, dict):
+            raise ValueError(f"{local.name}: 문서가 객체가 아니다")
+        doc.update(over)
     errors = validate_zones(doc)
     if errors:
         raise ValueError(f"{path.name}: " + "; ".join(errors))

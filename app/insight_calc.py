@@ -9,7 +9,7 @@ import re
 import statistics
 
 from .config import STALE_SEC
-from .lunch import BUCKET_MIN, bin_of, in_window, seconds_of_day
+from .lunch import BUCKET_MIN, iso_at, seconds_of_day
 from vision.waittime import MIN_RATE
 
 CALC_VERSION = 1
@@ -30,24 +30,32 @@ def _mean(xs, nd=2):
 
 
 def _sec(s):
-    return seconds_of_day(s["ts"])
+    """표본의 자정부터 초. day_summary 가 한 번 계산해 s['sec'] 에 넣어 두므로 문자열을 거듭 파싱하지 않는다"""
+    return s["sec"] if "sec" in s else seconds_of_day(s["ts"])
 
 
-def _iso(date, sec):
-    sec = int(sec)
-    return f"{date}T{sec // 3600:02d}:{sec % 3600 // 60:02d}:{sec % 60:02d}"
+def _windowed(samples, lo, hi):
+    """[lo, hi) 분 안의 표본만, 각 표본에 'sec' 를 채워서"""
+    out = []
+    for s in samples:
+        sec = _sec(s)
+        if lo * 60 <= sec < hi * 60:
+            s["sec"] = sec
+            out.append(s)
+    return out
 
 
 def _runs(samples, pred, min_minutes=0, min_n=1):
     """pred 를 만족하는 표본이 끊기지 않고(간격 ≤ STALE_SEC) 이어진 구간들. 각 구간은 표본 리스트"""
     runs, cur = [], []
     for s in samples:
-        if pred(s) and (not cur or _sec(s) - _sec(cur[-1]) <= STALE_SEC):
+        ok = pred(s)
+        if ok and (not cur or _sec(s) - _sec(cur[-1]) <= STALE_SEC):
             cur.append(s)
             continue
         if cur:
             runs.append(cur)
-        cur = [s] if pred(s) else []
+        cur = [s] if ok else []
     if cur:
         runs.append(cur)
     return [r for r in runs if len(r) >= min_n and (_sec(r[-1]) - _sec(r[0])) / 60 >= min_minutes]
@@ -61,10 +69,10 @@ def _event(kind, run, value, detail):
 # ---- 구간 통계 ----------------------------------------------------------------
 
 def bin_samples(samples):
-    """5분 구간별 통계 — lunch_bins 한 행씩. bin 은 구간 시작 분(app.lunch.bin_of)"""
+    """5분 구간별 통계 — lunch_bins 한 행씩. bin 은 구간 시작 분(app.lunch.bin_of 와 같은 눈금)"""
     groups = {}
     for s in samples:
-        groups.setdefault(bin_of(s["ts"]), []).append(s)
+        groups.setdefault(int(_sec(s) // 60) // BUCKET_MIN * BUCKET_MIN, []).append(s)
     out = []
     for b in sorted(groups):
         g = groups[b]
@@ -79,11 +87,13 @@ def bin_samples(samples):
     return out
 
 
-def bin_zones(zone_rows):
-    """구역별 5분 구간 통계 — zone_bins 한 행씩. 입력은 {ts, zone, n} (숫자뿐, 좌표 없음)"""
+def bin_zones(zone_rows, lo=0, hi=24 * 60):
+    """구역별 5분 구간 통계 — zone_bins 한 행씩. 입력은 {ts, zone, n} (숫자뿐, 좌표 없음). 창 밖은 버린다"""
     groups = {}
     for r in zone_rows:
-        groups.setdefault((bin_of(r["ts"]), r["zone"]), []).append(r["n"])
+        m = int(seconds_of_day(r["ts"]) // 60)
+        if lo <= m < hi:
+            groups.setdefault((m // BUCKET_MIN * BUCKET_MIN, r["zone"]), []).append(r["n"])
     return [{"bin": b, "zone": z, "n": len(ns), "avg_n": _mean(ns), "max_n": max(ns)}
             for (b, z), ns in sorted(groups.items())]
 
@@ -91,27 +101,21 @@ def bin_zones(zone_rows):
 # ---- 판정 -------------------------------------------------------------------
 
 def coverage(samples, date, lo, hi, now_sec=None):
-    """측정 품질. 창 [lo, hi) 분 안에서 status.py 가 no_data 를 띄웠을 시간 = 이웃 표본 간격의 STALE_SEC 초과분
-    (첫 표본 앞·마지막 표본 뒤의 빈 시간 포함). 오늘이면 now_sec 까지만 잰다(아직 오지 않은 시간은 빈 시간이 아니다)."""
+    """측정 품질. 창 [lo, hi) 분 안에서 화면이 '데이터 없음'을 띄웠을 시간 = 창 시작·표본들·창 끝을 차례로 놓고
+    이웃 간격마다 STALE_SEC 를 넘긴 초과분의 합(표본 뒤 STALE_SEC 동안은 화면이 마지막 값을 보여준다).
+    오늘이면 now_sec 까지만 잰다(아직 오지 않은 시간은 빈 시간이 아니다). 창 밖 표본은 여기서 걸러낸다."""
     start, end = lo * 60, hi * 60
     if now_sec is not None:
         end = min(end, now_sec)
     if end <= start:
         return {"coverage_pct": None, "stale_min": 0.0, "gaps": []}
+    edges = [start] + [s["sec"] for s in _windowed(samples, lo, hi)] + [end]
     gaps, stale = [], 0.0
-    edges = [start] + [_sec(s) for s in samples] + [end]
-    for i in range(len(edges) - 1):
-        gap = edges[i + 1] - edges[i]
-        if i == 0 and samples:            # 첫 표본 앞은 통째로 빈 시간(그 전에는 행이 없었다)
-            excess = gap
-        elif not samples:
-            excess = gap
-        else:
-            excess = gap - STALE_SEC       # 표본 뒤 STALE_SEC 동안은 화면이 마지막 값을 보여준다
+    for a, b in zip(edges, edges[1:]):
+        excess = b - a - STALE_SEC
         if excess > 0:
             stale += excess
-            gaps.append({"start_ts": _iso(date, edges[i] if i == 0 else edges[i] + STALE_SEC),
-                         "end_ts": _iso(date, edges[i + 1]), "minutes": round(excess / 60, 1)})
+            gaps.append({"start_ts": iso_at(date, a + STALE_SEC), "end_ts": iso_at(date, b), "minutes": round(excess / 60, 1)})
     return {"coverage_pct": round(100 * (1 - stale / (end - start)), 1), "stale_min": round(stale / 60, 1), "gaps": gaps}
 
 
@@ -136,8 +140,30 @@ def golden_windows(samples):
     def ok(s):
         return s["state"] == "ok" and s["wait_min"] is not None and s["wait_min"] <= GOLDEN_WAIT \
             and (s["rate_per_min"] or 0) >= MIN_RATE
-    return [_event("golden", r, _mean([s["wait_min"] for s in r], 1), f"평균 대기 {_mean([s['wait_min'] for s in r], 1)}분")
-            for r in _runs(samples, ok, GOLDEN_MIN)]
+    out = []
+    for r in _runs(samples, ok, GOLDEN_MIN):
+        avg = _mean([s["wait_min"] for s in r], 1)
+        out.append(_event("golden", r, avg, f"평균 대기 {avg}분"))
+    return out
+
+
+def golden_bins(points, key="forecast_wait"):
+    """5분 구간 점들({minute_of_day, key}) 에서 대기 ≤ GOLDEN_WAIT 가 GOLDEN_MIN 이상 이어진 구간 [{start_min, end_min}].
+    예보 곡선처럼 표본이 아니라 구간 값만 있을 때 쓴다 — 문턱은 golden_windows 와 같다"""
+    out, cur = [], []
+
+    def flush():
+        if cur and cur[-1]["minute_of_day"] + BUCKET_MIN - cur[0]["minute_of_day"] >= GOLDEN_MIN:
+            out.append({"start_min": cur[0]["minute_of_day"], "end_min": cur[-1]["minute_of_day"] + BUCKET_MIN})
+    for p in points:
+        good = p.get(key) is not None and p[key] <= GOLDEN_WAIT
+        if good and cur and p["minute_of_day"] - cur[-1]["minute_of_day"] == BUCKET_MIN:
+            cur.append(p)
+            continue
+        flush()
+        cur = [p] if good else []
+    flush()
+    return out
 
 
 def bottlenecks(samples, typical=None):
@@ -153,8 +179,8 @@ def bottlenecks(samples, typical=None):
     out = []
     for r in _runs(samples, stuck, BOTTLENECK_MIN, BOTTLENECK_N):
         rate = _mean([s["rate_per_min"] for s in r if s["rate_per_min"] is not None], 1)
-        out.append(_event("bottleneck", r, max(s["queue_len"] for s in r),
-                          f"처리 {rate}/분 (평소 {typical}/분), 최대 {max(s['queue_len'] for s in r)}명 대기"))
+        peak = max(s["queue_len"] for s in r)
+        out.append(_event("bottleneck", r, peak, f"처리 {rate}/분 (평소 {typical}/분), 최대 {peak}명 대기"))
     return out
 
 
@@ -194,11 +220,17 @@ def popularity(rise, peak_wait, base_rise, base_wait):
     return round(100 * sum(terms) / len(terms)) if terms else None
 
 
+def median_or_none(xs, nd=2):
+    xs = [x for x in xs if x is not None]
+    return round(statistics.median(xs), nd) if xs else None
+
+
 # ---- 하루 요약 -----------------------------------------------------------------
 
 def day_summary(samples, date, lo, hi, now_sec=None):
-    """하루(또는 오늘 지금까지)의 요약 — lunch_days 한 행 + bins + events. 창 밖 표본은 여기서 걸러낸다"""
-    samples = [s for s in samples if in_window(s["ts"], lo, hi)]
+    """하루(또는 오늘 지금까지)의 요약 — lunch_days 한 행 + bins + events(황금·병목·빈 시간·산출 불가, 시각순).
+    창 밖 표본은 여기서 걸러낸다"""
+    samples = _windowed(samples, lo, hi)
     cov = coverage(samples, date, lo, hi, now_sec)
     bins = bin_samples(samples)
     typical = typical_rate(samples)
@@ -223,7 +255,6 @@ def day_summary(samples, date, lo, hi, now_sec=None):
         "golden_min": round(sum(e["minutes"] for e in golden), 1),
         "bottleneck_min": round(sum(e["minutes"] for e in bott), 1),
         "calc_version": CALC_VERSION,
-        "golden": golden, "bottlenecks": bott,
         "events": sorted(golden + bott + stale + insuff, key=lambda e: e["start_ts"]),
         "bins": bins,
     }

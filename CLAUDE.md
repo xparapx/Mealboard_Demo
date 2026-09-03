@@ -34,7 +34,10 @@
   2 프론트 5화면(모바일 하단 dock `#wait #room #week #today #news`, 데스크톱 보드+좌측 레일, 인사이트 카드는 주제별 화면 아래) →
   3 tailnet 전용 관리 앱(8101, Serve 8443, 허용목록) → 4 로컬 LLM(Hailo GenAI) 리포트·기사 본문 요약 → 5 문서. 단계마다 사용자 확인.
   파일당 쓰기 주체 하나(§2 DB 행), 개별 좌표·프레임 저장 금지는 그대로다.
-- **다음 할 일**: PLAN §6 순서대로 — 지금은 **Phase 1a**(config·lunch·zones·zone_samples). 아래 ①~④ 는 그 안에 흡수된다.
+- **Phase 1 완료(09-03, 1a~1d)**: `insights.db` 는 `jobs/rollup.py` 만 쓰고 `/api/insight/*` 는 읽기 전용. 인사이트 API 는 `.env` `FEED_SOURCE` 와
+  같은 출처의 집계 행만 쓴다 — 스테이징 Pi `.env` 는 `ROLLUP_WINDOW=all`·`FEED_SOURCE=mock`, 학교 전환 시 `lunch`·`vision`. 판정 규칙을 바꾸면
+  `insight_calc.CALC_VERSION` 을 올린다. 매뉴얼 STEP 15.
+- **다음 할 일**: PLAN §6 순서대로 — 지금은 **Phase 2a**(static 파일 분리, sw v8, Cache-Control 접두어). 아래 ①~④ 는 이후 단계에 흡수된다.
   ① 평소 곡선(`/api/typical`)은 mock 이 170분 사이클을 반복해 써서 스테이징에서는 값이 바닥이다. 실측 이후 확인.
   ② Inside Climate News 는 미국 지역 전력·정치 보도가 많아 "세계적 기후 이슈"와 결이 다른 기사가 섞인다 —
   며칠 지켜본 뒤 교체 여부 판단(후보: UNEP · Climate Home News). ③ 급식 있는 평일에 데스크톱 2컬럼 높이 맞춤 실물 확인.

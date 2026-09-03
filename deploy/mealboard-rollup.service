@@ -1,0 +1,10 @@
+[Unit]
+Description=Mealboard 인사이트 집계 — queue.db → insights.db (1회 실행, 오늘·어제)
+
+[Service]
+Type=oneshot
+User=__USER__
+WorkingDirectory=/opt/mealboard
+EnvironmentFile=/opt/mealboard/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/mealboard/.venv/bin/python -m jobs.rollup --days 2

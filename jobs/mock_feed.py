@@ -1,6 +1,6 @@
 """vision/counter.py 의 대역.
 점심시간 인파 곡선을 흉내내어 samples 테이블에 쓰고, 같은 틱의 위치를 data/zones.json 구역으로 세어
-zone_samples 에 인원수만 남긴다(같은 트랜잭션). 구역 정의는 시작할 때 한 번 읽는다(바뀌면 재시작).
+zone_samples 에 인원수만 남긴다(같은 트랜잭션). 구역 정의는 시작할 때 한 번 읽는다(바뀌면 재시작). 읽지 못하면 구역 인원수만 빠진다.
 실제 vision 과 동시에 켜지 말 것 — SQLite 쓰기 주체는 항상 하나.
 
 실행:  uv run python -m jobs.mock_feed --speed 30
@@ -79,7 +79,11 @@ def main():
     a = ap.parse_args()
 
     con = connect()
-    zones = load_zones(ZONES_JSON)["zones"]                   # 템플릿 + zones.local.json overlay. 깨져 있으면 여기서 멈춘다
+    try:
+        zones = load_zones(ZONES_JSON)["zones"]               # 템플릿 + zones.local.json overlay
+    except (OSError, ValueError) as e:                        # 구역 정의가 깨져도 대기시간 피드는 멈추지 않는다 — 구역 인원수만 빠진다
+        print(f"구역 정의를 읽지 못했다 - 구역 인원수 없이 계속한다: {e}")
+        zones = []
     served_log = deque()        # (sim_sec, 처리 인원) — 5분 이동평균 계산용
     queue, sim = 0, 0.0
     print(f"mock_feed 시작  speed={a.speed}  scenario={a.scenario}  zones={[z['id'] for z in zones]}")

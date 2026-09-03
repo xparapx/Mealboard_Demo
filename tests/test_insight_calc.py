@@ -1,8 +1,9 @@
 """인사이트 판정 규칙(PLAN §2.3). 합성 표본만 쓴다 — DB 없음."""
 import pytest
 
-from app.insight_calc import (bin_samples, bin_zones, bottlenecks, coverage, day_summary, golden_windows,
-                              insufficient_runs, normalize_menu, popularity, rise_rate, served_estimate, typical_rate)
+from app.insight_calc import (bin_samples, bin_zones, bottlenecks, coverage, day_summary, golden_bins, golden_windows,
+                              insufficient_runs, median_or_none, normalize_menu, popularity, rise_rate, served_estimate,
+                              typical_rate)
 
 DATE = "2026-09-03"
 
@@ -34,12 +35,13 @@ def test_구간_통계는_5분_눈금():
     assert bins[0]["n"] == 10 and bins[0]["ok_n"] == 10 and bins[0]["avg_wait"] == 2.0 and bins[0]["max_queue"] == 10
 
 
-def test_구역_구간_통계():
+def test_구역_구간_통계는_창_밖을_버린다():
     rows = [{"ts": ts(720), "zone": "aisle", "n": 4}, {"ts": ts(721), "zone": "aisle", "n": 6},
-            {"ts": ts(720), "zone": "counter", "n": 1}]
-    z = bin_zones(rows)
+            {"ts": ts(720), "zone": "counter", "n": 1}, {"ts": ts(480), "zone": "seating", "n": 9}]
+    z = bin_zones(rows, 690, 840)
     assert z == [{"bin": 720, "zone": "aisle", "n": 2, "avg_n": 5.0, "max_n": 6},
                  {"bin": 720, "zone": "counter", "n": 1, "avg_n": 1.0, "max_n": 1}]
+    assert len(bin_zones(rows)) == 3
 
 
 def test_커버리지는_120초_초과분만_빈_시간으로():
@@ -50,16 +52,29 @@ def test_커버리지는_120초_초과분만_빈_시간으로():
     assert c["coverage_pct"] == pytest.approx(100 * (1 - 8.5 / 150), abs=0.1)
 
 
-def test_첫_표본_앞은_통째로_빈_시간이고_오늘은_지금까지만_잰다():
+def test_첫_표본_앞도_같은_유예를_두고_오늘은_지금까지만_잰다():
     s = every30s(700, 720, 3, 4.0)
     c = coverage(s, DATE, 690, 840, now_sec=720 * 60)
-    assert c["stale_min"] == 10.0 and c["gaps"][0]["start_ts"] == ts(690)
-    assert c["coverage_pct"] == pytest.approx(100 * (1 - 10 / 30), abs=0.1)
+    assert c["stale_min"] == 8.0 and c["gaps"][0]["start_ts"] == ts(692)
+    assert c["coverage_pct"] == pytest.approx(100 * (1 - 8 / 30), abs=0.1)
+
+
+def test_창_밖_표본은_커버리지에_끼지_않는다():
+    s = every30s(480, 510, 3, 4.0) + every30s(690, 840, 3, 4.0)      # 아침 표본은 점심 창과 무관
+    c = coverage(s, DATE, 690, 840)
+    assert c["coverage_pct"] == 100.0 and c["gaps"] == []
 
 
 def test_표본이_없으면_창_전체가_빈_시간():
     c = coverage([], DATE, 690, 840)
-    assert c["coverage_pct"] == 0.0 and c["stale_min"] == 150.0
+    assert c["stale_min"] == 148.0 and c["coverage_pct"] == pytest.approx(1.3, abs=0.1)
+    assert c["gaps"] == [{"start_ts": ts(692), "end_ts": ts(840), "minutes": 148.0}]
+
+
+def test_하루_끝은_23_59_59_로_눌린다():
+    s = every30s(0, 60, 3, 4.0)
+    c = coverage(s, DATE, 0, 1440)
+    assert c["gaps"][-1]["end_ts"] == f"{DATE}T23:59:59"
 
 
 def test_처리_인원은_끊긴_동안을_세지_않는다():
@@ -78,6 +93,14 @@ def test_황금_구간은_5분_이상_연속일_때만():
     s = every30s(720, 724, 2, 5.0) + every30s(724, 730, 30, 5.0) + every30s(730, 740, 2, 5.0)
     g = golden_windows(s)
     assert len(g) == 1 and g[0]["start_ts"] == ts(730) and g[0]["minutes"] == 9.5 and g[0]["value"] == 0.4
+
+
+def test_예보_곡선의_황금_구간은_같은_문턱():
+    pts = [{"minute_of_day": m, "forecast_wait": w} for m, w in
+           [(690, 1.0), (695, 2.0), (700, 3.0), (705, 8.0), (710, 2.5), (720, 2.0), (725, None), (730, 1.0)]]
+    assert golden_bins(pts) == [{"start_min": 690, "end_min": 705}, {"start_min": 710, "end_min": 715},
+                                {"start_min": 720, "end_min": 725}, {"start_min": 730, "end_min": 735}]
+    assert golden_bins([]) == []
 
 
 def test_황금_구간은_데이터_공백에서_끊긴다():
@@ -128,6 +151,7 @@ def test_인기_지수():
     assert popularity(1.0, 3.0, 1.0, 3.0) == 100
     assert popularity(None, 6.0, 1.0, 3.0) == 200           # 한 항이 없으면 남은 항으로
     assert popularity(1.0, 3.0, None, None) is None
+    assert median_or_none([3.0, None, 1.0, 2.0]) == 2.0 and median_or_none([None]) is None
 
 
 def test_하루_요약은_창_밖_표본을_버리고_이벤트를_시각순으로():
@@ -139,3 +163,5 @@ def test_하루_요약은_창_밖_표본을_버리고_이벤트를_시각순으�
     assert d["bottleneck_min"] == 9.5 and d["insufficient_min"] == 9.5 and d["golden_min"] == 9.5
     assert [e["kind"] for e in d["events"]] == ["bottleneck", "insufficient", "stale", "golden", "stale"]
     assert d["typical_rate"] == 6.0 and d["calc_version"] == 1 and d["bins"][0]["bin"] == 690
+    assert "golden" not in d and "bottlenecks" not in d          # 이벤트 하나로만 표현한다
+    assert all("sec" in s for s in s[20:40])                      # 시각은 한 번만 파싱해 표본에 남긴다

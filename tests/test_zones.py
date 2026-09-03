@@ -123,8 +123,15 @@ def test_로컬_파일이_템플릿을_덮어쓴다(tmp_path, doc):
     assert [z["id"] for z in merged["zones"]] == ["counter", "aisle", "seating"]   # 덮어쓰지 않은 키는 그대로
 
 
-def test_깨진_로컬_파일은_예외로_멈춘다(tmp_path, doc):
+@pytest.mark.parametrize("local", ['{"zones": []}', "null", "[1, 2]", "{broken"])
+def test_깨진_로컬_파일은_언제나_ValueError(tmp_path, doc, local):
     (tmp_path / "zones.json").write_text(json.dumps(doc), encoding="utf-8")
-    (tmp_path / "zones.local.json").write_text(json.dumps({"zones": []}), encoding="utf-8")
+    (tmp_path / "zones.local.json").write_text(local, encoding="utf-8")
+    with pytest.raises(ValueError):
+        load_zones(tmp_path / "zones.json")
+
+
+def test_템플릿이_객체가_아니어도_ValueError(tmp_path):
+    (tmp_path / "zones.json").write_text("[]", encoding="utf-8")
     with pytest.raises(ValueError):
         load_zones(tmp_path / "zones.json")

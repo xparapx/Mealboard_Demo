@@ -1,0 +1,9 @@
+[Unit]
+Description=매일 14:10 인사이트 집계 (급식 14:00 종료 뒤, 14:20 리포트 앞)
+
+[Timer]
+OnCalendar=*-*-* 14:10:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

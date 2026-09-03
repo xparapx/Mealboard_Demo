@@ -1,6 +1,7 @@
 """급식 시간창과 5분 구간 — 순수 함수. DB·시계를 모른다.
 평소 곡선(typical)·집계(rollup)·인사이트 API 가 같은 규칙으로 시각을 자르도록 한 곳에 둔다.
-시각 단위는 '자정부터 분'(minute of day, 0~1439) — SQLite strftime('%H')*60+strftime('%M') 과 같은 눈금이다."""
+시각 단위는 '자정부터 분'(minute of day, 0~1439) — SQLite strftime('%H')*60+strftime('%M') 과 같은 눈금이다.
+.env 의 LUNCH_START·LUNCH_END 는 이 모듈을 import 하는 순간 검증된다 — 잘못된 값은 서비스 시작을 막는다(요청 때 500 이 아니라)."""
 import datetime as dt
 
 from .config import LUNCH_START, LUNCH_END
@@ -60,3 +61,18 @@ def bin_of(t):
 def in_window(t, lo, hi):
     """[lo, hi) 안의 시각인가 (분 단위, 끝은 열린 구간)"""
     return lo <= minute_of_day(t) < hi
+
+
+def iso_at(date, sec):
+    """'2026-09-03' + 자정부터 초 → 'YYYY-MM-DDTHH:MM:SS'. 하루 끝(86400)은 23:59:59 로 눌러 T24:00:00 이 나오지 않게"""
+    sec = min(int(sec), DAY_MIN * 60 - 1)
+    return f"{date}T{sec // 3600:02d}:{sec % 3600 // 60:02d}:{sec % 60:02d}"
+
+
+def weekday_of(date):
+    """'YYYY-MM-DD' 또는 date → 요일 번호. SQLite strftime('%w') 규칙(0=일요일) — lunch_days.weekday 와 같은 눈금"""
+    d = dt.date.fromisoformat(date) if isinstance(date, str) else date
+    return (d.weekday() + 1) % 7
+
+
+LUNCH_LO, LUNCH_HI = lunch_bounds()     # import 시점 검증. 잘못된 .env 는 여기서 ValueError
