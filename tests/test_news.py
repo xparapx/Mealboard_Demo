@@ -59,7 +59,8 @@ def test_한국어_검증은_스키마_길이_한국어():
     assert why == "ok" and len(d["bullets"]) == 3                                            # '374억' 은 번역이 바꾼 단위 — 숫자 검사는 끈다
     assert fetch_news.validate_digest(BODY, {"bullets": ["a", "b"], "why": "w"})[1] == "schema"
     assert fetch_news.validate_digest(BODY, {**good, "bullets": [KO[0], "English sentence here", KO[2]]})[1] == "bullet:hangul"
-    assert fetch_news.validate_digest(BODY, {**good, "why": "가" * 101})[1] == "why:length"
+    d, why = fetch_news.validate_digest(BODY, {**good, "why": "가" * 101})
+    assert why == "ok" and d["why"] == ""                                                   # 긴 Why 는 비울 뿐 요약은 살린다
     assert fetch_news.validate_digest(BODY, {"bullets": KO[:3]})[1] == "ok"                   # why 없음 허용
 
 
@@ -74,6 +75,10 @@ def test_Why_줄이_없으면_후속_질문으로_채운다():
     with m:
         d, why = fetch_news.digest_with(m, BODY, translate_fn=fake_translate)
     assert why == "ok" and d["why"] == KO[3]
+    m2 = fake("- Global emissions rose 1.1% in 2024.\n- Scientists warn.\n- Cuts needed.", why="In 2024 global emissions rose 1.1%, the report said.")()
+    with m2:
+        d2, why2 = fetch_news.digest_with(m2, BODY, translate_fn=lambda t, log=None: KO[:len(t)])
+    assert why2 == "ok" and d2["why"] == ""                                              # 첫 줄을 되풀이한 Why 는 버린다
 
 
 def fake_translate(texts, log=None):

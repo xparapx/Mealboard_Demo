@@ -107,6 +107,17 @@ def clip_sentences(s, limit):
     return out
 
 
+WORD = re.compile(r"[a-z0-9]+")
+
+
+def similar(a, b, thresh=0.7):
+    """낱말 집합 겹침(작은 쪽 기준) ≥ thresh — Why 가 요약 한 줄을 말만 바꿔 되풀이했는지(09-04 실측: 앞 40자 비교로는 못 잡는다)"""
+    wa, wb = set(WORD.findall(a.lower())), set(WORD.findall(b.lower()))
+    if not wa or not wb:
+        return False
+    return len(wa & wb) / min(len(wa), len(wb)) >= thresh
+
+
 def check_english(body, d):
     """영어 단계 검증 → reason|None. 긴 줄은 문장 경계에서 줄이고(d 를 고친다), 기사에 없는 숫자(모델이 지어낸 수치)·주입 흔적은 거부.
     거부 사유에 문제의 숫자를 남긴다 — 운영 로그에서 '본문 표기 차이' 인지 '지어낸 수치' 인지 읽을 수 있게"""
@@ -140,10 +151,8 @@ def validate_digest(body, out, check_numbers=False):
         if not ok:
             return None, f"bullet:{why}"
     w = (out.get("why") or "").strip()
-    if w:
-        ok, why = valid_korean(body, w, max_len=WHY_MAX, check_numbers=check_numbers)
-        if not ok:
-            return None, f"why:{why}"
+    if w and not valid_korean(body, w, max_len=WHY_MAX, check_numbers=check_numbers)[0]:
+        w = ""                                                     # Why 는 선택 항목 — 검증에 떨어지면 줄만 비우고 요약 세 줄은 살린다(09-04 실측: why:length 로 전체가 죽었다)
     return {"bullets": bullets, "why": w}, "ok"
 
 
@@ -157,6 +166,8 @@ def digest_with(m, body, translate_fn=None):
     if not en["why"]:                                              # 모델이 Why 줄을 자주 빠뜨린다(09-04 실측) — 요약 세 줄만 주고 짧게 다시 묻는다
         w = m.complete(WHY_SYSTEM, "Summary:\n" + "\n".join("- " + b for b in en["bullets"]), max_tokens=60, timeout_s=60)
         en["why"] = WHY_PREFIX.sub("", (w or "").strip().splitlines()[0] if (w or "").strip() else "").strip().strip('"')
+    if en["why"] and any(similar(en["why"], b) for b in en["bullets"]):        # Why 가 요약 한 줄을 되풀이하면(09-04 실측) 비운다 — 없어도 되는 줄
+        en["why"] = ""
     bad = check_english(text, en)
     if bad:
         return None, bad
