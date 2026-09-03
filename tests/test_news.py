@@ -56,7 +56,7 @@ def test_한국어_검증은_스키마_길이_한국어():
     assert why == "ok" and len(d["bullets"]) == 3                                            # '374억' 은 번역이 바꾼 단위 — 숫자 검사는 끈다
     assert fetch_news.validate_digest(BODY, {"bullets": ["a", "b"], "why": "w"})[1] == "schema"
     assert fetch_news.validate_digest(BODY, {**good, "bullets": [KO[0], "English sentence here", KO[2]]})[1] == "bullet:hangul"
-    assert fetch_news.validate_digest(BODY, {**good, "why": "가" * 81})[1] == "why:length"
+    assert fetch_news.validate_digest(BODY, {**good, "why": "가" * 101})[1] == "why:length"
     assert fetch_news.validate_digest(BODY, {"bullets": KO[:3]})[1] == "ok"                   # why 없음 허용
 
 
