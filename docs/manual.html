@@ -1386,7 +1386,7 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v13&quot;;   // 09-04 밤: 밀집도 Sunsetdark — 옛 셸 캐시를 지운다
+const CACHE = &quot;mealboard-v14&quot;;   // 09-04 밤: 컬러바 위치·타일 투명도 — 옛 셸 캐시를 지운다
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
@@ -5171,7 +5171,7 @@ export function drawHeat(g, G, cells, cols, rows) {
   (cells || []).forEach(c =&gt; {
     const w = Math.min(1, Math.max(0, c.w));
     hex(c.i % cols, Math.floor(c.i / cols), .9);
-    g.fillStyle = ramp(SUNSETDARK, w); g.globalAlpha = .7 + .25 * w; g.fill();
+    g.fillStyle = ramp(SUNSETDARK, w); g.globalAlpha = .55 + .25 * w; g.fill();   // 최대 .8 — 바닥 도면이 비쳐 보이게(09-04 사용자 요청, 이전 .7~.95)
   });
   g.restore();
 }</code></pre>

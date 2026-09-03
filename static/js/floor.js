@@ -181,7 +181,7 @@ export function drawHeat(g, G, cells, cols, rows) {
   (cells || []).forEach(c => {
     const w = Math.min(1, Math.max(0, c.w));
     hex(c.i % cols, Math.floor(c.i / cols), .9);
-    g.fillStyle = ramp(SUNSETDARK, w); g.globalAlpha = .7 + .25 * w; g.fill();
+    g.fillStyle = ramp(SUNSETDARK, w); g.globalAlpha = .55 + .25 * w; g.fill();   // 최대 .8 — 바닥 도면이 비쳐 보이게(09-04 사용자 요청, 이전 .7~.95)
   });
   g.restore();
 }
