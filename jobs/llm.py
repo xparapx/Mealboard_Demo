@@ -4,9 +4,12 @@
 (`valid_korean`, `numbers_subset`)를 통과한 것만 저장하고, 실패·미설치·busy 는 호출자가 규칙 템플릿/DeepL 로 물러선다.
 점심시간 밖에서만 부른다(HAT·CPU 경합 회피) — 타이머가 그렇게 잡혀 있다.
 
-장치 API: `hailo_platform.genai` 는 apt 로 깔리는 시스템 패키지라 `--system-site-packages` venv 에서만 보인다. 정확한 클래스·메서드 이름은
-학교 Pi 에서 `check_llm.py` 스파이크(PLAN §5.1)로 확정한다 — 그 전까지 `_hailo_backend` 는 가장 그럴듯한 형태로 시도하고,
-모양이 다르면 LLMUnavailable 로 물러선다(아무것도 깨지지 않는다). `LLM_HEF` 가 비어 있으면 아예 시도하지 않는다."""
+장치 API(학교 Pi HailoRT 5.1.1 에서 09-04 확인): `genai.LLM(vdevice, model_path, lora_name='', optimize_memory_on_device=False)`,
+`generate_all(prompt, temperature, top_p, top_k, frequency_penalty, max_generated_tokens, do_sample, seed, timeout_ms=600000) -> str`,
+prompt 는 문자열(원문 그대로) 또는 chat 리스트 `[{"role","content"}]`. `generate` 는 스트리밍. 모델 파일은 공개 경로
+`https://dev-public.hailo.ai/v<HailoRT>/blob/<모델>.hef` (예: v5.1.1/blob/Qwen2.5-1.5B-Instruct.hef, 2.36 GB) — 로그인 없이 받는다.
+`hailo_platform.genai` 는 apt 시스템 패키지라 `--system-site-packages` venv 에서만 보인다. 모양이 다르면 LLMUnavailable 로 물러선다
+(아무것도 깨지지 않는다). `LLM_HEF` 가 비어 있으면 아예 시도하지 않는다."""
 import json
 import os
 import re
@@ -99,12 +102,20 @@ def _hailo_backend(hef):
 
     def complete(system, user, max_tokens, temperature, timeout_s):
         prompt = [{"role": "system", "content": system}, {"role": "user", "content": user}]
-        if hasattr(llm, "generate"):
-            out = llm.generate(prompt, max_generated_tokens=max_tokens, temperature=temperature)
-        elif hasattr(llm, "chat"):
-            out = llm.chat(prompt, max_tokens=max_tokens, temperature=temperature)
+        # 온도 0 = 탐욕 디코딩(do_sample=False). 검증기가 숫자·형식을 보므로 결정적 출력이 맞다
+        kw = {"max_generated_tokens": max_tokens, "do_sample": temperature > 0}
+        if temperature > 0:
+            kw["temperature"] = temperature
+        if hasattr(llm, "generate_all"):
+            out = llm.generate_all(prompt, timeout_ms=int(timeout_s * 1000), **kw)
+        elif hasattr(llm, "generate"):
+            out = llm.generate(prompt, **kw)
         else:
-            raise LLMUnavailable("genai.LLM 에 generate/chat 이 없다 — check_llm.py 로 API 확인")
+            raise LLMUnavailable("genai.LLM 에 generate_all/generate 가 없다 — check_llm.py 로 API 확인")
+        try:
+            llm.clear_context()                                 # 호출마다 독립 — 앞 대화가 다음 요약에 새지 않게
+        except Exception:
+            pass
         return out if isinstance(out, str) else "".join(str(t) for t in out)
 
     def close():
