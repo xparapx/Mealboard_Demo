@@ -31,8 +31,8 @@ BOILER = re.compile(r"\s*The post .*? appeared first on .*?\.?\s*$", re.S)
 # 요약 자리에 문장 대신 링크 문구만 들어오는 항목이 있다(가디언 만평 등) — 걸러낸다
 JUNK = re.compile(r"\s*(continue reading|read more)\.*\s*$", re.I)
 MIN_SUMMARY = 60          # 이보다 짧으면 카드에서 요약이 제 몫을 못 한다
-BULLET_MAX, WHY_MAX = 170, 100                                   # 한국어 글자 수(DeepL 번역 뒤). 09-04 실측: 모델은 '25단어' 를 자주 넘겨 한 줄 40단어까지 쓴다 — 카드에 세 줄이면 읽힌다
-EN_MAX = 360                                                      # 영어 한 줄 상한 — 단락을 쏟아내면 거른다
+BULLET_MAX, WHY_MAX = 190, 100                                   # 한국어 글자 수(DeepL 뒤). 영어 260자 ≈ 한국어 150~180자 — 카드에 세 줄이면 읽힌다
+EN_MAX = 260                                                      # 영어 한 줄 상한 — 넘으면 문장 경계에서 줄인다(clip_sentences). 09-04 실측으로 360 → 260
 WHY_SYSTEM = "You are given a summary of a news article. In one sentence of at most 20 words, say why this matters to high-school students. Output only the sentence."
 CONTEXT_CHARS = int(os.getenv("LLM_CONTEXT_CHARS", "3200"))     # 스파이크(09-04, Qwen2.5-1.5B·HailoRT 5.1.1): 4,000자까지 네 줄 형식 안정 → 3,200
 # 09-04 스파이크 결론: 1.5B 모델은 한국어 문장이 무너지지만(문법·중국어 혼입) 영어 요약은 정확하다. 그래서 요약은 두 단계 —
