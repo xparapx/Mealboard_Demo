@@ -1,0 +1,47 @@
+/* 관리 화면 — v5 카드 골격 그대로(외곽선 없음, radius 24, e1). 색 규칙: 틸=정상/라이브, 멜론=경고·파괴적, 차콜=구조, 옐로 금지. 버튼은 44px 알약 */
+.dock[data-n="6"] { grid-template-columns: repeat(6, 1fr); }
+.adminhead { background: var(--ink); color: var(--surface); box-shadow: var(--e2); }
+.adminhead .eyebrow { color: rgba(255,253,246,.52); }
+.adminhead .who { font-size: 20px; font-weight: 700; margin-top: 6px; letter-spacing: -.01em; }
+.adminhead .lock { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: var(--melon); color: #2B1410; font-size: 12.5px; font-weight: 700; }
+.adminhead .lock code { background: rgba(43,20,16,.12); }
+.pill { font: inherit; font-size: 12.5px; font-weight: 700; border: 0; cursor: pointer; min-height: 44px; padding: 10px 16px; border-radius: 999px;
+        background: var(--teal); color: var(--surface); }
+.pill.ghost { background: transparent; box-shadow: inset 0 0 0 1.5px var(--hair); color: var(--ink2); }
+.pill.small { min-height: 34px; padding: 6px 12px; font-size: 11.5px; }
+.pill.danger { background: var(--melon); color: #2B1410; }
+.pill[aria-pressed="true"] { background: var(--teal-tint); color: var(--teal-ink); box-shadow: none; }
+.pill:disabled { opacity: .5; cursor: default; }
+.pill:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.units { list-style: none; margin: 12px 0 0; padding: 0; }
+.units li { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--hair); font-size: 13.5px; }
+.units li:last-child { border-bottom: 0; }
+.units li b { width: 64px; font-weight: 700; }
+.units li em { font-style: normal; font-size: 10px; font-weight: 700; border-radius: 6px; padding: 3px 7px; background: var(--melon-tint); color: var(--melon-ink); }
+.units li em.teal { background: var(--teal-tint); color: var(--teal-ink); }
+.units li em.mute { background: var(--hair); color: var(--ink3); }
+.units li small { font-size: 11px; color: var(--ink3); }
+.units li button { margin-left: auto; }
+.jobs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.logbar { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.logbar select { font: inherit; font-size: 13px; min-height: 44px; padding: 8px 12px; border-radius: 12px; border: 0; background: var(--well); color: var(--ink); }
+pre.log { margin: 10px 0 0; max-height: 300px; overflow: auto; background: var(--well); border-radius: 12px; padding: 12px;
+          font: 11.5px/1.5 ui-monospace, Menlo, Consolas, monospace; color: #4A4740; white-space: pre-wrap; word-break: break-all; }
+dialog.confirm { border: 0; border-radius: 24px; background: var(--surface); color: var(--ink); box-shadow: var(--e2); padding: 22px 24px; max-width: 360px; width: calc(100% - 32px); }
+dialog.confirm::backdrop { background: rgba(51,49,45,.42); }
+dialog.confirm h3 { margin: 0; font-size: 17px; font-weight: 700; }
+dialog.confirm p { margin: 8px 0 0; font-size: 13.5px; color: var(--ink2); line-height: 1.55; }
+dialog.confirm .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+#admintoast { position: fixed; left: 50%; bottom: calc(var(--dock-h) + 16px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 30;
+              background: var(--ink); color: var(--surface); font-size: 13px; font-weight: 700; padding: 10px 16px; border-radius: 999px; box-shadow: var(--e2);
+              opacity: 0; transition: opacity .2s; pointer-events: none; max-width: calc(100% - 32px); }
+#admintoast.on { opacity: 1; }
+#admintoast.bad { background: var(--melon); color: #2B1410; }
+@media (min-width: 900px) {
+  #adminhead { grid-column: 1 / 13; }
+  #svccard { grid-column: 1 / 8; }
+  #jobcard { grid-column: 8 / 13; }
+  #logcard { grid-column: 1 / 8; }
+  #auditcard { grid-column: 8 / 13; }
+  #admintoast { bottom: 24px; }
+}

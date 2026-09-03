@@ -461,6 +461,16 @@ for u in deploy/*.service deploy/*.timer; do
 done
 sudo systemctl daemon-reload
 sudo systemctl enable --now mealboard-api mealboard-mock mealboard-neis.timer mealboard-news.timer mealboard-rollup.timer
+
+echo &quot;== 6b. 관리 앱 — sudoers 드롭인(정확한 argv 만) + 저널 읽기 그룹 + 유닛&quot;
+tmp=$(mktemp); sed &quot;s/__USER__/$USER/g&quot; deploy/sudoers-mealboard &gt; &quot;$tmp&quot;
+if sudo visudo -cf &quot;$tmp&quot; &gt;/dev/null; then sudo install -m 440 -o root -g root &quot;$tmp&quot; /etc/sudoers.d/mealboard; echo &quot;   sudoers OK&quot;;
+else echo &quot;!! sudoers 문법 오류 — 설치하지 않음&quot;; fi
+rm -f &quot;$tmp&quot;
+sudo usermod -aG systemd-journal &quot;$USER&quot;           # journalctl -u 를 sudo 없이
+sudo systemctl enable --now mealboard-admin
+echo &quot;&gt;&gt; tailnet 에만 내보내기(한 번):  sudo tailscale serve --bg --https=8443 http://127.0.0.1:\${ADMIN_PORT:-8101}&quot;
+echo &quot;&gt;&gt; .env 의 ADMIN_USERS(Tailscale 로그인, 쉼표) 와 ADMIN_LOCAL_KEY(openssl rand -hex 16) 를 채울 것. 비어 있으면 닫힌다&quot;
 echo &quot;&gt;&gt; 카메라 있는 Pi 에서만:  sudo systemctl disable --now mealboard-mock &amp;&amp; sudo systemctl enable --now mealboard-vision&quot;
 
 echo &quot;== 완료. 확인:  curl -s localhost:\${API_PORT:-8100}/api/status&quot;</code></pre>
@@ -612,7 +622,15 @@ LUNCH_START = os.getenv(&quot;LUNCH_START&quot;, &quot;11:30&quot;)     # 형식
 LUNCH_END = os.getenv(&quot;LUNCH_END&quot;, &quot;14:00&quot;)
 STALE_SEC = 120                             # 이 시간 넘게 새 행·새 파일이 없으면 '데이터 없음' (status·positions·집계 커버리지 공통)
 ROLLUP_WINDOW = _choice(&quot;ROLLUP_WINDOW&quot;, &quot;lunch&quot;, (&quot;lunch&quot;, &quot;all&quot;))   # 집계 창 (스테이징 mock 은 종일 돌므로 all)
-FEED_SOURCE = _choice(&quot;FEED_SOURCE&quot;, &quot;vision&quot;, (&quot;mock&quot;, &quot;vision&quot;))    # 집계 행의 출처 표기</code></pre>
+FEED_SOURCE = _choice(&quot;FEED_SOURCE&quot;, &quot;vision&quot;, (&quot;mock&quot;, &quot;vision&quot;))    # 집계 행의 출처 표기
+
+# 관리 앱 (tailnet 전용, 별도 프로세스). 허용목록이 비면 tailnet 경로는 닫히고, 로컬 키가 비면 SSH 터널 경로도 닫힌다 (fail-closed)
+ADMIN_PORT = int(os.getenv(&quot;ADMIN_PORT&quot;, &quot;8101&quot;))
+ADMIN_USERS = os.getenv(&quot;ADMIN_USERS&quot;, &quot;&quot;)            # Tailscale 로그인, 쉼표 구분 — app/admin/auth.parse_users 가 정리
+ADMIN_LOCAL_KEY = os.getenv(&quot;ADMIN_LOCAL_KEY&quot;, &quot;&quot;)    # SSH 터널(127.0.0.1) 경로용. 생성: openssl rand -hex 16
+DEBUG_PORT = int(os.getenv(&quot;DEBUG_PORT&quot;, &quot;8102&quot;))     # vision 디버그 MJPEG (127.0.0.1 전용, 관리 앱이 중계)
+RUN_DIR = Path(os.getenv(&quot;RUN_DIR&quot;, str(DATA / &quot;run&quot;)))   # 메타데이터 소켓 디렉터리 (Pi: /run/mealboard)
+ADMIN_DB_PATH = DATA / &quot;admin.db&quot;                     # 쓰기 주체: 관리 앱 (감사 로그)</code></pre>
 </figure>
 <figure class="code">
 <figcaption><span class="path">app/db.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>

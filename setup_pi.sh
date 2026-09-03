@@ -40,6 +40,16 @@ for u in deploy/*.service deploy/*.timer; do
 done
 sudo systemctl daemon-reload
 sudo systemctl enable --now mealboard-api mealboard-mock mealboard-neis.timer mealboard-news.timer mealboard-rollup.timer
+
+echo "== 6b. 관리 앱 — sudoers 드롭인(정확한 argv 만) + 저널 읽기 그룹 + 유닛"
+tmp=$(mktemp); sed "s/__USER__/$USER/g" deploy/sudoers-mealboard > "$tmp"
+if sudo visudo -cf "$tmp" >/dev/null; then sudo install -m 440 -o root -g root "$tmp" /etc/sudoers.d/mealboard; echo "   sudoers OK";
+else echo "!! sudoers 문법 오류 — 설치하지 않음"; fi
+rm -f "$tmp"
+sudo usermod -aG systemd-journal "$USER"           # journalctl -u 를 sudo 없이
+sudo systemctl enable --now mealboard-admin
+echo ">> tailnet 에만 내보내기(한 번):  sudo tailscale serve --bg --https=8443 http://127.0.0.1:\${ADMIN_PORT:-8101}"
+echo ">> .env 의 ADMIN_USERS(Tailscale 로그인, 쉼표) 와 ADMIN_LOCAL_KEY(openssl rand -hex 16) 를 채울 것. 비어 있으면 닫힌다"
 echo ">> 카메라 있는 Pi 에서만:  sudo systemctl disable --now mealboard-mock && sudo systemctl enable --now mealboard-vision"
 
 echo "== 완료. 확인:  curl -s localhost:\${API_PORT:-8100}/api/status"

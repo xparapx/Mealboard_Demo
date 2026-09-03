@@ -28,3 +28,11 @@ LUNCH_END = os.getenv("LUNCH_END", "14:00")
 STALE_SEC = 120                             # 이 시간 넘게 새 행·새 파일이 없으면 '데이터 없음' (status·positions·집계 커버리지 공통)
 ROLLUP_WINDOW = _choice("ROLLUP_WINDOW", "lunch", ("lunch", "all"))   # 집계 창 (스테이징 mock 은 종일 돌므로 all)
 FEED_SOURCE = _choice("FEED_SOURCE", "vision", ("mock", "vision"))    # 집계 행의 출처 표기
+
+# 관리 앱 (tailnet 전용, 별도 프로세스). 허용목록이 비면 tailnet 경로는 닫히고, 로컬 키가 비면 SSH 터널 경로도 닫힌다 (fail-closed)
+ADMIN_PORT = int(os.getenv("ADMIN_PORT", "8101"))
+ADMIN_USERS = os.getenv("ADMIN_USERS", "")            # Tailscale 로그인, 쉼표 구분 — app/admin/auth.parse_users 가 정리
+ADMIN_LOCAL_KEY = os.getenv("ADMIN_LOCAL_KEY", "")    # SSH 터널(127.0.0.1) 경로용. 생성: openssl rand -hex 16
+DEBUG_PORT = int(os.getenv("DEBUG_PORT", "8102"))     # vision 디버그 MJPEG (127.0.0.1 전용, 관리 앱이 중계)
+RUN_DIR = Path(os.getenv("RUN_DIR", str(DATA / "run")))   # 메타데이터 소켓 디렉터리 (Pi: /run/mealboard)
+ADMIN_DB_PATH = DATA / "admin.db"                     # 쓰기 주체: 관리 앱 (감사 로그)

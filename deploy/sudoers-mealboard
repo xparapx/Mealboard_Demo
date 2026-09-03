@@ -1,0 +1,12 @@
+# /etc/sudoers.d/mealboard — 관리 앱(mealboard-admin, __USER__ 계정)이 비밀번호 없이 실행할 수 있는 명령. 정확한 argv 만, 와일드카드 없음.
+# 이 목록은 app/admin/sysctl.py ALLOWED_SUDO 와 한 쌍이다 — setup_pi.sh 6b 가 `visudo -cf` 를 통과할 때만 install -m 440 한다.
+# 관리 앱 자신(mealboard-admin)의 재시작은 없다(자기 발을 쏘지 않게). serve/funnel 은 status 읽기뿐 — reset 은 어떤 경로로도 없다.
+__USER__ ALL=(root) NOPASSWD: /usr/bin/systemctl restart --no-block mealboard-api.service, \
+    /usr/bin/systemctl restart --no-block mealboard-mock.service, \
+    /usr/bin/systemctl restart --no-block mealboard-vision.service, \
+    /usr/bin/systemctl start --no-block mealboard-neis.service, \
+    /usr/bin/systemctl start --no-block mealboard-news.service, \
+    /usr/bin/systemctl start --no-block mealboard-rollup.service, \
+    /usr/bin/systemctl start --no-block mealboard-report.service, \
+    /usr/bin/tailscale serve status --json, \
+    /usr/bin/tailscale funnel status --json
