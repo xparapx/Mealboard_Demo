@@ -709,10 +709,14 @@ def meal():
 </figure>
 <figure class="code">
 <figcaption><span class="path">app/main.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
-<pre><code class="lang-python">from fastapi import FastAPI, Request
+<pre><code class="lang-python">import mimetypes
+
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from .config import BASE
 from .routers import status, history, meal, positions, news, typical, insight
+
+mimetypes.add_type(&quot;text/javascript&quot;, &quot;.js&quot;)    # Windows 개발 PC 의 레지스트리가 .js 를 text/plain 으로 주면 모듈 로드가 막힌다
 
 app = FastAPI(title=&quot;Mealboard&quot;)
 app.include_router(status.router)
@@ -727,13 +731,16 @@ app.include_router(insight.router)      # /api/insight/* — insights.db·report
 # (경험칙: 파일이 묵은 기간의 10%). 이틀 된 index.html 은 약 5시간 동안 새로 받지 않으므로
 # 배포가 브라우저에 도달하지 못한다 — v5 에서 서비스워커를 고치고도 같은 증상이 남았던 이유.
 # no-cache 는 '캐시 금지'가 아니라 '쓰기 전 검사'다. ETag 가 같으면 304 라 비용은 거의 없다.
+# 화면이 부르는 모듈(/js/)·스타일(/css/)도 같다 — 셸은 새것인데 모듈은 옛것이면 짝이 어긋난다.
 REVALIDATE = (&quot;/&quot;, &quot;/index.html&quot;, &quot;/sw.js&quot;, &quot;/manifest.json&quot;)
+REVALIDATE_PREFIX = (&quot;/js/&quot;, &quot;/css/&quot;)
 
 
 @app.middleware(&quot;http&quot;)
 async def revalidate_shell(request: Request, call_next):
     res = await call_next(request)
-    if request.url.path in REVALIDATE:
+    path = request.url.path
+    if path in REVALIDATE or path.startswith(REVALIDATE_PREFIX):
         res.headers[&quot;Cache-Control&quot;] = &quot;no-cache&quot;
     return res
 
@@ -976,247 +983,8 @@ systemctl status mealboard-api --no-pager</code></pre>
 &lt;meta name=&quot;theme-color&quot; content=&quot;#F5F2E9&quot;&gt;
 &lt;title&gt;급식실 대기 안내&lt;/title&gt;
 &lt;link rel=&quot;manifest&quot; href=&quot;/manifest.json&quot;&gt;
-&lt;style&gt;
-  /* 팔레트 v5 — 브랜드 3색(차콜·틸·멜론)은 유지하고, 표면을 1.5px 외곽선에서 '라운드 + 부드러운 그림자'로 옮겼다.
-     도면의 단일 출처는 docs/layout.html. 여기 값과 도면이 어긋나면 도면을 고칠 것 */
-  :root {
-    --ground:#F5F2E9; --surface:#FFFCF6; --hair:#F0EDE3;
-    --ink:#33312D; --ink2:#6E6A61; --ink3:#9A958A; --off:#C9C2B2;
-    --teal:#129793; --teal-ink:#0C6D6A; --teal-tint:#DEF0EF; --teal-tint2:#EAF5F4; --aqua:#9BD7D5;
-    --melon:#FF7260; --melon-ink:#C9452F; --melon-tint:#FFE9E4; --melon-tint2:#FFF4F1;
-    --e1: 0 1px 2px rgba(51,49,45,.04), 0 10px 26px rgba(51,49,45,.055);
-    --e2: 0 16px 36px rgba(51,49,45,.24);
-    --r-card: 24px; --r-tile: 16px;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--ground); color: var(--ink); word-break: keep-all;
-         font-family: &quot;Pretendard&quot;, -apple-system, &quot;Apple SD Gothic Neo&quot;, &quot;Noto Sans KR&quot;, system-ui, sans-serif;
-         -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
-  main { max-width: 390px; margin: 0 auto; padding: 18px 16px 28px; display: flex; flex-direction: column; gap: 12px; }
-  .col { display: flex; flex-direction: column; gap: 12px; }
-  .card { background: var(--surface); border-radius: var(--r-card); padding: 20px; box-shadow: var(--e1); }
-  .eyebrow { font-size: 11.5px; font-weight: 700; letter-spacing: .10em; color: var(--ink3); }
-  .note { font-size: 11px; color: var(--ink3); line-height: 1.55; }
-  a { color: var(--teal-ink); text-decoration: none; }
-  a.u { border-bottom: 1px solid rgba(12,109,106,.35); }
-  [hidden] { display: none !important; }
-
-  /* ① 히어로 — 상태 4얼굴: ok=차콜+아쿠아 칩 · wait=차콜+멜론 외곽선 칩 · busy=멜론 카드 · off=점선 */
-  .hero { position: relative; background: var(--ink); border-radius: 26px; padding: 34px 22px 30px; box-shadow: var(--e2); }
-  .hero .eyebrow { color: rgba(255,253,246,.52); }
-  .dot { position: absolute; right: 22px; top: 24px; width: 10px; height: 10px; border-radius: 50%;
-         background: #2FB7B3; box-shadow: 0 0 0 5px rgba(47,183,179,.20); }
-  .big { display: flex; align-items: baseline; gap: 7px; margin-top: 12px; transform-origin: left center; }
-  .big b { font-size: 104px; font-weight: 700; letter-spacing: -.045em; line-height: .86; color: var(--surface); }
-  .big i { font-style: normal; font-size: 24px; font-weight: 500; color: rgba(255,253,246,.58); }
-  .big.pulse { animation: pulse .25s ease; }                  /* 값이 실제로 바뀔 때만 JS 가 붙인다 */
-  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
-  .verdictrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 20px; }
-  #state { display: inline-flex; align-items: center; padding: 9px 16px; border-radius: 999px;
-           background: var(--aqua); color: #223634; font-size: 13px; font-weight: 700; }
-  /* ③ 도착 시각 — 판정 칩 오른쪽 빈 자리. '몇 분'보다 '몇 시'가 즉각적이다 */
-  .arrive { text-align: right; flex: none; }
-  .arrive span { display: block; font-size: 11.5px; color: rgba(255,253,246,.5); }
-  .arrive b { font-size: 18px; font-weight: 700; letter-spacing: -.02em; color: var(--surface); }
-  .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 24px; }
-  .stats &gt; div { background: rgba(255,253,246,.07); border-radius: var(--r-tile); padding: 15px 14px; }
-  .stats b { font-size: 22px; font-weight: 700; color: var(--surface); }
-  .stats em { font-style: normal; font-size: 12.5px; font-weight: 500; color: rgba(255,253,246,.58); margin-left: 2px; }
-  .stats span { display: block; font-size: 11.5px; color: rgba(255,253,246,.5); margin-top: 3px; }
-
-  .hero[data-level=&quot;busy&quot;] { background: var(--melon); box-shadow: 0 16px 36px rgba(255,114,96,.32); }
-  .hero[data-level=&quot;busy&quot;] .eyebrow, .hero[data-level=&quot;busy&quot;] .big i,
-  .hero[data-level=&quot;busy&quot;] .arrive span { color: rgba(43,20,16,.62); }
-  .hero[data-level=&quot;busy&quot;] .big b, .hero[data-level=&quot;busy&quot;] .arrive b, .hero[data-level=&quot;busy&quot;] .stats b { color: #2B1410; }
-  .hero[data-level=&quot;busy&quot;] .stats &gt; div { background: rgba(43,20,16,.10); }
-  .hero[data-level=&quot;busy&quot;] .stats em { color: rgba(43,20,16,.62); }
-  .hero[data-level=&quot;busy&quot;] .stats span { color: rgba(43,20,16,.55); }
-  .hero[data-level=&quot;busy&quot;] .dot { background: var(--ink); box-shadow: 0 0 0 5px rgba(51,49,45,.18); }
-  .hero[data-level=&quot;busy&quot;] #state { background: var(--ink); color: var(--surface); }
-
-  .hero[data-level=&quot;wait&quot;] #state { background: transparent; border: 1.5px solid var(--melon); color: #FF9182; }
-  .hero[data-level=&quot;wait&quot;] .big b { color: rgba(255,253,246,.28); }
-
-  .hero[data-level=&quot;off&quot;] { background: #FBF8F0; border: 1.5px dashed #D5CDBA; box-shadow: none; }
-  .hero[data-level=&quot;off&quot;] .eyebrow { color: #A9A296; }
-  .hero[data-level=&quot;off&quot;] .big b, .hero[data-level=&quot;off&quot;] .big i { color: var(--off); }
-  .hero[data-level=&quot;off&quot;] .dot { background: var(--off); box-shadow: none; }
-  .hero[data-level=&quot;off&quot;] #state { background: transparent; border: 1.5px solid #D5CDBA; color: var(--ink3); }
-  .hero[data-level=&quot;off&quot;] .stats &gt; div { background: #F3F0E7; }
-  .hero[data-level=&quot;off&quot;] .stats b, .hero[data-level=&quot;off&quot;] .stats em { color: var(--off); }
-  .hero[data-level=&quot;off&quot;] .stats span, .hero[data-level=&quot;off&quot;] .arrive span { color: #A9A296; }
-  .hero[data-level=&quot;off&quot;] .arrive b { color: var(--off); }
-
-  .meta { display: flex; justify-content: space-between; align-items: center; padding: 0 6px;
-          font-size: 11px; color: var(--ink3); }
-
-  /* ③ 추이 — 데이터는 한 색(틸), 비교 기준선은 중립 회색 파선. 색을 둘 쓰면 어느 쪽이 실측인지 흐려진다 */
-  .lead { font-size: 14px; font-weight: 600; color: var(--ink); margin-top: 8px; letter-spacing: -.01em; }
-  .lead b { color: var(--teal-ink); font-weight: 600; }
-  #chartcard { padding-top: 26px; padding-bottom: 26px; }
-  #chart { display: block; width: 100%; height: 108px; margin-top: 12px; }
-  .legend { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 11px; }
-  .legend &gt; span { display: inline-flex; align-items: center; gap: 12px; }
-  .legend i { font-style: normal; display: inline-flex; align-items: center; gap: 6px; color: var(--ink2); }
-  .legend i::before { content: &quot;&quot;; width: 14px; height: 2px; border-radius: 2px; background: var(--teal); flex: none; }
-  .legend i.ref { color: var(--ink3); }
-  .legend i.ref::before { height: 0; background: none; border-top: 1.5px dashed #B9B1A0; }
-  .legend .now { color: var(--ink3); }
-  .legend .now b { color: var(--melon-ink); }
-
-  /* ⑩ 급식실 현황 — 벡터 평면도 + 익명 위치 마커. 영상 아님 · 순간 상태만 · 이력 없음 (CLAUDE.md §2) */
-  .plan { position: relative; }
-  .plan .count { position: absolute; right: 18px; top: 16px; background: var(--teal-tint); color: var(--teal-ink);
-                 font-size: 12.5px; font-weight: 700; padding: 6px 12px; border-radius: 999px; }
-  .plan .stage { position: relative; margin-top: 12px; }
-  #plan { display: block; width: 100%; aspect-ratio: 318 / 460; }
-  #marks { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
-           animation: blink 1.4s ease-in-out infinite; }         /* 점멸은 CSS 가 맡는다 — JS 루프·전체 재그리기 없음 */
-  @keyframes blink { 50% { opacity: .55; } }
-  .plan[data-state=&quot;no_data&quot;] #plan { opacity: .4; }
-  .plan[data-state=&quot;no_data&quot;] #marks { display: none; }
-  .plan .empty { display: none; position: absolute; left: 0; right: 0; top: 52%; text-align: center;
-                 font-size: 13px; font-weight: 700; color: var(--ink3); }
-  .plan[data-state=&quot;no_data&quot;] .empty { display: block; }
-
-  /* ④ 메뉴 — 한 줄 리스트. 알레르기 번호가 붙으므로 2열 격자로는 좁다 */
-  .menu { list-style: none; margin: 10px 0 0; padding: 0; }
-  .menu li { display: flex; align-items: center; gap: 9px; padding: 6px 8px; font-size: 14px; color: #4A4740; }
-  .menu li::before { content: &quot;&quot;; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--off); flex: none; }
-  .menu li.main { font-size: 16px; font-weight: 700; color: var(--ink); letter-spacing: -.01em; }
-  .menu li.main::before { width: 8px; height: 8px; background: var(--melon); border-color: var(--melon); }
-  .menu li.hit { background: var(--melon-tint2); border-radius: 10px; }
-  .menu li .codes { margin-left: auto; font-size: 10px; color: var(--ink3); letter-spacing: .06em; flex: none; }
-  .menu li .codes b { color: var(--melon-ink); }
-  .menu li .tag { font-size: 10px; font-weight: 700; color: var(--melon-ink); background: var(--melon-tint);
-                  border-radius: 6px; padding: 2px 6px; flex: none; }
-  /* ① 알레르기 — NEIS 가 메뉴명에 붙여 보내는 번호(1~19). 내 항목은 브라우저에만 저장한다 */
-  .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
-  .chips span { font-size: 10px; font-weight: 700; border-radius: 6px; padding: 3px 7px;
-                background: var(--hair); color: var(--ink2); }
-  .chips span.on { background: var(--melon-tint); color: var(--melon-ink); }
-  details &gt; summary { list-style: none; cursor: pointer; }
-  details &gt; summary::-webkit-details-marker { display: none; }
-  .pick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-  .pick button { font: inherit; font-size: 11.5px; font-weight: 700; border: 0; cursor: pointer;
-                 min-height: 34px; padding: 6px 12px; border-radius: 999px; background: var(--hair); color: var(--ink2); }
-  .pick button[aria-pressed=&quot;true&quot;] { background: var(--melon); color: #2B1410; }
-  .pick button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
-
-  /* ⑤ 영양 3칸 — 색은 칸의 정체성, 상태는 우상단 플래그. 둘을 섞지 않는다 */
-  .kpi { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
-  .kpi &gt; div { position: relative; border-radius: var(--r-tile); padding: 11px 12px 12px; }
-  .kpi &gt; div:nth-child(1) { background: #CFE9E7; }
-  .kpi &gt; div:nth-child(2) { background: var(--teal-tint2); }
-  .kpi &gt; div:nth-child(3) { background: var(--melon-tint); }
-  .kpi em { font-style: normal; display: block; font-size: 10px; font-weight: 700; letter-spacing: .12em; opacity: .85; }
-  .kpi &gt; div:nth-child(1) em { color: var(--teal-ink); }
-  .kpi &gt; div:nth-child(2) em { color: #3D8583; }
-  .kpi &gt; div:nth-child(3) em { color: var(--melon-ink); }
-  .kpi b { display: block; font-size: 21px; font-weight: 700; letter-spacing: -.02em; color: #22403E; margin-top: 3px; }
-  .kpi &gt; div:nth-child(3) b { color: #4A2A23; }
-  .kpi span { font-size: 11px; color: #4C6564; margin-top: 2px; display: block; }
-  .kpi &gt; div:nth-child(3) span { color: #7A4A3E; }
-  .kpi .flag { position: absolute; right: 9px; top: 9px; font-size: 10px; font-weight: 700; padding: 2px 7px;
-               border-radius: 999px; background: #FFD3C9; color: #A83A28; margin: 0; }
-  .kpi .flag:empty { display: none; }
-
-  /* ⑥ 영양소 칩 — 토글 없이 항상 펼침. 권장섭취량(RNI) 대비 과부족만 말한다.
-     ±% 의 부호가 곧 색이다 — 0 이상은 푸른 계열, 음수(권장섭취량 미달)는 붉은 계열 그라데이션.
-     그중 평균필요량(EAR)에도 못 미치는 칸만 멜론 외곽선 + &quot;부족&quot; 글자를 더해 3칸의 &quot;부족 N&quot; 과 맞춘다 */
-  .micro { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
-  .micro &gt; div { display: flex; flex-direction: column; gap: 5px; }
-  .micro .v { height: 52px; border-radius: 14px; display: flex; flex-direction: column; align-items: center;
-              justify-content: center; gap: 1px; font-size: 14px; font-weight: 700; letter-spacing: -.02em; }
-  .micro .v em { font-style: normal; font-size: 9px; font-weight: 700; }
-  .micro .n { font-size: 9.5px; color: var(--ink3); text-align: center; letter-spacing: -.03em; }
-  .micro [data-band=&quot;hi&quot;]   .v { background: linear-gradient(180deg, #CDE9E7, #B5DAD8); color: #0A5F5C; }
-  .micro [data-band=&quot;mid&quot;]  .v { background: linear-gradient(180deg, var(--teal-tint2), var(--teal-tint)); color: var(--teal-ink); }
-  .micro [data-band=&quot;lo&quot;]   .v { background: linear-gradient(180deg, #FFF1EC, #FFDCD3); color: #C9452F; }
-  .micro [data-band=&quot;short&quot;] .v { background: linear-gradient(180deg, #FFD9CF, #FFB2A1); color: #8E2E1E; box-shadow: inset 0 0 0 1.5px var(--melon); }
-  .micro [data-band=&quot;short&quot;] .n { color: var(--melon-ink); font-weight: 700; }
-
-  /* ② 이번 주 식단 — 요일이 컬럼. 색은 무관한 5색이 아니라 월→금 단일 색상 램프다
-     (요일은 순서 있는 범주 · 명도 단조 감소 검증: L .962 → .794, 인접 ΔL ≥ .034) */
-  .week { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 10px;
-          align-items: stretch; }
-  .week &gt; div { border-radius: 14px; padding: 10px 5px 11px; display: flex; flex-direction: column;
-                align-items: center; gap: 5px; text-align: center; min-width: 0; }
-  .week .d { font-size: 10px; font-weight: 700; color: var(--ink3); letter-spacing: .04em; }
-  .week .n { font-size: 15px; font-weight: 700; line-height: 1; color: var(--ink2); }
-  /* 긴 이름(친환경토마코펜라이스)이 칩 밖으로 나가지 않게: keep-all 은 유지하되
-     달리 방법이 없을 때만 낱말 안에서 끊고, 세 줄에서 말줄임한다 */
-  .week .m { font-size: 10.5px; font-weight: 500; color: var(--ink); line-height: 1.35;
-             word-break: keep-all; overflow-wrap: anywhere; min-width: 0; max-width: 100%;
-             display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .week .k { font-size: 9.5px; color: #4A4740; margin-top: auto; padding-top: 4px; line-height: 1.35; }
-  /* 요일 5색 — 월은 브랜드 아쿠아, 화는 에그셸 계열을 그대로 쓰고 나머지 셋을 최대한 벌렸다.
-     전체쌍 정상시야 최악 ΔE 10.7 · 본문 대비는 어디서나 7.2:1 이상.
-     색맹에서는 갈리지 않는 쌍이 있으므로 칩마다 요일 글자와 날짜를 반드시 함께 둔다 */
-  .week [data-wd=&quot;1&quot;] { background: #9BD7D5; }   /* 월 · 브랜드 아쿠아 */
-  .week [data-wd=&quot;2&quot;] { background: #FBE9B7; }   /* 화 · 에그셸 */
-  .week [data-wd=&quot;3&quot;] { background: #F3B2A4; }   /* 수 · 멜론 */
-  .week [data-wd=&quot;4&quot;] { background: #CBC2FB; }   /* 목 · 페리윙클 */
-  .week [data-wd=&quot;5&quot;] { background: #A3F5B4; }   /* 금 · 세이지 */
-  .week [data-when=&quot;past&quot;] &gt; * { opacity: .62; }
-  .week [data-when=&quot;today&quot;] { background: var(--ink); }
-  .week [data-when=&quot;today&quot;] .d { color: rgba(255,253,246,.55); }
-  .week [data-when=&quot;today&quot;] .n, .week [data-when=&quot;today&quot;] .m { color: var(--surface); }
-  .week [data-when=&quot;today&quot;] .m { font-weight: 700; }
-  .week [data-when=&quot;today&quot;] .k { color: rgba(255,253,246,.55); }
-
-  /* ⑧ 잔반 탄소 — 읽기 전용 정보 카드. 개인 기록·선택은 두지 않는다 */
-  .carbon { background: var(--teal-tint2); box-shadow: 0 1px 2px rgba(51,49,45,.04), 0 10px 26px rgba(18,151,147,.09); }
-  .carbon .eyebrow { color: var(--teal-ink); }
-  .co2 { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-  .co2 b { font-size: 46px; font-weight: 700; letter-spacing: -.035em; line-height: 1; color: var(--teal-ink); }
-  .co2 span { font-size: 12.5px; color: #5C6E6D; }
-  .cmp { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
-  .cmp &gt; div { background: var(--surface); border-radius: var(--r-tile); padding: 12px 14px; }
-  .cmp b { display: block; font-size: 19px; font-weight: 700; color: var(--ink); }
-  .cmp span { display: block; font-size: 11px; color: var(--ink2); margin-top: 3px; line-height: 1.45; }
-
-  /* ⑨ 이슈 링크 — 제목 1줄 + 출처 + 날짜. 본문 요약 없음 */
-  .news { list-style: none; margin: 6px 0 0; padding: 0; }
-  .news li { display: flex; flex-direction: column; gap: 7px; padding: 13px 0; border-bottom: 1px solid var(--hair); }
-  .news li:last-child { border-bottom: 0; }
-  /* 헤드라인이 잘리는 것보다 요약이 짧은 편이 낫다 — 제목에 3줄, 요약에 2줄 */
-  .news li a { font-size: 13.5px; font-weight: 600; color: var(--ink); line-height: 1.4;
-               display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .news li p { margin: 0; font-size: 11.5px; color: var(--ink2); line-height: 1.55;
-               display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .news li div { display: flex; align-items: center; gap: 8px; }
-  .news li em { font-style: normal; font-size: 10px; font-weight: 700; color: var(--teal-ink);
-                background: var(--teal-tint); border-radius: 6px; padding: 3px 7px; }
-  .news li em.ko { color: var(--ink3); background: var(--hair); }   /* 기계 번역임을 숨기지 않는다 */
-  .news li small { font-size: 11px; color: var(--ink3); }
-
-  /* 데스크톱 — 왼쪽 히어로·추이·평면도 / 오른쪽 급식·주간·탄소·이슈 */
-  @media (min-width: 900px) {
-    /* 두 패널의 아래 끝을 맞춘다 — 그리드는 stretch 로 두고, 짧은 쪽의 마지막 카드가 남는 높이를 흡수 */
-    main { max-width: 1120px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px;
-           align-items: stretch; padding: 40px 16px 56px; }
-    .col &gt; .grow { flex: 1 1 auto; }
-    #newscard.grow { display: flex; flex-direction: column; }
-    #newscard.grow .news { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
-    /* 짧은 쪽 컬럼이 흡수하는 높이는 빈 여백이 아니라 더 큰 평면도가 된다 */
-    #plancard.grow { display: flex; flex-direction: column; }
-    #plancard.grow #plan { flex: 1 1 0; min-height: 320px; aspect-ratio: auto; }
-    .card { padding: 24px 26px; }
-    .big b { font-size: 120px; } .big i { font-size: 28px; }
-    #chartcard { padding-top: 32px; padding-bottom: 32px; }
-    #chart { height: 152px; }
-  }
-  @media (hover: hover) {
-    .card, .hero { transition: transform .18s ease, box-shadow .18s ease; }
-    .card:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(51,49,45,.05), 0 16px 34px rgba(51,49,45,.08); }
-    .pick button { transition: background .12s ease; }
-    .news li a:hover { color: var(--teal-ink); }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { transition: none !important; animation: none !important; transform: none !important; }
-  }
-&lt;/style&gt;
+&lt;link rel=&quot;stylesheet&quot; href=&quot;/css/base.css&quot;&gt;
+&lt;link rel=&quot;stylesheet&quot; href=&quot;/css/screens.css&quot;&gt;
 &lt;/head&gt;
 &lt;body&gt;
 &lt;main&gt;
@@ -1303,431 +1071,8 @@ systemctl status mealboard-api --no-pager</code></pre>
   &lt;/div&gt;
 &lt;/main&gt;
 
-&lt;script&gt;
-const $ = s =&gt; document.querySelector(s);
-const j = async u =&gt; (await fetch(u, { cache: &quot;no-store&quot; })).json();
-const esc = s =&gt; String(s).replace(/[&amp;&lt;&gt;&quot;']/g, c =&gt; ({ &quot;&amp;&quot;: &quot;&amp;amp;&quot;, &quot;&lt;&quot;: &quot;&amp;lt;&quot;, &quot;&gt;&quot;: &quot;&amp;gt;&quot;, '&quot;': &quot;&amp;quot;&quot;, &quot;'&quot;: &quot;&amp;#39;&quot; }[c]));
-const BUSY_MIN = 12, EASY_MIN = 5;
-const CHART_MIN = 30;                 // 추이 카드의 시간창(분) — 카드 제목·축 라벨과 함께 바꾼다                  // 판정 임계값 (학교마다 다를 수 있음)
-
-function level(st) {
-  if (st.state === &quot;no_data&quot;) return &quot;off&quot;;
-  if (st.state === &quot;insufficient_rate&quot;) return &quot;wait&quot;;
-  return st.wait_min &gt; BUSY_MIN ? &quot;busy&quot; : &quot;ok&quot;;
-}
-function verdict(st) {
-  return { off: &quot;정보 없음&quot;, wait: &quot;배식 시작 대기&quot;, busy: &quot;혼잡 · 잠시 후 추천&quot;,
-           ok: st.wait_min &lt;= EASY_MIN ? &quot;여유 · 바로 가세요&quot; : &quot;보통&quot; }[level(st)];
-}
-const minuteOfDay = d =&gt; d.getHours() * 60 + d.getMinutes();
-const hhmm = d =&gt; String(d.getHours()).padStart(2, &quot;0&quot;) + &quot;:&quot; + String(d.getMinutes()).padStart(2, &quot;0&quot;);
-
-if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
-  CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
-    r = Math.min(+r || 0, w / 2, h / 2);
-    this.moveTo(x + r, y); this.arcTo(x + w, y, x + w, y + h, r); this.arcTo(x + w, y + h, x, y + h, r);
-    this.arcTo(x, y + h, x, y, r); this.arcTo(x, y, x + w, y, r); this.closePath();
-  };
-}
-
-/* 캔버스는 배경 저장소를 DPR 에 맞춰 잡아야 선이 뭉개지지 않는다 */
-function fit(c, h) {
-  const dpr = window.devicePixelRatio || 1, w = c.clientWidth || 318;
-  c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
-  const g = c.getContext(&quot;2d&quot;); g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  g.clearRect(0, 0, w, h);
-  return { g, w, h };
-}
-
-/* ---------------- 대기 상태 ---------------- */
-let lastWait = null, LAST = null, LASTPOS = null, MEAL = null;
-async function refresh() {
-  const st = await j(&quot;/api/status&quot;);
-  const shown = st.wait_min == null ? &quot;—&quot; : String(st.wait_min);
-  if (shown !== lastWait) {                          // 값이 실제로 바뀔 때만 0.25s 스케일 펄스
-    $(&quot;#wait&quot;).textContent = shown;
-    if (lastWait !== null) {
-      const b = $(&quot;#bigbox&quot;); b.classList.remove(&quot;pulse&quot;); void b.offsetWidth; b.classList.add(&quot;pulse&quot;);
-      b.addEventListener(&quot;animationend&quot;, () =&gt; b.classList.remove(&quot;pulse&quot;), { once: true });
-    }
-    lastWait = shown;
-  }
-  $(&quot;#queue&quot;).textContent = st.queue_len ?? &quot;—&quot;;
-  $(&quot;#rate&quot;).textContent = st.rate_per_min ?? &quot;—&quot;;
-  $(&quot;#state&quot;).textContent = verdict(st);
-  $(&quot;#hero&quot;).dataset.level = level(st);
-  $(&quot;#updated&quot;).textContent = st.updated_at ? new Date(st.updated_at).toLocaleTimeString(&quot;ko-KR&quot;) : &quot;—&quot;;
-  // ③ 도착 시각 — 지금 줄을 서면 몇 시에 배식대에 닿는가
-  const ok = st.wait_min != null;
-  $(&quot;#arrive&quot;).hidden = !ok;
-  if (ok) $(&quot;#arriveat&quot;).textContent = hhmm(new Date(Date.now() + st.wait_min * 60000));
-
-  const [h, t] = await Promise.all([
-    j(`/api/history?minutes=${CHART_MIN}`),
-    j(`/api/typical?minutes=${CHART_MIN}`).catch(() =&gt; ({ state: &quot;no_data&quot;, rows: [] }))]);
-  LAST = { rows: h.rows, typ: t, st };
-  drawChart(h.rows, t, st);
-  try { LASTPOS = await j(&quot;/api/positions&quot;); } catch { LASTPOS = { state: &quot;no_data&quot; }; }
-  renderPlan(LASTPOS);
-}
-
-/* ---------------- ④ 추이 + 평소 곡선 ----------------
-   x 는 '자정부터 몇 분'. 오늘 이력과 평소 곡선을 같은 축에 얹으려면 인덱스가 아니라 시각이어야 한다 */
-function drawChart(rows, typ, st) {
-  const pts = rows.filter(r =&gt; r.wait_min != null)
-                  .map(r =&gt; ({ m: minuteOfDay(new Date(r.ts)), v: r.wait_min }));
-  $(&quot;#chartcard&quot;).hidden = pts.length &lt; 2;
-  if (pts.length &lt; 2) return;
-
-  const hi = minuteOfDay(new Date()), lo = Math.max(0, hi - CHART_MIN);
-  const ref = (typ.state === &quot;ok&quot; ? typ.rows : []).filter(r =&gt; r.minute_of_day &gt;= lo &amp;&amp; r.minute_of_day &lt;= hi);
-  $(&quot;#reflab&quot;).hidden = !ref.length;
-  $(&quot;#reflab&quot;).textContent = ref.length
-    ? (typ.basis === &quot;weekday&quot; ? `평소 · 같은 요일 ${typ.days}일` : `평소 · 최근 ${typ.days}일`) : &quot;&quot;;
-
-  const c = $(&quot;#chart&quot;), H = c.clientHeight || 92, { g, w } = fit(c, H);
-  const padR = ref.length ? 34 : 8, padT = 6, padB = 4;              // 오른쪽은 선 끝 라벨 자리
-  const plotW = Math.max(1, w - padR - 4), plotH = H - padT - padB;
-  // 스프레드(...)로 넘기면 행이 수만 개일 때(고배속 mock) 호출 스택이 터진다 — reduce 로
-  const max = Math.max(5, pts.reduce((a, p) =&gt; Math.max(a, p.v), 0),
-                       ref.reduce((a, r) =&gt; Math.max(a, r.wait_min), 0));
-  const X = m =&gt; 4 + (m - lo) / Math.max(1, hi - lo) * plotW;
-  const Y = v =&gt; padT + (1 - v / max) * plotH;
-  const path = (arr, fx, fy) =&gt; { g.beginPath(); arr.forEach((d, i) =&gt; (i ? g.lineTo : g.moveTo).call(g, fx(d), fy(d))); };
-
-  g.lineJoin = g.lineCap = &quot;round&quot;;
-  // 오늘: 위로 갈수록 진한 틸 채움 — 봉우리가 스스로 강조된다
-  const grad = g.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, &quot;rgba(18,151,147,.24)&quot;); grad.addColorStop(1, &quot;rgba(18,151,147,0)&quot;);
-  path(pts, p =&gt; X(p.m), p =&gt; Y(p.v));
-  g.lineTo(X(pts[pts.length - 1].m), H); g.lineTo(X(pts[0].m), H); g.closePath();
-  g.fillStyle = grad; g.fill();
-
-  if (ref.length) {                                                   // 평소: 중립 회색 파선 (색이 아니라 선으로 구분)
-    g.setLineDash([4, 4]); g.strokeStyle = &quot;#B9B1A0&quot;; g.lineWidth = 1.5;
-    path(ref, r =&gt; X(r.minute_of_day), r =&gt; Y(r.wait_min)); g.stroke();
-    g.setLineDash([]);
-  }
-  g.strokeStyle = &quot;#129793&quot;; g.lineWidth = 2;
-  path(pts, p =&gt; X(p.m), p =&gt; Y(p.v)); g.stroke();
-
-  const last = pts[pts.length - 1];
-  g.setLineDash([3, 3]); g.strokeStyle = &quot;rgba(209,74,56,.5)&quot;; g.lineWidth = 1.5;
-  g.beginPath(); g.moveTo(X(last.m), 2); g.lineTo(X(last.m), H); g.stroke(); g.setLineDash([]);
-  g.beginPath(); g.arc(X(last.m), Y(last.v), 4, 0, Math.PI * 2);
-  g.fillStyle = &quot;#129793&quot;; g.fill(); g.strokeStyle = &quot;#FFFCF6&quot;; g.lineWidth = 2; g.stroke();
-
-  if (ref.length) {
-    g.font = &quot;700 9px system-ui, sans-serif&quot;; g.textBaseline = &quot;middle&quot;; g.textAlign = &quot;left&quot;;
-    const r = ref[ref.length - 1];
-    g.fillStyle = &quot;#0C6D6A&quot;; g.fillText(&quot;오늘&quot;, X(last.m) + 8, Y(last.v));
-    g.fillStyle = &quot;#A9A296&quot;; g.fillText(&quot;평소&quot;, X(r.minute_of_day) + 8, Y(r.wait_min));
-  }
-  // 결론 한 줄 — 곡선을 읽지 않아도 답이 나오게
-  const near = ref.length ? ref.reduce((a, b) =&gt;
-    Math.abs(b.minute_of_day - last.m) &lt; Math.abs(a.minute_of_day - last.m) ? b : a) : null;
-  const lead = $(&quot;#chartlead&quot;);
-  lead.hidden = !near || st.wait_min == null;
-  if (!lead.hidden) {
-    const d = Math.round(near.wait_min - st.wait_min);
-    lead.innerHTML = Math.abs(d) &lt; 1 ? &quot;평소 이 시각과 &lt;b&gt;비슷합니다&lt;/b&gt;&quot;
-      : `평소 이 시각보다 &lt;b&gt;${Math.abs(d)}분 ${d &gt; 0 ? &quot;짧습니다&quot; : &quot;깁니다&quot;}&lt;/b&gt;`;
-  }
-}
-
-const ROOM = { W: 15.55, D: 24.65, H: 2.68 };
-function renderPlan(p) {
-  try { drawPlan(p); } catch (e) { console.error(&quot;drawPlan&quot;, e); }
-}
-/* ---------------- ⑩ 급식실 현황 (탑뷰 2D) ----------------
-   실측 기반 평면 탑뷰(세로형) — 방 15.55m(폭 x) × 24.65m(길이 y), 원점 = 배식구 벽 ∧ 창가 통로 구석.
-   /api/positions 의 x,y 는 이 바닥의 0~1 정규화 값 — zones.json 과 공유하는 좌표계.
-   화면 방향은 확정 도면: 배식대 위(카메라는 그 오른쪽 끝) · 퇴식구→출구 왼쪽(위부터) ·
-   대기통로(창가) 오른쪽 · 입구 아래(통로 쪽). 투영: sx=(W−x)·k, sy=y·k — 왜곡 없음.
-   테이블 6열 × [6인×3 | 6인×2 | 6인×4+4인], 의자는 도면 기호처럼 테이블 가장자리에 살짝만.
-   두 겹 캔버스: #plan 에 정적 평면도, 그 위 #marks 에 마커만 — 점멸은 #marks 의 CSS opacity 애니메이션(1.4초, 0.55~1).
-   평면도는 데이터·크기가 바뀔 때만 그리고, 모션 축소 설정은 기존 @media 규칙이 자동으로 애니메이션을 끈다 */
-function drawPlan(p) {
-  const ok = p.state === &quot;ok&quot;;
-  $(&quot;#plancard&quot;).dataset.state = ok ? &quot;ok&quot; : &quot;no_data&quot;;
-  $(&quot;#posn&quot;).textContent = ok ? `${p.n}명` : &quot;—&quot;;
-  const c = $(&quot;#plan&quot;), W = c.clientWidth || 318;
-  const H = c.clientHeight || Math.round(W * 460 / 318);
-  const { g } = fit(c, H);
-  const u = W / 318;
-  const ML = 50 * u, MR = 10 * u, MT = 22 * u, MB = 8 * u;          // 좌측은 퇴식구·출구 라벨 자리
-  const k = Math.min((W - ML - MR) / ROOM.W, (H - MT - MB) / ROOM.D);
-  const ox = ML + (W - ML - MR - ROOM.W * k) / 2;
-  const oy = MT + (H - MT - MB - ROOM.D * k) / 2;
-  const X = x =&gt; ox + (ROOM.W - x) * k, Yy = y =&gt; oy + y * k;       // 세계좌표 → 화면
-  const rect = (y0, x0, dy, dx, r, fill) =&gt; {                       // 세계 y0..y0+dy × x0..x0+dx
-    g.beginPath(); g.roundRect(X(x0 + dx), Yy(y0), dx * k, dy * k, r);
-    g.fillStyle = fill; g.fill();
-  };
-  // 바닥 + 통로 띠(우측) + 타일 줄눈
-  rect(0, 0, ROOM.D, ROOM.W, 10 * u, &quot;#FBF8F0&quot;);
-  rect(0, 0, ROOM.D, 2.2, 0, &quot;rgba(51,49,45,.05)&quot;);
-  g.strokeStyle = &quot;rgba(51,49,45,.045)&quot;; g.lineWidth = 1;
-  for (let ty = 2.5; ty &lt; ROOM.D; ty += 2.5) {
-    g.beginPath(); g.moveTo(X(ROOM.W), Yy(ty)); g.lineTo(X(0), Yy(ty)); g.stroke();
-  }
-  for (let tx = 2.65; tx &lt; ROOM.W; tx += 2.65) {
-    g.beginPath(); g.moveTo(X(tx), Yy(0)); g.lineTo(X(tx), Yy(ROOM.D)); g.stroke();
-  }
-  // 벽 네 변 — 두께 띠. 개구부: 배식구 벽(위) · 퇴식구→출구(좌) · 창(우, 하늘빛) · 입구(아래, 통로 쪽)
-  const T = Math.max(3, .45 * k);
-  const gapDoor = [0.2, 3.2], gapDish = [1.6, 4.4], gapExit = [5.6, 8.4];  // 입구 = 통로 끝단(아래 벽, 창가 쪽)
-  g.fillStyle = &quot;#E3DCC9&quot;;
-  g.fillRect(X(ROOM.W) - T, Yy(0) - T, ROOM.W * k + 2 * T, T);      // 위 (y=0 배식구 벽) — 좌우 벽 두께까지 늘려 모서리를 채운다
-  g.fillRect(X(ROOM.W) - T, Yy(ROOM.D), ROOM.W * k + 2 * T, T);     // 아래 (y=D 출입문 벽) — 위와 같이
-  g.fillRect(X(ROOM.W) - T, Yy(0), T, ROOM.D * k);                  // 좌 (x=W 벽)
-  g.fillRect(X(0), Yy(0), T, ROOM.D * k);                           // 우 (x=0 창가 벽)
-  g.fillStyle = &quot;#B9DBD9&quot;;                                          // 입구 (아래 벽, 통로 쪽)
-  g.fillRect(X(gapDoor[1]), Yy(ROOM.D), (gapDoor[1] - gapDoor[0]) * k, T);
-  g.fillStyle = &quot;#CFC9B8&quot;;                                          // 퇴식구 (좌측, 위부터)
-  g.fillRect(X(ROOM.W) - T, Yy(gapDish[0]), T, (gapDish[1] - gapDish[0]) * k);
-  g.fillStyle = &quot;#B9DBD9&quot;;                                          // 출구 (퇴식구 아래)
-  g.fillRect(X(ROOM.W) - T, Yy(gapExit[0]), T, (gapExit[1] - gapExit[0]) * k);
-  g.fillStyle = &quot;#D9E7EE&quot;;                                          // 창 (우측 벽 세 칸)
-  [[2.6, 7.4], [9.2, 14], [15.8, 20.6]].forEach(([a, b]) =&gt;
-    g.fillRect(X(0), Yy(a), T, (b - a) * k));
-  // 배식대 — 위 벽 안쪽의 긴 카운터 (카메라는 그 오른쪽 끝, 통로 쪽 구석)
-  rect(0.15, 1.5, 0.85, 12.0, 3 * u, &quot;#FFD9D0&quot;);
-  g.strokeStyle = &quot;#F0A897&quot;; g.lineWidth = 1;
-  g.strokeRect(X(13.5), Yy(0.15), 12.0 * k, 0.85 * k);
-  // 퇴식구 싱크대 — 좌측 벽 안쪽의 회색 카운터 (배식대와 같은 표기법)
-  rect(1.4, ROOM.W - 0.97, 3.2, 0.85, 3 * u, &quot;#E4DFD3&quot;);
-  g.strokeStyle = &quot;#C7C0AE&quot;; g.lineWidth = 1;
-  g.strokeRect(X(ROOM.W - 0.12), Yy(1.4), 0.85 * k, 3.2 * k);
-  // 테이블 6열(세로) — 흰 상판 + 도면 기호식 의자(양옆에 살짝)
-  const pitch = 1.8, x0 = 3.2, tw = 0.82;
-  const blocks = [[1.8, 1.8, 1.8], [1.8, 1.8], [1.8, 1.8, 1.8, 1.8, 1.25]];
-  for (let r = 0; r &lt; 6; r++) {
-    const xr = x0 + r * pitch;
-    let y = 2.2;
-    blocks.forEach(bl =&gt; {
-      bl.forEach(len =&gt; {
-        const nc = len &gt; 1.5 ? 3 : 2, step = len / nc;              // 6인 = 양측 의자 3개, 4인 = 2개
-        for (let i = 0; i &lt; nc; i++) {                              // 의자 먼저 — 테이블이 안쪽을 덮는다
-          const cy = y + step * (i + 0.5), cw = .44, cd = .28;
-          rect(cy - cw / 2, xr + tw - .08, cw, cd, 2.5 * u, &quot;#BCD98C&quot;);
-          rect(cy - cw / 2, xr - cd + .08, cw, cd, 2.5 * u, &quot;#BCD98C&quot;);
-        }
-        g.save(); g.shadowColor = &quot;rgba(51,49,45,.18)&quot;; g.shadowBlur = 3 * u;
-        g.shadowOffsetY = 1.2 * u;
-        rect(y, xr, len, tw, 2.5 * u, &quot;#FFFEF8&quot;);
-        g.restore();
-        y += len + 0.12;
-      });
-      y += 1.2;                                                      // 가로 통로
-    });
-  }
-  // 라벨 — 흰 halo. 평면도 층에 그리므로 통로 라벨 위로 마커가 지나갈 수 있다(마커가 우선)
-  g.textBaseline = &quot;alphabetic&quot;; g.font = `700 ${Math.max(9, 10.5 * u)}px system-ui, sans-serif`;
-  g.lineJoin = &quot;round&quot;; g.lineWidth = 3 * u; g.strokeStyle = &quot;#FFFCF6&quot;;
-  const label = (t, x, y, col) =&gt; { g.strokeText(t, x, y); g.fillStyle = col; g.fillText(t, x, y); };
-  g.textAlign = &quot;center&quot;;
-  label(&quot;배식대&quot;, X(7.5), Yy(0) - T - 4 * u, &quot;#D14A38&quot;);
-  label(&quot;입구&quot;, X((gapDoor[0] + gapDoor[1]) / 2), Yy(ROOM.D) - 5 * u, &quot;#6E6A61&quot;);
-  g.textAlign = &quot;right&quot;;                                            // 레이아웃 바깥(좌측 여백)에
-  label(&quot;퇴식구&quot;, X(ROOM.W) - T - 4 * u, Yy((gapDish[0] + gapDish[1]) / 2) + 4 * u, &quot;#6E6A61&quot;);
-  label(&quot;출구&quot;, X(ROOM.W) - T - 4 * u, Yy((gapExit[0] + gapExit[1]) / 2) + 4 * u, &quot;#6E6A61&quot;);
-  g.textAlign = &quot;center&quot;;
-  label(&quot;통로&quot;, X(1.1), Yy(ROOM.D * .5), &quot;#A9A296&quot;);
-  // 익명 마커 — 노란 스마일(테두리 없음), r=5.2u. 좌표 두 개뿐, 식별 정보 없음. 위 겹 #marks 에만 그린다
-  const { g: m } = fit($(&quot;#marks&quot;), H);
-  if (ok) (p.points || []).forEach(({ x, y }) =&gt; {
-    const sx = X(x * ROOM.W), sy = Yy(y * ROOM.D), r = 5.2 * u;
-    m.beginPath(); m.arc(sx, sy, r, 0, Math.PI * 2);
-    m.fillStyle = &quot;#F6C445&quot;; m.fill();
-    m.fillStyle = &quot;#33312D&quot;;
-    m.beginPath(); m.arc(sx - r * .33, sy - r * .22, r * .155, 0, Math.PI * 2); m.fill();
-    m.beginPath(); m.arc(sx + r * .33, sy - r * .22, r * .155, 0, Math.PI * 2); m.fill();
-    m.beginPath(); m.lineWidth = Math.max(1, r * .17); m.strokeStyle = &quot;#33312D&quot;; m.lineCap = &quot;round&quot;;
-    m.arc(sx, sy + r * .06, r * .44, .16 * Math.PI, .84 * Math.PI); m.stroke();
-  });
-}
-
-/* ---------------- ① 알레르기 ----------------
-   식약처 고시 19종. NEIS 는 DDISH_NM 끝에 &quot;(5.6.10.13)&quot; 형태로 붙여 보낸다 */
-const ALLERGENS = { 1: &quot;난류&quot;, 2: &quot;우유&quot;, 3: &quot;메밀&quot;, 4: &quot;땅콩&quot;, 5: &quot;대두&quot;, 6: &quot;밀&quot;, 7: &quot;고등어&quot;,
-  8: &quot;게&quot;, 9: &quot;새우&quot;, 10: &quot;돼지고기&quot;, 11: &quot;복숭아&quot;, 12: &quot;토마토&quot;, 13: &quot;아황산류&quot;, 14: &quot;호두&quot;,
-  15: &quot;닭고기&quot;, 16: &quot;쇠고기&quot;, 17: &quot;오징어&quot;, 18: &quot;조개류&quot;, 19: &quot;잣&quot; };
-const MY_KEY = &quot;mb_allergy&quot;;
-const loadMy = () =&gt; { try { return new Set(JSON.parse(localStorage.getItem(MY_KEY)) || []); } catch { return new Set(); } };
-let MY = loadMy();
-
-function splitAllergy(raw) {
-  // 괄호로 묶였거나, 끝에 점으로 이어진 숫자가 둘 이상일 때만 뗀다 (&quot;우유200&quot; 같은 이름을 자르지 않도록)
-  const m = raw.match(/\s*[(（]\s*([\d.,\s]+)\s*[)）]\s*$/) || raw.match(/\s+(\d{1,2}(?:\.\d{1,2})+)\.?\s*$/);
-  if (!m) return { name: raw.trim(), codes: [] };
-  const codes = [...new Set(m[1].split(/\D+/).filter(Boolean).map(Number))].filter(n =&gt; n &gt;= 1 &amp;&amp; n &lt;= 19);
-  return { name: raw.slice(0, m.index).trim() || raw.trim(), codes: codes.sort((a, b) =&gt; a - b) };
-}
-
-function renderPicker() {
-  $(&quot;#pick&quot;).innerHTML = Object.entries(ALLERGENS).map(([n, label]) =&gt;
-    `&lt;button type=&quot;button&quot; data-n=&quot;${n}&quot; aria-pressed=&quot;${MY.has(+n)}&quot;&gt;${label}&lt;/button&gt;`).join(&quot;&quot;);
-  $(&quot;#pick&quot;).querySelectorAll(&quot;button&quot;).forEach(b =&gt; b.onclick = () =&gt; {
-    const n = +b.dataset.n;
-    MY.has(n) ? MY.delete(n) : MY.add(n);
-    try { localStorage.setItem(MY_KEY, JSON.stringify([...MY])); } catch {}
-    if (MEAL) renderMeal(MEAL);
-  });
-  const names = [...MY].sort((a, b) =&gt; a - b).map(n =&gt; ALLERGENS[n]);
-  $(&quot;#mysummary&quot;).textContent = names.length ? names.join(&quot; · &quot;) : &quot;없음&quot;;
-}
-
-/* ---------------- 급식 ---------------- */
-function bandOf(x) {
-  if (x.band === &quot;부족&quot;) return &quot;short&quot;;
-  const d = x.pct - 100;
-  return d &gt;= 10 ? &quot;hi&quot; : d &gt;= 0 ? &quot;mid&quot; : &quot;lo&quot;;
-}
-const shortLabel = s =&gt; s.replace(/\s*\(.*\)\s*$/, &quot;&quot;);   // &quot;비타민A (㎍RAE)&quot; → &quot;비타민A&quot;
-const unitOf = s =&gt; (s.match(/\(([^)]+)\)/) || [, &quot;&quot;])[1];
-
-async function loadMeal() {
-  MEAL = await j(&quot;/api/meal&quot;);
-  renderMeal(MEAL);
-}
-
-function renderMeal(m) {
-  const menu = $(&quot;#menu&quot;);
-  renderWeek(m);                                     // 주말·공휴일에도 &quot;그럼 언제 뭐가 나오나&quot;는 답할 수 있다
-  if (m.state !== &quot;ok&quot; || !m.today) {
-    // state 는 ok 인데 today 만 없는 날 = 주말·공휴일. 받아오지 못한 것과 구별해서 말한다
-    menu.innerHTML = `&lt;li class=&quot;main&quot;&gt;${m.state === &quot;no_meal&quot; ? &quot;이번 주 급식 정보가 없습니다&quot;
-      : m.state === &quot;ok&quot; ? &quot;오늘은 급식이 없습니다&quot; : &quot;급식 정보를 아직 받지 못했습니다&quot;}&lt;/li&gt;`;
-    [&quot;#allergybox&quot;, &quot;#carboncard&quot;, &quot;#microlab&quot;].forEach(s =&gt; $(s).hidden = true);
-    $(&quot;#allergens&quot;).innerHTML = &quot;&quot;; $(&quot;#micro&quot;).innerHTML = &quot;&quot;;
-    [&quot;#energy&quot;, &quot;#ratio&quot;, &quot;#mar&quot;].forEach(s =&gt; $(s).textContent = &quot;—&quot;);
-    [&quot;#energyflag&quot;, &quot;#marflag&quot;].forEach(s =&gt; $(s).textContent = &quot;&quot;);
-    setTimeout(balance, 0);            // 카드가 숨은 뒤에 컬럼 높이를 다시 맞춘다
-    return;
-  }
-  const dishes = m.today.menu.map(splitAllergy);
-  menu.innerHTML = dishes.map((d, i) =&gt; {
-    const hit = d.codes.some(c =&gt; MY.has(c));
-    const codes = d.codes.map(c =&gt; MY.has(c) ? `&lt;b&gt;${c}&lt;/b&gt;` : c).join(&quot;·&quot;);
-    return `&lt;li class=&quot;${i === 0 ? &quot;main&quot; : &quot;&quot;}${hit ? &quot; hit&quot; : &quot;&quot;}&quot;&gt;&lt;span&gt;${esc(d.name)}&lt;/span&gt;`
-      + (hit ? `&lt;span class=&quot;tag&quot;&gt;내 알레르기&lt;/span&gt;` : &quot;&quot;)
-      + (codes ? `&lt;span class=&quot;codes&quot;&gt;${codes}&lt;/span&gt;` : &quot;&quot;) + &quot;&lt;/li&gt;&quot;;
-  }).join(&quot;&quot;);
-
-  const today = [...new Set(dishes.flatMap(d =&gt; d.codes))].sort((a, b) =&gt; a - b);
-  $(&quot;#allergens&quot;).innerHTML = today.map(c =&gt;
-    `&lt;span class=&quot;${MY.has(c) ? &quot;on&quot; : &quot;&quot;}&quot;&gt;${c} ${ALLERGENS[c]}&lt;/span&gt;`).join(&quot;&quot;);
-  $(&quot;#allergybox&quot;).hidden = false;
-  renderPicker();
-
-  const a = m.today.assess;
-  $(&quot;#energy&quot;).textContent = a.energy_pct == null ? &quot;—&quot; : a.energy_pct + &quot;%&quot;;
-  $(&quot;#energyflag&quot;).textContent = a.energy_pct == null ? &quot;&quot; : a.energy_pct &gt; 110 ? &quot;많음&quot; : a.energy_pct &lt; 90 ? &quot;적음&quot; : &quot;&quot;;
-  $(&quot;#ratio&quot;).textContent = a.macro_ratio_ok ? &quot;적정&quot; : &quot;범위 밖&quot;;
-  $(&quot;#ratio&quot;).title = `탄 ${a.macro_ratio.carb} · 단 ${a.macro_ratio.protein} · 지 ${a.macro_ratio.fat} %`;
-  $(&quot;#mar&quot;).textContent = a.mar == null ? &quot;—&quot; : a.mar + &quot;%&quot;;
-  const short = a.micro.filter(x =&gt; x.band === &quot;부족&quot;).length;
-  $(&quot;#marflag&quot;).textContent = short ? `부족 ${short}` : &quot;&quot;;
-
-  $(&quot;#microlab&quot;).hidden = !a.micro.length;
-  $(&quot;#micro&quot;).innerHTML = a.micro.map(x =&gt; {
-    const d = x.pct - 100, band = bandOf(x);
-    const tag = band === &quot;short&quot; ? &quot;&lt;em&gt;부족&lt;/em&gt;&quot; : x.band === &quot;과다&quot; ? &quot;&lt;em&gt;과다&lt;/em&gt;&quot; : &quot;&quot;;
-    return `&lt;div data-band=&quot;${band}&quot;&gt;&lt;div class=&quot;v&quot;&gt;${d &gt;= 0 ? &quot;+&quot; : &quot;−&quot;}${Math.abs(d)}%${tag}&lt;/div&gt;`
-         + `&lt;div class=&quot;n&quot; title=&quot;${esc(x.label)}&quot;&gt;${esc(shortLabel(x.label))}&lt;/div&gt;&lt;/div&gt;`;
-  }).join(&quot;&quot;);
-
-  renderCarbon(m);
-  setTimeout(balance, 0);              // 영양 3칸·칩이 붙어 오른쪽이 길어졌을 수 있다
-}
-
-/* ② 이번 주 식단 — meal.json 이 이미 월~금을 통째로 담고 있다. 프론트만 있으면 된다 */
-const WD = &quot;일월화수목금토&quot;;
-function renderWeek(m) {
-  const card = $(&quot;#weekcard&quot;), week = (m.week || []).filter(d =&gt; d.menu &amp;&amp; d.menu.length);
-  card.hidden = week.length &lt; 2;
-  if (card.hidden) return;
-  const n = new Date();                              // 오늘은 브라우저 시계로 정한다 — meal.json 은 05:40 캐시라 today 가 비는 날이 있다
-  const today = `${n.getFullYear()}${String(n.getMonth() + 1).padStart(2, &quot;0&quot;)}${String(n.getDate()).padStart(2, &quot;0&quot;)}`;
-  $(&quot;#week&quot;).innerHTML = week.map(d =&gt; {
-    const dd = new Date(+d.date.slice(0, 4), +d.date.slice(4, 6) - 1, +d.date.slice(6, 8));
-    const when = d.date === today ? &quot;today&quot; : d.date &lt; today ? &quot;past&quot; : &quot;future&quot;;
-    const main = splitAllergy(d.menu[0]).name;
-    // 램프는 인덱스가 아니라 실제 요일에 건다 — 주가 화요일부터 시작해도 색이 밀리지 않게
-    return `&lt;div data-wd=&quot;${dd.getDay()}&quot; data-when=&quot;${when}&quot;&gt;`
-      + `&lt;span class=&quot;d&quot;&gt;${WD[dd.getDay()]}&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;${dd.getDate()}&lt;/span&gt;`
-      + `&lt;span class=&quot;m&quot;&gt;${esc(main)}&lt;/span&gt;`
-      + `&lt;span class=&quot;k&quot;&gt;외 ${d.menu.length - 1}가지` + (d.kcal ? `&lt;br&gt;${Math.round(d.kcal)} kcal` : &quot;&quot;) + &quot;&lt;/span&gt;&lt;/div&gt;&quot;;
-  }).join(&quot;&quot;);
-  const w = m.week_avg || {};
-  $(&quot;#weekavg&quot;).innerHTML = w.energy_pct == null ? &quot;&quot;
-    : `이번 주 평균 에너지 충족 &lt;b style=&quot;color:var(--ink2)&quot;&gt;${w.energy_pct}%&lt;/b&gt;`
-      + (w.mar == null ? &quot;&quot; : ` · 미량영양소 &lt;b style=&quot;color:var(--ink2)&quot;&gt;${w.mar}%&lt;/b&gt;`);
-}
-
-/* ⑧ 잔반 탄소 — 계수는 /api/meal 의 carbon_std(= data/carbon_std.json) */
-function renderCarbon(m) {
-  const c = m.today &amp;&amp; m.today.carbon, cs = m.carbon_std || {};
-  $(&quot;#carboncard&quot;).hidden = !c;
-  if (!c) return;
-  $(&quot;#co2&quot;).textContent = c.kgco2e.toFixed(1);
-  $(&quot;#co2unit&quot;).textContent = `kg CO₂e · 1인분 약 ${c.portion_g} g 기준`;
-  $(&quot;#vsworld&quot;).textContent = c.pct_world + &quot;%&quot;;
-  $(&quot;#vskorea&quot;).textContent = c.pct_korea + &quot;%&quot;;
-  $(&quot;#carbonnote&quot;).textContent = `1인분 무게 = kcal ÷ 에너지밀도 환산(NEIS 는 g 미제공) · 배출계수: ${cs.ef_source}`
-    + ` · 1인 평균: ${cs.capita_source} · 승용차 환산 ${c.car_km} km`;
-}
-
-/* ⑨ 이슈 링크 — 외부 문자열이므로 이스케이프. no_data 면 카드 숨김 */
-async function loadNews() {
-  let n;
-  try { n = await j(&quot;/api/news&quot;); } catch { n = { state: &quot;no_data&quot;, items: [] }; }
-  const card = $(&quot;#newscard&quot;);
-  card.hidden = n.state !== &quot;ok&quot; || !(n.items &amp;&amp; n.items.length);
-  balance();
-  if (card.hidden) return;
-  // 제목·요약은 CSS 로 줄 수를 자른다 — 글자 수로 자르면 낱말 중간에서 끊긴다.
-  // 한국어가 있으면 그것을, 없으면 원문을. 링크의 title 에는 언제나 원문 제목을 남긴다
-  $(&quot;#news&quot;).innerHTML = n.items.map(x =&gt; {
-    const t = x.title_ko || x.title, s = x.summary_ko || x.summary;
-    return `&lt;li&gt;&lt;a href=&quot;${esc(x.link)}&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot; title=&quot;${esc(x.title)}&quot;&gt;${esc(t)}&lt;/a&gt;`
-      + (s ? `&lt;p&gt;${esc(s)}&lt;/p&gt;` : &quot;&quot;)
-      + `&lt;div&gt;&lt;em&gt;${esc(x.source)}&lt;/em&gt;`
-      + (x.title_ko ? `&lt;em class=&quot;ko&quot;&gt;번역&lt;/em&gt;` : &quot;&quot;)
-      + `&lt;small&gt;${esc(x.date)}&lt;/small&gt;&lt;/div&gt;&lt;/li&gt;`;
-  }).join(&quot;&quot;);
-}
-
-/* 데스크톱에서 두 패널의 아래 끝을 맞춘다. 어느 쪽이 긴지는 그날 데이터에 달렸으므로
-   양쪽 모두 마지막으로 '보이는' 카드에 .grow 를 걸어 둔다 — 긴 쪽은 흡수할 여백이 없어 그대로다 */
-function balance() {
-  document.querySelectorAll(&quot;main &gt; .col&quot;).forEach(col =&gt; {
-    const kids = [...col.children];
-    kids.forEach(el =&gt; el.classList.remove(&quot;grow&quot;));
-    const vis = kids.filter(el =&gt; !el.hidden &amp;&amp; el.classList.contains(&quot;card&quot;));
-    if (vis.length) vis[vis.length - 1].classList.add(&quot;grow&quot;);
-  });
-  if (LASTPOS) renderPlan(LASTPOS);    // 카드의 상자가 바뀌었으니 그 크기로 다시 그린다 (3D 는 ResizeObserver 가 맡는다)
-}
-
-async function tick() {                              // 서버에 닿지 못하면 옛 위치를 '지금'처럼 두지 않는다
-  try { await refresh(); }
-  catch (e) { console.error(&quot;refresh&quot;, e); LASTPOS = { state: &quot;no_data&quot; }; renderPlan(LASTPOS); }
-}
-tick(); loadMeal(); loadNews();
-setInterval(tick, 30000);
-let rt;                                              // 캔버스는 폭이 바뀌면 다시 그려야 한다 — 다시 받지는 않는다
-addEventListener(&quot;resize&quot;, () =&gt; {
-  clearTimeout(rt);
-  rt = setTimeout(() =&gt; {
-    balance();
-    if (LAST) drawChart(LAST.rows, LAST.typ, LAST.st);
-    if (LASTPOS) renderPlan(LASTPOS);
-  }, 150);
-});
-if (&quot;serviceWorker&quot; in navigator) navigator.serviceWorker.register(&quot;/sw.js&quot;);
-&lt;/script&gt;
+&lt;!-- 화면 모듈: js/core.js 가 wait·room·week·today·news 를 불러 부팅한다 (빌드 도구 없음, ES 모듈) --&gt;
+&lt;script type=&quot;module&quot; src=&quot;/js/core.js&quot;&gt;&lt;/script&gt;
 &lt;/body&gt;
 &lt;/html&gt;</code></pre>
 </figure>
@@ -1758,11 +1103,14 @@ if (&quot;serviceWorker&quot; in navigator) navigator.serviceWorker.register(&qu
 <figcaption><span class="path">static/sw.js</span><span class="lang">js</span><button class="copy" type="button">복사</button></figcaption>
 <pre><code class="lang-js">// 서비스워커: 정적 파일만 캐시한다. /api/ 는 절대 캐시하지 않는다 (30초 폴링이 무의미해짐)
 //
-// 화면(HTML)은 반드시 네트워크 우선. 캐시 우선으로 두면 배포를 해도 예전 화면이 계속 뜬다 —
-// v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다. 캐시는 오프라인 대비용일 뿐이다.
+// 화면(HTML)과 그 화면이 부르는 모듈(/js/)·스타일(/css/)은 반드시 네트워크 우선. 캐시 우선으로 두면 배포를 해도
+// 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
+// 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v7&quot;;
-const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;];
+const CACHE = &quot;mealboard-v8&quot;;
+const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
+  &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;,
+  &quot;/js/core.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
 
 self.addEventListener(&quot;install&quot;, e =&gt;
   e.waitUntil(caches.open(CACHE).then(c =&gt; c.addAll(SHELL)).then(() =&gt; self.skipWaiting())));
@@ -1774,21 +1122,24 @@ self.addEventListener(&quot;activate&quot;, e =&gt;
 
 const isPage = (req, url) =&gt;
   req.mode === &quot;navigate&quot; || url.pathname === &quot;/&quot; || url.pathname.endsWith(&quot;.html&quot;);
+const isShellPart = url =&gt; url.pathname.startsWith(&quot;/js/&quot;) || url.pathname.startsWith(&quot;/css/&quot;);
 
 self.addEventListener(&quot;fetch&quot;, e =&gt; {
   const url = new URL(e.request.url);
   if (url.pathname.startsWith(&quot;/api/&quot;)) return;           // 네트워크로 그냥 통과
 
-  if (isPage(e.request, url)) {                           // 화면: 네트워크 우선, 실패하면 캐시(오프라인)
+  const page = isPage(e.request, url);
+  if (page || isShellPart(url)) {                         // 화면·모듈·스타일: 네트워크 우선, 실패하면 캐시(오프라인)
     // cache:&quot;no-cache&quot; 는 브라우저 HTTP 캐시를 건너뛰지 않고 '반드시 검사'하게 한다.
-    // 이게 없으면 네트워크 우선이어도 그 fetch 가 디스크 캐시의 옛 HTML 로 조용히 채워진다
+    // 이게 없으면 네트워크 우선이어도 그 fetch 가 디스크 캐시의 옛 파일로 조용히 채워진다
     e.respondWith(fetch(e.request, { cache: &quot;no-cache&quot; })
       .then(res =&gt; {
         const copy = res.clone();
         caches.open(CACHE).then(c =&gt; c.put(e.request, copy));
         return res;
       })
-      .catch(() =&gt; caches.match(e.request).then(r =&gt; r || caches.match(&quot;/&quot;))));
+      // 오프라인 폴백: 화면은 &quot;/&quot; 로 물러서도 되지만 모듈·스타일은 그 자신만 — HTML 을 스크립트로 돌려주지 않게
+      .catch(() =&gt; caches.match(e.request).then(r =&gt; r || (page ? caches.match(&quot;/&quot;) : undefined))));
     return;
   }
   e.respondWith(caches.match(e.request).then(r =&gt; r || fetch(e.request)));
@@ -2617,10 +1968,14 @@ def positions():
 
 <figure class="code">
 <figcaption><span class="path">app/main.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
-<pre><code class="lang-python">from fastapi import FastAPI, Request
+<pre><code class="lang-python">import mimetypes
+
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from .config import BASE
 from .routers import status, history, meal, positions, news, typical, insight
+
+mimetypes.add_type(&quot;text/javascript&quot;, &quot;.js&quot;)    # Windows 개발 PC 의 레지스트리가 .js 를 text/plain 으로 주면 모듈 로드가 막힌다
 
 app = FastAPI(title=&quot;Mealboard&quot;)
 app.include_router(status.router)
@@ -2635,13 +1990,16 @@ app.include_router(insight.router)      # /api/insight/* — insights.db·report
 # (경험칙: 파일이 묵은 기간의 10%). 이틀 된 index.html 은 약 5시간 동안 새로 받지 않으므로
 # 배포가 브라우저에 도달하지 못한다 — v5 에서 서비스워커를 고치고도 같은 증상이 남았던 이유.
 # no-cache 는 '캐시 금지'가 아니라 '쓰기 전 검사'다. ETag 가 같으면 304 라 비용은 거의 없다.
+# 화면이 부르는 모듈(/js/)·스타일(/css/)도 같다 — 셸은 새것인데 모듈은 옛것이면 짝이 어긋난다.
 REVALIDATE = (&quot;/&quot;, &quot;/index.html&quot;, &quot;/sw.js&quot;, &quot;/manifest.json&quot;)
+REVALIDATE_PREFIX = (&quot;/js/&quot;, &quot;/css/&quot;)
 
 
 @app.middleware(&quot;http&quot;)
 async def revalidate_shell(request: Request, call_next):
     res = await call_next(request)
-    if request.url.path in REVALIDATE:
+    path = request.url.path
+    if path in REVALIDATE or path.startswith(REVALIDATE_PREFIX):
         res.headers[&quot;Cache-Control&quot;] = &quot;no-cache&quot;
     return res
 

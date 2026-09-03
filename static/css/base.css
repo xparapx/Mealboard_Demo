@@ -1,0 +1,24 @@
+/* 공통 — 팔레트 토큰·리셋·카드 골격. 화면별 규칙은 screens.css (이 파일 다음에 읽힌다 — 순서가 곧 캐스케이드) */
+/* 팔레트 v5 — 브랜드 3색(차콜·틸·멜론)은 유지하고, 표면을 1.5px 외곽선에서 '라운드 + 부드러운 그림자'로 옮겼다.
+   도면의 단일 출처는 docs/layout.html. 여기 값과 도면이 어긋나면 도면을 고칠 것 */
+:root {
+  --ground:#F5F2E9; --surface:#FFFCF6; --hair:#F0EDE3;
+  --ink:#33312D; --ink2:#6E6A61; --ink3:#9A958A; --off:#C9C2B2;
+  --teal:#129793; --teal-ink:#0C6D6A; --teal-tint:#DEF0EF; --teal-tint2:#EAF5F4; --aqua:#9BD7D5;
+  --melon:#FF7260; --melon-ink:#C9452F; --melon-tint:#FFE9E4; --melon-tint2:#FFF4F1;
+  --e1: 0 1px 2px rgba(51,49,45,.04), 0 10px 26px rgba(51,49,45,.055);
+  --e2: 0 16px 36px rgba(51,49,45,.24);
+  --r-card: 24px; --r-tile: 16px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ground); color: var(--ink); word-break: keep-all;
+       font-family: "Pretendard", -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+       -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+main { max-width: 390px; margin: 0 auto; padding: 18px 16px 28px; display: flex; flex-direction: column; gap: 12px; }
+.col { display: flex; flex-direction: column; gap: 12px; }
+.card { background: var(--surface); border-radius: var(--r-card); padding: 20px; box-shadow: var(--e1); }
+.eyebrow { font-size: 11.5px; font-weight: 700; letter-spacing: .10em; color: var(--ink3); }
+.note { font-size: 11px; color: var(--ink3); line-height: 1.55; }
+a { color: var(--teal-ink); text-decoration: none; }
+a.u { border-bottom: 1px solid rgba(12,109,106,.35); }
+[hidden] { display: none !important; }

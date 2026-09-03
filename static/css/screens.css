@@ -1,0 +1,216 @@
+/* 화면별 카드 — 히어로·추이·평면도·급식·주간·탄소·이슈, 그리고 데스크톱·hover·모션 축소 미디어 쿼리(맨 끝, 순서 유지) */
+/* ① 히어로 — 상태 4얼굴: ok=차콜+아쿠아 칩 · wait=차콜+멜론 외곽선 칩 · busy=멜론 카드 · off=점선 */
+.hero { position: relative; background: var(--ink); border-radius: 26px; padding: 34px 22px 30px; box-shadow: var(--e2); }
+.hero .eyebrow { color: rgba(255,253,246,.52); }
+.dot { position: absolute; right: 22px; top: 24px; width: 10px; height: 10px; border-radius: 50%;
+       background: #2FB7B3; box-shadow: 0 0 0 5px rgba(47,183,179,.20); }
+.big { display: flex; align-items: baseline; gap: 7px; margin-top: 12px; transform-origin: left center; }
+.big b { font-size: 104px; font-weight: 700; letter-spacing: -.045em; line-height: .86; color: var(--surface); }
+.big i { font-style: normal; font-size: 24px; font-weight: 500; color: rgba(255,253,246,.58); }
+.big.pulse { animation: pulse .25s ease; }                  /* 값이 실제로 바뀔 때만 JS 가 붙인다 */
+@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
+.verdictrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 20px; }
+#state { display: inline-flex; align-items: center; padding: 9px 16px; border-radius: 999px;
+         background: var(--aqua); color: #223634; font-size: 13px; font-weight: 700; }
+/* ③ 도착 시각 — 판정 칩 오른쪽 빈 자리. '몇 분'보다 '몇 시'가 즉각적이다 */
+.arrive { text-align: right; flex: none; }
+.arrive span { display: block; font-size: 11.5px; color: rgba(255,253,246,.5); }
+.arrive b { font-size: 18px; font-weight: 700; letter-spacing: -.02em; color: var(--surface); }
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 24px; }
+.stats > div { background: rgba(255,253,246,.07); border-radius: var(--r-tile); padding: 15px 14px; }
+.stats b { font-size: 22px; font-weight: 700; color: var(--surface); }
+.stats em { font-style: normal; font-size: 12.5px; font-weight: 500; color: rgba(255,253,246,.58); margin-left: 2px; }
+.stats span { display: block; font-size: 11.5px; color: rgba(255,253,246,.5); margin-top: 3px; }
+
+.hero[data-level="busy"] { background: var(--melon); box-shadow: 0 16px 36px rgba(255,114,96,.32); }
+.hero[data-level="busy"] .eyebrow, .hero[data-level="busy"] .big i,
+.hero[data-level="busy"] .arrive span { color: rgba(43,20,16,.62); }
+.hero[data-level="busy"] .big b, .hero[data-level="busy"] .arrive b, .hero[data-level="busy"] .stats b { color: #2B1410; }
+.hero[data-level="busy"] .stats > div { background: rgba(43,20,16,.10); }
+.hero[data-level="busy"] .stats em { color: rgba(43,20,16,.62); }
+.hero[data-level="busy"] .stats span { color: rgba(43,20,16,.55); }
+.hero[data-level="busy"] .dot { background: var(--ink); box-shadow: 0 0 0 5px rgba(51,49,45,.18); }
+.hero[data-level="busy"] #state { background: var(--ink); color: var(--surface); }
+
+.hero[data-level="wait"] #state { background: transparent; border: 1.5px solid var(--melon); color: #FF9182; }
+.hero[data-level="wait"] .big b { color: rgba(255,253,246,.28); }
+
+.hero[data-level="off"] { background: #FBF8F0; border: 1.5px dashed #D5CDBA; box-shadow: none; }
+.hero[data-level="off"] .eyebrow { color: #A9A296; }
+.hero[data-level="off"] .big b, .hero[data-level="off"] .big i { color: var(--off); }
+.hero[data-level="off"] .dot { background: var(--off); box-shadow: none; }
+.hero[data-level="off"] #state { background: transparent; border: 1.5px solid #D5CDBA; color: var(--ink3); }
+.hero[data-level="off"] .stats > div { background: #F3F0E7; }
+.hero[data-level="off"] .stats b, .hero[data-level="off"] .stats em { color: var(--off); }
+.hero[data-level="off"] .stats span, .hero[data-level="off"] .arrive span { color: #A9A296; }
+.hero[data-level="off"] .arrive b { color: var(--off); }
+
+.meta { display: flex; justify-content: space-between; align-items: center; padding: 0 6px;
+        font-size: 11px; color: var(--ink3); }
+
+/* ③ 추이 — 데이터는 한 색(틸), 비교 기준선은 중립 회색 파선. 색을 둘 쓰면 어느 쪽이 실측인지 흐려진다 */
+.lead { font-size: 14px; font-weight: 600; color: var(--ink); margin-top: 8px; letter-spacing: -.01em; }
+.lead b { color: var(--teal-ink); font-weight: 600; }
+#chartcard { padding-top: 26px; padding-bottom: 26px; }
+#chart { display: block; width: 100%; height: 108px; margin-top: 12px; }
+.legend { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 11px; }
+.legend > span { display: inline-flex; align-items: center; gap: 12px; }
+.legend i { font-style: normal; display: inline-flex; align-items: center; gap: 6px; color: var(--ink2); }
+.legend i::before { content: ""; width: 14px; height: 2px; border-radius: 2px; background: var(--teal); flex: none; }
+.legend i.ref { color: var(--ink3); }
+.legend i.ref::before { height: 0; background: none; border-top: 1.5px dashed #B9B1A0; }
+.legend .now { color: var(--ink3); }
+.legend .now b { color: var(--melon-ink); }
+
+/* ⑩ 급식실 현황 — 벡터 평면도 + 익명 위치 마커. 영상 아님 · 순간 상태만 · 이력 없음 (CLAUDE.md §2) */
+.plan { position: relative; }
+.plan .count { position: absolute; right: 18px; top: 16px; background: var(--teal-tint); color: var(--teal-ink);
+               font-size: 12.5px; font-weight: 700; padding: 6px 12px; border-radius: 999px; }
+.plan .stage { position: relative; margin-top: 12px; }
+#plan { display: block; width: 100%; aspect-ratio: 318 / 460; }
+#marks { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+         animation: blink 1.4s ease-in-out infinite; }         /* 점멸은 CSS 가 맡는다 — JS 루프·전체 재그리기 없음 */
+@keyframes blink { 50% { opacity: .55; } }
+.plan[data-state="no_data"] #plan { opacity: .4; }
+.plan[data-state="no_data"] #marks { display: none; }
+.plan .empty { display: none; position: absolute; left: 0; right: 0; top: 52%; text-align: center;
+               font-size: 13px; font-weight: 700; color: var(--ink3); }
+.plan[data-state="no_data"] .empty { display: block; }
+
+/* ④ 메뉴 — 한 줄 리스트. 알레르기 번호가 붙으므로 2열 격자로는 좁다 */
+.menu { list-style: none; margin: 10px 0 0; padding: 0; }
+.menu li { display: flex; align-items: center; gap: 9px; padding: 6px 8px; font-size: 14px; color: #4A4740; }
+.menu li::before { content: ""; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--off); flex: none; }
+.menu li.main { font-size: 16px; font-weight: 700; color: var(--ink); letter-spacing: -.01em; }
+.menu li.main::before { width: 8px; height: 8px; background: var(--melon); border-color: var(--melon); }
+.menu li.hit { background: var(--melon-tint2); border-radius: 10px; }
+.menu li .codes { margin-left: auto; font-size: 10px; color: var(--ink3); letter-spacing: .06em; flex: none; }
+.menu li .codes b { color: var(--melon-ink); }
+.menu li .tag { font-size: 10px; font-weight: 700; color: var(--melon-ink); background: var(--melon-tint);
+                border-radius: 6px; padding: 2px 6px; flex: none; }
+/* ① 알레르기 — NEIS 가 메뉴명에 붙여 보내는 번호(1~19). 내 항목은 브라우저에만 저장한다 */
+.chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+.chips span { font-size: 10px; font-weight: 700; border-radius: 6px; padding: 3px 7px;
+              background: var(--hair); color: var(--ink2); }
+.chips span.on { background: var(--melon-tint); color: var(--melon-ink); }
+details > summary { list-style: none; cursor: pointer; }
+details > summary::-webkit-details-marker { display: none; }
+.pick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.pick button { font: inherit; font-size: 11.5px; font-weight: 700; border: 0; cursor: pointer;
+               min-height: 34px; padding: 6px 12px; border-radius: 999px; background: var(--hair); color: var(--ink2); }
+.pick button[aria-pressed="true"] { background: var(--melon); color: #2B1410; }
+.pick button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+/* ⑤ 영양 3칸 — 색은 칸의 정체성, 상태는 우상단 플래그. 둘을 섞지 않는다 */
+.kpi { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+.kpi > div { position: relative; border-radius: var(--r-tile); padding: 11px 12px 12px; }
+.kpi > div:nth-child(1) { background: #CFE9E7; }
+.kpi > div:nth-child(2) { background: var(--teal-tint2); }
+.kpi > div:nth-child(3) { background: var(--melon-tint); }
+.kpi em { font-style: normal; display: block; font-size: 10px; font-weight: 700; letter-spacing: .12em; opacity: .85; }
+.kpi > div:nth-child(1) em { color: var(--teal-ink); }
+.kpi > div:nth-child(2) em { color: #3D8583; }
+.kpi > div:nth-child(3) em { color: var(--melon-ink); }
+.kpi b { display: block; font-size: 21px; font-weight: 700; letter-spacing: -.02em; color: #22403E; margin-top: 3px; }
+.kpi > div:nth-child(3) b { color: #4A2A23; }
+.kpi span { font-size: 11px; color: #4C6564; margin-top: 2px; display: block; }
+.kpi > div:nth-child(3) span { color: #7A4A3E; }
+.kpi .flag { position: absolute; right: 9px; top: 9px; font-size: 10px; font-weight: 700; padding: 2px 7px;
+             border-radius: 999px; background: #FFD3C9; color: #A83A28; margin: 0; }
+.kpi .flag:empty { display: none; }
+
+/* ⑥ 영양소 칩 — 토글 없이 항상 펼침. 권장섭취량(RNI) 대비 과부족만 말한다.
+   ±% 의 부호가 곧 색이다 — 0 이상은 푸른 계열, 음수(권장섭취량 미달)는 붉은 계열 그라데이션.
+   그중 평균필요량(EAR)에도 못 미치는 칸만 멜론 외곽선 + "부족" 글자를 더해 3칸의 "부족 N" 과 맞춘다 */
+.micro { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+.micro > div { display: flex; flex-direction: column; gap: 5px; }
+.micro .v { height: 52px; border-radius: 14px; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; gap: 1px; font-size: 14px; font-weight: 700; letter-spacing: -.02em; }
+.micro .v em { font-style: normal; font-size: 9px; font-weight: 700; }
+.micro .n { font-size: 9.5px; color: var(--ink3); text-align: center; letter-spacing: -.03em; }
+.micro [data-band="hi"]   .v { background: linear-gradient(180deg, #CDE9E7, #B5DAD8); color: #0A5F5C; }
+.micro [data-band="mid"]  .v { background: linear-gradient(180deg, var(--teal-tint2), var(--teal-tint)); color: var(--teal-ink); }
+.micro [data-band="lo"]   .v { background: linear-gradient(180deg, #FFF1EC, #FFDCD3); color: #C9452F; }
+.micro [data-band="short"] .v { background: linear-gradient(180deg, #FFD9CF, #FFB2A1); color: #8E2E1E; box-shadow: inset 0 0 0 1.5px var(--melon); }
+.micro [data-band="short"] .n { color: var(--melon-ink); font-weight: 700; }
+
+/* ② 이번 주 식단 — 요일이 컬럼. 색은 무관한 5색이 아니라 월→금 단일 색상 램프다
+   (요일은 순서 있는 범주 · 명도 단조 감소 검증: L .962 → .794, 인접 ΔL ≥ .034) */
+.week { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 10px;
+        align-items: stretch; }
+.week > div { border-radius: 14px; padding: 10px 5px 11px; display: flex; flex-direction: column;
+              align-items: center; gap: 5px; text-align: center; min-width: 0; }
+.week .d { font-size: 10px; font-weight: 700; color: var(--ink3); letter-spacing: .04em; }
+.week .n { font-size: 15px; font-weight: 700; line-height: 1; color: var(--ink2); }
+/* 긴 이름(친환경토마코펜라이스)이 칩 밖으로 나가지 않게: keep-all 은 유지하되
+   달리 방법이 없을 때만 낱말 안에서 끊고, 세 줄에서 말줄임한다 */
+.week .m { font-size: 10.5px; font-weight: 500; color: var(--ink); line-height: 1.35;
+           word-break: keep-all; overflow-wrap: anywhere; min-width: 0; max-width: 100%;
+           display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.week .k { font-size: 9.5px; color: #4A4740; margin-top: auto; padding-top: 4px; line-height: 1.35; }
+/* 요일 5색 — 월은 브랜드 아쿠아, 화는 에그셸 계열을 그대로 쓰고 나머지 셋을 최대한 벌렸다.
+   전체쌍 정상시야 최악 ΔE 10.7 · 본문 대비는 어디서나 7.2:1 이상.
+   색맹에서는 갈리지 않는 쌍이 있으므로 칩마다 요일 글자와 날짜를 반드시 함께 둔다 */
+.week [data-wd="1"] { background: #9BD7D5; }   /* 월 · 브랜드 아쿠아 */
+.week [data-wd="2"] { background: #FBE9B7; }   /* 화 · 에그셸 */
+.week [data-wd="3"] { background: #F3B2A4; }   /* 수 · 멜론 */
+.week [data-wd="4"] { background: #CBC2FB; }   /* 목 · 페리윙클 */
+.week [data-wd="5"] { background: #A3F5B4; }   /* 금 · 세이지 */
+.week [data-when="past"] > * { opacity: .62; }
+.week [data-when="today"] { background: var(--ink); }
+.week [data-when="today"] .d { color: rgba(255,253,246,.55); }
+.week [data-when="today"] .n, .week [data-when="today"] .m { color: var(--surface); }
+.week [data-when="today"] .m { font-weight: 700; }
+.week [data-when="today"] .k { color: rgba(255,253,246,.55); }
+
+/* ⑧ 잔반 탄소 — 읽기 전용 정보 카드. 개인 기록·선택은 두지 않는다 */
+.carbon { background: var(--teal-tint2); box-shadow: 0 1px 2px rgba(51,49,45,.04), 0 10px 26px rgba(18,151,147,.09); }
+.carbon .eyebrow { color: var(--teal-ink); }
+.co2 { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.co2 b { font-size: 46px; font-weight: 700; letter-spacing: -.035em; line-height: 1; color: var(--teal-ink); }
+.co2 span { font-size: 12.5px; color: #5C6E6D; }
+.cmp { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.cmp > div { background: var(--surface); border-radius: var(--r-tile); padding: 12px 14px; }
+.cmp b { display: block; font-size: 19px; font-weight: 700; color: var(--ink); }
+.cmp span { display: block; font-size: 11px; color: var(--ink2); margin-top: 3px; line-height: 1.45; }
+
+/* ⑨ 이슈 링크 — 제목 1줄 + 출처 + 날짜. 본문 요약 없음 */
+.news { list-style: none; margin: 6px 0 0; padding: 0; }
+.news li { display: flex; flex-direction: column; gap: 7px; padding: 13px 0; border-bottom: 1px solid var(--hair); }
+.news li:last-child { border-bottom: 0; }
+/* 헤드라인이 잘리는 것보다 요약이 짧은 편이 낫다 — 제목에 3줄, 요약에 2줄 */
+.news li a { font-size: 13.5px; font-weight: 600; color: var(--ink); line-height: 1.4;
+             display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.news li p { margin: 0; font-size: 11.5px; color: var(--ink2); line-height: 1.55;
+             display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.news li div { display: flex; align-items: center; gap: 8px; }
+.news li em { font-style: normal; font-size: 10px; font-weight: 700; color: var(--teal-ink);
+              background: var(--teal-tint); border-radius: 6px; padding: 3px 7px; }
+.news li em.ko { color: var(--ink3); background: var(--hair); }   /* 기계 번역임을 숨기지 않는다 */
+.news li small { font-size: 11px; color: var(--ink3); }
+
+/* 데스크톱 — 왼쪽 히어로·추이·평면도 / 오른쪽 급식·주간·탄소·이슈 */
+@media (min-width: 900px) {
+  /* 두 패널의 아래 끝을 맞춘다 — 그리드는 stretch 로 두고, 짧은 쪽의 마지막 카드가 남는 높이를 흡수 */
+  main { max-width: 1120px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px;
+         align-items: stretch; padding: 40px 16px 56px; }
+  .col > .grow { flex: 1 1 auto; }
+  #newscard.grow { display: flex; flex-direction: column; }
+  #newscard.grow .news { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+  /* 짧은 쪽 컬럼이 흡수하는 높이는 빈 여백이 아니라 더 큰 평면도가 된다 */
+  #plancard.grow { display: flex; flex-direction: column; }
+  #plancard.grow #plan { flex: 1 1 0; min-height: 320px; aspect-ratio: auto; }
+  .card { padding: 24px 26px; }
+  .big b { font-size: 120px; } .big i { font-size: 28px; }
+  #chartcard { padding-top: 32px; padding-bottom: 32px; }
+  #chart { height: 152px; }
+}
+@media (hover: hover) {
+  .card, .hero { transition: transform .18s ease, box-shadow .18s ease; }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(51,49,45,.05), 0 16px 34px rgba(51,49,45,.08); }
+  .pick button { transition: background .12s ease; }
+  .news li a:hover { color: var(--teal-ink); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; transform: none !important; }
+}
