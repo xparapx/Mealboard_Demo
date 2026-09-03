@@ -1,9 +1,8 @@
-/* 주간식단 화면 — 이번 주 식단(요일 컬럼). meal.json 이 이미 월~금을 통째로 담고 있다. 오늘급식과 같은 응답을 쓴다.
-   아래 인사이트 카드: 주간 영양 추이(kpi 3타일 + 스파크라인) · 메뉴 인기 TOP5(순위 목록). 진입 시 1회 + 5분 */
-import { $, S, esc, j, why } from "./core.js";
+/* 주간식단 화면 — 이번 주 식단(요일 컬럼). meal.json 이 이미 월~금을 통째로 담고 있다. 오늘급식과 같은 응답을 쓴다(loadMeal 이 한 번 받아 둘 다 그린다).
+   아래 인사이트 카드: 주간 영양 추이(kpi 3타일 + 스파크라인) · 메뉴 인기 TOP5(순위 목록). 집계에서 오므로 30분마다 */
+import { $, jSoft, esc, WD, setState } from "./core.js";
 import { splitAllergy, loadMeal } from "./today.js";
 
-const WD = "일월화수목금토";
 export function renderWeek(m) {
   const card = $("#weekcard"), week = (m.week || []).filter(d => d.menu && d.menu.length);
   card.hidden = week.length < 2;
@@ -27,16 +26,11 @@ export function renderWeek(m) {
 }
 
 /* ---------------- 인사이트 카드 ---------------- */
-const setState = (id, ok, reason) => {
-  const card = $("#" + id); card.dataset.state = ok ? "ok" : "no_data";
-  const e = card.querySelector(".empty"), w = why(reason); if (e && w) e.textContent = w;
-};
 const md = w => `${+w.slice(5, 7)}/${+w.slice(8, 10)}`;   // "2026-08-24" → "8/24"
 
 function renderNutrition(d) {
   const weeks = (d.weeks || []).filter(w => w.energy_pct != null);
-  setState("nutricard", d.state === "ok" && weeks.length > 0, d.reason);
-  if (!weeks.length) return;
+  if (!setState("nutricard", d.state === "ok" && weeks.length > 0, d.reason)) return;
   const last = weeks[weeks.length - 1];
   const flag = last.energy_pct > 110 ? "많음" : last.energy_pct < 90 ? "적음" : "";
   $("#nutrikpi").innerHTML =
@@ -59,8 +53,7 @@ function renderNutrition(d) {
 
 function renderTop(d) {
   const items = d.items || [];
-  setState("topcard", d.state === "ok" && items.length > 0, d.reason);
-  if (!items.length) return;
+  if (!setState("topcard", d.state === "ok" && items.length > 0, d.reason)) return;
   const top = Math.max(1, ...items.map(x => x.popularity || 0));
   $("#toplead").innerHTML = `<b>${esc(items[0].menu)}</b> 날에 줄이 가장 빨리 늘었습니다`;
   $("#toplist").innerHTML = items.map((x, i) =>
@@ -69,19 +62,13 @@ function renderTop(d) {
 }
 
 const RENDER = { nutricard: renderNutrition, topcard: renderTop };
-let lastInsight = 0;
-async function loadInsights() {
-  lastInsight = Date.now();
-  const get = u => j(u).catch(e => (console.error(u, e), { state: "no_data", reason: "서버에 닿지 못했습니다" }));
-  const [n, t] = await Promise.all([get("/api/insight/nutrition?weeks=8"), get("/api/insight/menus?n=5")]);
-  renderNutrition(n); renderTop(t);
-}
 
 export const screen = {
   every: 300000,
-  async poll() {
-    if (Date.now() - lastInsight >= 300000) loadInsights();
-    return S.meal ? renderWeek(S.meal) : loadMeal();
+  poll: loadMeal,                                      // 식단은 5분마다 다시 받는다(05:40 캐시가 바뀐 뒤 화면에 머물러도 따라온다)
+  async slow() {
+    const [n, t] = await Promise.all([jSoft("/api/insight/nutrition?weeks=8"), jSoft("/api/insight/menus?n=5")]);
+    renderNutrition(n); renderTop(t);
   },
   render(cardId, data) { RENDER[cardId]?.(data); },
 };

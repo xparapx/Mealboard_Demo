@@ -40,9 +40,9 @@ function bandOf(x) {
 }
 const shortLabel = s => s.replace(/\s*\(.*\)\s*$/, "");   // "비타민A (㎍RAE)" → "비타민A"
 
-export async function loadMeal() {
-  S.meal = await j("/api/meal");
-  renderMeal(S.meal);
+let inflight = null;
+export function loadMeal() {                          // 진행 중이면 그 약속을 나눠 준다 — 두 화면이 동시에 불러도 요청은 하나
+  return inflight ??= j("/api/meal").then(m => { S.meal = m; renderMeal(m); return m; }).finally(() => { inflight = null; });
 }
 
 export function renderMeal(m) {

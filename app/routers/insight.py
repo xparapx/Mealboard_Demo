@@ -15,7 +15,7 @@ from fastapi import APIRouter, Query
 from ..config import DB_PATH, FEED_SOURCE, ROLLUP_WINDOW, ZONES_JSON
 from ..insight_calc import GOLDEN_WAIT, day_summary, golden_bins, median_or_none
 from ..insights_db import connect_reports_ro, connect_ro, meta
-from ..lunch import BUCKET_MIN, bounds, iso_at, minute_of_day, seconds_of_day, weekday_of
+from ..lunch import BUCKET_MIN, LUNCH_HI, LUNCH_LO, bounds, iso_at, minute_of_day, seconds_of_day, weekday_of
 from ..mealjson import menu_on, nutrition_rows, read_meal
 from .typical import MIN_BUCKETS
 from vision.zones import load_zones, polygon_area_m2
@@ -124,7 +124,8 @@ def heatmap(weeks: int = Query(4, ge=1, le=12)):
     if not rows:
         return _no("집계된 날이 없다", cells=[], window=_window(), days=0)
     return {"state": "ok", "basis": "weekday" if days >= 5 else "recent", "weeks": weeks, "days": days,
-            "bucket_min": BUCKET_MIN, "window": _window(), "source": FEED_SOURCE,
+            "bucket_min": BUCKET_MIN, "window": _window(), "lunch": {"lo": LUNCH_LO, "hi": LUNCH_HI},   # 화면은 급식 창만 보여 준다
+            "golden_wait": GOLDEN_WAIT, "source": FEED_SOURCE,
             "cells": [{"weekday": r["weekday"], "minute_of_day": r["bin"],
                        "wait_min": round(r["w"], 1) if r["w"] is not None else None,
                        "queue": round(r["q"], 1) if r["q"] is not None else None, "n_days": r["d"]} for r in rows]}
@@ -215,6 +216,7 @@ def forecast(date: dt.date | None = Query(None), weeks: int = Query(4, ge=1, le=
     curve = [{"minute_of_day": p["minute_of_day"], "typical_wait": p["wait"], "forecast_wait": round(p["wait"] * factor, 1)} for p in typical]
     peak = max(curve, key=lambda p: p["forecast_wait"])
     return {"state": "ok", "basis": basis, "date": date, "weeks": weeks, "menu": dishes, "menu_factor": factor, "menu_matched": matched,
+            "golden_wait": GOLDEN_WAIT,
             "formula": f"forecast = typical({basis}) × menu_factor(인기 지수 평균/100, {MENU_FACTOR[0]}~{MENU_FACTOR[1]} 클램프); "
                        f"golden = forecast ≤ {GOLDEN_WAIT}분",
             "peak": {"minute_of_day": peak["minute_of_day"], "wait_min": peak["forecast_wait"]},

@@ -28,7 +28,7 @@
 .stats span { display: block; font-size: 11.5px; color: rgba(255,253,246,.5); margin-top: 3px; }
 
 .hero[data-level="busy"] { background: var(--melon); }
-.waitcard:has(.hero[data-level="busy"]) { box-shadow: 0 16px 36px rgba(255,114,96,.32); }
+.waitcard[data-level="busy"] { box-shadow: 0 16px 36px rgba(255,114,96,.32); }   /* 상자의 상태는 JS 가 히어로와 같이 적는다 — :has() 없이 */
 .hero[data-level="busy"] .eyebrow, .hero[data-level="busy"] .big i,
 .hero[data-level="busy"] .arrive span { color: rgba(43,20,16,.62); }
 .hero[data-level="busy"] .big b, .hero[data-level="busy"] .arrive b, .hero[data-level="busy"] .stats b { color: #2B1410; }
@@ -42,9 +42,9 @@
 .hero[data-level="wait"] .big b { color: rgba(255,253,246,.28); }
 
 .hero[data-level="off"] { background: #FBF8F0; border: 1.5px dashed #D5CDBA; border-radius: 26px 26px 0 0; }
-.waitcard:has(.hero[data-level="off"]) { box-shadow: none; }
-.waitcard:has(.hero[data-level="off"]) .trend { border: 1.5px dashed #D5CDBA; border-top: 0; border-radius: 0 0 26px 26px; }
-.waitcard:has(.hero[data-level="off"]) .hero:last-child { border-radius: 26px; }
+.waitcard:not(.hastrend) .hero { border-radius: 26px; }   /* 추이 절이 없으면 히어로가 카드 전체 — 점선 테두리가 모서리까지 온전히 */
+.waitcard[data-level="off"] { box-shadow: none; }
+.waitcard[data-level="off"] .trend { border: 1.5px dashed #D5CDBA; border-top: 0; border-radius: 0 0 26px 26px; }
 .hero[data-level="off"] .eyebrow { color: #A9A296; }
 .hero[data-level="off"] .big b, .hero[data-level="off"] .big i { color: var(--off); }
 .hero[data-level="off"] .dot { background: var(--off); box-shadow: none; }
@@ -197,7 +197,7 @@ details > summary::-webkit-details-marker { display: none; }
 .news .bullets { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .news .bullets li { display: block; padding: 0 0 0 14px; border: 0; position: relative; font-size: 13.5px; line-height: 1.55; color: #4A4740; }
 .news .bullets li::before { content: ""; position: absolute; left: 0; top: .6em; width: 6px; height: 6px; border-radius: 50%; background: var(--teal); }
-.news .why { font-style: italic; color: var(--ink2); font-size: 12.5px; -webkit-line-clamp: 1; }
+.news li p.why { font-style: italic; color: var(--ink2); font-size: 12.5px; -webkit-line-clamp: 1; }
 .news a.more { align-self: flex-start; font-size: 11.5px; font-weight: 700; color: var(--teal-ink); }
 .news li div { display: flex; align-items: center; gap: 8px; }
 .news li em { font-style: normal; font-size: 10px; font-weight: 700; color: var(--teal-ink);

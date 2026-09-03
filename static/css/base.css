@@ -62,8 +62,10 @@ a.u { border-bottom: 1px solid rgba(12,109,106,.35); }
   .rail a { height: 54px; border-radius: 14px; font-size: 10px; gap: 2px; }
   .rail a[aria-current="page"] { background: var(--surface); box-shadow: var(--e1); view-transition-name: rail-cur; }
   .views { max-width: 1120px; margin: 0 auto; padding: 40px 16px 56px 88px; display: grid;
-           grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; align-items: stretch; }
+           grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; align-items: stretch;
+           grid-auto-flow: row dense; }          /* 숨은 카드(주간식단·이슈)가 남긴 자리는 다음 카드가 채운다 */
   .view { display: contents; }
+  .view > * { max-width: none; }                /* 모바일의 390px 상한은 여기서 푼다 — display:contents 라도 선택자는 그대로 맞는다 */
 }
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }

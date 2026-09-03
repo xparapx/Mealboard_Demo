@@ -41,10 +41,10 @@
 .log li:last-child { border-bottom: 0; }
 .log li b { font-size: 13.5px; font-weight: 600; color: var(--ink); }
 .log li div { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.log li em { font-style: normal; font-size: 10px; font-weight: 700; border-radius: 6px; padding: 3px 7px;
+.log em { font-style: normal; font-size: 10px; font-weight: 700; border-radius: 6px; padding: 3px 7px;
              background: var(--melon-tint); color: var(--melon-ink); }
-.log li em.teal { background: var(--teal-tint); color: var(--teal-ink); }
-.log li small { font-size: 11px; color: var(--ink3); }
+.log em.teal { background: var(--teal-tint); color: var(--teal-ink); }
+.log small { font-size: 11px; color: var(--ink3); }
 
 /* 바탕색 타일 2×2 — 측정 품질 */
 .well { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }

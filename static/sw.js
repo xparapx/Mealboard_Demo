@@ -31,8 +31,7 @@ self.addEventListener("fetch", e => {
     // 이게 없으면 네트워크 우선이어도 그 fetch 가 디스크 캐시의 옛 파일로 조용히 채워진다
     e.respondWith(fetch(e.request, { cache: "no-cache" })
       .then(res => {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy));
+        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }   // 502·404 로 좋은 사본을 덮지 않는다
         return res;
       })
       // 오프라인 폴백: 화면은 "/" 로 물러서도 되지만 모듈·스타일은 그 자신만 — HTML 을 스크립트로 돌려주지 않게

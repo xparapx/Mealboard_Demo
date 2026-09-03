@@ -254,7 +254,7 @@ tr:last-child td{border-bottom:0}
 </ul></div>
 </div>
 <h2>정보 우선순위 <small>왜 이 순서인가</small></h2>
-<p class="sub">위에 있을수록 크고, 아래로 갈수록 작아지며 접힙니다. 이 표가 곧 화면의 세로 순서입니다.</p>
+<p class="sub">위에 있을수록 크고, 아래로 갈수록 작아지며 접힙니다. v5 에서는 이 표가 곧 한 화면의 세로 순서였고, 09-03 5화면 이후에는 각 화면 안의 순서(1~4 대기시간 · 5 실시간 · 6~8·10 오늘급식 · 9 주간식단 · 11 이슈피드 — 네비게이션 절 참조)입니다.</p>
 <div class="prio">
   <div>순위</div><div>사용자가 알고 싶은 것</div><div>화면 요소</div><div>데이터</div>
   <div class="n">1</div><div>지금 서면 몇 분?</div><div>히어로 — 104px 숫자 + 판정 칩(여유/보통/혼잡)</div><div><code>/api/status</code> wait_min, state</div>
@@ -940,8 +940,8 @@ tr:last-child td{border-bottom:0}
 <table>
 <tr><th>뷰포트</th><th>레이아웃</th><th>비고</th></tr>
 <tr><td>≤ 899px (모바일)</td><td>단일 컬럼, max-width 390, 카드 간격 12px — 모바일 도면 그대로</td><td>기본</td></tr>
-<tr><td>≥ 900px (데스크톱)</td><td>max-width 1120, <b>12컬럼 보드</b>(09-03, 네비게이션 절 참조): 대기시간(1~7행1) · 실시간(8~12, 행1~3) · 갱신 메타(행2) · 오늘급식(행3) · 주간식단(행4) · 이슈피드(8~12 행4), gap 24px, 좌측 레일 자리 88px</td><td>히어로 숫자 120px, 추이 130px. 카드 여백은 <code>--px:26px; --py:24px</code>. 이전 2컬럼(<code>1.1fr 1fr</code>)과 <code>.grow</code> 높이 맞춤은 폐기 — 그리드 행이 맞춘다. 마크업은 <code>.col</code> 두 개로 묶어 두고 모바일에서는 그 래퍼가 그냥 세로 스택</td></tr>
-<tr><td colspan="3"><b>두 패널의 아래 끝 맞추기.</b> 어느 쪽이 긴지는 그날 데이터에 달렸다(주말이면 급식·탄소 카드가 빠지고, 평일이면 오른쪽이 400px 넘게 길다). 그리드를 stretch 로 두고 <em>양쪽 모두</em> 마지막으로 '보이는' 카드에 <code>.grow</code>(<code>flex:1 1 auto</code>)를 건다 — 긴 쪽은 흡수할 여백이 없어 그대로다. 카드가 <code>hidden</code> 이 될 수 있어 CSS <code>:last-child</code> 로는 안 되고 JS 가 고른다. 흡수한 높이는 여백으로 두지 않는다: 평면도 카드가 늘면 평면도 자체가 커지고(<code>drawPlan</code> 이 폭·높이 둘 다에 맞춰 축척을 정한다), 이슈 카드가 늘면 목록이 벌어진다.</td></tr>
+<tr><td>≥ 900px (데스크톱)</td><td>max-width 1120, <b>12컬럼 보드</b>(09-03, 네비게이션 절 참조): 대기시간(1~7행1) · 실시간(8~12, 행1~3) · 갱신 메타(행2) · 오늘급식(행3) · 주간식단(행4) · 이슈피드(8~12 행4), gap 24px, 좌측 레일 자리 88px</td><td>히어로 숫자 120px, 추이 130px. 카드 여백은 <code>--px:26px; --py:24px</code>. 이전 2컬럼(<code>1.1fr 1fr</code>)과 <code>.grow</code> 높이 맞춤은 폐기 — 그리드 행이 맞춘다. 마크업은 <code>section.view</code> 다섯 개(모바일은 페이저의 한 칸, 데스크톱은 <code>display:contents</code> 로 카드가 곧 그리드 아이템)</td></tr>
+<tr><td colspan="3"><b>(v5 당시 규칙 — 09-03 12컬럼 보드로 폐기, 기록용) 두 패널의 아래 끝 맞추기.</b> 어느 쪽이 긴지는 그날 데이터에 달렸다(주말이면 급식·탄소 카드가 빠지고, 평일이면 오른쪽이 400px 넘게 길다). 그리드를 stretch 로 두고 <em>양쪽 모두</em> 마지막으로 '보이는' 카드에 <code>.grow</code>(<code>flex:1 1 auto</code>)를 건다 — 긴 쪽은 흡수할 여백이 없어 그대로다. 카드가 <code>hidden</code> 이 될 수 있어 CSS <code>:last-child</code> 로는 안 되고 JS 가 고른다. 흡수한 높이는 여백으로 두지 않는다: 평면도 카드가 늘면 평면도 자체가 커지고(<code>drawPlan</code> 이 폭·높이 둘 다에 맞춰 축척을 정한다), 이슈 카드가 늘면 목록이 벌어진다.</td></tr>
 </table>
 <h4 style="margin:24px 0 8px;font-size:11px;letter-spacing:.18em;color:var(--teal)">고도 체계 (CSS 변수)</h4>
 <div class="tokens">

@@ -1053,7 +1053,7 @@ systemctl status mealboard-api --no-pager</code></pre>
       &lt;div class=&quot;body&quot;&gt;
         &lt;div class=&quot;lead&quot; id=&quot;heatlead&quot;&gt;셀을 누르면 그 시각의 평소 대기를 읽습니다&lt;/div&gt;
         &lt;div class=&quot;heat&quot; id=&quot;heat&quot;&gt;&lt;/div&gt;
-        &lt;div class=&quot;heatlegend&quot;&gt;&lt;span&gt;짧음&lt;/span&gt;&lt;i&gt;&lt;/i&gt;&lt;span&gt;긺&lt;/span&gt;&lt;em&gt;&lt;/em&gt;&lt;span&gt;3분 이하 · 황금&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;heatlegend&quot;&gt;&lt;span&gt;짧음&lt;/span&gt;&lt;i&gt;&lt;/i&gt;&lt;span&gt;긺&lt;/span&gt;&lt;em&gt;&lt;/em&gt;&lt;span id=&quot;heatgolden&quot;&gt;3분 이하 · 황금&lt;/span&gt;&lt;/div&gt;
         &lt;div class=&quot;note foot&quot; id=&quot;heatfoot&quot;&gt;&lt;/div&gt;
       &lt;/div&gt;
       &lt;div class=&quot;empty&quot; id=&quot;heatempty&quot;&gt;집계가 아직 없습니다&lt;/div&gt;
@@ -1257,8 +1257,7 @@ self.addEventListener(&quot;fetch&quot;, e =&gt; {
     // 이게 없으면 네트워크 우선이어도 그 fetch 가 디스크 캐시의 옛 파일로 조용히 채워진다
     e.respondWith(fetch(e.request, { cache: &quot;no-cache&quot; })
       .then(res =&gt; {
-        const copy = res.clone();
-        caches.open(CACHE).then(c =&gt; c.put(e.request, copy));
+        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c =&gt; c.put(e.request, copy)); }   // 502·404 로 좋은 사본을 덮지 않는다
         return res;
       })
       // 오프라인 폴백: 화면은 &quot;/&quot; 로 물러서도 되지만 모듈·스타일은 그 자신만 — HTML 을 스크립트로 돌려주지 않게
@@ -3438,7 +3437,7 @@ from fastapi import APIRouter, Query
 from ..config import DB_PATH, FEED_SOURCE, ROLLUP_WINDOW, ZONES_JSON
 from ..insight_calc import GOLDEN_WAIT, day_summary, golden_bins, median_or_none
 from ..insights_db import connect_reports_ro, connect_ro, meta
-from ..lunch import BUCKET_MIN, bounds, iso_at, minute_of_day, seconds_of_day, weekday_of
+from ..lunch import BUCKET_MIN, LUNCH_HI, LUNCH_LO, bounds, iso_at, minute_of_day, seconds_of_day, weekday_of
 from ..mealjson import menu_on, nutrition_rows, read_meal
 from .typical import MIN_BUCKETS
 from vision.zones import load_zones, polygon_area_m2
@@ -3547,7 +3546,8 @@ def heatmap(weeks: int = Query(4, ge=1, le=12)):
     if not rows:
         return _no(&quot;집계된 날이 없다&quot;, cells=[], window=_window(), days=0)
     return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: &quot;weekday&quot; if days &gt;= 5 else &quot;recent&quot;, &quot;weeks&quot;: weeks, &quot;days&quot;: days,
-            &quot;bucket_min&quot;: BUCKET_MIN, &quot;window&quot;: _window(), &quot;source&quot;: FEED_SOURCE,
+            &quot;bucket_min&quot;: BUCKET_MIN, &quot;window&quot;: _window(), &quot;lunch&quot;: {&quot;lo&quot;: LUNCH_LO, &quot;hi&quot;: LUNCH_HI},   # 화면은 급식 창만 보여 준다
+            &quot;golden_wait&quot;: GOLDEN_WAIT, &quot;source&quot;: FEED_SOURCE,
             &quot;cells&quot;: [{&quot;weekday&quot;: r[&quot;weekday&quot;], &quot;minute_of_day&quot;: r[&quot;bin&quot;],
                        &quot;wait_min&quot;: round(r[&quot;w&quot;], 1) if r[&quot;w&quot;] is not None else None,
                        &quot;queue&quot;: round(r[&quot;q&quot;], 1) if r[&quot;q&quot;] is not None else None, &quot;n_days&quot;: r[&quot;d&quot;]} for r in rows]}
@@ -3638,6 +3638,7 @@ def forecast(date: dt.date | None = Query(None), weeks: int = Query(4, ge=1, le=
     curve = [{&quot;minute_of_day&quot;: p[&quot;minute_of_day&quot;], &quot;typical_wait&quot;: p[&quot;wait&quot;], &quot;forecast_wait&quot;: round(p[&quot;wait&quot;] * factor, 1)} for p in typical]
     peak = max(curve, key=lambda p: p[&quot;forecast_wait&quot;])
     return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: basis, &quot;date&quot;: date, &quot;weeks&quot;: weeks, &quot;menu&quot;: dishes, &quot;menu_factor&quot;: factor, &quot;menu_matched&quot;: matched,
+            &quot;golden_wait&quot;: GOLDEN_WAIT,
             &quot;formula&quot;: f&quot;forecast = typical({basis}) × menu_factor(인기 지수 평균/100, {MENU_FACTOR[0]}~{MENU_FACTOR[1]} 클램프); &quot;
                        f&quot;golden = forecast ≤ {GOLDEN_WAIT}분&quot;,
             &quot;peak&quot;: {&quot;minute_of_day&quot;: peak[&quot;minute_of_day&quot;], &quot;wait_min&quot;: peak[&quot;forecast_wait&quot;]},
