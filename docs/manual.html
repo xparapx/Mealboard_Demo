@@ -295,8 +295,8 @@ RUN_DIR=/run/mealboard
 LLM_HEF=
 # 리포트(예보·결산)에도 LLM 을 쓸지 — 0 이면 규칙 템플릿(기본). 09-04 스파이크에서 1.5B 모델은 리포트 문장을 지어내 0 으로 둔다. 기사 요약은 이 값과 무관하게 LLM(영어) → DeepL
 LLM_REPORT=0
-# LLM 에 넣는 기사 본문 글자 상한 — 09-04 스파이크(Qwen2.5-1.5B, HailoRT 5.1.1): 6,000자 OK · 8,000자 실패 → 4800 권장
-LLM_CONTEXT_CHARS=4800
+# LLM 에 넣는 기사 본문 글자 상한 — 09-04 스파이크(Qwen2.5-1.5B, HailoRT 5.1.1): 4,000자까지 네 줄 형식이 안정, 6,000자부터 흔들림 → 3200 권장
+LLM_CONTEXT_CHARS=3200
 # 헤드라인 번역기 — deepl | local | none
 TRANSLATOR=deepl
 # The Guardian Content API 키 (기사 본문 확보용, 비상업 무료). 없으면 피드 요약으로 폴백
@@ -1982,7 +1982,7 @@ JUNK = re.compile(r&quot;\s*(continue reading|read more)\.*\s*$&quot;, re.I)
 MIN_SUMMARY = 60          # 이보다 짧으면 카드에서 요약이 제 몫을 못 한다
 BULLET_MAX, WHY_MAX = 120, 80                                    # 한국어 글자 수(DeepL 번역 뒤). 영어 25단어 ≈ 한국어 70~110자
 EN_MAX = 260                                                      # 영어 한 줄 상한 — 모델이 단락을 쏟아내면 거른다
-CONTEXT_CHARS = int(os.getenv(&quot;LLM_CONTEXT_CHARS&quot;, &quot;4800&quot;))     # 스파이크(09-04, Qwen2.5-1.5B·HailoRT 5.1.1): 6,000자 OK · 8,000자 실패 → 4,800
+CONTEXT_CHARS = int(os.getenv(&quot;LLM_CONTEXT_CHARS&quot;, &quot;3200&quot;))     # 스파이크(09-04, Qwen2.5-1.5B·HailoRT 5.1.1): 4,000자까지 네 줄 형식 안정 → 3,200
 # 09-04 스파이크 결론: 1.5B 모델은 한국어 문장이 무너지지만(문법·중국어 혼입) 영어 요약은 정확하다. 그래서 요약은 두 단계 —
 # ① 로컬 LLM 이 영어 네 줄(요약 3 + Why) ② DeepL 이 한국어로. 숫자 검사(기사에 없는 숫자 금지)는 ① 의 영어에서, 한국어 검사는 ② 뒤에 한다
 DIGEST_SYSTEM = (&quot;Summarize the news article below for high-school students. Use only facts and numbers that appear in the article. &quot;
@@ -5954,6 +5954,11 @@ def _hailo_backend(hef):
     except Exception as e:
         msg = str(e).lower()
         raise (LLMBusy if &quot;busy&quot; in msg or &quot;in use&quot; in msg else LLMUnavailable)(f&quot;LLM 로드 실패: {e}&quot;)
+    try:
+        stops = list(llm.get_stop_tokens() or [])                # Qwen: &lt;|im_end|&gt; &lt;|endoftext|&gt; — generate_all 이 문자열 끝에 남긴다(09-04 확인)
+    except Exception:
+        stops = []
+    stops = list(dict.fromkeys(stops + [&quot;&lt;|im_end|&gt;&quot;, &quot;&lt;|endoftext|&gt;&quot;, &quot;&lt;|im_start|&gt;&quot;]))
 
     def complete(system, user, max_tokens, temperature, timeout_s):
         prompt = [{&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: system}, {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: user}]
@@ -5971,7 +5976,10 @@ def _hailo_backend(hef):
             llm.clear_context()                                 # 호출마다 독립 — 앞 대화가 다음 요약에 새지 않게
         except Exception:
             pass
-        return out if isinstance(out, str) else &quot;&quot;.join(str(t) for t in out)
+        out = out if isinstance(out, str) else &quot;&quot;.join(str(t) for t in out)
+        for s in stops:                                         # 종료 토큰과 그 뒤는 버린다
+            out = out.split(s)[0]
+        return out.strip()
 
     def close():
         for o in (llm, vdev):

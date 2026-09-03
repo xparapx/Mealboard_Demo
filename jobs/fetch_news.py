@@ -33,7 +33,7 @@ JUNK = re.compile(r"\s*(continue reading|read more)\.*\s*$", re.I)
 MIN_SUMMARY = 60          # 이보다 짧으면 카드에서 요약이 제 몫을 못 한다
 BULLET_MAX, WHY_MAX = 120, 80                                    # 한국어 글자 수(DeepL 번역 뒤). 영어 25단어 ≈ 한국어 70~110자
 EN_MAX = 260                                                      # 영어 한 줄 상한 — 모델이 단락을 쏟아내면 거른다
-CONTEXT_CHARS = int(os.getenv("LLM_CONTEXT_CHARS", "4800"))     # 스파이크(09-04, Qwen2.5-1.5B·HailoRT 5.1.1): 6,000자 OK · 8,000자 실패 → 4,800
+CONTEXT_CHARS = int(os.getenv("LLM_CONTEXT_CHARS", "3200"))     # 스파이크(09-04, Qwen2.5-1.5B·HailoRT 5.1.1): 4,000자까지 네 줄 형식 안정 → 3,200
 # 09-04 스파이크 결론: 1.5B 모델은 한국어 문장이 무너지지만(문법·중국어 혼입) 영어 요약은 정확하다. 그래서 요약은 두 단계 —
 # ① 로컬 LLM 이 영어 네 줄(요약 3 + Why) ② DeepL 이 한국어로. 숫자 검사(기사에 없는 숫자 금지)는 ① 의 영어에서, 한국어 검사는 ② 뒤에 한다
 DIGEST_SYSTEM = ("Summarize the news article below for high-school students. Use only facts and numbers that appear in the article. "

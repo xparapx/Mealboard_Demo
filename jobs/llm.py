@@ -100,6 +100,11 @@ def _hailo_backend(hef):
     except Exception as e:
         msg = str(e).lower()
         raise (LLMBusy if "busy" in msg or "in use" in msg else LLMUnavailable)(f"LLM 로드 실패: {e}")
+    try:
+        stops = list(llm.get_stop_tokens() or [])                # Qwen: <|im_end|> <|endoftext|> — generate_all 이 문자열 끝에 남긴다(09-04 확인)
+    except Exception:
+        stops = []
+    stops = list(dict.fromkeys(stops + ["<|im_end|>", "<|endoftext|>", "<|im_start|>"]))
 
     def complete(system, user, max_tokens, temperature, timeout_s):
         prompt = [{"role": "system", "content": system}, {"role": "user", "content": user}]
@@ -117,7 +122,10 @@ def _hailo_backend(hef):
             llm.clear_context()                                 # 호출마다 독립 — 앞 대화가 다음 요약에 새지 않게
         except Exception:
             pass
-        return out if isinstance(out, str) else "".join(str(t) for t in out)
+        out = out if isinstance(out, str) else "".join(str(t) for t in out)
+        for s in stops:                                         # 종료 토큰과 그 뒤는 버린다
+            out = out.split(s)[0]
+        return out.strip()
 
     def close():
         for o in (llm, vdev):
