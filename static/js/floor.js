@@ -16,7 +16,7 @@ export function geom(W, H) {
   const k = Math.min((W - ML - MR) / ROOM.W, (H - MT - MB) / ROOM.D);
   const ox = ML + (W - ML - MR - ROOM.W * k) / 2;
   const oy = MT + (H - MT - MB - ROOM.D * k) / 2;
-  return { W, H, u, k, T: Math.max(3, .45 * k),
+  return { W, H, u, k, T: Math.max(3, .45 * k), fu: Math.min(u, 1.35),   // fu = 글자 배율 상한 — 관리 편집기의 큰 캔버스에서도 사용자 앱과 같은 글자 크기(09-04)
            X: x => ox + (ROOM.W - x) * k, Y: y => oy + y * k,
            P: (nx, ny) => [ox + (ROOM.W - nx * ROOM.W) * k, oy + ny * ROOM.D * k] };   // 정규화 0~1 → 화면
 }
@@ -97,8 +97,9 @@ export function drawFloor(g, G) {
 
 /* 흰 halo 라벨 — 마커 위에서도 읽힌다 */
 export function label(g, G, t, x, y, col) {
-  g.textBaseline = "alphabetic"; g.font = `700 ${Math.max(9, 10.5 * G.u)}px system-ui, sans-serif`;
-  g.lineJoin = "round"; g.lineWidth = 3 * G.u; g.strokeStyle = "#FFFCF6";
+  const fu = G.fu ?? G.u;
+  g.textBaseline = "alphabetic"; g.font = `700 ${Math.max(9, 10.5 * fu)}px system-ui, sans-serif`;
+  g.lineJoin = "round"; g.lineWidth = 3 * fu; g.strokeStyle = "#FFFCF6";
   g.strokeText(t, x, y); g.fillStyle = col; g.fillText(t, x, y);
 }
 
@@ -135,7 +136,7 @@ export function drawZones(g, G, zones, occ = {}, labels = true) {
     const cy = z.polygon.reduce((a, p) => a + p[1], 0) / z.polygon.length;
     const [lx, ly] = G.P(cx, cy);
     g.textAlign = "center";
-    label(g, G, z.label || z.id, lx, ly + 4 * G.u, "#0C6D6A");        // 언제나 틸 잉크 + 종이색 테두리(label) — 흰 글자는 테두리와 같아 보이지 않았다
+    label(g, G, z.label || z.id, lx, ly + 4 * (G.fu ?? G.u), "#0C6D6A");        // 언제나 틸 잉크 + 종이색 테두리(label) — 흰 글자는 테두리와 같아 보이지 않았다
   });
 }
 

@@ -1,7 +1,8 @@
 /* 구역 편집기(3d) — 관리 화면 카드 한 장. 평면도 모드에서 구역 폴리곤을, 프레임 모드에서 ROI(λ 변·출구 방향)와 보정 4점(호모그래피)을 편집한다.
    저장은 PUT /api/admin/zones → 서버가 검증해 data/zones.local.json 에만 쓴다(템플릿은 그대로, 직전 판 .bak 5개).
    실사 프레임 스냅은 <img>(mjpeg) 를 캔버스에 복사한 브라우저 메모리뿐 — 어디에도 저장·전송되지 않는다.
-   캔버스는 touch-action:none, 꼭짓점 핸들 r6 / 히트 반경 22px(지름 44). 틸=선택·정상, 멜론=ROI·λ·파괴적, 옐로 금지 (PLAN §4.5) */
+   캔버스는 touch-action:none, 꼭짓점 핸들 r6 / 히트 반경 22px(지름 44). 틸=선택·정상, 멜론=ROI·λ·파괴적, 옐로 금지 (PLAN §4.5)
+   Shift 를 누른 채 핸들을 끌면 직각 구속(09-04): 원래 x 를 나누던 이웃 꼭짓점은 새 x 로, y 를 나누던 이웃은 새 y 로 따라와 사각형이 유지된다 */
 import { fit } from "/js/core.js";
 import { drawFloor, drawZones, geom } from "/js/floor.js";
 
@@ -138,7 +139,7 @@ function onDown(e) {
   if (poly) {
     let hit = -1, hd = HIT;
     poly.forEach((p, i) => { const [x, y] = M.toS(...p), d = Math.hypot(x - sx, y - sy); if (d < hd) { hd = d; hit = i; } });
-    if (hit >= 0) { Z.vsel = hit; Z.drag = { vi: hit }; draw(); return; }
+    if (hit >= 0) { Z.vsel = hit; Z.drag = { vi: hit, orig: copy(poly) }; draw(); return; }
   }
   const [nx, ny] = M.toN(sx, sy);
   if (Z.mode === "floor") {
@@ -151,7 +152,14 @@ function onMove(e) {
   if (!Z.drag) return;
   const c = e.currentTarget, r = c.getBoundingClientRect(), M = mapping(r.width, r.height);
   const poly = polyOf(); if (!poly) return;
-  poly[Z.drag.vi] = M.toN(e.clientX - r.left, e.clientY - r.top).map(r3);
+  const vi = Z.drag.vi, p = M.toN(e.clientX - r.left, e.clientY - r.top).map(r3);
+  poly[vi] = p;
+  if (e.shiftKey && poly.length >= 4) {                             // 직각 구속 — 드래그 시작 때의 좌표로 어느 이웃이 x·y 를 나누는지 정한다
+    const o = Z.drag.orig, n = poly.length, a = (vi + n - 1) % n, b = (vi + 1) % n;
+    const aSharesX = Math.abs(o[a][0] - o[vi][0]) <= Math.abs(o[b][0] - o[vi][0]);
+    const xs = aSharesX ? a : b, ys = aSharesX ? b : a;
+    poly[xs] = [p[0], o[xs][1]]; poly[ys] = [o[ys][0], p[1]];
+  }
   dirty(); draw();
 }
 function onUp() { Z.drag = null; }
@@ -297,7 +305,7 @@ export function mount(deps) {
     <div class="zchips" id="zchips"></div>
     <div class="zfields" id="zfields"></div>
     <div class="zbar"><button type="button" class="pill" id="zsave" disabled>저장</button><button type="button" class="pill ghost" id="zreset" disabled>되돌리기</button><span class="note" id="zinfo">—</span></div>
-    <div class="note foot">저장은 data/zones.local.json 에만(템플릿은 그대로) · 직전 판 .bak 5개 보존 · vision 은 파일 시각으로 2초 안에 다시 읽고 mock 은 재시작 때 읽는다 · 프레임 스냅은 브라우저 메모리뿐</div>
+    <div class="note foot">Shift + 끌기 = 직각 구속(이웃 꼭짓점이 따라와 사각형 유지) · 저장은 data/zones.local.json 에만(템플릿은 그대로) · 직전 판 .bak 5개 보존 · vision 은 파일 시각으로 2초 안에 다시 읽고 mock 은 재시작 때 읽는다 · 프레임 스냅은 브라우저 메모리뿐</div>
   </section>`);
   const c = $("#zcanvas");
   c.addEventListener("pointerdown", onDown); c.addEventListener("pointermove", onMove); c.addEventListener("pointerup", onUp); c.addEventListener("pointercancel", onUp);

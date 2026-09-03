@@ -2607,7 +2607,7 @@ LUNCH_LO, LUNCH_HI = lunch_bounds()     # import 시점 검증. 잘못된 .env �
  &quot;version&quot;: 1,
  &quot;updated_at&quot;: null,
  &quot;updated_by&quot;: null,
- &quot;note&quot;: &quot;바닥 0~1 정규화. x=폭 15.55m(원점=창가 통로 벽), y=길이 24.65m(원점=배식구 벽). static 탑뷰·mock·vision·rollup·관리 앱이 공유. 관리 앱만 쓴다(PC 에서 직접 편집은 초기값뿐).&quot;,
+ &quot;note&quot;: &quot;바닥 0~1 정규화. x=폭 15.55m(원점=창가 통로 벽), y=길이 24.65m(원점=배식구 벽). static 탑뷰·mock·vision·rollup·관리 앱이 공유. 관리 앱만 쓴다(PC 에서 직접 편집은 초기값뿐). 기본 구역 5개(09-04): 배식대 앞 · 입구쪽 통로(창가) · 출구쪽 통로(테이블 왼쪽 빈 띠 x≥0.84) · 1/2구역 좌석(y=0.552, 2·3번째 테이블 블록 사이 통로에서 분리).&quot;,
  &quot;floor&quot;: {
   &quot;width_m&quot;: 15.55,
   &quot;length_m&quot;: 24.65,
@@ -2643,7 +2643,7 @@ LUNCH_LO, LUNCH_HI = lunch_bounds()     # import 시점 검증. 잘못된 .env �
   },
   {
    &quot;id&quot;: &quot;aisle&quot;,
-   &quot;name&quot;: &quot;창가 통로&quot;,
+   &quot;name&quot;: &quot;입구쪽 통로&quot;,
    &quot;polygon&quot;: [
     [
      0,
@@ -2664,19 +2664,63 @@ LUNCH_LO, LUNCH_HI = lunch_bounds()     # import 시점 검증. 잘못된 .env �
    ]
   },
   {
-   &quot;id&quot;: &quot;seating&quot;,
-   &quot;name&quot;: &quot;좌석&quot;,
+   &quot;id&quot;: &quot;exit_aisle&quot;,
+   &quot;name&quot;: &quot;출구쪽 통로&quot;,
+   &quot;polygon&quot;: [
+    [
+     0.84,
+     0.1
+    ],
+    [
+     1,
+     0.1
+    ],
+    [
+     1,
+     1
+    ],
+    [
+     0.84,
+     1
+    ]
+   ]
+  },
+  {
+   &quot;id&quot;: &quot;seat1&quot;,
+   &quot;name&quot;: &quot;1구역 좌석&quot;,
    &quot;polygon&quot;: [
     [
      0.1415,
      0.1
     ],
     [
-     1,
+     0.84,
      0.1
     ],
     [
-     1,
+     0.84,
+     0.552
+    ],
+    [
+     0.1415,
+     0.552
+    ]
+   ]
+  },
+  {
+   &quot;id&quot;: &quot;seat2&quot;,
+   &quot;name&quot;: &quot;2구역 좌석&quot;,
+   &quot;polygon&quot;: [
+    [
+     0.1415,
+     0.552
+    ],
+    [
+     0.84,
+     0.552
+    ],
+    [
+     0.84,
      1
     ],
     [
@@ -4201,7 +4245,7 @@ def doc():
 
 def test_저장소_템플릿은_검증을_통과한다(doc):
     assert validate_zones(doc) == []
-    assert [z[&quot;id&quot;] for z in doc[&quot;zones&quot;]] == [&quot;counter&quot;, &quot;aisle&quot;, &quot;seating&quot;]
+    assert [z[&quot;id&quot;] for z in doc[&quot;zones&quot;]] == [&quot;counter&quot;, &quot;aisle&quot;, &quot;exit_aisle&quot;, &quot;seat1&quot;, &quot;seat2&quot;]
 
 
 def test_점_판정_경계는_아래_왼쪽만_안():
@@ -4216,16 +4260,18 @@ def test_구역은_첫_일치_우선이고_맞닿은_경계는_한_번만(doc):
     zones = doc[&quot;zones&quot;]
     assert zone_of(0.5, 0.05, zones) == &quot;counter&quot;
     assert zone_of(0.05, 0.5, zones) == &quot;aisle&quot;
-    assert zone_of(0.5, 0.5, zones) == &quot;seating&quot;
+    assert zone_of(0.5, 0.5, zones) == &quot;seat1&quot;
+    assert zone_of(0.5, 0.6, zones) == &quot;seat2&quot;            # y=0.552 에서 위·아래 좌석이 갈린다
+    assert zone_of(0.9, 0.5, zones) == &quot;exit_aisle&quot;       # 테이블 왼쪽 빈 띠(x ≥ 0.84)
     assert zone_of(0.05, 0.10, zones) == &quot;aisle&quot;          # y=0.10 경계: 배식대(위 경계=밖) 가 아니라 통로
-    assert zone_of(0.1415, 0.5, zones) == &quot;seating&quot;       # x=0.1415 경계: 통로(오른 경계=밖) 가 아니라 좌석
+    assert zone_of(0.1415, 0.5, zones) == &quot;seat1&quot;         # x=0.1415 경계: 통로(오른 경계=밖) 가 아니라 좌석
     assert zone_of(0.5, 1.0, zones) is None               # 출입문 벽 위의 점은 어느 구역도 아니다
 
 
 def test_구역별_인원수는_모든_구역을_0_포함으로(doc):
     pts = [{&quot;x&quot;: 0.5, &quot;y&quot;: 0.05}, {&quot;x&quot;: 0.6, &quot;y&quot;: 0.02}, (0.05, 0.5), (0.5, 1.0)]
-    assert count_by_zone(pts, doc[&quot;zones&quot;]) == {&quot;counter&quot;: 2, &quot;aisle&quot;: 1, &quot;seating&quot;: 0}
-    assert count_by_zone([], doc[&quot;zones&quot;]) == {&quot;counter&quot;: 0, &quot;aisle&quot;: 0, &quot;seating&quot;: 0}
+    assert count_by_zone(pts, doc[&quot;zones&quot;]) == {&quot;counter&quot;: 2, &quot;aisle&quot;: 1, &quot;exit_aisle&quot;: 0, &quot;seat1&quot;: 0, &quot;seat2&quot;: 0}
+    assert count_by_zone([], doc[&quot;zones&quot;]) == {&quot;counter&quot;: 0, &quot;aisle&quot;: 0, &quot;exit_aisle&quot;: 0, &quot;seat1&quot;: 0, &quot;seat2&quot;: 0}
 
 
 def test_실제_면적은_폭_곱하기_길이(doc):
@@ -4301,7 +4347,7 @@ def test_로컬_파일이_템플릿을_덮어쓴다(tmp_path, doc):
         json.dumps({&quot;roi&quot;: {&quot;polygon&quot;: SQUARE, &quot;lambda_edge&quot;: [0, 1], &quot;out_dir&quot;: 1}, &quot;updated_by&quot;: &quot;admin&quot;}), encoding=&quot;utf-8&quot;)
     merged = load_zones(tmp_path / &quot;zones.json&quot;)
     assert merged[&quot;roi&quot;][&quot;lambda_edge&quot;] == [0, 1] and merged[&quot;updated_by&quot;] == &quot;admin&quot;
-    assert [z[&quot;id&quot;] for z in merged[&quot;zones&quot;]] == [&quot;counter&quot;, &quot;aisle&quot;, &quot;seating&quot;]   # 덮어쓰지 않은 키는 그대로
+    assert [z[&quot;id&quot;] for z in merged[&quot;zones&quot;]] == [&quot;counter&quot;, &quot;aisle&quot;, &quot;exit_aisle&quot;, &quot;seat1&quot;, &quot;seat2&quot;]   # 덮어쓰지 않은 키는 그대로
 
 
 @pytest.mark.parametrize(&quot;local&quot;, ['{&quot;zones&quot;: []}', &quot;null&quot;, &quot;[1, 2]&quot;, &quot;{broken&quot;])
@@ -4858,7 +4904,7 @@ export function geom(W, H) {
   const k = Math.min((W - ML - MR) / ROOM.W, (H - MT - MB) / ROOM.D);
   const ox = ML + (W - ML - MR - ROOM.W * k) / 2;
   const oy = MT + (H - MT - MB - ROOM.D * k) / 2;
-  return { W, H, u, k, T: Math.max(3, .45 * k),
+  return { W, H, u, k, T: Math.max(3, .45 * k), fu: Math.min(u, 1.35),   // fu = 글자 배율 상한 — 관리 편집기의 큰 캔버스에서도 사용자 앱과 같은 글자 크기(09-04)
            X: x =&gt; ox + (ROOM.W - x) * k, Y: y =&gt; oy + y * k,
            P: (nx, ny) =&gt; [ox + (ROOM.W - nx * ROOM.W) * k, oy + ny * ROOM.D * k] };   // 정규화 0~1 → 화면
 }
@@ -4939,8 +4985,9 @@ export function drawFloor(g, G) {
 
 /* 흰 halo 라벨 — 마커 위에서도 읽힌다 */
 export function label(g, G, t, x, y, col) {
-  g.textBaseline = &quot;alphabetic&quot;; g.font = `700 ${Math.max(9, 10.5 * G.u)}px system-ui, sans-serif`;
-  g.lineJoin = &quot;round&quot;; g.lineWidth = 3 * G.u; g.strokeStyle = &quot;#FFFCF6&quot;;
+  const fu = G.fu ?? G.u;
+  g.textBaseline = &quot;alphabetic&quot;; g.font = `700 ${Math.max(9, 10.5 * fu)}px system-ui, sans-serif`;
+  g.lineJoin = &quot;round&quot;; g.lineWidth = 3 * fu; g.strokeStyle = &quot;#FFFCF6&quot;;
   g.strokeText(t, x, y); g.fillStyle = col; g.fillText(t, x, y);
 }
 
@@ -4977,7 +5024,7 @@ export function drawZones(g, G, zones, occ = {}, labels = true) {
     const cy = z.polygon.reduce((a, p) =&gt; a + p[1], 0) / z.polygon.length;
     const [lx, ly] = G.P(cx, cy);
     g.textAlign = &quot;center&quot;;
-    label(g, G, z.label || z.id, lx, ly + 4 * G.u, &quot;#0C6D6A&quot;);        // 언제나 틸 잉크 + 종이색 테두리(label) — 흰 글자는 테두리와 같아 보이지 않았다
+    label(g, G, z.label || z.id, lx, ly + 4 * (G.fu ?? G.u), &quot;#0C6D6A&quot;);        // 언제나 틸 잉크 + 종이색 테두리(label) — 흰 글자는 테두리와 같아 보이지 않았다
   });
 }
 

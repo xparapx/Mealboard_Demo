@@ -20,7 +20,7 @@ def doc():
 
 def test_저장소_템플릿은_검증을_통과한다(doc):
     assert validate_zones(doc) == []
-    assert [z["id"] for z in doc["zones"]] == ["counter", "aisle", "seating"]
+    assert [z["id"] for z in doc["zones"]] == ["counter", "aisle", "exit_aisle", "seat1", "seat2"]
 
 
 def test_점_판정_경계는_아래_왼쪽만_안():
@@ -35,16 +35,18 @@ def test_구역은_첫_일치_우선이고_맞닿은_경계는_한_번만(doc):
     zones = doc["zones"]
     assert zone_of(0.5, 0.05, zones) == "counter"
     assert zone_of(0.05, 0.5, zones) == "aisle"
-    assert zone_of(0.5, 0.5, zones) == "seating"
+    assert zone_of(0.5, 0.5, zones) == "seat1"
+    assert zone_of(0.5, 0.6, zones) == "seat2"            # y=0.552 에서 위·아래 좌석이 갈린다
+    assert zone_of(0.9, 0.5, zones) == "exit_aisle"       # 테이블 왼쪽 빈 띠(x ≥ 0.84)
     assert zone_of(0.05, 0.10, zones) == "aisle"          # y=0.10 경계: 배식대(위 경계=밖) 가 아니라 통로
-    assert zone_of(0.1415, 0.5, zones) == "seating"       # x=0.1415 경계: 통로(오른 경계=밖) 가 아니라 좌석
+    assert zone_of(0.1415, 0.5, zones) == "seat1"         # x=0.1415 경계: 통로(오른 경계=밖) 가 아니라 좌석
     assert zone_of(0.5, 1.0, zones) is None               # 출입문 벽 위의 점은 어느 구역도 아니다
 
 
 def test_구역별_인원수는_모든_구역을_0_포함으로(doc):
     pts = [{"x": 0.5, "y": 0.05}, {"x": 0.6, "y": 0.02}, (0.05, 0.5), (0.5, 1.0)]
-    assert count_by_zone(pts, doc["zones"]) == {"counter": 2, "aisle": 1, "seating": 0}
-    assert count_by_zone([], doc["zones"]) == {"counter": 0, "aisle": 0, "seating": 0}
+    assert count_by_zone(pts, doc["zones"]) == {"counter": 2, "aisle": 1, "exit_aisle": 0, "seat1": 0, "seat2": 0}
+    assert count_by_zone([], doc["zones"]) == {"counter": 0, "aisle": 0, "exit_aisle": 0, "seat1": 0, "seat2": 0}
 
 
 def test_실제_면적은_폭_곱하기_길이(doc):
@@ -120,7 +122,7 @@ def test_로컬_파일이_템플릿을_덮어쓴다(tmp_path, doc):
         json.dumps({"roi": {"polygon": SQUARE, "lambda_edge": [0, 1], "out_dir": 1}, "updated_by": "admin"}), encoding="utf-8")
     merged = load_zones(tmp_path / "zones.json")
     assert merged["roi"]["lambda_edge"] == [0, 1] and merged["updated_by"] == "admin"
-    assert [z["id"] for z in merged["zones"]] == ["counter", "aisle", "seating"]   # 덮어쓰지 않은 키는 그대로
+    assert [z["id"] for z in merged["zones"]] == ["counter", "aisle", "exit_aisle", "seat1", "seat2"]   # 덮어쓰지 않은 키는 그대로
 
 
 @pytest.mark.parametrize("local", ['{"zones": []}', "null", "[1, 2]", "{broken"])
