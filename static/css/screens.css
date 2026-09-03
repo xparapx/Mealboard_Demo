@@ -165,9 +165,11 @@ details > summary::-webkit-details-marker { display: none; }
 .week [data-wd="4"] { background: #CBC2FB; }   /* 목 · 페리윙클 */
 .week [data-wd="5"] { background: #BFE3F7; }   /* 금 · 스카이블루(09-04, 이전 세이지 #A3F5B4) */
 .week [data-when="past"] > * { opacity: .62; }
-/* 오늘(09-04 개정): 차콜 채움을 버리고 요일색을 유지 — 요일 글자 밑줄 + 메뉴 굵게 + 날짜 진하게로만 표시 */
-.week [data-when="today"] .d { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1.5px; }
-.week [data-when="today"] .n { color: var(--ink); }
+/* 오늘(09-04 개정): 차콜 채움·밑줄 대신 요일색을 유지하고, 칩이 천천히 커졌다 작아지는 숨쉬기(2.6초, 1 → 1.035)로 강조.
+   transform 이라 모션 축소 설정에서는 자동으로 멈춘다(맨 아래 미디어 쿼리) — 그때는 메뉴 굵게·날짜 진하게만 남는다 */
+.week [data-when="today"] { animation: breathe 2.6s ease-in-out infinite; box-shadow: 0 6px 18px rgba(51,49,45,.12); position: relative; z-index: 1; }
+@keyframes breathe { 50% { transform: scale(1.035); box-shadow: 0 10px 24px rgba(51,49,45,.18); } }
+.week [data-when="today"] .d, .week [data-when="today"] .n { color: var(--ink); }
 .week [data-when="today"] .m { font-weight: 700; }
 
 /* ⑧ 잔반 탄소 — 오늘급식 카드의 아래 절(읽기 전용, 개인 기록·선택 없음). 카드 여백을 음수로 밀어 틸 틴트가
