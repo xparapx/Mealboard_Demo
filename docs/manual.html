@@ -73,8 +73,8 @@ details.fold[open] summary{margin-bottom:8px;border-bottom:1px solid var(--line)
 <div class="wrap">
 <nav>
 <h1>Mealboard 구축 매뉴얼</h1>
-<p class="sub">홈 Pi 5 · 카메라 제외 · 2026-08</p>
-<a href="#s0"><span class="n">0</span><span>시작하기 전에</span><small>읽기</small></a><a href="#s1"><span class="n">1</span><span>Pi 기본 설정 — 시각, 계정, 원격 접속</span><small>Pi</small></a><a href="#s2"><span class="n">2</span><span>저장소 뼈대 — GitHub 에 프로젝트 만들기</span><small>저장소</small></a><a href="#s3"><span class="n">3</span><span>설치 스크립트와 systemd 유닛</span><small>Pi · 저장소</small></a><a href="#s4"><span class="n">4</span><span>대기시간 계산 — 순수 로직과 테스트</span><small>앱</small></a><a href="#s5"><span class="n">5</span><span>데이터베이스와 API</span><small>앱</small></a><a href="#s6"><span class="n">6</span><span>mock_feed — 카메라 대역</span><small>앱</small></a><a href="#s7"><span class="n">7</span><span>대시보드 화면</span><small>앱</small></a><a href="#s8"><span class="n">8</span><span>NEIS 급식 정보와 영양 지표</span><small>데이터</small></a><a href="#s9"><span class="n">9</span><span>외부 공개 — Tailscale Funnel, PWA, QR</span><small>공개</small></a><a href="#s10"><span class="n">10</span><span>검증 체크리스트, 진단 순서, 이식</span><small>운영</small></a><a href="#s11"><span class="n">11</span><span>탄소 카드 — 잔반의 배출량</span><small>확장</small></a><a href="#s12"><span class="n">12</span><span>이슈 링크 — 기후·탄소 뉴스</span><small>확장</small></a><a href="#s13"><span class="n">13</span><span>급식실 현황 — 익명 위치 마커</span><small>확장</small></a><a href="#s14"><span class="n">14</span><span>대시보드 v5 — 스타일 개편과 네 가지 추가</span><small>확장</small></a><a href="#s15"><span class="n">15</span><span>인사이트 집계 — insights.db 와 /api/insight/*</span><small>확장</small></a>
+<p class="sub">홈 Pi 5 · 카메라 제외 · 2026-08 → 2026-09 확장(STEP 15~18)</p>
+<a href="#s0"><span class="n">0</span><span>시작하기 전에</span><small>읽기</small></a><a href="#s1"><span class="n">1</span><span>Pi 기본 설정 — 시각, 계정, 원격 접속</span><small>Pi</small></a><a href="#s2"><span class="n">2</span><span>저장소 뼈대 — GitHub 에 프로젝트 만들기</span><small>저장소</small></a><a href="#s3"><span class="n">3</span><span>설치 스크립트와 systemd 유닛</span><small>Pi · 저장소</small></a><a href="#s4"><span class="n">4</span><span>대기시간 계산 — 순수 로직과 테스트</span><small>앱</small></a><a href="#s5"><span class="n">5</span><span>데이터베이스와 API</span><small>앱</small></a><a href="#s6"><span class="n">6</span><span>mock_feed — 카메라 대역</span><small>앱</small></a><a href="#s7"><span class="n">7</span><span>대시보드 화면</span><small>앱</small></a><a href="#s8"><span class="n">8</span><span>NEIS 급식 정보와 영양 지표</span><small>데이터</small></a><a href="#s9"><span class="n">9</span><span>외부 공개 — Tailscale Funnel, PWA, QR</span><small>공개</small></a><a href="#s10"><span class="n">10</span><span>검증 체크리스트, 진단 순서, 이식</span><small>운영</small></a><a href="#s11"><span class="n">11</span><span>탄소 카드 — 잔반의 배출량</span><small>확장</small></a><a href="#s12"><span class="n">12</span><span>이슈 링크 — 기후·탄소 뉴스</span><small>확장</small></a><a href="#s13"><span class="n">13</span><span>급식실 현황 — 익명 위치 마커</span><small>확장</small></a><a href="#s14"><span class="n">14</span><span>대시보드 v5 — 스타일 개편과 네 가지 추가</span><small>확장</small></a><a href="#s15"><span class="n">15</span><span>인사이트 집계 — insights.db 와 /api/insight/*</span><small>확장</small></a><a href="#s16"><span class="n">16</span><span>5화면 프론트 — 셸·ES 모듈·해시 라우트</span><small>확장</small></a><a href="#s17"><span class="n">17</span><span>관리 앱 — tailnet 전용 운영·스트림·구역 편집</span><small>확장</small></a><a href="#s18"><span class="n">18</span><span>로컬 LLM — 리포트와 기사 요약</span><small>확장</small></a>
 </nav>
 <main>
 <div class="hero">
@@ -4379,6 +4379,1877 @@ systemctl list-timers 'mealboard*'
 curl -s https://rsp.taild5f11e.ts.net/api/insight/quality</code></pre>
 </figure>
 <p>학교 Pi 로 전환할 때는 mock 을 멈춘 직후 <code>queue.db</code>·<code>insights.db</code> 를 <code>.bak-&lt;시각&gt;</code> 으로 이름을 바꾸고 새로 시작합니다(지우는 도구는 만들지 않습니다). <code>FEED_SOURCE</code> 꼬리표가 있으니 옛 파일을 남겨 두어도 실측 히트맵에 섞이지는 않지만, 파일을 갈라 두는 편이 나중에 덜 헷갈립니다.</p>
+
+</section><section id="s16" class="step">
+<header><span class="stepnum">STEP 16</span><h2>5화면 프론트 — 셸·ES 모듈·해시 라우트</h2><span class="layer">확장</span></header>
+
+<p class="goal">목표: 762줄짜리 <code>index.html</code> 한 장이던 대시보드를 <strong>다섯 화면</strong>(대기시간 · 실시간 · 주간식단 · 오늘급식 · 이슈피드)으로 나누되, 빌드 도구 없이 브라우저가 그대로 읽는 ES 모듈로 만든다. 모바일은 가로로 넘기는 페이저 + 하단 dock, 데스크톱은 좌측 레일 + 12컬럼 보드. 보이는 화면만 폴링한다.</p>
+
+<dl class="term"><dt>ES 모듈(ES module)</dt><dd>브라우저가 <code>&lt;script type="module"&gt;</code> 로 직접 읽는 자바스크립트 파일 단위. <code>import/export</code> 로 서로 부르고, 번들러(webpack 같은 빌드 도구)가 필요 없다 — CLAUDE.md 의 "Pi 에 Node.js 설치 금지" 를 지키는 방법.</dd>
+<dt>해시 라우트(hash route)</dt><dd>주소의 <code>#wait</code> 같은 조각으로 화면을 고르는 방식. 서버는 언제나 같은 <code>index.html</code> 을 주고, 화면 전환은 브라우저 안에서만 일어난다. 새로고침·뒤로가기·북마크가 그대로 통한다.</dd>
+<dt>스크롤 스냅(scroll snap)</dt><dd>가로로 밀면 한 화면 단위로 딱 멈추게 하는 CSS. 모바일 페이저는 문서 자체가 스냅 컨테이너다.</dd>
+<dt>순환 import 의 TDZ</dt><dd>core.js 가 화면 모듈을 부르고 화면 모듈이 core.js 를 부를 때, 모듈 <em>최상위</em>에서 상대 모듈의 값을 쓰면 아직 초기화되지 않은 변수를 건드려 <code>ReferenceError</code> 가 난다. 화면 모듈은 core 의 도구를 <code>mount()</code> 안에서만 쓴다.</dd></dl>
+
+<h3>16-1. 구조 — 셸 하나, 화면 모듈 다섯</h3>
+<p><code>static/index.html</code> 은 100줄 셸(SVG 아이콘 스프라이트, dock·레일, <code>section.view</code> 다섯 개와 그 안의 카드 껍데기)만 남기고, 스타일은 <code>css/base.css</code>(토큰·dock·레일·페이저·보드 골격) + <code>css/screens.css</code>(카드 + 데스크톱 배치; 미디어 쿼리는 파일 끝 — 순서가 캐스케이드다) + <code>css/insight.css</code>(인사이트 카드), 스크립트는 <code>js/core.js</code>(도구·공유 상태·라우터·폴링·부팅) + 화면 모듈 다섯(<code>wait room week today news</code>) + <code>floor.js</code>(평면도 그리기 공용)로 나뉩니다. 서비스워커 SHELL 목록과 <code>main.py</code> 의 REVALIDATE(<code>/js/</code> <code>/css/</code> 는 <code>no-cache</code>)를 같은 커밋에서 갱신합니다.</p>
+<p>화면 모듈은 <code>screen = {mount, every, poll, slow, fail, activate, deactivate, render}</code> 훅 객체 하나만 내보냅니다. <code>poll</code> 은 라이브 값(30초), <code>slow</code> 는 집계에서 오는 인사이트 카드(30분) — 둘 다 core 가 시각으로 가릅니다. <code>render(cardId, json)</code> 은 픽스처 JSON 으로 카드를 그리는 검사용 손잡이(<code>MB.screens.wait.render("heatcard", {...})</code>)입니다.</p>
+<figure class="code">
+<figcaption><span class="path">static/js/core.js</span><span class="lang">js</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-js">/* 공통 도구 · 공유 상태 · 5화면 라우터 · 폴링 · 부팅. 빌드 도구 없이 브라우저가 ES 모듈을 직접 해석한다 (PLAN §0, §3.3).
+   화면 모듈(wait·room·week·today·news)은 `screen` 훅 객체({mount, every, poll, slow, fail, activate, deactivate, render})만 내보내고,
+   이 파일이 순서대로 등록해 부팅한다 — 순환 import 이지만 서로를 함수 안에서만 부르므로 안전하다(모듈 평가 시점엔 정의만.
+   화면 모듈의 최상위에서 core 의 $ 등을 부르면 TDZ 오류 — 그런 준비는 mount() 에 둔다).
+
+   화면 = 해시(#wait #room #week #today #news). 모바일(&lt;900)은 문서 자체가 가로 스냅 페이저(이웃 화면을 스와이프),
+   데스크톱(≥900)은 다섯 화면을 한 보드에 펼치고 좌측 레일이 그 카드로 스크롤한다.
+   폴링은 보이는 화면만: 모바일은 활성 화면 하나, 데스크톱은 전부. 탭이 숨겨지면(document.hidden) 쉰다.
+   두 박자: poll(라이브, every) 과 slow(집계에서 오는 인사이트, SLOW_EVERY) — 둘 다 core 가 시각으로 가른다 */
+import * as wait from &quot;./wait.js&quot;;
+import * as room from &quot;./room.js&quot;;
+import * as week from &quot;./week.js&quot;;
+import * as today from &quot;./today.js&quot;;
+import * as news from &quot;./news.js&quot;;
+
+export const $ = s =&gt; document.querySelector(s);
+export const $$ = s =&gt; [...document.querySelectorAll(s)];
+export const j = async u =&gt; {
+  const r = await fetch(u, { cache: &quot;no-store&quot; });
+  if (!r.ok) throw new Error(`${u} → ${r.status}`);                 // 404·500 을 조용히 JSON 으로 읽지 않는다
+  return r.json();
+};
+export const UNREACHABLE = &quot;서버에 닿지 못했습니다&quot;;
+/* 실패해도 카드가 그릴 수 있는 응답으로 — 인사이트 카드용 */
+export const jSoft = u =&gt; j(u).catch(e =&gt; (console.error(u, e), { state: &quot;no_data&quot;, reason: UNREACHABLE }));
+export const esc = s =&gt; String(s).replace(/[&amp;&lt;&gt;&quot;']/g, c =&gt; ({ &quot;&amp;&quot;: &quot;&amp;amp;&quot;, &quot;&lt;&quot;: &quot;&amp;lt;&quot;, &quot;&gt;&quot;: &quot;&amp;gt;&quot;, '&quot;': &quot;&amp;quot;&quot;, &quot;'&quot;: &quot;&amp;#39;&quot; }[c]));
+export const minuteOfDay = d =&gt; d.getHours() * 60 + d.getMinutes();
+export const hhmm = d =&gt; String(d.getHours()).padStart(2, &quot;0&quot;) + &quot;:&quot; + String(d.getMinutes()).padStart(2, &quot;0&quot;);
+export const mm = m =&gt; `${String(Math.floor(m / 60)).padStart(2, &quot;0&quot;)}:${String(m % 60).padStart(2, &quot;0&quot;)}`;   // 자정부터 분 → &quot;HH:MM&quot;
+export const hm = ts =&gt; ts ? ts.slice(11, 16) : &quot;&quot;;                                                           // ISO 문자열 → &quot;HH:MM&quot;
+export const WD = &quot;일월화수목금토&quot;;
+export const REDUCE = matchMedia(&quot;(prefers-reduced-motion: reduce)&quot;).matches;   // 전환·부드러운 스크롤·점멸을 생략
+/* 인사이트 카드의 빈 상태 문구 — API 의 reason 은 개발자용(파일 이름)일 수 있다. 학생에게는 뜻만 남긴다. null 이면 카드의 기본 문구를 둔다 */
+export const why = r =&gt; !r || /reports\.db/.test(r) ? null : /insights\.db/.test(r) ? &quot;집계가 아직 시작되지 않았습니다&quot; : r;
+const DESK_MQ = matchMedia(&quot;(min-width: 900px)&quot;);
+export const desktop = () =&gt; DESK_MQ.matches;
+export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
+
+if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
+  CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+    r = Math.min(+r || 0, w / 2, h / 2);
+    this.moveTo(x + r, y); this.arcTo(x + w, y, x + w, y + h, r); this.arcTo(x + w, y + h, x, y + h, r);
+    this.arcTo(x, y + h, x, y, r); this.arcTo(x, y, x + w, y, r); this.closePath();
+  };
+}
+
+/* 캔버스는 배경 저장소를 DPR 에 맞춰 잡아야 선이 뭉개지지 않는다. 크기가 그대로면 저장소를 다시 잡지 않고(메모리 재할당 없이) 지우기만 한다 */
+export function fit(c, h) {
+  const dpr = window.devicePixelRatio || 1, w = c.clientWidth || 318;
+  const pw = Math.round(w * dpr), ph = Math.round(h * dpr);
+  if (c.width !== pw || c.height !== ph) { c.width = pw; c.height = ph; }
+  const g = c.getContext(&quot;2d&quot;); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  return { g, w, h };
+}
+
+/* 캔버스 상자 크기가 바뀌면 다시 그린다(다시 받지는 않는다). 숨은 화면(폭 0)은 건너뛴다 — 보이는 순간 상자가 생기며 다시 불린다 */
+export function canvasAuto(c, draw) {
+  let w = 0, h = 0;
+  new ResizeObserver(() =&gt; {
+    if (c.clientWidth &gt; 0 &amp;&amp; (c.clientWidth !== w || c.clientHeight !== h)) {
+      w = c.clientWidth; h = c.clientHeight;
+      try { draw(); } catch (e) { console.error(&quot;canvasAuto&quot;, e); }
+    }
+  }).observe(c.parentElement || c);
+}
+
+/* 인사이트 카드의 상태. 빈 상태 문구는 reason 이 있으면 학생용으로 옮겨 쓰고, 없으면 카드의 기본 문구로 되돌린다(옛 오류 문구가 남지 않게) */
+export function setState(id, ok, reason) {
+  const card = $(&quot;#&quot; + id); card.dataset.state = ok ? &quot;ok&quot; : &quot;no_data&quot;;
+  const e = card.querySelector(&quot;.empty&quot;);
+  if (e) { e.dataset.default ??= e.textContent; e.textContent = why(reason) ?? e.dataset.default; }
+  return !!ok;
+}
+
+/* 화면 모듈이 공유하는 최근 응답 — 다시 그릴 때 다시 받지 않기 위해 */
+export const S = { last: null, lastPos: null, meal: null, typ: null };
+
+/* ---------------- 화면 등록 · 라우터 ---------------- */
+const ORDER = [&quot;wait&quot;, &quot;room&quot;, &quot;week&quot;, &quot;today&quot;, &quot;news&quot;];
+const NAMES = { wait: &quot;대기시간&quot;, room: &quot;실시간&quot;, week: &quot;주간식단&quot;, today: &quot;오늘급식&quot;, news: &quot;이슈피드&quot; };
+const SCREENS = { wait: wait.screen, room: room.screen, week: week.screen, today: today.screen, news: news.screen };
+const lastPoll = {}, lastSlow = {};                    // name → 마지막 폴링 시각 (라이브 / 느린 인사이트)
+const scrollYs = {};                                   // 모바일: 화면별 세로 스크롤 위치
+let active = null;
+let spyLock = 0;                                       // 레일·키보드로 스크롤하는 동안 스파이가 끼어들지 않게
+
+const view = name =&gt; document.getElementById(name);
+const pageW = () =&gt; view(&quot;wait&quot;).offsetWidth || innerWidth;   // 페이저 한 칸 = 화면 폭(뷰 요소가 정한다 — innerWidth 는 환경마다 다르다)
+const firstCard = name =&gt; view(name).querySelector(&quot;:scope &gt; :not([hidden])&quot;) || view(name).firstElementChild;   // 숨은 카드(주간식단·이슈)는 건너뛴다
+
+async function poll(name, force) {
+  const s = SCREENS[name];
+  if (!s) return;
+  const now = Date.now();
+  if (s.slow &amp;&amp; (force || !lastSlow[name] || now - lastSlow[name] &gt;= SLOW_EVERY)) {
+    lastSlow[name] = now;
+    Promise.resolve().then(s.slow).catch(e =&gt; console.error(name, &quot;slow&quot;, e));
+  }
+  if (!s.poll) return;
+  if (!force &amp;&amp; lastPoll[name] &amp;&amp; now - lastPoll[name] &lt; (s.every || 30000)) return;
+  lastPoll[name] = now;
+  try { await s.poll(); }
+  catch (e) { console.error(name, e); s.fail?.(e); }   // 서버에 닿지 못하면 옛 값을 '지금'처럼 두지 않는다 — 화면이 정한다
+}
+
+function tick() {                                      // 30초마다. 각 화면의 every 에 못 미치면 건너뛴다
+  if (document.hidden) return;
+  (desktop() ? ORDER : [active]).forEach(n =&gt; n &amp;&amp; poll(n, false));
+}
+
+/* dock·레일의 현재 표시 + 문서 제목 + 해시 */
+function mark(name, push) {
+  $$(&quot;[data-go]&quot;).forEach(a =&gt; a.setAttribute(&quot;aria-current&quot;, a.dataset.go === name ? &quot;page&quot; : &quot;false&quot;));
+  const cur = $(`.dock a[data-go=&quot;${name}&quot;]`), m = $(&quot;.dock .mark&quot;);
+  if (cur &amp;&amp; m) { m.style.left = cur.offsetLeft + 6 + &quot;px&quot;; m.style.width = cur.offsetWidth - 12 + &quot;px&quot;; }
+  document.title = `${NAMES[name]} · 급식실 대기 안내`;
+  if (location.hash !== &quot;#&quot; + name) history[push ? &quot;pushState&quot; : &quot;replaceState&quot;](null, &quot;&quot;, &quot;#&quot; + name);
+}
+
+/* 도착 화면의 카드에 짧은 등장 효과 — translateY 는 transform 이라 모션 축소 설정이면 자동으로 무효. 리플로우는 한 번만 */
+function enter(sec) {
+  if (REDUCE) return;
+  const cards = [...sec.querySelectorAll(&quot;:scope &gt; .card, :scope &gt; .waitcard&quot;)];
+  cards.forEach(c =&gt; c.classList.remove(&quot;enter&quot;));
+  void sec.offsetWidth;
+  cards.forEach(c =&gt; { c.classList.add(&quot;enter&quot;); c.addEventListener(&quot;animationend&quot;, () =&gt; c.classList.remove(&quot;enter&quot;), { once: true }); });
+}
+
+/* 데스크톱: 그 화면의 첫 카드로 부드럽게 스크롤 + 잠깐 링. 스파이는 도착할 때까지 잠근다 */
+function scrollToCard(name) {
+  spyLock = Date.now() + 900;
+  const card = firstCard(name);
+  card.scrollIntoView({ behavior: REDUCE ? &quot;auto&quot; : &quot;smooth&quot;, block: &quot;start&quot; });
+  card.classList.add(&quot;ring&quot;); setTimeout(() =&gt; card.classList.remove(&quot;ring&quot;), 900);
+}
+
+/* 화면으로 간다. push=false 는 뒤로가기·스와이프·스파이처럼 이미 일어난 이동을 따라가는 경우 */
+export function go(name, { push = true, swipe = false } = {}) {
+  if (!ORDER.includes(name)) name = &quot;wait&quot;;
+  const prev = active;
+  if (desktop()) {                                     // 보드: 모든 화면이 보이므로 activate/poll 은 부팅 때 한 번. 여기선 표시와 스크롤만
+    if (prev !== name) {
+      active = name;
+      const change = () =&gt; mark(name, push);
+      if (!REDUCE &amp;&amp; document.startViewTransition) document.startViewTransition(change); else change();
+    }
+    if (push) scrollToCard(name);
+    return;
+  }
+  if (prev === name) return;
+  if (prev) { scrollYs[prev] = scrollY; SCREENS[prev].deactivate?.(); view(prev).removeAttribute(&quot;data-active&quot;); }
+  active = name;
+  view(name).setAttribute(&quot;data-active&quot;, &quot;&quot;);
+  mark(name, push);
+  const top = scrollYs[name] || 0;
+  if (swipe) scrollTo({ top, behavior: &quot;auto&quot; });                                   // 가로는 이미 왔다 — 세로만 그 화면의 자리로
+  else scrollTo({ left: view(name).offsetLeft, top, behavior: REDUCE ? &quot;auto&quot; : &quot;smooth&quot; });
+  enter(view(name));
+  const first = !(name in lastPoll);
+  SCREENS[name].activate?.({ first });
+  poll(name, first);
+}
+
+/* 모바일: 스와이프가 끝나면 어느 화면에 멈췄는지 해시를 맞춘다 (scrollend, 없으면 120ms 디바운스) */
+function landed() {
+  if (desktop()) return;
+  const n = ORDER[Math.round(scrollX / pageW())];
+  if (n &amp;&amp; n !== active) go(n, { push: false, swipe: true });
+}
+if (&quot;onscrollend&quot; in window) addEventListener(&quot;scrollend&quot;, landed);
+else { let t; addEventListener(&quot;scroll&quot;, () =&gt; { clearTimeout(t); t = setTimeout(landed, 120); }, { passive: true }); }
+
+/* 데스크톱: 스크롤 스파이 — 화면의 카드(숨은 것 제외) 중 가운데 띠와 가장 많이 겹치는 화면이 현재 */
+let spyIO = null;
+export function observe(name) {                         // 부팅 뒤에 등록된 화면(관리)의 카드도 스파이에 넣는다
+  if (spyIO) [...view(name).children].forEach(c =&gt; c.id &amp;&amp; spyIO.observe(c));
+}
+function spy() {
+  const ratio = {};                                    // 카드 → 겹침 비율. 세 행을 차지하는 실시간 카드가 늘 이기지 않게 비율로 견준다
+  const io = spyIO = new IntersectionObserver(es =&gt; {
+    es.forEach(e =&gt; { ratio[e.target.id] = e.isIntersecting &amp;&amp; !e.target.hidden ? e.intersectionRatio : 0; });
+    if (Date.now() &lt; spyLock) return;
+    const byView = n =&gt; Math.max(0, ...[...view(n).children].map(c =&gt; ratio[c.id] || 0));
+    const best = ORDER.filter(n =&gt; byView(n) &gt; 0).sort((a, b) =&gt; byView(b) - byView(a) || ORDER.indexOf(a) - ORDER.indexOf(b))[0];
+    if (best &amp;&amp; best !== active) { active = best; mark(best, false); }
+  }, { rootMargin: &quot;-10% 0px -60% 0px&quot;, threshold: [0, .1, .25, .5, .75, 1] });
+  ORDER.forEach(n =&gt; [...view(n).children].forEach(c =&gt; c.id &amp;&amp; io.observe(c)));
+}
+
+/* ---------------- 부팅 ---------------- */
+$$(&quot;[data-go]&quot;).forEach(a =&gt; a.addEventListener(&quot;click&quot;, e =&gt; { e.preventDefault(); go(a.dataset.go); }));
+addEventListener(&quot;hashchange&quot;, () =&gt; go(location.hash.slice(1), { push: false }));
+addEventListener(&quot;keydown&quot;, e =&gt; {                     // 데스크톱: 1~9 로 이동 — ORDER 길이만큼(관리 화면이 붙으면 6) (입력란 안에서는 무시)
+  if (!desktop() || e.altKey || e.ctrlKey || e.metaKey || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  const i = /^[1-9]$/.test(e.key) ? Number(e.key) - 1 : -1; if (i &gt;= 0 &amp;&amp; i &lt; ORDER.length) go(ORDER[i]);
+});
+DESK_MQ.addEventListener(&quot;change&quot;, () =&gt; location.reload());   // 페이저 ↔ 보드는 구조가 다르다. 경계를 넘는 일은 드물다 — 새로 그린다
+addEventListener(&quot;resize&quot;, () =&gt; { if (active &amp;&amp; !desktop()) scrollTo({ left: view(active).offsetLeft, behavior: &quot;auto&quot; }); mark(active || &quot;wait&quot;, false); });
+document.addEventListener(&quot;visibilitychange&quot;, () =&gt; { if (!document.hidden) tick(); });
+
+const wanted = location.hash.slice(1);                 // 부팅 때 없는 화면(관리)을 가리켰다면 그 화면이 등록될 때 되돌아간다(MB.wanted)
+const start = ORDER.includes(wanted) ? wanted : &quot;wait&quot;;
+ORDER.forEach(n =&gt; SCREENS[n].mount?.());              // 캔버스 관찰 등 한 번만 하는 준비
+if (desktop()) {
+  active = start; view(start).setAttribute(&quot;data-active&quot;, &quot;&quot;); mark(start, false);
+  ORDER.forEach(n =&gt; { SCREENS[n].activate?.({ first: true }); poll(n, true); });
+  spy();
+  if (start !== &quot;wait&quot;) requestAnimationFrame(() =&gt; firstCard(start).scrollIntoView({ block: &quot;start&quot; }));
+} else {
+  go(start, { push: false });
+  if (start !== &quot;wait&quot;) requestAnimationFrame(() =&gt; scrollTo({ left: view(start).offsetLeft, behavior: &quot;auto&quot; }));
+}
+setInterval(tick, 30000);
+if (&quot;serviceWorker&quot; in navigator) navigator.serviceWorker.register(&quot;/sw.js&quot;).catch(() =&gt; {});
+/* 관리 origin 에서만 관리 뷰를 붙인다 — 호스트명이 아니라 서버가 답하는지로 판단. 공개 origin 에서는 세션당 404 한 번 (PLAN §3.1, Phase 3) */
+window.MB = { S, go, poll, observe, ORDER, NAMES, screens: SCREENS, active: () =&gt; active, wanted };   // 콘솔·테스트·관리 모듈의 손잡이
+try {
+  // SSH 터널은 `/?key=…` 로 들어온다(서버가 그 응답에 쿠키를 준다) — 그때는 세션의 '없음' 기억을 무시하고 다시 묻는다
+  if (sessionStorage.getItem(&quot;mb_admin_probe&quot;) !== &quot;no&quot; || location.search.includes(&quot;key=&quot;))
+    fetch(&quot;/api/admin/whoami&quot;, { cache: &quot;no-store&quot; }).then(r =&gt; {
+      if (r.ok) { sessionStorage.removeItem(&quot;mb_admin_probe&quot;); import(&quot;/admin-ui/admin.js&quot;).then(m =&gt; m.default?.(window.MB)).catch(() =&gt; {}); }
+      else sessionStorage.setItem(&quot;mb_admin_probe&quot;, &quot;no&quot;);
+    }).catch(() =&gt; {});
+} catch {}</code></pre>
+</figure>
+
+<h3>16-2. 화면 모듈 하나 — 실시간(room.js)</h3>
+<p>평면도는 두 겹 캔버스입니다. <code>#plan</code> 에 정적 평면도(<code>floor.js</code>)는 상자 크기가 바뀔 때만(ResizeObserver), 그 위 <code>#marks</code> 에 익명 마커만 30초마다. 점멸은 <code>#marks</code> 의 CSS opacity 애니메이션이고 이 화면이 활성일 때만 돕니다 — 전체를 다시 그리는 JS 루프로 되돌리지 않습니다(리뷰에서 걷어낸 패턴). 아래 인사이트 카드 둘(구역 점유율 · 오늘 리포트)은 <code>slow</code> 박자입니다.</p>
+<figure class="code">
+<figcaption><span class="path">static/js/room.js</span><span class="lang">js</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-js">/* 실시간 화면 — 탑뷰 평면도 + 익명 위치 마커. 영상 아님 · 순간 상태만 · 이력 없음 (CLAUDE.md §2)
+   두 겹 캔버스: #plan 에 정적 평면도(floor.js)는 상자 크기가 바뀔 때만(canvasAuto), 그 위 #marks 에 마커만 30초마다.
+   점멸은 #marks 의 CSS opacity 애니메이션(1.4초, 0.55~1)이며 이 화면이 활성일 때만 돈다(.plan.live).
+   /api/positions 는 이 화면이 보일 때만 30초마다 — 다른 화면에서는 요청이 나가지 않는다.
+   아래 인사이트 카드: 구역별 점유율(집계 숫자만 — 같은 평면도 위에 틴트) · 오늘 리포트(로컬 LLM 글, Phase 4 가 채운다). 30분마다 */
+import { $, j, jSoft, S, esc, fit, mm, canvasAuto, setState } from &quot;./core.js&quot;;
+import { drawFloor, drawMarkers, drawZones, geom } from &quot;./floor.js&quot;;
+
+let G = null;                                          // #plan 의 투영 — 평면도를 그린 크기. 상자가 바뀌면 canvasAuto 가 다시 만든다
+
+function drawFloorLayer() {
+  const c = $(&quot;#plan&quot;), W = c.clientWidth || 318;
+  const H = c.clientHeight || Math.round(W * 460 / 318);
+  const { g } = fit(c, H);
+  G = geom(W, H);
+  drawFloor(g, G);
+}
+
+export function renderPlan(p) {
+  try { drawPlan(p); } catch (e) { console.error(&quot;drawPlan&quot;, e); }
+}
+
+export function drawPlan(p) {
+  const ok = p.state === &quot;ok&quot;;
+  $(&quot;#plancard&quot;).dataset.state = ok ? &quot;ok&quot; : &quot;no_data&quot;;
+  $(&quot;#posn&quot;).textContent = ok ? `${p.n}명` : &quot;—&quot;;
+  if (!G) drawFloorLayer();
+  const { g: m } = fit($(&quot;#marks&quot;), G.H);              // 마커 층만 지우고 다시 그린다 — 평면도는 그대로
+  if (ok) drawMarkers(m, G, p.points);
+}
+
+/* ---------------- 인사이트 카드 ---------------- */
+let ZONES = null;                                      // 마지막 구역 응답 — 상자 크기가 바뀌면 다시 그린다
+
+function drawZoneCard() {
+  const d = ZONES; if (!d) return;
+  const c = $(&quot;#zoneplan&quot;), W = c.clientWidth || 318;
+  const H = c.clientHeight || Math.round(W * 460 / 318);
+  const { g } = fit(c, H);
+  const Gz = geom(W, H);
+  drawFloor(g, Gz);
+  drawZones(g, Gz, d.zones, d.occ);
+}
+
+function renderZones(d) {
+  const ok = d.state === &quot;ok&quot; &amp;&amp; d.bins &amp;&amp; d.bins.length &amp;&amp; d.zones &amp;&amp; d.zones.length;
+  if (!setState(&quot;zonecard&quot;, ok, d.reason)) { ZONES = null; return; }
+  // 창 전체의 평균 점유율(%) — 5분 구간 share_pct 의 평균. 틴트는 가장 붐빈 구역을 1 로 정규화
+  const share = {}, avg = {};
+  d.zones.forEach(z =&gt; { share[z.id] = 0; avg[z.id] = 0; });
+  d.bins.forEach(b =&gt; d.zones.forEach(z =&gt; { share[z.id] += b.share_pct?.[z.id] || 0; avg[z.id] += b.avg_n?.[z.id] || 0; }));
+  d.zones.forEach(z =&gt; { share[z.id] /= d.bins.length; avg[z.id] /= d.bins.length; });
+  const top = Math.max(1, ...Object.values(share));
+  const occ = {}; d.zones.forEach(z =&gt; occ[z.id] = share[z.id] / top);
+  ZONES = { zones: d.zones, occ };
+  drawZoneCard();
+  const busiest = d.zones.slice().sort((a, b) =&gt; share[b.id] - share[a.id])[0];
+  $(&quot;#zonelead&quot;).innerHTML = `&lt;b&gt;${esc(busiest.label)}&lt;/b&gt;에 사람이 가장 많았습니다 (${Math.round(share[busiest.id])}%)`;
+  $(&quot;#zonechips&quot;).innerHTML = d.zones.map(z =&gt;
+    `&lt;span class=&quot;${z.id === busiest.id ? &quot;&quot; : &quot;ghost&quot;}&quot;&gt;${esc(z.label)}&lt;small&gt;${Math.round(share[z.id])}% · 평균 ${avg[z.id].toFixed(1)}명&lt;/small&gt;&lt;/span&gt;`).join(&quot;&quot;);
+  const peak = d.peak ? ` · 가장 붐빈 시각 ${mm(d.peak.minute_of_day)} (${d.peak.total}명)` : &quot;&quot;;
+  $(&quot;#zonefoot&quot;).textContent = (d.basis === &quot;day&quot; ? `${d.date} 하루` : `최근 ${d.weeks}주 평균`) + peak + &quot; · 구역별 인원수만 집계, 개별 위치는 저장하지 않습니다&quot;;
+}
+
+function renderReport(d) {
+  const item = (d.items || []).find(x =&gt; x.kind === &quot;recap&quot;) || (d.items || [])[0];
+  if (!setState(&quot;reportcard&quot;, d.state === &quot;ok&quot; &amp;&amp; !!item, d.reason)) return;
+  $(&quot;#reporthead&quot;).textContent = item.headline || &quot;&quot;;
+  $(&quot;#reportbody&quot;).textContent = item.body || &quot;&quot;;
+  $(&quot;#reportchips&quot;).innerHTML = `&lt;em class=&quot;teal&quot;&gt;${item.engine === &quot;hailo&quot; ? &quot;AI 작성&quot; : &quot;규칙 문장&quot;}${item.model ? &quot; · &quot; + esc(item.model) : &quot;&quot;}&lt;/em&gt;`
+    + `&lt;small&gt;${item.kind === &quot;preview&quot; ? &quot;아침 예보&quot; : &quot;점심 결산&quot;} · ${(item.created_at || &quot;&quot;).slice(5, 16).replace(&quot;T&quot;, &quot; &quot;)}&lt;/small&gt;`;
+}
+
+const RENDER = { zonecard: renderZones, reportcard: renderReport };
+
+export const screen = {
+  mount() {                                            // 부팅 때 core 가 부른다(순환 import 의 TDZ 회피)
+    canvasAuto($(&quot;#plan&quot;), () =&gt; { drawFloorLayer(); renderPlan(S.lastPos || { state: &quot;no_data&quot; }); });
+    canvasAuto($(&quot;#zoneplan&quot;), drawZoneCard);
+  },
+  every: 30000,
+  async poll() { S.lastPos = await j(&quot;/api/positions&quot;); renderPlan(S.lastPos); },
+  async slow() {                                       // 집계·리포트 — core 가 30분마다
+    const [z, t] = await Promise.all([jSoft(&quot;/api/insight/zones?weeks=4&quot;), jSoft(&quot;/api/insight/text&quot;)]);
+    renderZones(z); renderReport(t);
+  },
+  fail() { S.lastPos = { state: &quot;no_data&quot; }; renderPlan(S.lastPos); },    // 서버에 닿지 못하면 옛 위치를 '지금'처럼 두지 않는다
+  activate() { $(&quot;#plancard&quot;).classList.add(&quot;live&quot;); },                   // 점멸은 보일 때만
+  deactivate() { $(&quot;#plancard&quot;).classList.remove(&quot;live&quot;); },
+  render(cardId, data) { RENDER[cardId]?.(data); },
+};</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">static/js/floor.js</span><span class="lang">js</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-js">/* 급식실 평면도 그리기 — 공용. 급식실 현황 카드(마커)와 구역 점유율 카드(구역 틴트)가 같은 평면도를 쓴다.
+   실측 기반 탑뷰(세로형) — 방 15.55m(폭 x) × 24.65m(길이 y), 원점 = 배식구 벽 ∧ 창가 통로 구석.
+   /api/positions 와 zones.json 의 x,y 는 이 바닥의 0~1 정규화 값 — 같은 좌표계.
+   화면 방향은 확정 도면(docs/layout.html): 배식대 위(카메라는 그 오른쪽 끝) · 퇴식구→출구 왼쪽(위부터) ·
+   대기통로(창가) 오른쪽 · 입구 아래(통로 쪽). 투영: sx=(W−x)·k, sy=y·k — 왜곡 없음.
+   테이블 6열 × [6인×3 | 6인×2 | 6인×4+4인], 의자는 도면 기호처럼 테이블 가장자리에 살짝만.
+   여기 함수들은 캔버스 컨텍스트 g 와 geom 만 받는다 — DOM 을 모른다 */
+
+export const ROOM = { W: 15.55, D: 24.65, H: 2.68 };
+const GAP = { door: [0.2, 3.2], dish: [1.6, 4.4], exit: [5.6, 8.4] };   // 입구(아래 벽, 통로 쪽) · 퇴식구·출구(좌측 벽, 위부터)
+
+/* 캔버스 크기(W,H, CSS px) → 투영 도구. u = 318px 기준 배율, k = m → px, X/Y = 세계좌표 → 화면 */
+export function geom(W, H) {
+  const u = W / 318;
+  const ML = 50 * u, MR = 10 * u, MT = 22 * u, MB = 8 * u;          // 좌측은 퇴식구·출구 라벨 자리
+  const k = Math.min((W - ML - MR) / ROOM.W, (H - MT - MB) / ROOM.D);
+  const ox = ML + (W - ML - MR - ROOM.W * k) / 2;
+  const oy = MT + (H - MT - MB - ROOM.D * k) / 2;
+  return { W, H, u, k, T: Math.max(3, .45 * k),
+           X: x =&gt; ox + (ROOM.W - x) * k, Y: y =&gt; oy + y * k,
+           P: (nx, ny) =&gt; [ox + (ROOM.W - nx * ROOM.W) * k, oy + ny * ROOM.D * k] };   // 정규화 0~1 → 화면
+}
+
+/* 정적 평면도 — 바닥·타일·벽·개구부·배식대·싱크대·테이블·라벨 */
+export function drawFloor(g, G) {
+  const { u, k, T, X, Y } = G;
+  const rect = (y0, x0, dy, dx, r, fill) =&gt; {                       // 세계 y0..y0+dy × x0..x0+dx
+    g.beginPath(); g.roundRect(X(x0 + dx), Y(y0), dx * k, dy * k, r);
+    g.fillStyle = fill; g.fill();
+  };
+  // 바닥 + 통로 띠(우측) + 타일 줄눈
+  rect(0, 0, ROOM.D, ROOM.W, 10 * u, &quot;#FBF8F0&quot;);
+  rect(0, 0, ROOM.D, 2.2, 0, &quot;rgba(51,49,45,.05)&quot;);
+  g.strokeStyle = &quot;rgba(51,49,45,.045)&quot;; g.lineWidth = 1;
+  for (let ty = 2.5; ty &lt; ROOM.D; ty += 2.5) {
+    g.beginPath(); g.moveTo(X(ROOM.W), Y(ty)); g.lineTo(X(0), Y(ty)); g.stroke();
+  }
+  for (let tx = 2.65; tx &lt; ROOM.W; tx += 2.65) {
+    g.beginPath(); g.moveTo(X(tx), Y(0)); g.lineTo(X(tx), Y(ROOM.D)); g.stroke();
+  }
+  // 벽 네 변 — 두께 띠. 개구부: 배식구 벽(위) · 퇴식구→출구(좌) · 창(우, 하늘빛) · 입구(아래, 통로 쪽)
+  g.fillStyle = &quot;#E3DCC9&quot;;
+  g.fillRect(X(ROOM.W) - T, Y(0) - T, ROOM.W * k + 2 * T, T);        // 위 (y=0 배식구 벽) — 좌우 벽 두께까지 늘려 모서리를 채운다
+  g.fillRect(X(ROOM.W) - T, Y(ROOM.D), ROOM.W * k + 2 * T, T);       // 아래 (y=D 출입문 벽) — 위와 같이
+  g.fillRect(X(ROOM.W) - T, Y(0), T, ROOM.D * k);                    // 좌 (x=W 벽)
+  g.fillRect(X(0), Y(0), T, ROOM.D * k);                             // 우 (x=0 창가 벽)
+  g.fillStyle = &quot;#B9DBD9&quot;;                                          // 입구 (아래 벽, 통로 쪽)
+  g.fillRect(X(GAP.door[1]), Y(ROOM.D), (GAP.door[1] - GAP.door[0]) * k, T);
+  g.fillStyle = &quot;#CFC9B8&quot;;                                          // 퇴식구 (좌측, 위부터)
+  g.fillRect(X(ROOM.W) - T, Y(GAP.dish[0]), T, (GAP.dish[1] - GAP.dish[0]) * k);
+  g.fillStyle = &quot;#B9DBD9&quot;;                                          // 출구 (퇴식구 아래)
+  g.fillRect(X(ROOM.W) - T, Y(GAP.exit[0]), T, (GAP.exit[1] - GAP.exit[0]) * k);
+  g.fillStyle = &quot;#D9E7EE&quot;;                                          // 창 (우측 벽 세 칸)
+  [[2.6, 7.4], [9.2, 14], [15.8, 20.6]].forEach(([a, b]) =&gt;
+    g.fillRect(X(0), Y(a), T, (b - a) * k));
+  // 배식대 — 위 벽 안쪽의 긴 카운터 (카메라는 그 오른쪽 끝, 통로 쪽 구석)
+  rect(0.15, 1.5, 0.85, 12.0, 3 * u, &quot;#FFD9D0&quot;);
+  g.strokeStyle = &quot;#F0A897&quot;; g.lineWidth = 1;
+  g.strokeRect(X(13.5), Y(0.15), 12.0 * k, 0.85 * k);
+  // 퇴식구 싱크대 — 좌측 벽 안쪽의 회색 카운터 (배식대와 같은 표기법)
+  rect(1.4, ROOM.W - 0.97, 3.2, 0.85, 3 * u, &quot;#E4DFD3&quot;);
+  g.strokeStyle = &quot;#C7C0AE&quot;; g.lineWidth = 1;
+  g.strokeRect(X(ROOM.W - 0.12), Y(1.4), 0.85 * k, 3.2 * k);
+  // 테이블 6열(세로) — 흰 상판 + 도면 기호식 의자(양옆에 살짝)
+  const pitch = 1.8, x0 = 3.2, tw = 0.82;
+  const blocks = [[1.8, 1.8, 1.8], [1.8, 1.8], [1.8, 1.8, 1.8, 1.8, 1.25]];
+  for (let r = 0; r &lt; 6; r++) {
+    const xr = x0 + r * pitch;
+    let y = 2.2;
+    blocks.forEach(bl =&gt; {
+      bl.forEach(len =&gt; {
+        const nc = len &gt; 1.5 ? 3 : 2, step = len / nc;              // 6인 = 양측 의자 3개, 4인 = 2개
+        for (let i = 0; i &lt; nc; i++) {                              // 의자 먼저 — 테이블이 안쪽을 덮는다
+          const cy = y + step * (i + 0.5), cw = .44, cd = .28;
+          rect(cy - cw / 2, xr + tw - .08, cw, cd, 2.5 * u, &quot;#BCD98C&quot;);
+          rect(cy - cw / 2, xr - cd + .08, cw, cd, 2.5 * u, &quot;#BCD98C&quot;);
+        }
+        g.save(); g.shadowColor = &quot;rgba(51,49,45,.18)&quot;; g.shadowBlur = 3 * u;
+        g.shadowOffsetY = 1.2 * u;
+        rect(y, xr, len, tw, 2.5 * u, &quot;#FFFEF8&quot;);
+        g.restore();
+        y += len + 0.12;
+      });
+      y += 1.2;                                                      // 가로 통로
+    });
+  }
+  // 라벨 — 흰 halo. 평면도 층에 그리므로 통로 라벨 위로 마커가 지나갈 수 있다(마커가 우선)
+  g.textAlign = &quot;center&quot;;
+  label(g, G, &quot;배식대&quot;, X(7.5), Y(0) - T - 4 * u, &quot;#D14A38&quot;);
+  label(g, G, &quot;입구&quot;, X((GAP.door[0] + GAP.door[1]) / 2), Y(ROOM.D) - 5 * u, &quot;#6E6A61&quot;);
+  g.textAlign = &quot;right&quot;;                                            // 레이아웃 바깥(좌측 여백)에
+  label(g, G, &quot;퇴식구&quot;, X(ROOM.W) - T - 4 * u, Y((GAP.dish[0] + GAP.dish[1]) / 2) + 4 * u, &quot;#6E6A61&quot;);
+  label(g, G, &quot;출구&quot;, X(ROOM.W) - T - 4 * u, Y((GAP.exit[0] + GAP.exit[1]) / 2) + 4 * u, &quot;#6E6A61&quot;);
+  g.textAlign = &quot;center&quot;;
+  label(g, G, &quot;통로&quot;, X(1.1), Y(ROOM.D * .5), &quot;#A9A296&quot;);
+}
+
+/* 흰 halo 라벨 — 마커 위에서도 읽힌다 */
+export function label(g, G, t, x, y, col) {
+  g.textBaseline = &quot;alphabetic&quot;; g.font = `700 ${Math.max(9, 10.5 * G.u)}px system-ui, sans-serif`;
+  g.lineJoin = &quot;round&quot;; g.lineWidth = 3 * G.u; g.strokeStyle = &quot;#FFFCF6&quot;;
+  g.strokeText(t, x, y); g.fillStyle = col; g.fillText(t, x, y);
+}
+
+/* 익명 마커 — 노란 스마일(테두리 없음), r=5.2u. 좌표 두 개뿐, 식별 정보 없음. points = [{x, y}] 정규화 */
+export function drawMarkers(g, G, points, alpha = 1) {
+  const r = 5.2 * G.u;
+  g.save(); g.globalAlpha = alpha;
+  (points || []).forEach(({ x, y }) =&gt; {
+    const [sx, sy] = G.P(x, y);
+    g.beginPath(); g.arc(sx, sy, r, 0, Math.PI * 2);
+    g.fillStyle = &quot;#F6C445&quot;; g.fill();
+    g.fillStyle = &quot;#33312D&quot;;
+    g.beginPath(); g.arc(sx - r * .33, sy - r * .22, r * .155, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.arc(sx + r * .33, sy - r * .22, r * .155, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.lineWidth = Math.max(1, r * .17); g.strokeStyle = &quot;#33312D&quot;; g.lineCap = &quot;round&quot;;
+    g.arc(sx, sy + r * .06, r * .44, .16 * Math.PI, .84 * Math.PI); g.stroke();
+  });
+  g.restore();
+}
+
+/* 구역 틴트 — zones = [{id, label, polygon:[[x,y],…]}] (정규화), occ = {id: 0~1 점유 비율}.
+   구역 점유율 카드가 쓴다(마커 없음). 틸 한 램프: 비율이 클수록 진하게, 가운데에 이름 */
+export function drawZones(g, G, zones, occ = {}) {
+  (zones || []).forEach(z =&gt; {
+    if (!z.polygon || z.polygon.length &lt; 3) return;
+    const t = Math.min(1, Math.max(0, occ[z.id] ?? 0));
+    g.beginPath();
+    z.polygon.forEach(([x, y], i) =&gt; { const [sx, sy] = G.P(x, y); (i ? g.lineTo : g.moveTo).call(g, sx, sy); });
+    g.closePath();
+    g.fillStyle = `rgba(12,109,106,${(.06 + .5 * t).toFixed(3)})`; g.fill();
+    g.strokeStyle = &quot;rgba(12,109,106,.35)&quot;; g.lineWidth = 1; g.stroke();
+    const cx = z.polygon.reduce((a, p) =&gt; a + p[0], 0) / z.polygon.length;
+    const cy = z.polygon.reduce((a, p) =&gt; a + p[1], 0) / z.polygon.length;
+    const [lx, ly] = G.P(cx, cy);
+    g.textAlign = &quot;center&quot;;
+    label(g, G, z.label || z.id, lx, ly + 4 * G.u, t &gt; .5 ? &quot;#FFFCF6&quot; : &quot;#0C6D6A&quot;);
+  });
+}</code></pre>
+</figure>
+
+<h3>16-3. 확인</h3>
+<figure class="code">
+<figcaption><span class="path">터미널 — 5화면 회귀 확인</span><span class="lang">bash</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash"># 헤드리스 Edge 로 두 폭(420·1400) 캡처 → 분리 전과 픽셀 비교(히어로 시계 값만 다르다)
+# 500px 최소 창이라 420 캡처는 우측이 잘린다 — 환경. 데스크톱 1400×3400 은 보드 전체
+uv run uvicorn app.main:app --port 8100 &amp;
+curl -s localhost:8100/ | grep -c 'section class="view"'        # 5
+curl -s -o /dev/null -w '%{http_code} %header{cache-control}\n' localhost:8100/js/core.js   # 200 no-cache
+# 브라우저 콘솔: 화면 모듈 픽스처 검사
+#   MB.screens.wait.render("heatcard", {state:"no_data", reason:"insights.db 가 아직 없다"})
+#   MB.go("room"); MB.active()</code></pre>
+</figure>
+
+<p><strong>왜 이렇게</strong> — 화면을 파일로 나누면 카드 하나를 고칠 때 762줄을 뒤지지 않아도 되고, 화면 모듈이 같은 훅 모양을 갖추면 core 가 "보이는 화면만 폴링" 같은 규칙을 한 곳에서 지킵니다. 모바일에서 실시간 화면 밖에서는 <code>/api/positions</code> 요청이 0회입니다. 데스크톱은 <code>.view{display:contents}</code> 로 카드가 곧 그리드 아이템이 되어 두 모드가 같은 마크업을 씁니다(도면 <code>docs/layout.html</code> 네비게이션 절).</p>
+
+</section><section id="s17" class="step">
+<header><span class="stepnum">STEP 17</span><h2>관리 앱 — tailnet 전용 운영·스트림·구역 편집</h2><span class="layer">확장</span></header>
+
+<p class="goal">목표: 관리자만 닿는 <strong>두 번째 프로세스</strong>(8101)를 세워 서비스 상태·재시작·원샷 작업·로그·감사 로그, 추론 <strong>메타데이터 스트림</strong>(SSE)과 opt-in <strong>실사 MJPEG</strong>(≤10분, 감사 기록), <strong>구역·ROI·보정 편집기</strong>를 준다. 공개 Funnel 에는 절대 물리지 않는다 — Tailscale <em>Serve</em>(tailnet 전용) 8443 으로만.</p>
+
+<dl class="term"><dt>Tailscale Serve vs Funnel</dt><dd>둘 다 Pi 가 밖으로 연결을 여는 방식이지만, Funnel 은 인터넷 누구나(공개 대시보드 8100), Serve 는 같은 tailnet 의 기기만. Serve 는 요청마다 <code>Tailscale-User-Login</code> 헤더로 접속자 로그인을 붙여 준다 — 관리 앱의 신원이 여기서 온다. <strong><code>serve reset</code>·<code>funnel reset</code> 은 절대 실행하지 않는다</strong>(공개 443 까지 같이 지워진다).</dd>
+<dt>fail-closed</dt><dd>판정이 애매하면 <em>닫는</em> 쪽으로. 허용목록이 비어 있으면 tailnet 경로가 닫히고, 로컬 키가 비어 있으면 SSH 터널 경로가 닫힌다. Funnel 헤더가 보이면 누구든 거부.</dd>
+<dt>SSE(Server-Sent Events)</dt><dd>서버가 HTTP 연결 하나를 열어 두고 이벤트를 흘려보내는 단방향 스트림. 브라우저의 <code>EventSource</code> 가 받는다. 메타데이터(bbox·트랙 ID·바닥 좌표)는 이 통로로만, 구독 중에만 중계되고 어디에도 저장되지 않는다.</dd>
+<dt>sudoers 드롭인</dt><dd><code>/etc/sudoers.d/mealboard</code> 한 파일로 관리 앱 계정에 <em>정확한 argv</em> 의 명령만 비밀번호 없이 허용한다(재시작 3개·작업 시작 4개·serve/funnel status). 와일드카드 없음, 관리 앱 자신은 제외. 코드의 허용목록과 같은지 테스트가 지킨다.</dd>
+<dt>CSRF</dt><dd>다른 사이트의 페이지가 관리자의 브라우저를 빌려 관리 앱에 요청을 보내는 공격. tailnet 경로는 기기 단위 신원이라 GET 도 위험하므로 <code>Sec-Fetch-Site</code> 가 교차 사이트면 모든 게이트 요청을 거부하고, 변경 요청은 JSON 본문만 받는다.</dd></dl>
+
+<h3>17-1. 신원과 게이트 — auth.py · server.py</h3>
+<p>판정 순서(PLAN §4.1): ① <code>Tailscale-Funnel-Request</code> 가 있으면 거부 ② lockdown 이면 거부 ③ <code>Tailscale-User-Login</code> 이 <code>ADMIN_USERS</code> 에 있으면 통과 ④ 헤더가 없으면 쿠키/<code>?key=</code> 가 <code>ADMIN_LOCAL_KEY</code> 와 상수시간 일치할 때 통과(SSH 터널 경로) ⑤ 403. 워치독이 60초마다 <code>tailscale serve status --json</code> 을 읽어 관리 포트가 Funnel 에 물려 있으면 lockdown 으로 잠급니다.</p>
+<figure class="code">
+<figcaption><span class="path">app/admin/auth.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">&quot;&quot;&quot;관리자 신원 판정 — 순수 함수. 요청 헤더·쿠키·쿼리와 설정만 보고 (신원, 거부 사유) 를 돌려준다 (PLAN §4.1, fail-closed).
+
+순서:
+  ① `Tailscale-Funnel-Request` 헤더가 있으면 거부 — 공개 Funnel 을 통해 들어온 요청은 누구든 관리자가 아니다
+  ② lockdown(워치독이 &quot;관리 포트가 Funnel 에 물렸다&quot;고 판단한 상태)이면 거부
+  ③ `Tailscale-User-Login` 이 허용목록(ADMIN_USERS, 소문자 비교)에 있으면 via=tailscale. 목록이 비어 있으면 닫힘
+  ④ Tailscale 헤더가 없으면 쿠키 `mb_admin` 또는 `?key=` 가 ADMIN_LOCAL_KEY 와 상수시간 일치할 때 via=local (SSH 터널 경로).
+     키가 비어 있으면 닫힘. loopback 판정은 하지 않는다 — Serve 도 터널도 모두 127.0.0.1 로 들어온다
+  ⑤ 그 밖엔 거부
+헤더 이름은 대소문자를 가리지 않는다. Tailscale 헤더가 있는데 목록에 없으면 로컬 키로 물러서지 않는다(신원이 있는데 키로 우회하는 길을 막는다).&quot;&quot;&quot;
+import hmac
+
+COOKIE = &quot;mb_admin&quot;
+
+
+def parse_users(text):
+    &quot;&quot;&quot;ADMIN_USERS='a@x.com, B@y.com' → {'a@x.com', 'b@y.com'}&quot;&quot;&quot;
+    return {u.strip().lower() for u in (text or &quot;&quot;).split(&quot;,&quot;) if u.strip()}
+
+
+def _get(mapping, key):
+    &quot;&quot;&quot;헤더처럼 대소문자를 가리지 않는 조회. 없으면 None&quot;&quot;&quot;
+    if mapping is None:
+        return None
+    lk = key.lower()
+    for k, v in mapping.items():
+        if k.lower() == lk:
+            return v
+    return None
+
+
+def identify(headers, cookies, query, users, local_key, lockdown=False):
+    &quot;&quot;&quot;→ (identity | None, reason). identity = {'user': str, 'via': 'tailscale' | 'local'}&quot;&quot;&quot;
+    if _get(headers, &quot;Tailscale-Funnel-Request&quot;) is not None:
+        return None, &quot;funnel&quot;
+    if lockdown:
+        return None, &quot;lockdown&quot;
+    login = _get(headers, &quot;Tailscale-User-Login&quot;)
+    if login is not None:
+        login = login.strip().lower()
+        if login and login in (users or set()):
+            return {&quot;user&quot;: login, &quot;via&quot;: &quot;tailscale&quot;}, &quot;ok&quot;
+        return None, &quot;not_allowed&quot; if users else &quot;closed&quot;
+    key = _get(cookies, COOKIE) or _get(query, &quot;key&quot;)
+    if local_key and key and hmac.compare_digest(str(key), str(local_key)):
+        return {&quot;user&quot;: &quot;local&quot;, &quot;via&quot;: &quot;local&quot;}, &quot;ok&quot;
+    return None, &quot;closed&quot; if not local_key else &quot;bad_key&quot;</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">app/admin/server.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">&quot;&quot;&quot;관리 앱 — 별도 프로세스(ADMIN_PORT 8101, 127.0.0.1). 공개 라우터도 그대로 싣는다(관리자는 같은 대시보드 + 관리 화면을 본다).
+밖으로는 `tailscale serve --https=8443 http://127.0.0.1:8101` 로만 — tailnet 안에서만 닿고, Tailscale 이 요청마다 붙이는
+Tailscale-User-Login 헤더를 허용목록과 대조한다. SSH 터널 경로는 로컬 키. Funnel 헤더가 보이면 무조건 거부 (PLAN §4.1, fail-closed).
+
+실행: uv run uvicorn app.admin.server:app --host 127.0.0.1 --port 8101
+&quot;&quot;&quot;
+import asyncio
+import contextlib
+import mimetypes
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+
+from ..config import ADMIN_LOCAL_KEY, ADMIN_PORT, ADMIN_USERS, BASE
+from ..main import REVALIDATE, REVALIDATE_PREFIX
+from ..routers import history, insight, meal, news, positions, status, typical
+from . import audit, sysctl, watchdog
+from .auth import COOKIE, identify, parse_users
+from .routers import stream as stream_router
+from .routers import system
+from .routers import zones as zones_router
+from .stream import StreamState
+
+mimetypes.add_type(&quot;text/javascript&quot;, &quot;.js&quot;)
+USERS = parse_users(ADMIN_USERS)
+GATED = (&quot;/api/admin/&quot;, &quot;/admin-ui/&quot;)
+WATCH_EVERY = 60
+
+
+async def _watch(app):
+    &quot;&quot;&quot;60초마다 serve status 를 읽어 관리 포트가 Funnel 에 물렸으면 lockdown. 명령이 없는 기기(개발 PC)에서는 아무것도 바꾸지 않는다&quot;&quot;&quot;
+    while True:
+        try:
+            rc, out, _ = await asyncio.to_thread(sysctl.run, (&quot;tailscale&quot;, &quot;serve&quot;, &quot;status&quot;, &quot;--json&quot;), True)
+            if rc == 0:
+                bad = watchdog.exposed(out, ADMIN_PORT)
+                if bad and not app.state.lockdown:
+                    app.state.lockdown = True
+                    audit.log(None, &quot;lockdown.on&quot;, &quot;watchdog&quot;, f&quot;관리 포트 {ADMIN_PORT} 가 Funnel 에 노출됨&quot;, True)
+                    app.state.stream.turn_off(None, reason=&quot;lockdown&quot;)      # 스트림도 함께 닫는다 — 구독 중이던 SSE 는 bye
+                    app.state.stream.hub.kick()
+                elif not bad and app.state.lockdown:
+                    app.state.lockdown = False
+                    audit.log(None, &quot;lockdown.off&quot;, &quot;watchdog&quot;, &quot;노출 해소&quot;, True)
+        except Exception as e:                       # 워치독은 죽지 않는다
+            print(&quot;watchdog&quot;, e)
+        await asyncio.sleep(WATCH_EVERY)
+
+
+@contextlib.asynccontextmanager
+async def lifespan(app):
+    app.state.lockdown = False
+    app.state.stream = StreamState()
+    await app.state.stream.resume()               # 재시작 전의 MJPEG 플래그: 남은 시간을 이어가거나 만료분을 지운다
+    task = asyncio.create_task(_watch(app))
+    yield
+    task.cancel()
+    app.state.stream.shutdown()
+
+
+def create_app():
+    app = FastAPI(title=&quot;Mealboard admin&quot;, lifespan=lifespan)
+    for r in (status, history, meal, positions, news, typical, insight):
+        app.include_router(r.router)
+    app.include_router(system.router)
+    app.include_router(stream_router.router)
+    app.include_router(zones_router.router)
+
+    @app.middleware(&quot;http&quot;)
+    async def gate(request: Request, call_next):
+        path = request.url.path
+        gated = path.startswith(GATED)
+        ident = None
+        if gated or (path == &quot;/&quot; and &quot;key&quot; in request.query_params):
+            ident, why = identify(request.headers, request.cookies, request.query_params, USERS, ADMIN_LOCAL_KEY, request.app.state.lockdown)
+        if gated:
+            if ident is None:
+                return JSONResponse({&quot;state&quot;: &quot;forbidden&quot;, &quot;reason&quot;: why}, status_code=403)
+            # CSRF: tailnet 경로는 기기 단위 신원이라 다른 사이트의 &lt;img&gt;·EventSource 도 같은 신원으로 온다 — GET 포함 모든 교차 사이트 요청 거부
+            sfs = request.headers.get(&quot;sec-fetch-site&quot;)
+            if sfs and sfs not in (&quot;same-origin&quot;, &quot;none&quot;):
+                return JSONResponse({&quot;state&quot;: &quot;forbidden&quot;, &quot;reason&quot;: &quot;cross_site&quot;}, status_code=403)
+            if request.method in (&quot;POST&quot;, &quot;PUT&quot;, &quot;DELETE&quot;, &quot;PATCH&quot;):     # 변경 요청은 JSON 본문만, CORS 헤더 없음
+                if not request.headers.get(&quot;content-type&quot;, &quot;&quot;).startswith(&quot;application/json&quot;):
+                    return JSONResponse({&quot;state&quot;: &quot;forbidden&quot;, &quot;reason&quot;: &quot;json_only&quot;}, status_code=415)
+            request.state.user = ident
+        res = await call_next(request)
+        if path in REVALIDATE or path.startswith(REVALIDATE_PREFIX) or path.startswith(&quot;/admin-ui/&quot;):
+            res.headers[&quot;Cache-Control&quot;] = &quot;no-cache&quot;
+        if &quot;key&quot; in request.query_params and ident is not None and ident.get(&quot;via&quot;) == &quot;local&quot;:
+            # SSH 터널 경로: 첫 방문(`/?key=…` 또는 whoami?key=)의 키를 HttpOnly 쿠키로 옮겨 이후 요청·화면 스크립트가 키를 다시 들고 다니지 않게.
+            # 유닛은 --no-access-log — 이 URL 은 저널에 남지 않는다
+            res.set_cookie(COOKIE, request.query_params[&quot;key&quot;], httponly=True, samesite=&quot;strict&quot;, max_age=12 * 3600)
+        return res
+
+    app.mount(&quot;/admin-ui&quot;, StaticFiles(directory=BASE / &quot;app&quot; / &quot;admin&quot; / &quot;static&quot;), name=&quot;admin-ui&quot;)   # 관리 UI 는 공개 static 에 두지 않는다
+    app.mount(&quot;/&quot;, StaticFiles(directory=BASE / &quot;static&quot;, html=True), name=&quot;static&quot;)
+    return app
+
+
+app = create_app()</code></pre>
+</figure>
+
+<h3>17-2. 스트림 — stream.py</h3>
+<p>메타데이터 허브는 <strong>인증된 구독자가 있을 때만</strong> 소켓을 bind 하고 마지막 구독자가 떠나면 unlink 합니다 — 아무도 보지 않으면 좌표가 vision 프로세스를 떠나지 않습니다. vision(또는 <code>mock --meta</code>)은 <code>vision/meta.py</code> 로 프레임마다 데이터그램 하나를 던지고, 받는 이가 없으면 실패할 뿐입니다. 실사 MJPEG 는 플래그 파일 <code>/tmp/debug_on</code> 이 켜짐 계약입니다: 관리 앱이 쓰고 자동 off 타이머(≤10분)로 지우며, vision 도 mtime 10분 초과면 스스로 끕니다(2중 안전장치). 프록시는 <code>127.0.0.1:DEBUG_PORT/mjpeg</code> 의 바이트를 그대로 흘리고(뷰어 1명, 디스크 접촉 없음) 켜짐·구독 이력은 전부 <code>admin.db</code> 감사 행입니다.</p>
+<figure class="code">
+<figcaption><span class="path">app/admin/stream.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">&quot;&quot;&quot;스트림 — 두 경로 모두 tailnet 관리자만, 저장·버퍼 없음 (CLAUDE.md §2 영상 취급·히트맵 행, PLAN §4.4).
+
+① 메타데이터: MetaHub 가 인증된 SSE 구독자가 있을 때만 소켓을 bind 하고(POSIX AF_UNIX DGRAM RUN_DIR/meta.sock,
+   Windows 개발 PC 는 UDP 127.0.0.1:META_UDP_PORT) 마지막 구독자가 떠나면 닫고 unlink 한다 — 아무도 보지 않으면
+   좌표가 vision 프로세스를 떠나지 않는다. 구독당 asyncio.Queue(QUEUE_N) drop-oldest, 구독 ≤ MAX_SUBS. 프레임은 전달만 하고 남기지 않는다.
+② MJPEG(opt-in): 플래그 파일(DEBUG_FLAG) 이 켜짐 계약이다. on = 파일 쓰기 + 자동 off 타이머(≤ MAX_MIN 분), off = unlink.
+   vision 은 플래그가 없거나 mtime 이 10분을 넘으면 스스로 503 — 2중 안전장치. 프록시는 127.0.0.1:DEBUG_PORT/mjpeg 의 바이트를
+   그대로 흘려보낸다(뷰어 1명, 디스크 접촉 없음). 관리 앱이 재시작돼도 플래그 안의 until 을 읽어 타이머를 이어간다(resume).
+전부 이벤트 루프 위에서만 돈다(스레드 없음).&quot;&quot;&quot;
+import asyncio
+import datetime as dt
+import json
+import os
+import socket
+import time
+
+from ..config import DEBUG_FLAG, DEBUG_PORT, META_UDP_PORT, RUN_DIR
+from . import audit
+
+MAX_MIN, DEFAULT_MIN = 10, 5
+MAX_SUBS, QUEUE_N = 3, 5
+PING_SEC = 15                               # SSE 유휴 시 주석 프레임 — 프록시 타임아웃 방지 + 끊긴 클라이언트 감지
+SOCK_NAME = &quot;meta.sock&quot;
+UPSTREAM_TIMEOUT = 3
+
+
+class HubFull(Exception):
+    pass
+
+
+# ---------------- 플래그 파일 (순수 함수) ----------------
+def clamp_minutes(m):
+    &quot;&quot;&quot;요청 분 → 1..MAX_MIN. 숫자가 아니면 기본값&quot;&quot;&quot;
+    try:
+        m = int(m)
+    except (TypeError, ValueError):
+        return DEFAULT_MIN
+    return min(max(m, 1), MAX_MIN)
+
+
+def flag_read(path=DEBUG_FLAG):
+    &quot;&quot;&quot;플래그 → {'until','by','minutes'} 또는 None. until 은 언제나 mtime+MAX_MIN 분을 넘지 못한다(vision 의 mtime 규칙과 같은 상한 —
+    손으로 고친 파일이나 시계가 뒤로 간 경우에도 10분). 내용이 깨졌으면 그 상한이 곧 until 이다&quot;&quot;&quot;
+    try:
+        st = path.stat()
+    except OSError:
+        return None
+    cap = dt.datetime.fromtimestamp(st.st_mtime) + dt.timedelta(minutes=MAX_MIN)
+    try:
+        d = json.loads(path.read_text(encoding=&quot;utf-8&quot;))
+        until = min(dt.datetime.fromisoformat(d[&quot;until&quot;]), cap)
+        return {&quot;until&quot;: until, &quot;by&quot;: d.get(&quot;by&quot;), &quot;minutes&quot;: d.get(&quot;minutes&quot;)}
+    except (OSError, ValueError, KeyError, TypeError):
+        return {&quot;until&quot;: cap, &quot;by&quot;: None, &quot;minutes&quot;: None}
+
+
+def flag_write(path, until, by, minutes):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({&quot;until&quot;: until.isoformat(timespec=&quot;seconds&quot;), &quot;by&quot;: by, &quot;minutes&quot;: minutes}), encoding=&quot;utf-8&quot;)
+
+
+def flag_remove(path=DEBUG_FLAG):
+    try:
+        path.unlink()
+        return True
+    except OSError:
+        return False
+
+
+def remaining_s(flag, now=None):
+    if not flag:
+        return 0
+    return max(0, int((flag[&quot;until&quot;] - (now or dt.datetime.now())).total_seconds()))
+
+
+def parse_head(head):
+    &quot;&quot;&quot;HTTP 응답 머리(bytes, 빈 줄까지) → (status, {소문자 헤더: 값})&quot;&quot;&quot;
+    lines = head.decode(&quot;latin-1&quot;).split(&quot;\r\n&quot;)
+    parts = lines[0].split(&quot; &quot;, 2)
+    try:
+        status = int(parts[1])
+    except (IndexError, ValueError):
+        status = 0
+    headers = {}
+    for ln in lines[1:]:
+        if &quot;:&quot; in ln:
+            k, v = ln.split(&quot;:&quot;, 1)
+            headers[k.strip().lower()] = v.strip()
+    return status, headers
+
+
+# ---------------- 메타데이터 허브 ----------------
+class MetaHub(asyncio.DatagramProtocol):
+    def __init__(self, run_dir=RUN_DIR, port=META_UDP_PORT):
+        self.subs = set()
+        self.transport = None
+        self.path = run_dir / SOCK_NAME
+        self.port = port
+        self.unix = hasattr(socket, &quot;AF_UNIX&quot;)
+        self.frames = 0
+        self.last = None                        # 마지막 데이터그램 시각(monotonic)
+        self._lock = None                       # bind 직렬화 — 루프가 있을 때 만든다
+
+    # -- DatagramProtocol
+    def connection_made(self, transport):
+        self.transport = transport
+
+    def datagram_received(self, data, addr):
+        self.frames += 1
+        self.last = time.monotonic()
+        for q in self.subs:
+            if q.full():
+                q.get_nowait()                  # drop-oldest: 느린 구독자가 최신 프레임을 놓치지 않게
+            q.put_nowait(data)
+
+    def error_received(self, exc):
+        pass
+
+    def connection_lost(self, exc):
+        self.transport = None
+
+    # -- 구독
+    @property
+    def endpoint(self):
+        return str(self.path) if self.unix else f&quot;udp://127.0.0.1:{self.port}&quot;
+
+    def info(self):
+        return {&quot;bound&quot;: self.transport is not None, &quot;endpoint&quot;: self.endpoint, &quot;subscribers&quot;: len(self.subs),
+                &quot;frames&quot;: self.frames, &quot;last_age_s&quot;: None if self.last is None else round(time.monotonic() - self.last, 1)}
+
+    async def subscribe(self):
+        if len(self.subs) &gt;= MAX_SUBS:
+            raise HubFull()
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        async with self._lock:                  # 동시에 온 두 구독이 둘 다 bind 하지 않게(두 번째는 첫 소켓을 unlink 해 버린다)
+            if self.transport is None:
+                await self._bind()
+        q = asyncio.Queue(QUEUE_N)
+        self.subs.add(q)
+        return q
+
+    def unsubscribe(self, q):
+        self.subs.discard(q)
+        if not self.subs:
+            self._unbind()
+
+    def kick(self):
+        &quot;&quot;&quot;lockdown 등 — 모든 구독자에게 종료 신호(None). 큐가 차 있으면 하나 비우고 넣는다&quot;&quot;&quot;
+        for q in list(self.subs):
+            if q.full():
+                q.get_nowait()
+            q.put_nowait(None)
+
+    async def _bind(self):
+        &quot;&quot;&quot;소켓은 직접 bind 해서 sock= 으로 넘긴다 — uvloop(Pi 의 uvicorn[standard]) 는 AF_UNIX 경로를 local_addr 로 받지 않는다&quot;&quot;&quot;
+        loop = asyncio.get_running_loop()
+        if self.unix:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                self.path.unlink()
+            except OSError:
+                pass
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+            try:
+                sock.bind(str(self.path))
+                os.chmod(self.path, 0o660)      # 같은 사용자·그룹(mealboard)만 — vision·mock 이 같은 계정으로 돈다
+            except OSError:
+                sock.close()
+                raise
+        else:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                sock.bind((&quot;127.0.0.1&quot;, self.port))
+            except OSError:
+                sock.close()
+                raise
+        sock.setblocking(False)
+        try:
+            await loop.create_datagram_endpoint(lambda: self, sock=sock)
+        except Exception:
+            sock.close()
+            raise
+
+    def _unbind(self):
+        if self.transport is not None:
+            self.transport.close()
+            self.transport = None
+        if self.unix:
+            try:
+                self.path.unlink()
+            except OSError:
+                pass
+
+
+# ---------------- 스트림 상태 (플래그 + 타이머 + 뷰어) ----------------
+class StreamState:
+    def __init__(self, flag=DEBUG_FLAG, port=DEBUG_PORT, hub=None):
+        self.flag = flag
+        self.port = port
+        self.hub = hub or MetaHub()
+        self.timer = None
+        self.viewers = 0
+        self.off = asyncio.Event()              # off/autooff/lockdown → 릴레이가 다음 1초 안에 끊는다(파일을 폴링하지 않고)
+
+    def current(self):
+        return flag_read(self.flag)
+
+    def is_on(self):
+        return remaining_s(self.current()) &gt; 0
+
+    def state(self):
+        f = self.current()
+        rem = remaining_s(f)
+        return {&quot;state&quot;: &quot;on&quot; if rem &gt; 0 else &quot;off&quot;, &quot;until&quot;: f[&quot;until&quot;].isoformat(timespec=&quot;seconds&quot;) if f and rem &gt; 0 else None,
+                &quot;remaining_s&quot;: rem, &quot;minutes&quot;: f[&quot;minutes&quot;] if f else None, &quot;by&quot;: f[&quot;by&quot;] if f else None,
+                &quot;viewers&quot;: self.viewers, &quot;meta&quot;: self.hub.info(), &quot;debug_port&quot;: self.port, &quot;max_minutes&quot;: MAX_MIN}
+
+    async def resume(self):
+        &quot;&quot;&quot;관리 앱 시작 때: 남은 플래그가 있으면 타이머를 이어가고, 이미 지났으면 지운다&quot;&quot;&quot;
+        f = self.current()
+        if not f:
+            return
+        rem = remaining_s(f)
+        if rem &lt;= 0:
+            flag_remove(self.flag)
+            audit.log(None, &quot;stream.autooff&quot;, &quot;mjpeg&quot;, &quot;시작 시 만료된 플래그 제거&quot;, True)
+        else:
+            self._arm(rem)
+
+    def turn_on(self, minutes, user, ip=None):
+        m = clamp_minutes(minutes)
+        until = dt.datetime.now() + dt.timedelta(minutes=m)
+        flag_write(self.flag, until, (user or {}).get(&quot;user&quot;), m)
+        self.off.clear()
+        self._arm(m * 60)
+        audit.log(user, &quot;stream.on&quot;, &quot;mjpeg&quot;, f&quot;{m}분 · until {until.isoformat(timespec='seconds')}&quot;, True, ip)
+        return self.state()
+
+    def turn_off(self, user, ip=None, reason=&quot;off&quot;):
+        self._disarm()
+        self.off.set()
+        if flag_remove(self.flag):
+            audit.log(user, &quot;stream.&quot; + reason, &quot;mjpeg&quot;, f&quot;viewers={self.viewers}&quot;, True, ip)
+        return self.state()
+
+    # -- MJPEG 뷰어 자리(1명). claim 은 await 전에 동기적으로 — 요청 두 개가 연결 대기 사이에 같이 통과하지 않는다
+    def claim(self):
+        if self.viewers &gt;= 1:
+            return False
+        self.viewers += 1
+        return True
+
+    def release(self):
+        self.viewers = max(0, self.viewers - 1)
+
+    def _arm(self, seconds):
+        self._disarm()
+        self.timer = asyncio.get_running_loop().call_later(seconds, self._auto_off)
+
+    def _disarm(self):
+        if self.timer is not None:
+            self.timer.cancel()
+            self.timer = None
+
+    def _auto_off(self):
+        self.timer = None
+        self.off.set()
+        if flag_remove(self.flag):
+            audit.log(None, &quot;stream.autooff&quot;, &quot;mjpeg&quot;, f&quot;viewers={self.viewers}&quot;, True)
+
+    def shutdown(self):
+        self._disarm()
+        self.hub.kick()
+        self.hub._unbind()
+
+    # -- MJPEG 프록시
+    async def open_upstream(self):
+        &quot;&quot;&quot;→ (status, headers, reader, writer). 연결 실패는 OSError/TimeoutError 로 올라간다&quot;&quot;&quot;
+        reader, writer = await asyncio.wait_for(asyncio.open_connection(&quot;127.0.0.1&quot;, self.port), UPSTREAM_TIMEOUT)
+        try:
+            writer.write(b&quot;GET /mjpeg HTTP/1.0\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n&quot;)
+            await writer.drain()
+            head = await asyncio.wait_for(reader.readuntil(b&quot;\r\n\r\n&quot;), UPSTREAM_TIMEOUT + 2)
+        except (OSError, asyncio.IncompleteReadError, asyncio.LimitOverrunError, asyncio.TimeoutError):
+            writer.close()
+            raise OSError(&quot;upstream head&quot;)
+        status, headers = parse_head(head)
+        return status, headers, reader, writer
+
+    async def relay(self, reader, writer, user, ip=None):
+        &quot;&quot;&quot;upstream 바이트를 그대로 넘긴다. 자리(claim)는 라우터가 미리 잡았고 여기서 돌려준다. off·autooff·lockdown 이면 1초 안에 끊는다 —
+        upstream 이 멈춘 채 열려 있어도(read 가 돌아오지 않아도) 마찬가지(wait_for 1초). 아무것도 남기지 않는다&quot;&quot;&quot;
+        t0, nbytes, check = time.monotonic(), 0, time.monotonic()
+        audit.log(user, &quot;stream.view&quot;, &quot;mjpeg&quot;, &quot;open&quot;, True, ip)
+        try:
+            while not self.off.is_set():
+                try:
+                    chunk = await asyncio.wait_for(reader.read(65536), 1.0)
+                except asyncio.TimeoutError:
+                    chunk = None                                     # 조용한 upstream — 플래그만 다시 본다
+                if chunk == b&quot;&quot;:
+                    break
+                if chunk:
+                    nbytes += len(chunk)
+                    yield chunk
+                if time.monotonic() - check &gt; 1:
+                    check = time.monotonic()
+                    if not self.is_on():
+                        break
+        finally:
+            self.release()
+            writer.close()
+            audit.log(user, &quot;stream.view&quot;, &quot;mjpeg&quot;, f&quot;close · {round(time.monotonic() - t0)}초 · {nbytes // 1024}KB&quot;, True, ip)</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">vision/meta.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">&quot;&quot;&quot;메타데이터 발신 — vision(counter)·mock 이 프레임마다 dict 하나를 관리 앱의 소켓에 던진다. 저장·버퍼 없음, 실패 무시 (PLAN §4.4).
+관리 앱은 인증된 구독자가 있을 때만 소켓을 bind 하므로, 아무도 보지 않으면 sendto 가 실패할 뿐이고 좌표는 이 프로세스를 떠나지 않는다.
+POSIX: AF_UNIX DGRAM RUN_DIR/meta.sock. AF_UNIX 가 없는 개발 PC(Windows): UDP 127.0.0.1:META_UDP_PORT.
+한 프레임이 데이터그램 하나 — MAX_BYTES 를 넘는 프레임은 보내지 않는다(잘린 JSON 을 흘리지 않기 위해).&quot;&quot;&quot;
+import json
+import socket
+
+from app.config import META_UDP_PORT, RUN_DIR
+
+MAX_BYTES = 60_000
+SOCK_NAME = &quot;meta.sock&quot;
+
+
+def encode(event):
+    &quot;&quot;&quot;dict → 데이터그램 bytes. 너무 크면 None&quot;&quot;&quot;
+    data = json.dumps(event, separators=(&quot;,&quot;, &quot;:&quot;), ensure_ascii=False).encode(&quot;utf-8&quot;)
+    return data if len(data) &lt;= MAX_BYTES else None
+
+
+class MetaSender:
+    def __init__(self, run_dir=RUN_DIR, port=META_UDP_PORT):
+        self.unix = hasattr(socket, &quot;AF_UNIX&quot;)
+        self.target = str(run_dir / SOCK_NAME) if self.unix else (&quot;127.0.0.1&quot;, port)
+        self.sock = socket.socket(socket.AF_UNIX if self.unix else socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.setblocking(False)
+        self.sent = self.dropped = 0
+
+    def send(self, event):
+        &quot;&quot;&quot;→ True 면 소켓에 들어갔다(구독자가 있다). 수신자가 없으면 False — 오류가 아니다&quot;&quot;&quot;
+        data = encode(event)
+        if data is None:
+            self.dropped += 1
+            return False
+        try:
+            self.sock.sendto(data, self.target)
+            self.sent += 1
+            return True
+        except OSError:                     # ENOENT·ECONNREFUSED·EAGAIN — 아무도 듣지 않는다
+            self.dropped += 1
+            return False
+
+    def close(self):
+        self.sock.close()</code></pre>
+</figure>
+
+<h3>17-3. 구역 편집기 — zones_store.py</h3>
+<p>편집기는 평면도 모드(구역 폴리곤 핸들 드래그)와 프레임 모드(ROI·λ 변·출구 방향, 보정 4점 → 호모그래피)로 나뉘고, 저장은 <code>PUT /api/admin/zones</code> 한 곳입니다. 서버는 <code>validate_zones</code> 를 통과한 문서 중 <strong>템플릿과 다른 최상위 키만</strong> <code>data/zones.local.json</code> 에 씁니다 — git 템플릿 <code>zones.json</code> 은 Pi 에서 절대 쓰지 않고(<em>Pi 는 git pull 만</em>), 손대지 않은 키는 계속 템플릿을 따르며, 직전 판은 <code>.bak-&lt;시각&gt;</code> 5개로 남습니다.</p>
+<figure class="code">
+<figcaption><span class="path">app/admin/zones_store.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">&quot;&quot;&quot;구역 정의 저장 — `data/zones.local.json` 의 유일한 writer 는 관리 앱이다 (CLAUDE.md §2). git 템플릿 `zones.json` 은 절대 쓰지 않는다
+('Pi 는 git pull 만'). 읽기는 vision/zones.load_zones(템플릿 + local overlay)와 같은 규칙 — 편집기가 보는 것이 vision·mock·rollup 이 보는 것이다.
+쓰기: validate_zones 를 통과한 문서 **전체**를 local 에 `.tmp → os.replace`(원자적), 직전 local 은 `.bak-&lt;시각&gt;` 으로 최신 KEEP_BAK 개 보존.
+호모그래피: 이미지 4점 ↔ 바닥 4점(모두 0~1 정규화) → image_to_floor(3×3) + 역행렬 + 재투영 오차.&quot;&quot;&quot;
+import datetime as dt
+import json
+import math
+import os
+import shutil
+import time
+
+from ..config import ZONES_JSON
+from vision.zones import LOCAL_NAME, REPROJ_TOL, det3, homography_from_4, invert, load_zones, project, validate_zones
+
+TEMPLATE = ZONES_JSON
+LOCAL = ZONES_JSON.with_name(LOCAL_NAME)
+KEEP_BAK = 5
+
+
+class Invalid(ValueError):
+    def __init__(self, errors):
+        super().__init__(&quot;; &quot;.join(errors))
+        self.errors = list(errors)
+
+
+def _iso(ts):
+    return dt.datetime.fromtimestamp(ts).isoformat(timespec=&quot;seconds&quot;)
+
+
+def backups(local=None):
+    local = local or LOCAL
+    return sorted((p.name for p in local.parent.glob(local.name + &quot;.bak-*&quot;)), reverse=True)
+
+
+def read(template=None, local=None):
+    &quot;&quot;&quot;→ {doc, local(bool), local_mtime, template_mtime, backups}. 템플릿·local 이 깨졌으면 ValueError/OSError 그대로&quot;&quot;&quot;
+    template, local = template or TEMPLATE, local or LOCAL
+    doc = load_zones(template, local)
+    return {&quot;doc&quot;: doc, &quot;local&quot;: local.is_file(),
+            &quot;local_mtime&quot;: _iso(local.stat().st_mtime) if local.is_file() else None,
+            &quot;template_mtime&quot;: _iso(template.stat().st_mtime), &quot;backups&quot;: backups(local)}
+
+
+def _replace(tmp, dst):
+    &quot;&quot;&quot;Windows 에서는 읽는 순간 replace 가 거부될 수 있어 잠깐 재시도 (mock_feed.write_positions 와 같은 이유)&quot;&quot;&quot;
+    for _ in range(10):
+        try:
+            os.replace(tmp, dst)
+            return
+        except PermissionError:
+            time.sleep(0.02)
+    os.replace(tmp, dst)
+
+
+def write(doc, user, template=None, local=None, now=None):
+    &quot;&quot;&quot;검증 → 백업 → 원자적 쓰기. → (병합된 doc, 백업 파일명 또는 None). 검증 실패는 Invalid(errors).
+    local 에는 **템플릿과 다른 최상위 키만** 남긴다(+ updated_at/by) — overlay 는 키 단위이므로, 손대지 않은 키(version·floor·note…)는
+    계속 git 템플릿을 따른다. 전체를 쓰면 첫 저장 뒤 템플릿 갱신이 영영 닿지 않고 VERSION 을 올렸을 때 모든 읽기가 죽는다&quot;&quot;&quot;
+    template, local = template or TEMPLATE, local or LOCAL
+    if not isinstance(doc, dict):
+        raise Invalid([&quot;문서가 객체가 아니다&quot;])
+    tpl = json.loads(template.read_text(encoding=&quot;utf-8&quot;))
+    doc = {**tpl, **doc}                                   # 빠진 키는 템플릿 값으로 채워 검증한다
+    now = now or dt.datetime.now()
+    doc[&quot;updated_at&quot;] = now.isoformat(timespec=&quot;seconds&quot;)
+    doc[&quot;updated_by&quot;] = user
+    doc.pop(&quot;version&quot;, None); doc[&quot;version&quot;] = tpl.get(&quot;version&quot;)     # version 은 언제나 템플릿의 것
+    errors = validate_zones(doc)
+    if errors:
+        raise Invalid(errors)
+    over = {k: v for k, v in doc.items() if k in (&quot;updated_at&quot;, &quot;updated_by&quot;) or (k != &quot;version&quot; and tpl.get(k) != v)}
+    bak = None
+    if local.is_file():
+        bak = f&quot;{local.name}.bak-{now.strftime('%Y%m%d-%H%M%S')}&quot;
+        shutil.copy2(local, local.with_name(bak))
+        for old in backups(local)[KEEP_BAK:]:                 # 최신 KEEP_BAK 개만 — 이 도구가 만든 백업만 지운다
+            local.with_name(old).unlink(missing_ok=True)
+    tmp = local.with_name(local.name + &quot;.tmp&quot;)
+    tmp.write_text(json.dumps(over, ensure_ascii=False, indent=1), encoding=&quot;utf-8&quot;)
+    try:
+        _replace(tmp, local)
+    except OSError:
+        tmp.unlink(missing_ok=True)
+        raise
+    return doc, bak
+
+
+def _pair_ok(p):
+    return (isinstance(p, dict) and set(p) == {&quot;img&quot;, &quot;floor&quot;}
+            and all(isinstance(p[k], list) and len(p[k]) == 2
+                    and all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) and 0 &lt;= v &lt;= 1 for v in p[k])
+                    for k in (&quot;img&quot;, &quot;floor&quot;)))
+
+
+def homography(pairs):
+    &quot;&quot;&quot;pairs = [{img:[u,v], floor:[x,y]}×4] → {image_to_floor, floor_to_image, reproj_err, ok}. 형태·퇴화는 Invalid&quot;&quot;&quot;
+    if not (isinstance(pairs, list) and len(pairs) == 4 and all(_pair_ok(p) for p in pairs)):
+        raise Invalid([&quot;pairs 는 {img:[u,v], floor:[x,y]} 4개 (모두 0~1 정규화)&quot;])
+    try:
+        h = homography_from_4([p[&quot;img&quot;] for p in pairs], [p[&quot;floor&quot;] for p in pairs])
+    except ValueError as e:
+        raise Invalid([str(e)])
+    if abs(det3(h)) &lt;= 1e-12:
+        raise Invalid([&quot;결과가 특이 행렬이다&quot;])
+    err = max(math.dist(project(h, *p[&quot;img&quot;]), p[&quot;floor&quot;]) for p in pairs)
+    return {&quot;image_to_floor&quot;: h, &quot;floor_to_image&quot;: invert(h), &quot;reproj_err&quot;: round(err, 6), &quot;ok&quot;: err &lt; REPROJ_TOL, &quot;tol&quot;: REPROJ_TOL}</code></pre>
+</figure>
+
+<h3>17-4. 설치 — 유닛·sudoers·Serve</h3>
+<figure class="code">
+<figcaption><span class="path">deploy/mealboard-admin.service</span><span class="lang">ini</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-ini">[Unit]
+Description=Mealboard 관리 앱 (tailnet 전용 — tailscale serve --https=8443 → 127.0.0.1:8101)
+After=network.target
+
+[Service]
+User=__USER__
+WorkingDirectory=/opt/mealboard
+EnvironmentFile=/opt/mealboard/.env
+Environment=PYTHONUNBUFFERED=1
+# RUN_DIR=/run/mealboard (메타데이터 소켓, 3c). PrivateTmp 금지 — /tmp/debug_on 이 vision 과의 계약이다
+RuntimeDirectory=mealboard
+RuntimeDirectoryPreserve=yes
+# --no-access-log: SSH 터널 첫 방문의 ?key= 가 저널(→ 관리 화면 로그 테일)에 남지 않게 (CLAUDE.md §5 인증키 로그 노출 금지)
+ExecStart=/opt/mealboard/.venv/bin/uvicorn app.admin.server:app --host 127.0.0.1 --port ${ADMIN_PORT} --workers 1 --no-access-log
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">deploy/sudoers-mealboard</span><span class="lang">text</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-text"># /etc/sudoers.d/mealboard — 관리 앱(mealboard-admin, __USER__ 계정)이 비밀번호 없이 실행할 수 있는 명령. 정확한 argv 만, 와일드카드 없음.
+# 이 목록은 app/admin/sysctl.py ALLOWED_SUDO 와 한 쌍이다 — setup_pi.sh 6b 가 `visudo -cf` 를 통과할 때만 install -m 440 한다.
+# 관리 앱 자신(mealboard-admin)의 재시작은 없다(자기 발을 쏘지 않게). serve/funnel 은 status 읽기뿐 — reset 은 어떤 경로로도 없다.
+__USER__ ALL=(root) NOPASSWD: /usr/bin/systemctl restart --no-block mealboard-api.service, \
+    /usr/bin/systemctl restart --no-block mealboard-mock.service, \
+    /usr/bin/systemctl restart --no-block mealboard-vision.service, \
+    /usr/bin/systemctl start --no-block mealboard-neis.service, \
+    /usr/bin/systemctl start --no-block mealboard-news.service, \
+    /usr/bin/systemctl start --no-block mealboard-rollup.service, \
+    /usr/bin/systemctl start --no-block mealboard-report.service, \
+    /usr/bin/tailscale serve status --json, \
+    /usr/bin/tailscale funnel status --json</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">터미널 (Pi) — setup_pi.sh 6b 가 하는 일</span><span class="lang">bash</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">cd /opt/mealboard &amp;&amp; git pull --ff-only
+bash setup_pi.sh                       # 6b: visudo -cf 통과 시에만 install -m 440 → /etc/sudoers.d/mealboard, systemd-journal 그룹, mealboard-admin enable
+# .env 에 두 줄 (값은 어디에도 적지 않는다)
+#   ADMIN_USERS=teacher@example.com,dev@example.com      # Tailscale 로그인, 쉼표
+#   ADMIN_LOCAL_KEY=$(openssl rand -hex 16)               # SSH 터널 경로용
+sudo systemctl restart mealboard-admin
+sudo tailscale serve --bg --https=8443 http://127.0.0.1:8101     # tailnet 에만. 끄기는 --https=8443 off (reset 금지)
+tailscale serve status                 # 8443 "tailnet only", 443 은 Funnel 그대로
+tailscale funnel status                # 443 → 8100 만 보여야 한다
+# tailnet PC 에서
+curl -s https://rsp.taild5f11e.ts.net:8443/api/admin/whoami      # {"state":"ok","user":"...","via":"tailscale",...}
+curl -s -o /dev/null -w '%{http_code}\n' https://rsp.taild5f11e.ts.net/api/admin/whoami   # 404 (공개 앱에는 관리 라우터가 없다)
+# SSH 터널 경로: ssh -L 8101:127.0.0.1:8101 mbpi 뒤 브라우저에서 http://127.0.0.1:8101/?key=<ADMIN_LOCAL_KEY> 한 번 → 쿠키 12시간</code></pre>
+</figure>
+
+<p><strong>왜 이렇게</strong> — 공개 페이지에 관리 버튼을 두지 않는 이유는 다른 origin(:8443)을 학생 전원에게 광고하게 되기 때문입니다. 관리자는 <code>https://rsp.taild5f11e.ts.net:8443/</code> 을 북마크합니다(같은 대시보드 + 여섯 번째 화면 "관리"). 접근 로그를 끈 것(<code>--no-access-log</code>)은 터널 첫 방문의 <code>?key=</code> 가 저널을 거쳐 로그 테일 카드에 그대로 보였던 리뷰 발견 때문입니다.</p>
+
+</section><section id="s18" class="step">
+<header><span class="stepnum">STEP 18</span><h2>로컬 LLM — 리포트와 기사 요약</h2><span class="layer">확장</span></header>
+
+<p class="goal">목표: 숫자를 사람의 문장으로 — 아침 예보·점심 결산 <strong>리포트</strong>(<code>reports.db</code>)와 기후 기사 <strong>한국어 요약</strong>(<code>news.json</code> 의 <code>digest</code>)을 Pi 위의 로컬 LLM(Hailo-10H GenAI)이 쓰게 한다. LLM 이 없거나 출력이 검증에 떨어지면 <strong>규칙 템플릿</strong>(리포트)·<strong>DeepL 도입부</strong>(기사)로 물러선다. 어느 경우에도 화면은 비지 않는다.</p>
+
+<dl class="term"><dt>.hef</dt><dd>Hailo 가속기용으로 컴파일된 모델 파일. LLM 용 <code>.hef</code> 는 Hailo Developer Zone 에서 받아 <code>.env</code> 의 <code>LLM_HEF=</code> 로 지정한다. 빈 값이면 LLM 없음 — 모든 소비자가 폴백.</dd>
+<dt>숫자 부분집합 규칙</dt><dd>모델 출력에 나오는 숫자의 집합이 입력에 있던 숫자의 집합 안에 들어야 한다. "9분" 처럼 없는 숫자를 지어내면 그 출력은 버린다. 입력 쪽에서 날짜·요일 번호는 뺀다(<code>2026-09-03</code> 의 09 가 9 로 통과한 적이 있다).</dd>
+<dt>폴백 체인</dt><dd>기사: LLM 요약 → DeepL 도입부 번역 → 원문 영어. 리포트: LLM → 규칙 템플릿. 어느 단계를 썼는지 <code>engine</code> 으로 남겨 화면이 "AI 요약 · 모델" 또는 "DeepL 번역"·"규칙 문장" 칩을 단다.</dd></dl>
+
+<h3>18-1. 공용 라이브러리 — jobs/llm.py</h3>
+<p>장치 API 의 정확한 모양은 학교 Pi 에서 <code>check_llm.py</code> 스파이크(PLAN §5.1: 로드 시간·tok/s·컨텍스트 상한·YOLO 와 공존)로 확정합니다. 그 전까지 <code>_hailo_backend</code> 는 가장 그럴듯한 형태를 시도하고 다르면 <code>LLMUnavailable</code> 로 물러섭니다. 입력은 숫자·정제된 메뉴명·(기사에 한해) 본문뿐 — 프레임·좌표는 절대 넣지 않습니다. 점심시간 밖에서만 부릅니다(타이머 05:45·06:10·14:20).</p>
+<figure class="code">
+<figcaption><span class="path">jobs/llm.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">&quot;&quot;&quot;로컬 LLM 공용 라이브러리 — Hailo-10H GenAI (PLAN §5.2). 소비자는 jobs/report.py(리포트)·jobs/fetch_news.py(기사 요약)뿐이다.
+
+원칙(CLAUDE.md §2 해석 AI): 입력은 숫자·정제된 메뉴명·(기사 요약에 한해) 본문뿐 — 프레임·좌표는 절대 넣지 않는다. 출력은 여기의 검증기
+(`valid_korean`, `numbers_subset`)를 통과한 것만 저장하고, 실패·미설치·busy 는 호출자가 규칙 템플릿/DeepL 로 물러선다.
+점심시간 밖에서만 부른다(HAT·CPU 경합 회피) — 타이머가 그렇게 잡혀 있다.
+
+장치 API: `hailo_platform.genai` 는 apt 로 깔리는 시스템 패키지라 `--system-site-packages` venv 에서만 보인다. 정확한 클래스·메서드 이름은
+학교 Pi 에서 `check_llm.py` 스파이크(PLAN §5.1)로 확정한다 — 그 전까지 `_hailo_backend` 는 가장 그럴듯한 형태로 시도하고,
+모양이 다르면 LLMUnavailable 로 물러선다(아무것도 깨지지 않는다). `LLM_HEF` 가 비어 있으면 아예 시도하지 않는다.&quot;&quot;&quot;
+import json
+import os
+import re
+import time
+
+from app.config import LLM_HEF
+
+HANGUL = re.compile(r&quot;[가-힣]&quot;)
+LETTER = re.compile(r&quot;[A-Za-z가-힣]&quot;)
+NUM = re.compile(r&quot;\d+(?:[.,]\d+)*&quot;)
+URL = re.compile(r&quot;https?://|www\.&quot;, re.I)
+MARKERS = (&quot;```&quot;, &quot;&lt;&quot;, &quot;&gt;&quot;, &quot;system:&quot;, &quot;assistant:&quot;, &quot;user:&quot;)
+
+
+class LLMUnavailable(RuntimeError):
+    &quot;&quot;&quot;설치 안 됨·.hef 없음·API 모양 다름 — 호출자는 템플릿으로&quot;&quot;&quot;
+
+
+class LLMBusy(LLMUnavailable):
+    &quot;&quot;&quot;장치가 다른 프로세스(vision·rollup)에 잡혀 있다 — 잠시 뒤 재시도 가치 있음&quot;&quot;&quot;
+
+
+# ---------------- 검증기 (순수) ----------------
+def numbers(s):
+    &quot;&quot;&quot;문자열의 숫자 집합. '1,234' 와 '1234', '3.0' 과 '3' 은 같은 수로 본다&quot;&quot;&quot;
+    out = set()
+    for m in NUM.findall(str(s)):
+        v = m.replace(&quot;,&quot;, &quot;&quot;)
+        try:
+            f = float(v)
+        except ValueError:
+            continue
+        out.add(str(int(f)) if f == int(f) else str(f))
+    return out
+
+
+def numbers_subset(src, out):
+    &quot;&quot;&quot;출력의 숫자 집합 ⊆ 입력의 숫자 집합 — 모델이 숫자를 지어내지 못하게 하는 핵심 규칙&quot;&quot;&quot;
+    return numbers(out) &lt;= numbers(src)
+
+
+def valid_korean(src, out, min_hangul=0.6, len_ratio=None, max_len=None):
+    &quot;&quot;&quot;→ (ok, reason). 한글 비율(문자 중) ≥ min_hangul, URL·개행·마커 없음, 숫자 부분집합, (선택) 길이비·최대 길이&quot;&quot;&quot;
+    if not isinstance(out, str) or not out.strip():
+        return False, &quot;empty&quot;
+    if &quot;\n&quot; in out or URL.search(out) or any(m in out for m in MARKERS):
+        return False, &quot;format&quot;
+    letters = LETTER.findall(out)
+    if not letters or len(HANGUL.findall(out)) / len(letters) &lt; min_hangul:
+        return False, &quot;hangul&quot;
+    if max_len is not None and len(out) &gt; max_len:
+        return False, &quot;length&quot;
+    if len_ratio is not None and src:
+        r = len(out) / max(1, len(str(src)))
+        if not (len_ratio[0] &lt;= r &lt;= len_ratio[1]):
+            return False, &quot;ratio&quot;
+    if not numbers_subset(src, out):
+        return False, &quot;numbers&quot;
+    return True, &quot;ok&quot;
+
+
+def parse_json_object(text):
+    &quot;&quot;&quot;모델 출력에서 첫 JSON 객체만 뽑는다(앞뒤 잡담·코드펜스 무시). 못 찾으면 None&quot;&quot;&quot;
+    if not isinstance(text, str):
+        return None
+    s, e = text.find(&quot;{&quot;), text.rfind(&quot;}&quot;)
+    if s &lt; 0 or e &lt;= s:
+        return None
+    try:
+        v = json.loads(text[s:e + 1])
+    except ValueError:
+        return None
+    return v if isinstance(v, dict) else None
+
+
+# ---------------- 장치 ----------------
+def _hailo_backend(hef):
+    &quot;&quot;&quot;→ (complete(system, user, max_tokens, temperature, timeout_s) -&gt; str, close()). 모양이 다르면 LLMUnavailable&quot;&quot;&quot;
+    try:
+        from hailo_platform import VDevice                     # noqa: F401  (apt: hailo-h10-all)
+        from hailo_platform import genai
+    except Exception as e:                                     # ImportError 외에도 드라이버 없음 등
+        raise LLMUnavailable(f&quot;hailo_platform.genai 없음: {e} — venv 는 --system-site-packages 여야 한다&quot;)
+    try:
+        vdev = VDevice()
+        llm = genai.LLM(vdev, hef)
+    except Exception as e:
+        msg = str(e).lower()
+        raise (LLMBusy if &quot;busy&quot; in msg or &quot;in use&quot; in msg else LLMUnavailable)(f&quot;LLM 로드 실패: {e}&quot;)
+
+    def complete(system, user, max_tokens, temperature, timeout_s):
+        prompt = [{&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: system}, {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: user}]
+        if hasattr(llm, &quot;generate&quot;):
+            out = llm.generate(prompt, max_generated_tokens=max_tokens, temperature=temperature)
+        elif hasattr(llm, &quot;chat&quot;):
+            out = llm.chat(prompt, max_tokens=max_tokens, temperature=temperature)
+        else:
+            raise LLMUnavailable(&quot;genai.LLM 에 generate/chat 이 없다 — check_llm.py 로 API 확인&quot;)
+        return out if isinstance(out, str) else &quot;&quot;.join(str(t) for t in out)
+
+    def close():
+        for o in (llm, vdev):
+            try:
+                o.release()
+            except Exception:
+                pass
+    return complete, close
+
+
+class LocalLLM:
+    &quot;&quot;&quot;컨텍스트 매니저. `with LocalLLM() as m: m.complete(system, user)`. 없으면 __enter__ 가 LLMUnavailable.
+    backend 인자는 테스트·스파이크용(complete 호출자 하나).&quot;&quot;&quot;
+
+    def __init__(self, hef=None, backend=None):
+        self.hef = LLM_HEF if hef is None else hef
+        self.model = os.path.splitext(os.path.basename(self.hef))[0] if self.hef else None
+        self._backend = backend
+        self._complete = self._close = None
+
+    def __enter__(self):
+        if self._backend is not None:
+            self._complete, self._close = self._backend, (lambda: None)
+            return self
+        if not self.hef:
+            raise LLMUnavailable(&quot;LLM_HEF 가 비어 있다&quot;)
+        if not os.path.exists(self.hef):
+            raise LLMUnavailable(f&quot;LLM_HEF 파일이 없다: {self.hef}&quot;)
+        self._complete, self._close = _hailo_backend(self.hef)
+        return self
+
+    def __exit__(self, *exc):
+        if self._close:
+            self._close()
+        return False
+
+    def complete(self, system, user, max_tokens=256, temperature=0.0, timeout_s=60):
+        t0 = time.monotonic()
+        out = self._complete(system, user, max_tokens, temperature, timeout_s)
+        self.last_ms = round((time.monotonic() - t0) * 1000)
+        return out</code></pre>
+</figure>
+
+<h3>18-2. 리포트 — jobs/report.py</h3>
+<p>preview 는 오늘 메뉴(meal.json) + 같은 요일 최근 4주의 5분 구간 평균(<code>lunch_bins</code>)에서 피크를, recap 은 그날 집계 행(<code>lunch_days</code>)과 이벤트를 입력으로 삼습니다. 둘 다 insights.db 를 읽기 전용으로 열고, <code>reports.db</code> 는 이 파일만 씁니다. 출력 스키마는 <code>{headline≤40, body≤120, tone}</code>, 검증 실패·미설치·장치 busy(60초×3) 는 템플릿. <code>/api/insight/text</code> 가 읽어 실시간 화면의 "오늘 리포트" 카드에 답니다.</p>
+<figure class="code">
+<figcaption><span class="path">jobs/report.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">&quot;&quot;&quot;리포트 생성 → data/reports.db. 이 파일이 reports.db 의 유일한 writer 다 (CLAUDE.md §2). `/api/insight/text` 가 읽는다.
+
+두 종류(PLAN §5.3):
+  preview  05:45 — 오늘 메뉴(meal.json)·요일·평소 곡선(insights.db lunch_bins, 같은 요일 최근 4주 → 최근 전체) → 언제 붐비는지
+  recap    14:20 — 오늘 집계 행(insights.db lunch_days, rollup 14:10 이후)·이벤트 → 결산 한 줄
+엔진: 로컬 LLM(jobs/llm.py) → 출력 JSON {headline≤40, body≤120, tone} 검증(한글·숫자 부분집합·길이) 통과 시 engine=hailo,
+      미설치·busy(60초×3 재시도)·검증 실패 → jobs/report_templates.py 규칙 문장 engine=template. 어느 쪽이든 행 하나.
+입력은 숫자·정제된 메뉴명뿐(프레임·좌표 없음). insights.db·queue.db 는 읽기 전용 연결.
+
+실행:  uv run python -m jobs.report --kind preview|recap|auto [--date YYYY-MM-DD] [--dry-run] [--template]
+       auto = 12:00 전이면 preview, 뒤면 recap. systemd: mealboard-report.timer 05:45·14:20 → --kind auto
+&quot;&quot;&quot;
+import argparse
+import datetime as dt
+import json
+import re
+import sqlite3
+import sys
+import time
+
+from app.config import INSIGHTS_DB_PATH, REPORTS_DB_PATH
+from app.insight_calc import normalize_menu
+from app.insights_db import connect_ro
+from app.lunch import weekday_of
+from app.mealjson import menu_on, read_meal
+from jobs import report_templates as tpl
+from jobs.llm import LLMBusy, LLMUnavailable, LocalLLM, parse_json_object, valid_korean
+
+KINDS = (&quot;preview&quot;, &quot;recap&quot;)
+TONES = (&quot;calm&quot;, &quot;busy&quot;, &quot;info&quot;)
+MENU_RE = re.compile(r&quot;[^가-힣0-9A-Za-z ()&amp;·,]&quot;)
+BUSY_RETRY, BUSY_WAIT_S = 3, 60
+SCHEMA = &quot;&quot;&quot;
+CREATE TABLE IF NOT EXISTS reports (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, kind TEXT NOT NULL, for_date TEXT NOT NULL,
+  engine TEXT NOT NULL, model TEXT, ok INTEGER NOT NULL, ms INTEGER, headline TEXT, body TEXT, tone TEXT, input_json TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_reports_date ON reports (for_date, kind);
+&quot;&quot;&quot;
+SYSTEM = (&quot;너는 학교 급식실 안내판의 짧은 글을 쓰는 작성자다. 입력 JSON 의 숫자와 메뉴명만 사용하고 입력에 없는 사실·숫자는 절대 만들지 않는다. &quot;
+          &quot;학생에게 말하듯 존댓말로, 한국어로만 쓴다. 출력은 JSON 하나뿐: {\&quot;headline\&quot;: 40자 이하 한 줄, \&quot;body\&quot;: 120자 이하 두세 문장, &quot;
+          &quot;\&quot;tone\&quot;: \&quot;calm\&quot;|\&quot;busy\&quot;|\&quot;info\&quot;}. 다른 말·코드펜스·개행 없이 JSON 만 출력한다.&quot;)
+
+
+# ---------------- 입력 만들기 (읽기 전용) ----------------
+def clean_menu(items, n=6):
+    &quot;&quot;&quot;정제된 메뉴명만 — 알레르기 번호 제거(normalize_menu), 허용 문자 밖 제거, 20자 이하, 최대 n개&quot;&quot;&quot;
+    out = []
+    for m in items or []:
+        s = MENU_RE.sub(&quot;&quot;, normalize_menu(str(m)) or &quot;&quot;).strip()[:20]
+        if s:
+            out.append(s)
+    return out[:n]
+
+
+def typical_for(icon, date, weeks=4):
+    &quot;&quot;&quot;같은 요일 최근 weeks 주의 lunch_bins 평균 → {peak_minute, peak_wait, low_minute, days, basis}. 표본 없으면 None&quot;&quot;&quot;
+    if icon is None:
+        return None
+    wd = weekday_of(date)
+    since = (dt.date.fromisoformat(date) - dt.timedelta(weeks=weeks)).isoformat()
+    for basis, sql, args in (
+        (&quot;weekday&quot;, &quot;SELECT bin, AVG(avg_wait) w, COUNT(DISTINCT date) d FROM lunch_bins WHERE weekday = ? AND date &gt;= ? AND date &lt; ? AND avg_wait IS NOT NULL GROUP BY bin&quot;, (wd, since, date)),
+        (&quot;recent&quot;, &quot;SELECT bin, AVG(avg_wait) w, COUNT(DISTINCT date) d FROM lunch_bins WHERE date &lt; ? AND avg_wait IS NOT NULL GROUP BY bin&quot;, (date,)),
+    ):
+        rows = icon.execute(sql, args).fetchall()
+        if len(rows) &gt;= 6:
+            peak = max(rows, key=lambda r: r[&quot;w&quot;])
+            low = min(rows, key=lambda r: r[&quot;w&quot;])
+            return {&quot;basis&quot;: basis, &quot;days&quot;: max(r[&quot;d&quot;] for r in rows), &quot;peak_minute&quot;: int(peak[&quot;bin&quot;]), &quot;peak_wait&quot;: round(peak[&quot;w&quot;], 1),
+                    &quot;low_minute&quot;: int(low[&quot;bin&quot;]) if low[&quot;w&quot;] &lt; peak[&quot;w&quot;] else None}
+    return None
+
+
+def build_preview(date, meal, icon):
+    return {&quot;kind&quot;: &quot;preview&quot;, &quot;date&quot;: date, &quot;weekday&quot;: weekday_of(date), &quot;menu&quot;: clean_menu(menu_on(meal, date)),
+            &quot;typical&quot;: typical_for(icon, date)}
+
+
+def build_recap(date, icon):
+    &quot;&quot;&quot;그날의 집계 행이 있어야 결산이 있다. 없으면 None&quot;&quot;&quot;
+    if icon is None:
+        return None
+    row = icon.execute(&quot;SELECT * FROM lunch_days WHERE date = ?&quot;, (date,)).fetchone()
+    if row is None:
+        return None
+    ev = icon.execute(&quot;SELECT kind, minutes, value FROM events WHERE date = ? AND kind IN ('golden','bottleneck') ORDER BY start_ts&quot;, (date,)).fetchall()
+    menu = clean_menu(json.loads(row[&quot;menu_json&quot;]) if row[&quot;menu_json&quot;] else [])
+    hmv = (row[&quot;peak_wait_ts&quot;] or &quot;&quot;)[11:16] or None
+    return {&quot;kind&quot;: &quot;recap&quot;, &quot;date&quot;: date, &quot;weekday&quot;: row[&quot;weekday&quot;], &quot;menu&quot;: menu, &quot;n_samples&quot;: row[&quot;n_samples&quot;],
+            &quot;coverage_pct&quot;: None if row[&quot;coverage_pct&quot;] is None else round(row[&quot;coverage_pct&quot;]),
+            &quot;peak_wait&quot;: row[&quot;peak_wait&quot;], &quot;peak_wait_hm&quot;: hmv, &quot;peak_queue&quot;: row[&quot;peak_queue&quot;],
+            &quot;avg_wait&quot;: row[&quot;avg_wait&quot;], &quot;served_est&quot;: row[&quot;served_est&quot;],
+            &quot;golden_min&quot;: None if not row[&quot;golden_min&quot;] else round(row[&quot;golden_min&quot;]),
+            &quot;bottleneck_min&quot;: None if not row[&quot;bottleneck_min&quot;] else round(row[&quot;bottleneck_min&quot;]),
+            &quot;events&quot;: [{&quot;kind&quot;: e[&quot;kind&quot;], &quot;minutes&quot;: round(e[&quot;minutes&quot;] or 0), &quot;value&quot;: e[&quot;value&quot;]} for e in ev][:6]}
+
+
+# ---------------- 문장 만들기 ----------------
+def validate_output(inp, out):
+    &quot;&quot;&quot;LLM 출력 dict → (ok, reason). 스키마·길이·tone·한글·숫자 부분집합(입력 JSON 전체 기준)&quot;&quot;&quot;
+    if not isinstance(out, dict) or set(out) - {&quot;headline&quot;, &quot;body&quot;, &quot;tone&quot;} or not all(k in out for k in (&quot;headline&quot;, &quot;body&quot;, &quot;tone&quot;)):
+        return False, &quot;schema&quot;
+    if out[&quot;tone&quot;] not in TONES:
+        return False, &quot;tone&quot;
+    # 숫자 출처는 측정값·메뉴명뿐 — 날짜(2026-09-03 → 9)·요일 번호는 빼야 지어낸 '9분' 이 통과하지 못한다
+    src = json.dumps({k: v for k, v in inp.items() if k not in (&quot;date&quot;, &quot;kind&quot;, &quot;weekday&quot;)}, ensure_ascii=False)
+    for key, n in ((&quot;headline&quot;, 40), (&quot;body&quot;, 120)):
+        ok, why = valid_korean(src, out[key], max_len=n)
+        if not ok:
+            return False, f&quot;{key}:{why}&quot;
+    return True, &quot;ok&quot;
+
+
+def compose(kind, inp, llm_factory=None, busy_wait_s=BUSY_WAIT_S, log=print):
+    &quot;&quot;&quot;→ {engine, model, ok, ms, headline, body, tone, reason}. llm_factory() 가 LocalLLM 컨텍스트 매니저를 준다(테스트는 가짜)&quot;&quot;&quot;
+    factory = llm_factory or LocalLLM
+    for attempt in range(1, BUSY_RETRY + 1):
+        try:
+            with factory() as m:
+                raw = m.complete(SYSTEM, json.dumps(inp, ensure_ascii=False), max_tokens=200)
+                out = parse_json_object(raw)
+                ok, why = validate_output(inp, out)
+                if ok:
+                    return {&quot;engine&quot;: &quot;hailo&quot;, &quot;model&quot;: m.model, &quot;ok&quot;: True, &quot;ms&quot;: getattr(m, &quot;last_ms&quot;, None), **out, &quot;reason&quot;: &quot;ok&quot;}
+                log(f&quot;LLM 출력 거부({why}) → 템플릿&quot;)
+                reason = f&quot;llm_rejected:{why}&quot;
+                break
+        except LLMBusy as e:
+            log(f&quot;LLM busy ({attempt}/{BUSY_RETRY}): {e}&quot;)
+            reason = &quot;llm_busy&quot;
+            if attempt &lt; BUSY_RETRY:
+                time.sleep(busy_wait_s)
+        except LLMUnavailable as e:
+            log(f&quot;LLM 없음 → 템플릿: {e}&quot;)
+            reason = &quot;llm_unavailable&quot;
+            break
+        except Exception as e:                                    # 장치 예외 어떤 것도 리포트를 막지 않는다
+            log(f&quot;LLM 오류 → 템플릿: {type(e).__name__}: {e}&quot;)
+            reason = &quot;llm_error&quot;
+            break
+    out = tpl.render(kind, inp)
+    return {&quot;engine&quot;: &quot;template&quot;, &quot;model&quot;: None, &quot;ok&quot;: True, &quot;ms&quot;: None, **out, &quot;reason&quot;: reason}
+
+
+# ---------------- 쓰기 ----------------
+def connect_rw(path=REPORTS_DB_PATH):
+    con = sqlite3.connect(path, timeout=10)
+    con.execute(&quot;PRAGMA journal_mode=WAL&quot;)
+    con.executescript(SCHEMA)
+    return con
+
+
+def write(con, kind, date, res, inp):
+    con.execute(&quot;INSERT INTO reports (ts, kind, for_date, engine, model, ok, ms, headline, body, tone, input_json) VALUES (?,?,?,?,?,?,?,?,?,?,?)&quot;,
+                (dt.datetime.now().isoformat(timespec=&quot;seconds&quot;), kind, date, res[&quot;engine&quot;], res[&quot;model&quot;], int(res[&quot;ok&quot;]), res[&quot;ms&quot;],
+                 res[&quot;headline&quot;], res[&quot;body&quot;], res[&quot;tone&quot;], json.dumps(inp, ensure_ascii=False)))
+    con.commit()
+
+
+def run(kind, date, insights=INSIGHTS_DB_PATH, reports=REPORTS_DB_PATH, meal=None, dry_run=False, template_only=False, llm_factory=None,
+        busy_wait_s=BUSY_WAIT_S, log=print):
+    &quot;&quot;&quot;→ (res, inp) 또는 (None, reason). 파일은 dry_run 이 아닐 때만 만든다&quot;&quot;&quot;
+    icon = connect_ro(insights, &quot;lunch_days&quot;)
+    try:
+        inp = build_preview(date, meal if meal is not None else read_meal(), icon) if kind == &quot;preview&quot; else build_recap(date, icon)
+    finally:
+        if icon is not None:
+            icon.close()
+    if inp is None:
+        return None, f&quot;{date} 의 집계 행이 없다 — rollup 이 먼저다&quot;
+    factory = llm_factory
+    if template_only:
+        def factory():
+            raise LLMUnavailable(&quot;--template&quot;)
+    res = compose(kind, inp, factory, busy_wait_s=busy_wait_s, log=log)
+    if not dry_run:
+        con = connect_rw(reports)
+        try:
+            write(con, kind, date, res, inp)
+        finally:
+            con.close()
+    return res, inp
+
+
+def main():
+    ap = argparse.ArgumentParser(description=&quot;리포트 생성 → reports.db&quot;)
+    ap.add_argument(&quot;--kind&quot;, choices=KINDS + (&quot;auto&quot;,), default=&quot;auto&quot;)
+    ap.add_argument(&quot;--date&quot;, type=lambda s: dt.date.fromisoformat(s).isoformat(), default=dt.date.today().isoformat())
+    ap.add_argument(&quot;--dry-run&quot;, action=&quot;store_true&quot;, help=&quot;계산만, 아무것도 쓰지 않는다&quot;)
+    ap.add_argument(&quot;--template&quot;, action=&quot;store_true&quot;, help=&quot;LLM 을 건너뛰고 규칙 문장만&quot;)
+    a = ap.parse_args()
+    kind = a.kind if a.kind != &quot;auto&quot; else (&quot;preview&quot; if dt.datetime.now().hour &lt; 12 else &quot;recap&quot;)
+    res, inp = run(kind, a.date, dry_run=a.dry_run, template_only=a.template)
+    if res is None:
+        print(f&quot;건너뜀: {inp}&quot;)
+        return 0
+    print(f&quot;{kind} {a.date} engine={res['engine']} ({res['reason']}){' [dry-run]' if a.dry_run else ''}&quot;)
+    print(f&quot;  {res['headline']}\n  {res['body']}  [{res['tone']}]&quot;)
+    return 0
+
+
+if __name__ == &quot;__main__&quot;:
+    sys.exit(main())</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">jobs/report_templates.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">&quot;&quot;&quot;규칙 템플릿 — LLM 이 없거나 출력이 검증에 떨어졌을 때의 리포트 문장 (PLAN §5.3). 순수 함수, 입력은 report.py 가 만든 dict.
+출력 스키마는 LLM 경로와 같다: {headline ≤40, body ≤120, tone calm|busy|info}. 숫자는 입력에 있는 것만 쓴다(검증기와 같은 규칙).&quot;&quot;&quot;
+
+WD = [&quot;일&quot;, &quot;월&quot;, &quot;화&quot;, &quot;수&quot;, &quot;목&quot;, &quot;금&quot;, &quot;토&quot;]        # SQLite %w 규칙(0=일요일)
+
+
+def clip(s, n):
+    s = &quot; &quot;.join(str(s or &quot;&quot;).split())
+    return s if len(s) &lt;= n else s[:n - 1].rstrip() + &quot;…&quot;
+
+
+def hm(minute):
+    return f&quot;{int(minute) // 60}:{int(minute) % 60:02d}&quot;
+
+
+def menu_phrase(menu, k=2):
+    m = [x for x in (menu or []) if x][:k]
+    return &quot;·&quot;.join(m) if m else &quot;오늘 식단&quot;
+
+
+def preview(inp):
+    &quot;&quot;&quot;아침 예보 — 오늘 메뉴·요일·평소 곡선(같은 요일) → 언제 붐비는지&quot;&quot;&quot;
+    wd = WD[inp.get(&quot;weekday&quot;, 0)] if isinstance(inp.get(&quot;weekday&quot;), int) else &quot;&quot;
+    menu = menu_phrase(inp.get(&quot;menu&quot;))
+    t = inp.get(&quot;typical&quot;) or {}
+    if t.get(&quot;peak_minute&quot;) is not None and t.get(&quot;peak_wait&quot;) is not None:
+        peak, wait = hm(t[&quot;peak_minute&quot;]), t[&quot;peak_wait&quot;]
+        tone = &quot;busy&quot; if wait &gt;= 8 else &quot;calm&quot;
+        headline = clip(f&quot;{wd}요일 {menu}, 평소 {peak} 전후가 가장 붐빕니다&quot;, 40)
+        low = t.get(&quot;low_minute&quot;)
+        body = clip(f&quot;같은 요일 {t.get('days', 0)}일 기준 {peak}쯤 대기 {wait}분까지 올라갔습니다.&quot;
+                    + (f&quot; {hm(low)} 무렵은 한산했습니다.&quot; if low is not None else &quot;&quot;)
+                    + &quot; 줄이 길면 잠시 뒤에 오세요.&quot;, 120)
+    else:
+        tone = &quot;info&quot;
+        headline = clip(f&quot;{wd}요일 급식은 {menu}&quot;, 40)
+        body = clip(&quot;아직 이 요일의 평소 곡선이 없습니다. 대기시간 화면의 실시간 값을 보고 오세요.&quot;, 120)
+    return {&quot;headline&quot;: headline, &quot;body&quot;: body, &quot;tone&quot;: tone}
+
+
+def recap(inp):
+    &quot;&quot;&quot;점심 결산 — 그날 집계 행(lunch_days)·이벤트 → 한 줄 요약&quot;&quot;&quot;
+    menu = menu_phrase(inp.get(&quot;menu&quot;))
+    pw, pq = inp.get(&quot;peak_wait&quot;), inp.get(&quot;peak_queue&quot;)
+    pt = inp.get(&quot;peak_wait_hm&quot;)
+    if pw is None:
+        return {&quot;headline&quot;: clip(f&quot;{menu}, 오늘은 측정값이 부족했습니다&quot;, 40),
+                &quot;body&quot;: clip(f&quot;표본 {inp.get('n_samples') or 0}개, 커버리지 {inp.get('coverage_pct') or 0}%. 카메라·카운팅 상태를 확인해 주세요.&quot;, 120),
+                &quot;tone&quot;: &quot;info&quot;}
+    tone = &quot;busy&quot; if pw &gt;= 8 else &quot;calm&quot;
+    headline = clip(f&quot;{menu}, 최대 대기 {pw}분&quot; + (f&quot; ({pt})&quot; if pt else &quot;&quot;), 40)
+    parts = [f&quot;오늘 {inp.get('served_est') or 0}명이 배식대를 지났고 평균 대기 {inp.get('avg_wait') or 0}분이었습니다.&quot;]
+    if pq is not None:
+        parts.append(f&quot;줄이 가장 길 때 {pq}명.&quot;)
+    if inp.get(&quot;golden_min&quot;):
+        parts.append(f&quot;여유 구간 {inp['golden_min']}분.&quot;)
+    if inp.get(&quot;bottleneck_min&quot;):
+        parts.append(f&quot;병목 {inp['bottleneck_min']}분.&quot;)
+    return {&quot;headline&quot;: headline, &quot;body&quot;: clip(&quot; &quot;.join(parts), 120), &quot;tone&quot;: tone}
+
+
+def render(kind, inp):
+    return preview(inp) if kind == &quot;preview&quot; else recap(inp)</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">deploy/mealboard-report.timer</span><span class="lang">ini</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-ini">[Unit]
+Description=매일 05:45 아침 예보, 14:20 점심 결산 (집계 14:10 뒤 · 점심시간 밖에서만 LLM)
+
+[Timer]
+OnCalendar=*-*-* 05:45:00
+OnCalendar=*-*-* 14:20:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target</code></pre>
+</figure>
+
+<h3>18-3. 기사 본문과 요약 — jobs/newsbody.py · translators.py</h3>
+<p>STEP 12 의 <code>fetch_news.py</code> 는 이제 수집 → <strong>본문 확보</strong> → LLM 요약 → 번역 순서입니다. 본문 전략은 피드별로 <code>news_feeds.json</code> 의 <code>body</code> 가 정하고(<code>rss_content</code> → <code>guardian_api</code> → <code>html</code> → <code>description</code>), 본문은 메모리에서 요약 입력으로만 쓰고 저장하지 않습니다. 요약은 세 문장 bullets(각 ≤90자) + "왜 중요한가"(≤60자)이고 검증(한국어·길이·본문 숫자 부분집합)을 통과해야 <code>digest</code> 가 됩니다. 헤드라인은 계속 번역기(<code>TRANSLATOR=deepl|local|none</code>).</p>
+<figure class="code">
+<figcaption><span class="path">jobs/newsbody.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">&quot;&quot;&quot;기사 본문 확보 (PLAN §5.4) — 요약(LLM)의 입력으로만 쓰고 **어디에도 저장하지 않는다**(메모리에서 요약 → 버림).
+전략 순서는 피드 설정(news_feeds.json `body`)이 정하고, 없으면 rss_content → guardian_api → html → description:
+  rss_content  피드 항목의 &lt;content:encoded&gt; 전문 (Carbon Brief 처럼 전문을 싣는 워드프레스 피드)
+  guardian_api Guardian Content API `show-fields=bodyText` (GUARDIAN_API_KEY 있을 때, theguardian.com 링크만; 비상업 무료 키·출처 표기)
+  html         기사 URL 의 &lt;article&gt;/&lt;main&gt; 안 &lt;p&gt; 단락 — 스크립트·스타일·광고성 짧은 단락 제거, MAX_CHARS 상한, 30초, UA 명시.
+               매체가 거부(403·robots)하면 그 매체는 description 으로.
+  description  피드 요약(이미 있는 것) — 언제나 마지막 폴백
+결과: (본문 텍스트, 출처 이름). 개인 비상업 요약 용도로 제한한다(저작권 메모: PLAN §5.4).&quot;&quot;&quot;
+import html as htmlmod
+import json
+import os
+import re
+import urllib.error
+import urllib.parse
+import urllib.request
+
+MAX_CHARS = 6000
+TIMEOUT = 30
+UA = &quot;Mealboard/0.1 (+school cafeteria dashboard; non-commercial summary)&quot;
+DEFAULT_ORDER = (&quot;rss_content&quot;, &quot;guardian_api&quot;, &quot;html&quot;, &quot;description&quot;)
+MIN_PARA = 40                       # 이보다 짧은 &lt;p&gt; 는 캡션·버튼·광고 문구로 본다
+
+_SCRIPT = re.compile(r&quot;&lt;(script|style|noscript|svg|figure|aside|nav|footer|header|form)\b.*?&lt;/\1\s*&gt;&quot;, re.S | re.I)
+_COMMENT = re.compile(r&quot;&lt;!--.*?--&gt;&quot;, re.S)
+_ARTICLE = re.compile(r&quot;&lt;(article|main)\b[^&gt;]*&gt;(.*?)&lt;/\1\s*&gt;&quot;, re.S | re.I)
+_P = re.compile(r&quot;&lt;p\b[^&gt;]*&gt;(.*?)&lt;/p\s*&gt;&quot;, re.S | re.I)
+_TAG = re.compile(r&quot;&lt;[^&gt;]+&gt;&quot;)
+_WS = re.compile(r&quot;\s+&quot;)
+
+
+def strip_tags(s):
+    return _WS.sub(&quot; &quot;, _TAG.sub(&quot; &quot;, htmlmod.unescape(s or &quot;&quot;))).strip()
+
+
+def paragraphs_from_html(page):
+    &quot;&quot;&quot;HTML → 본문 단락 리스트. &lt;article&gt;/&lt;main&gt; 이 있으면 그 안만, 없으면 문서 전체의 &lt;p&gt;. 스크립트·잡동사니 제거&quot;&quot;&quot;
+    page = _COMMENT.sub(&quot;&quot;, _SCRIPT.sub(&quot;&quot;, page or &quot;&quot;))
+    m = _ARTICLE.search(page)
+    scope = m.group(2) if m else page
+    paras = [strip_tags(p) for p in _P.findall(scope)]
+    return [p for p in paras if len(p) &gt;= MIN_PARA]
+
+
+def join_capped(paras, cap=MAX_CHARS):
+    &quot;&quot;&quot;단락을 이어 붙이되 cap 을 넘으면 앞 단락들 + 마지막 단락(결론이 보통 끝에 있다)&quot;&quot;&quot;
+    text = &quot;\n&quot;.join(paras)
+    if len(text) &lt;= cap:
+        return text
+    last = paras[-1] if paras else &quot;&quot;
+    budget = cap - len(last) - 1
+    head = []
+    for p in paras[:-1]:
+        if sum(len(x) + 1 for x in head) + len(p) &gt; budget:
+            break
+        head.append(p)
+    return &quot;\n&quot;.join(head + [last])[:cap]
+
+
+def _get(url, timeout=TIMEOUT):
+    req = urllib.request.Request(url, headers={&quot;User-Agent&quot;: UA, &quot;Accept&quot;: &quot;text/html,application/json;q=0.9,*/*;q=0.5&quot;})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read().decode(r.headers.get_content_charset() or &quot;utf-8&quot;, errors=&quot;replace&quot;)
+
+
+# ---- 전략 ----
+def from_rss_content(item):
+    raw = item.get(&quot;_content&quot;) or &quot;&quot;
+    paras = paragraphs_from_html(raw) if &quot;&lt;p&quot; in raw.lower() else [strip_tags(raw)]
+    return join_capped([p for p in paras if p]) or None
+
+
+def from_guardian_api(item, key=None):
+    key = (key if key is not None else os.getenv(&quot;GUARDIAN_API_KEY&quot;) or &quot;&quot;).strip()
+    link = item.get(&quot;link&quot;) or &quot;&quot;
+    if not key or &quot;theguardian.com/&quot; not in link:
+        return None
+    path = urllib.parse.urlparse(link).path.strip(&quot;/&quot;)
+    url = f&quot;https://content.guardianapis.com/{path}?{urllib.parse.urlencode({'api-key': key, 'show-fields': 'bodyText'})}&quot;
+    data = json.loads(_get(url))
+    body = ((data.get(&quot;response&quot;) or {}).get(&quot;content&quot;) or {}).get(&quot;fields&quot;, {}).get(&quot;bodyText&quot;)
+    return join_capped([body]) if body else None
+
+
+def from_html(item):
+    paras = paragraphs_from_html(_get(item.get(&quot;link&quot;) or &quot;&quot;))
+    return join_capped(paras) if len(paras) &gt;= 2 else None
+
+
+def fetch_body(item, order=None, log=print):
+    &quot;&quot;&quot;→ (text, source). 어떤 전략도 실패하면 (description, 'description'). 예외는 여기서 삼킨다 — 뉴스는 나가야 한다&quot;&quot;&quot;
+    for name in order or DEFAULT_ORDER:
+        try:
+            if name == &quot;rss_content&quot;:
+                text = from_rss_content(item)
+            elif name == &quot;guardian_api&quot;:
+                text = from_guardian_api(item)
+            elif name == &quot;html&quot;:
+                text = from_html(item)
+            else:
+                text = None
+            if text and len(text) &gt;= 400:
+                return text, name
+        except urllib.error.HTTPError as e:
+            log(f&quot;    본문 {name} 거부 HTTP {e.code} — 다음 전략&quot;)
+        except Exception as e:
+            log(f&quot;    본문 {name} 실패 {type(e).__name__}: {str(e)[:80]} — 다음 전략&quot;)
+    return item.get(&quot;summary&quot;) or &quot;&quot;, &quot;description&quot;</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">jobs/translators.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">&quot;&quot;&quot;헤드라인·요약 번역기 (PLAN §5.4). `.env TRANSLATOR=deepl|local|none` (기본 deepl).
+  deepl  DeepL API Free — 월 50만 자. 하루 세 건(약 800자)이면 한도의 5% 도 쓰지 않는다. 무료 키는 끝이 &quot;:fx&quot; 이고 엔드포인트가 다르다.
+  local  로컬 LLM(jobs/llm.py)로 제목만 옮긴다 — 4a 스파이크를 통과한 뒤에 켜는 옵션. 검증에 떨어지면 원문.
+  none   번역하지 않는다.
+어디서 실패하든 원문 영어는 그대로 남는다 — 번역이 안 됐다고 카드를 비우지 않는다.&quot;&quot;&quot;
+import json
+import os
+import urllib.error
+import urllib.request
+
+from jobs.llm import LLMUnavailable, LocalLLM, valid_korean
+
+DEEPL = {True: &quot;https://api-free.deepl.com/v2/translate&quot;, False: &quot;https://api.deepl.com/v2/translate&quot;}
+MODES = (&quot;deepl&quot;, &quot;local&quot;, &quot;none&quot;)
+
+
+def mode():
+    m = (os.getenv(&quot;TRANSLATOR&quot;) or &quot;deepl&quot;).strip().lower()
+    return m if m in MODES else &quot;deepl&quot;
+
+
+def deepl_texts(texts, key=None, timeout=20, log=print):
+    &quot;&quot;&quot;영어 문자열 리스트 → 한국어 리스트(같은 길이). 실패하면 None (호출자가 원문 유지)&quot;&quot;&quot;
+    key = (key if key is not None else os.getenv(&quot;DEEPL_API_KEY&quot;) or &quot;&quot;).strip()
+    if not key:
+        log(&quot;  번역 건너뜀: DEEPL_API_KEY 없음 — 원문 영어로 싣는다&quot;)
+        return None
+    if not texts:
+        return []
+    body = json.dumps({&quot;text&quot;: texts, &quot;target_lang&quot;: &quot;KO&quot;}).encode(&quot;utf-8&quot;)
+    req = urllib.request.Request(DEEPL[key.endswith(&quot;:fx&quot;)], data=body, method=&quot;POST&quot;,
+                                 headers={&quot;Authorization&quot;: f&quot;DeepL-Auth-Key {key}&quot;, &quot;Content-Type&quot;: &quot;application/json&quot;, &quot;User-Agent&quot;: &quot;Mealboard/0.1&quot;})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            out = json.load(r)[&quot;translations&quot;]
+        if len(out) != len(texts):                        # 개수가 어긋나면 짝이 밀린다 — 통째로 포기
+            raise ValueError(f&quot;{len(out)}개 회신, {len(texts)}개 요청&quot;)
+        return [o[&quot;text&quot;] for o in out]
+    except urllib.error.HTTPError as e:                   # 456 한도 초과 · 403 키 오류를 구분해 남긴다
+        hint = {403: &quot;키가 잘못됐거나 권한 없음&quot;, 456: &quot;이번 달 무료 한도 소진&quot;, 429: &quot;요청이 너무 잦음&quot;}.get(e.code, &quot;&quot;)
+        log(f&quot;  번역 실패: HTTP {e.code} {hint} — 원문 영어로 싣는다&quot;)
+    except Exception as e:                                # 번역이 실패해도 뉴스는 나가야 한다
+        log(f&quot;  번역 실패({type(e).__name__}: {e}) — 원문 영어로 싣는다&quot;)
+    return None
+
+
+def local_titles(titles, llm_factory=None, log=print):
+    &quot;&quot;&quot;로컬 LLM 으로 제목만. 항목별로 검증(valid_korean, 길이비 0.4~2.5) — 떨어진 것은 None&quot;&quot;&quot;
+    factory = llm_factory or LocalLLM
+    try:
+        with factory() as m:
+            out = []
+            for t in titles:
+                raw = m.complete(&quot;영어 뉴스 제목을 자연스러운 한국어 한 줄로 옮긴다. 번역문만 출력한다.&quot;, t, max_tokens=60)
+                raw = (raw or &quot;&quot;).strip().strip('&quot;')
+                out.append(raw if valid_korean(t, raw, len_ratio=(0.4, 2.5))[0] else None)
+            return out
+    except LLMUnavailable as e:
+        log(f&quot;  로컬 번역 없음: {e}&quot;)
+        return None
+
+
+def translate(items, clean, log=print, llm_factory=None):
+    &quot;&quot;&quot;items 에 title_ko(모두)·summary_ko(digest 없는 것만)를 붙인다. → 쓴 엔진 이름 또는 None&quot;&quot;&quot;
+    if not items:
+        return None
+    m = mode()
+    if m == &quot;none&quot;:
+        return None
+    if m == &quot;local&quot;:
+        kos = local_titles([x[&quot;title&quot;] for x in items], llm_factory, log)
+        if kos is None:
+            return None
+        for x, ko in zip(items, kos):
+            if ko:
+                x[&quot;title_ko&quot;] = clean(ko)
+        return &quot;local&quot;
+    need = [x for x in items if not x.get(&quot;digest&quot;)]
+    texts = [x[&quot;title&quot;] for x in items] + [x[&quot;summary&quot;] for x in need]
+    out = deepl_texts(texts, log=log)
+    if out is None:
+        return None
+    for x, ko in zip(items, out[:len(items)]):
+        x[&quot;title_ko&quot;] = clean(ko) or x[&quot;title&quot;]
+    for x, ko in zip(need, out[len(items):]):
+        x[&quot;summary_ko&quot;] = clean(ko) or x[&quot;summary&quot;]
+    return &quot;deepl&quot;</code></pre>
+</figure>
+
+<h3>18-4. 확인</h3>
+<figure class="code">
+<figcaption><span class="path">터미널 — PC 와 Pi</span><span class="lang">bash</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">uv run pytest -q tests/test_report.py tests/test_news.py
+uv run python -m jobs.report --kind recap --dry-run --template        # 규칙 문장 경로
+uv run python -m jobs.fetch_news --dry-run                             # 본문 출처(html/rss_content/…)와 요약·번역 결과, 파일은 안 쓴다
+# Pi
+sudo systemctl start mealboard-report &amp;&amp; journalctl -u mealboard-report -n 5 --no-pager   # engine=template (LLM_HEF 비면)
+curl -s localhost:8100/api/insight/text | head -c 300
+systemctl list-timers 'mealboard*'                                     # report 05:45·14:20, news 06:10, rollup 14:10
+# .hef 를 받은 뒤: .env LLM_HEF=/opt/mealboard/models/<file>.hef → 같은 명령에서 engine=hailo 가 보여야 한다</code></pre>
+</figure>
+
+<p><strong>왜 이렇게</strong> — LLM 은 "숫자 → 문장" 한 가지 일만 하고, 카운팅 트랙과는 SQLite 로 완전히 분리됩니다. 출력이 스키마와 숫자 규칙을 통과했을 때만 저장하므로, 모델이 바뀌거나 없어도 화면의 약속(카드가 비지 않고, 없는 숫자를 말하지 않는다)은 그대로입니다. 기사 본문은 저작권 때문에 저장·표시하지 않고 짧은 자체 요약 + 출처 링크만 둡니다(STEP 12 개정 문단).</p>
 
 </section>
 </main>

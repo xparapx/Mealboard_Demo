@@ -830,6 +830,7 @@ tr:last-child td{border-bottom:0}
 <tr><td>3</td><td><code>#week</code> · 달력 · <b>주간식단</b></td><td>이번 주 식단</td><td>주간 영양 추이 · 메뉴 인기 TOP5</td></tr>
 <tr><td>4</td><td><code>#today</code> · 숟가락+포크 나란히 · <b>오늘급식</b></td><td>오늘 중식(+탄소 절)</td><td>—</td></tr>
 <tr><td>5</td><td><code>#news</code> · 피드 줄 · <b>이슈피드</b></td><td>오늘의 이슈 피드</td><td>—</td></tr>
+<tr><td>6 (관리 origin 만)</td><td><code>#admin</code> · 스패너 · <b>관리</b></td><td colspan="2">공개 origin 에는 없다. <code>/api/admin/whoami</code> 가 200 인 origin(Serve 8443 · SSH 터널)에서만 <code>admin.js</code> 가 dock·레일에 여섯 번째 버튼과 화면을 붙인다 — 아래 "관리 화면" 절</td></tr>
 </table>
 <table>
 <tr><th>요소</th><th>스펙</th><th>동작</th><th>비고</th></tr>
@@ -837,6 +838,21 @@ tr:last-child td{border-bottom:0}
 <tr><td>페이저 (모바일)</td><td><code>html{scroll-snap-type:x mandatory}</code>, <code>.views</code> 는 가로 flex, <code>.view</code> 는 100vw + <code>scroll-snap-align:start</code>. 활성 화면(<code>[data-active]</code>)만 문서 높이를 정하고, 비활성 화면은 <code>position:sticky; top:0; height:100dvh−dock; overflow:hidden</code></td><td>스와이프 = 문서 가로 스크롤. <code>scrollend</code>(없으면 120ms 디바운스)에 어느 화면에 멈췄는지 읽어 <code>replaceState</code>. 세로 스크롤은 문서 스크롤 그대로(URL 바 접힘 유지), 화면별 scrollY 저장·복원. 도착 화면 카드에 <code>.enter</code>(opacity + translateY 6px, .24s)</td><td>이웃 화면의 상단이 스와이프 중에 보인다. 모션 축소면 스냅 이동은 즉시, .enter 없음</td></tr>
 <tr><td>레일 + 보드 (데스크톱 ≥900)</td><td>좌측 fixed 56px 레일(같은 5 아이콘, 54px 칸, 현재 = 카드색 + 그림자). 보드 = max-width 1120, 12컬럼 grid, gap 24, 왼쪽 여백 88px(레일 자리). <code>.view</code> 는 <code>display:contents</code> 라 카드가 곧 그리드 아이템</td><td>레일 클릭·키보드 1~5 = 그 화면 첫 카드로 부드럽게 스크롤 + 0.9초 틸 링(<code>.ring</code>). 스크롤 스파이(IntersectionObserver, 화면 가운데 띠)가 현재 아이콘을 켜고 해시를 replaceState. 현재 표시 이동은 View Transition(<code>view-transition-name: rail-cur</code>)</td><td>배치: 1행 대기시간(1~7) · 실시간(8~12, 1~3행) / 2행 갱신 메타 / 3행 오늘급식(1~7) / 4행 주간식단(1~7) · 이슈피드(8~12). 실시간 카드가 늘어난 높이는 평면도가 채운다(캔버스 absolute + canvasAuto). 인사이트 카드는 5행부터</td></tr>
 <tr><td>폴링·생명주기</td><td>각 화면 모듈이 <code>screen = {every, poll, fail, activate, deactivate}</code> 를 내보내고 core 가 30초 tick 에서 <em>보이는 화면</em>만 폴링(모바일 = 활성 1개, 데스크톱 = 전부). 대기시간·실시간 30초, 나머지 진입 시 1회 + 5분</td><td>탭이 숨겨지면(<code>document.hidden</code>) 쉬고, 돌아오면 즉시 한 번. 실시간 화면 밖에서는 <code>/api/positions</code> 요청이 나가지 않는다. 마커 점멸은 활성일 때만(<code>.plan.live</code>). 서버에 닿지 못하면 화면이 '정보 없음'으로 — 옛 값을 지금처럼 두지 않는다</td><td>캔버스는 <code>canvasAuto</code>(ResizeObserver, 폭 0 이면 건너뜀)가 상자 크기 변화에만 다시 그린다. 900px 경계를 넘으면 구조가 다르므로 새로 읽는다</td></tr>
+</table>
+
+<h2>관리 화면 <small>여섯 번째 화면 · tailnet 전용 (09-03, PLAN §4.5 · Phase 3)</small></h2>
+<p class="sub">디자인 컨셉은 v5 그대로(외곽선 없음, radius 24, 2단 그림자). 색 규칙만 다릅니다 — <b>틸 = 정상·라이브</b>, <b>멜론 = 경고·파괴적</b>(실사 스트림·삭제·강제 재시작), <b>차콜 = 구조</b>(머리 카드), 옐로는 쓰지 않습니다. 모든 버튼은 44px 알약. 스타일은 <code>app/admin/static/admin.css</code> 에만 있고 공개 CSS 를 건드리지 않습니다.</p>
+<table>
+<tr><th>카드</th><th>내용</th><th>동작·규칙</th></tr>
+<tr><td>관리 머리(차콜)</td><td>"관리" 눈썹 + 접속자(<code>user · tailnet | SSH 터널</code>)</td><td>lockdown 이면 멜론 띠 "관리 포트가 공개 Funnel 에 노출되어 잠겼습니다" — whoami 가 403 이어도 본문 reason 으로 표시</td></tr>
+<tr><td>스트림</td><td>큰 fps + 상태 칩, 6타일(추론 ms · 트랙 · ROI 안 · λ · 예상 대기 · 소스·모델), 세그먼트 <b>메타 / 실사 / 끄기</b> + 실사 시간(2·5·10분), 16:9 스테이지, 보기 <b>평면도 / 프레임</b></td><td>메타 = SSE 를 평면도(익명 스마일 + 구역 틴트) 또는 프레임(bbox·발 점) 뷰로. 실사 = 확인 대화상자(멜론) → <code>stream/on</code> → <code>&lt;img&gt;</code> 에 켤 때만 src, 끌 때 비움, 우상단 카운트다운 배지(메타 = 틸 틴트, 실사 = 멜론 틴트). 서버가 끄면 즉시 메타로. 화면을 떠나면 클라이언트 쪽은 전부 끊는다. 각주 "실사는 이 화면에만 · 저장·전송 없음 · 켜짐 이력 기록"</td></tr>
+<tr><td>구역 편집기</td><td>모드 <b>평면도·구역 / 프레임·ROI·보정</b>, 스테이지 캔버스(<code>touch-action:none</code>), 구역 칩, 문맥 필드, <b>저장</b>(틸) · <b>되돌리기</b>(hair) · 삭제(멜론 + 확인), "저장 안 됨" 더티 표시</td><td>꼭짓점 핸들 r6 / 히트 반경 22(지름 44). λ 변은 변을 눌러 지정, 출구 방향 뒤집기, 완충띠 표시. 보정 4점 = 이미지 점 찍기 + 바닥 m 입력(도면 프리셋 6개) → 호모그래피 → 바닥 구역을 프레임 위에 점선으로. 프레임 잡기 = 실사 <code>&lt;img&gt;</code> 를 캔버스에 복사(브라우저 메모리뿐)</td></tr>
+<tr><td>서비스 상태</td><td><code>.well</code> 4타일(DB 최신 행 · 디스크 · 온도 · NTP) + 유닛 행(active/sub 태그, 재시작 ghost 버튼)</td><td>급식 시간의 카운팅 유닛 재시작은 409 → 멜론 경고 대화상자 → force. disabled 유닛(학교 Pi 의 mock)은 "꺼 둠" 표시, 버튼 없음</td></tr>
+<tr><td>원샷 작업</td><td>2×2 알약: NEIS 재수신 · 뉴스 재수신 · 집계 재실행 · 리포트 재생성</td><td>확인 → <code>systemctl start --no-block</code>(sudoers 허용목록) → 결과는 로그 테일에서</td></tr>
+<tr><td>통과 이벤트</td><td>메타 스트림의 λ 선 통과 50건(시각 · #ID · 방향)</td><td>화면에만, 저장 없음</td></tr>
+<tr><td>로그 테일 · 감사 로그</td><td><code>pre.log</code> 11.5px 모노, 유닛 선택 + 따라가기 / 감사 행 50건(누가·언제·무엇·결과)</td><td><code>?key=</code> 는 마스킹. 감사 행은 관리 앱만 쓴다(<code>admin.db</code>)</td></tr>
+<tr><td>확인 대화상자</td><td><code>&lt;dialog class="confirm"&gt;</code> r24 · surface · e2 · backdrop <code>rgba(51,49,45,.42)</code>, 파괴적이면 멜론 채움</td><td><code>confirm({title, body, ok, danger}) → Promise&lt;boolean&gt;</code>. 답은 form submit(<code>e.submitter</code>)에서 읽는다</td></tr>
+<tr><td>데스크톱 배치</td><td>머리 1~12 · 스트림 1~7 · 구역 편집기 1~7 · 로그 테일 1~7 / 서비스 8~12 · 작업 8~12 · 통과 이벤트 8~12 · 감사 8~12</td><td>dock 은 <code>[data-n="6"]</code> 로 6칸, 키보드 6</td></tr>
 </table>
 
 <h2>탄소 카드 산식 <small>전문가 판단 · 가정은 전부 파일 한 곳에</small></h2>

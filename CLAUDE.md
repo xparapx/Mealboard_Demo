@@ -57,7 +57,8 @@
 - **Phase 3c 완료(09-03, `a844104`+`2cf50f6`)**: `app/admin/stream.py` — 메타 허브는 인증된 SSE 구독자가 있을 때만 소켓 bind(POSIX `RUN_DIR/meta.sock`, **소켓을 직접 bind 해 `sock=` 로** — uvloop 은 AF_UNIX `local_addr` 를 거부), MJPEG 는 플래그 `DEBUG_FLAG` + 자동 off(≤10분, 재시작 뒤 resume). `vision/meta.py` 발신 라이브러리, `mock --meta`. **루프 타이머를 잡는 엔드포인트는 async def**. 관리 화면 `confirm()` 은 form submit 기반(임베디드 브라우저에서 dialog close 이벤트가 안 옴).
 - **Phase 3d 완료(09-03, `5ca03e2`)**: `app/admin/zones_store.py` 는 `data/zones.local.json` 에만 쓴다(템플릿 불변, `.bak` 5개). 편집기는 `app/admin/static/zones-editor.js`(별도 모듈). 관리 화면은 등록 직후 `MB.poll("admin", true)`.
 - **Phase 3 완료(09-03, 리뷰 14건 반영 `5725146`)**: 관리 앱은 `--no-access-log`(키가 저널에 남지 않게), 게이트는 GET 포함 모든 교차 사이트 요청 거부, 실사 자리는 `claim()` 을 await 전에, 릴레이는 off `Event` 로 1초 안에 끊김, `zones.local.json` 에는 **템플릿과 다른 키만**(version 은 절대 안 씀), disabled 카운팅 유닛은 재시작 409. SSH 터널 진입은 `http://127.0.0.1:8101/?key=<ADMIN_LOCAL_KEY>` 한 번(쿠키 12시간). 남은 설계 판단은 PLAN §7(loopback 헤더 위조·/tmp 플래그 선점).
-- **다음 할 일**: PLAN §6 순서대로 — **Phase 4**. 4a(`check_llm.py` 스파이크)는 학교 Pi 의 Hailo `.hef` 가 있어야 한다(사용자 몫) → 4b(`jobs/report.py` → `reports.db`, 규칙 템플릿 경로 먼저, LLM 은 `jobs/llm.py` 가 미설치면 폴백)·4c(뉴스 본문 + 요약) 를 템플릿/폴백 경로로 먼저 만든다. 아래 ①~④ 는 이후 단계에 흡수된다.
+- **Phase 4b·4c 완료(09-03, `69fc4ad`·`29cbca1`)**: `jobs/llm.py`(LocalLLM, 검증기 — **숫자 부분집합 출처에서 날짜·요일 제외**), `jobs/report.py`(reports.db 유일 writer, 템플릿 폴백, 타이머 05:45·14:20), `jobs/newsbody.py`+`translators.py`+`fetch_news.py`(본문은 메모리에서만, digest → DeepL → 영어). Pi 반영됨(리포트 행·news.json engine=deepl). **4a 스파이크는 `.hef` 확보 뒤**(그때까지 engine=template/deepl). 장치 API 모양은 `jobs/llm.py _hailo_backend` 가 추정 — 스파이크 결과로 고친다.
+- **다음 할 일**: PLAN §6 **Phase 5 문서**(매뉴얼 STEP 16~18 추가됨 — layout·README 구조·CLAUDE.md 정리) → 4a(사용자가 `.hef` 를 받으면 `check_llm.py`) → PLAN §7 메모 정리. 아래 ①~④ 는 이후 단계에 흡수된다.
   ① 평소 곡선(`/api/typical`)은 mock 이 170분 사이클을 반복해 써서 스테이징에서는 값이 바닥이다. 실측 이후 확인.
   ② Inside Climate News 는 미국 지역 전력·정치 보도가 많아 "세계적 기후 이슈"와 결이 다른 기사가 섞인다 —
   며칠 지켜본 뒤 교체 여부 판단(후보: UNEP · Climate Home News). ③ 급식 있는 평일에 데스크톱 12컬럼 보드·모바일 dock 실물 확인.
@@ -102,9 +103,10 @@ Mealboard_Demo/
 ├── README.md                     # 개요·구조·셋업·작업 로그 (선행 레포 형식)
 ├── setup_pi.sh                   # Pi 최초 설치 + 유닛 갱신 (멱등)
 ├── docs/                         # GitHub Pages (index.html + manual.html)
-├── app/                          # FastAPI: main.py, config.py, db.py, lunch.py, insight_calc.py, insights_db.py, routers/{status,history,meal,positions,news,typical,insight}.py, admin/(관리 앱, 별도 프로세스)
-├── vision/                       # counter.py(진입점), source.py(webcam|file|picamera), zones.py, waittime.py, heatmap.py, debug_stream.py, calibrate.py
-├── jobs/                         # fetch_neis.py, fetch_news.py, mock_feed.py, rollup.py(→insights.db), report.py(→reports.db), llm.py, translators.py, newsbody.py
+├── app/                          # FastAPI: main.py, config.py, db.py, lunch.py, insight_calc.py, insights_db.py, mealjson.py, routers/{status,history,meal,positions,news,typical,insight}.py
+│   └── admin/                    # 관리 앱(별도 프로세스 8101): server.py, auth.py, guard.py, sysctl.py, watchdog.py, audit.py, health.py, stream.py, zones_store.py, routers/{system,stream,zones}.py, static/{admin.js,zones-editor.js,admin.css}
+├── vision/                       # zones.py(구역·ROI·호모그래피), waittime.py, meta.py(메타데이터 발신). 로드맵 ④: counter.py(진입점), source.py(webcam|file|picamera), heatmap.py, debug_stream.py, calibrate.py
+├── jobs/                         # fetch_neis.py, fetch_news.py + newsbody.py + translators.py, mock_feed.py(--meta), rollup.py(→insights.db), report.py + report_templates.py + llm.py(→reports.db)
 ├── static/                       # index.html(셸), css/{base,screens,insight}.css, js/{core,floor,wait,room,week,today,news}.js, manifest.json, sw.js
 ├── data/                         # queue.db, insights.db, reports.db, admin.db, meal.json, news.json, positions.json (git 제외) / 포함: nutrition_std.json, carbon_std.json, news_feeds.json, zones.json(템플릿). 관리 앱의 보정 결과는 미추적 zones.local.json
 ├── deploy/                       # mealboard-{api,mock,vision,admin,neis,news,rollup,report}.service, *.timer, sudoers-mealboard, cloudflared-config.yml(견본)
