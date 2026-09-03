@@ -87,7 +87,7 @@ def main():
         from hailo_platform import genai
         print(f"   OK  hailo_platform {getattr(hailo_platform, '__version__', '?')}  genai: {[n for n in dir(genai) if not n.startswith('_')][:12]}")
     except Exception as e:
-        print(f"   FAIL {e}\n   힌트: venv 를 `uv venv --system-site-packages` 로 만들었는가(apt hailo-h10-all)"); return 2
+        print(f"   FAIL {e}\n   힌트: 5.3.0 은 휠(`hailort-5.3.0-cp313…whl`)을 venv 에 넣는다 — `uv pip install --python .venv/bin/python <whl>` (5.1.1 은 apt + --system-site-packages)"); return 2
 
     print("② 로드")
     t0 = time.monotonic()

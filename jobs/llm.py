@@ -8,7 +8,7 @@
 `generate_all(prompt, temperature, top_p, top_k, frequency_penalty, max_generated_tokens, do_sample, seed, timeout_ms=600000) -> str`,
 prompt 는 문자열(원문 그대로) 또는 chat 리스트 `[{"role","content"}]`. `generate` 는 스트리밍. 모델 파일은 공개 경로
 `https://dev-public.hailo.ai/v<HailoRT>/blob/<모델>.hef` (예: v5.1.1/blob/Qwen2.5-1.5B-Instruct.hef, 2.36 GB) — 로그인 없이 받는다.
-`hailo_platform.genai` 는 apt 시스템 패키지라 `--system-site-packages` venv 에서만 보인다. 모양이 다르면 LLMUnavailable 로 물러선다
+`hailo_platform` 은 5.1.1 까지는 apt 시스템 패키지(`--system-site-packages` venv 로 보임), 5.3.0 부터는 Hailo 휠을 venv 에 직접 설치(09-04). 모양이 다르면 LLMUnavailable 로 물러선다
 (아무것도 깨지지 않는다). `LLM_HEF` 가 비어 있으면 아예 시도하지 않는다."""
 import json
 import os

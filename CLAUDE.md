@@ -63,7 +63,12 @@
 - **09-03 오후 개정(사용자 요청)**: 화면은 **한 번에 한 화면**(스와이프 페이저·스크롤 스파이 폐기, dock/레일 탭 즉시 전환, 데스크톱은 화면별 12컬럼 그리드 1920×1080 기준 — `docs/layout.html` 네비게이션 절). 실시간뷰 화면의 구역 점유율은 **당일 최근 30분 밀집도**(`/api/insight/density`, queue.db 즉석) — **09-04 부터 육각 타일 10×18**(`vision/zones.py cell_of/hex_center`, 화면 `floor.js drawHeat` 가 같은 기하) 에 seaborn flare 팔레트, 글은 데스크톱에서 평면도 오른쪽. 추이 막대와 요일×시각 히트맵은 **멜론 #FF7260 램프**(`--heat`). 추이 그래프는 1분 막대. `/api/history` 는 10초 묶음. mock 은 `--speed 2`(5초 주기 더미). 관리 CSS 의 스테이지는 `.sstage`(공개 `.stage` 와 이름 분리).
 - **로컬 LLM 가동(09-04)**: Pi 에 `data/models/Qwen2.5-1.5B-Instruct.hef`(공개 경로 `https://dev-public.hailo.ai/v5.1.1/blob/…`, HailoRT 5.1.1 짝, 2.36 GB, 로그인 없음). `.env` `LLM_HEF`·`LLM_CONTEXT_CHARS=3200`·`LLM_REPORT=0`.
   스파이크 결과: 로드 11초, 5~9 tok/s, 6,000자 OK. **한국어 직접 생성은 불가**(문법 붕괴·중국어 혼입) → 기사 요약은 영어 4줄 → DeepL(운영 실측 3건 중 2건 성공, 거부는 '본문에 없는 숫자' 뿐), 리포트는 `LLM_REPORT=0`(규칙 템플릿 유지). 06:10 뉴스 타이머가 그대로 LLM 을 쓴다.
-  HailoRT 5.3.0 은 apt 후보가 없어(로컬 deb) Qwen3-1.7B 는 보류. 모델 교체 시 `check_llm.py` 로 다시 판정.
+  **09-04 밤 HailoRT 5.3.0 으로 올렸다**(사용자 실행): Pi 저장소의 `h10-hailort` 계열(5.1.1 고정)을 지우고 Hailo 공개 경로
+  `https://dev-public.hailo.ai/2026_04/Hailo10/` 의 `hailort-pcie-driver_5.3.0_all.deb`·`hailort_5.3.0_arm64.deb`·`hailo-tappas-core_5.3.0_arm64.deb` 설치,
+  Python API 는 시스템 패키지가 아니라 **휠(`hailort-5.3.0-cp313…whl`)을 venv 에**(`uv pip install --python .venv/bin/python`, 파일은 `data/models/` 에 보관 — `/tmp` 은 tmpfs 라 재부팅에 지워진다).
+  드라이버 소스는 커널 6.15+ 에서 `del_timer_sync` 로 빌드가 깨져 `/usr/src/hailo1x_pci-5.3.0/linux/vdma/monitor.c` 에 `timer_delete_sync` 호환 정의를 넣었다(dkms 가 이 소스를 쓴다 — 재설치하면 다시 패치).
+  5.1.1 로 컴파일된 YOLO hef 와 Qwen2.5 hef 는 5.3.0 에서도 열린다. 다음 모델 후보 Qwen3-1.7B(`v5.3.0/blob/Qwen3-1.7B-Instruct.hef`, 2.88 GB) — `check_llm.py` 로 판정 뒤 교체.
+  **`apt install hailo-h10-all` 을 다시 실행하지 말 것**(5.1.1 로 되돌아가며 `hailort` 와 충돌).
 - **다음 할 일**: 로드맵 ④ vision 프로토타입(실사 스트림·카운팅의 마지막 조각) → PLAN §7 메모 정리. 매뉴얼 STEP 16 의 페이저 설명 문단은 이번 개정에 맞춰 손봤다. 아래 ①~④ 는 이후 단계에 흡수된다.
   ① 평소 곡선(`/api/typical`)은 mock 이 170분 사이클을 반복해 써서 스테이징에서는 값이 바닥이다. 실측 이후 확인.
   ② Inside Climate News 는 미국 지역 전력·정치 보도가 많아 "세계적 기후 이슈"와 결이 다른 기사가 섞인다 —
@@ -152,9 +157,9 @@ Mealboard_Demo/
 - `mealboard-vision` 재시작: 점심 운영 시간(11:30~14:00)에는 카운팅 공백이 생긴다 — 시간을 확인하고 물을 것
 - 카메라는 **배타적 자원**: calibrate.py·디버그 도구를 띄우려면 vision 서비스를 먼저 내려야 한다 (Plant 프로젝트 실증)
 - systemd 유닛 수정, cloudflared 설정 변경, apt 설치, 타임존 변경(Plant 타이머 시각에 영향)
-- **커널이 올라가는 `apt full-upgrade` 뒤에는 Hailo PCIe 드라이버를 확인**(09-04 실증): `h10-hailort-pcie-driver` 는 dkms 소스인데 dkms 없이 깔려 있어 새 커널(6.18.39)에서
-  모듈이 사라졌다 → `apt install dkms` 후 `apt install --reinstall h10-hailort-pcie-driver` 로 빌드·등록(`/usr/sbin/dkms status` 에 `hailo1x_pci/5.1.1 … installed`). 이제부터는 커널이 바뀌어도 dkms 가 자동 빌드한다.
-  확인 명령: `lsmod | grep hailo` · `hailortcli fw-control identify`
+- **커널이 올라가는 `apt full-upgrade` 뒤에는 Hailo PCIe 드라이버를 확인**(09-04 실증): 드라이버는 dkms 소스(`/usr/src/hailo1x_pci-5.3.0`)이고 `/usr/sbin/dkms status` 가
+  `hailo1x_pci/5.3.0, <커널>: installed` 여야 한다. 빠져 있으면 `sudo /usr/sbin/dkms install hailo1x_pci/5.3.0` (빌드 오류 `del_timer_sync` 면 §0 의 호환 정의가 지워진 것).
+  확인 명령: `lsmod | grep hailo` · `hailortcli fw-control identify`(Firmware 5.3.0). 드라이버만 바꾸고 재부팅을 안 하면 `Mismatch Driver version` 으로 장치가 안 열린다 — 반드시 재부팅.
 - sudoers 드롭인(`/etc/sudoers.d/mealboard`) 설치·변경, `tailscale serve` 설정 변경. **`tailscale serve reset`·`funnel reset` 은 절대 실행하지 않는다**(공개 Funnel 443 까지 함께 지워진다)
 
 **금지 (사용자 명시 지시 없이는 절대 불가)**
