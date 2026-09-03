@@ -1,0 +1,11 @@
+[Unit]
+Description=Mealboard 리포트 생성 — 로컬 LLM 또는 규칙 템플릿 → reports.db (1회 실행, --kind auto: 12시 전 preview / 뒤 recap)
+After=network.target
+
+[Service]
+Type=oneshot
+User=__USER__
+WorkingDirectory=/opt/mealboard
+EnvironmentFile=/opt/mealboard/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/mealboard/.venv/bin/python -m jobs.report --kind auto

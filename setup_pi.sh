@@ -39,7 +39,7 @@ for u in deploy/*.service deploy/*.timer; do
   rm -f "$tmp"
 done
 sudo systemctl daemon-reload
-sudo systemctl enable --now mealboard-api mealboard-mock mealboard-neis.timer mealboard-news.timer mealboard-rollup.timer
+sudo systemctl enable --now mealboard-api mealboard-mock mealboard-neis.timer mealboard-news.timer mealboard-rollup.timer mealboard-report.timer
 
 echo "== 6b. 관리 앱 — sudoers 드롭인(정확한 argv 만) + 저널 읽기 그룹 + 유닛"
 tmp=$(mktemp); sed "s/__USER__/$USER/g" deploy/sudoers-mealboard > "$tmp"

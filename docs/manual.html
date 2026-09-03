@@ -461,7 +461,7 @@ for u in deploy/*.service deploy/*.timer; do
   rm -f &quot;$tmp&quot;
 done
 sudo systemctl daemon-reload
-sudo systemctl enable --now mealboard-api mealboard-mock mealboard-neis.timer mealboard-news.timer mealboard-rollup.timer
+sudo systemctl enable --now mealboard-api mealboard-mock mealboard-neis.timer mealboard-news.timer mealboard-rollup.timer mealboard-report.timer
 
 echo &quot;== 6b. 관리 앱 — sudoers 드롭인(정확한 argv 만) + 저널 읽기 그룹 + 유닛&quot;
 tmp=$(mktemp); sed &quot;s/__USER__/$USER/g&quot; deploy/sudoers-mealboard &gt; &quot;$tmp&quot;
@@ -633,7 +633,8 @@ DEBUG_PORT = int(os.getenv(&quot;DEBUG_PORT&quot;, &quot;8102&quot;))     # visi
 RUN_DIR = Path(os.getenv(&quot;RUN_DIR&quot;, str(DATA / &quot;run&quot;)))   # 메타데이터 소켓 디렉터리 (Pi: /run/mealboard)
 META_UDP_PORT = 8103                                  # AF_UNIX 가 없는 개발 PC(Windows)의 메타데이터 폴백 — UDP 127.0.0.1 (Pi 에서는 쓰지 않는다)
 DEBUG_FLAG = Path(&quot;/tmp/debug_on&quot;) if os.name != &quot;nt&quot; else RUN_DIR / &quot;debug_on&quot;   # MJPEG 켜짐 계약 파일 (vision 과 공유, PrivateTmp 금지)
-ADMIN_DB_PATH = DATA / &quot;admin.db&quot;                     # 쓰기 주체: 관리 앱 (감사 로그)</code></pre>
+ADMIN_DB_PATH = DATA / &quot;admin.db&quot;                     # 쓰기 주체: 관리 앱 (감사 로그)
+LLM_HEF = os.getenv(&quot;LLM_HEF&quot;, &quot;&quot;)                    # 로컬 LLM(Hailo-10H GenAI) .hef 경로. 빈 값 = LLM 없음 → 모든 소비자가 규칙 템플릿·DeepL 로 폴백</code></pre>
 </figure>
 <figure class="code">
 <figcaption><span class="path">app/db.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>

@@ -38,3 +38,4 @@ RUN_DIR = Path(os.getenv("RUN_DIR", str(DATA / "run")))   # 메타데이터 소�
 META_UDP_PORT = 8103                                  # AF_UNIX 가 없는 개발 PC(Windows)의 메타데이터 폴백 — UDP 127.0.0.1 (Pi 에서는 쓰지 않는다)
 DEBUG_FLAG = Path("/tmp/debug_on") if os.name != "nt" else RUN_DIR / "debug_on"   # MJPEG 켜짐 계약 파일 (vision 과 공유, PrivateTmp 금지)
 ADMIN_DB_PATH = DATA / "admin.db"                     # 쓰기 주체: 관리 앱 (감사 로그)
+LLM_HEF = os.getenv("LLM_HEF", "")                    # 로컬 LLM(Hailo-10H GenAI) .hef 경로. 빈 값 = LLM 없음 → 모든 소비자가 규칙 템플릿·DeepL 로 폴백
