@@ -73,9 +73,9 @@
 .zoneside { display: flex; flex-direction: column; }
 .chips2.zones span { background: #fcde9c; color: #7c1d6f; }                        /* Sunsetdark 의 양 끝 — 가장 붐빈 구역 칩 */
 .chips2.zones span.ghost { background: transparent; box-shadow: inset 0 0 0 1.5px var(--hair); color: var(--ink2); }
-/* 컬러바 — 평면도 바로 아래 오른쪽 끝(09-04 사용자 요청: 도면·"입구" 글자를 가리지 않게 경계 밖으로). 알약 모양, 그라데이션은 JS 가 Sunsetdark 로 채운다 */
-.zonestage { display: flex; flex-direction: column; }
-.heatbar { align-self: flex-end; margin-top: 6px; display: flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px;
+
+/* 컬러바 — 도면 우측 상단, "배식대" 글자 높이(캔버스 위 여백)에 맞춘다(09-04 사용자 요청) */
+.heatbar { position: absolute; right: 0; top: 2px; display: flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 999px;
            background: rgba(255,252,246,.88); box-shadow: var(--e1); font-size: 10px; color: var(--ink2); pointer-events: none; }
 .heatbar i { width: 64px; height: 7px; border-radius: 4px; background: linear-gradient(90deg, #fcde9c, #7c1d6f); }
 

@@ -4,7 +4,7 @@
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = "mealboard-v14";   // 09-04 밤: 컬러바 위치·타일 투명도 — 옛 셸 캐시를 지운다
+const CACHE = "mealboard-v15";   // 09-04 밤: 컬러바 우측 상단 — 옛 셸 캐시를 지운다
 const SHELL = ["/", "/index.html", "/manifest.json",
   "/css/base.css", "/css/screens.css", "/css/insight.css",
   "/js/core.js", "/js/colors.js", "/js/floor.js", "/js/wait.js", "/js/room.js", "/js/week.js", "/js/today.js", "/js/news.js"];
