@@ -46,7 +46,9 @@
   모바일은 문서 자체가 가로 스냅 페이저 + 하단 dock, 데스크톱은 좌측 레일 + 12컬럼 보드(`.view{display:contents}`). 화면 모듈은
   `screen={mount, every, poll, fail, activate, deactivate}` 를 내보내고 `js/core.js` 가 보이는 화면만 폴링한다(모듈 최상위에서 core 도구를 쓰면
   순환 import TDZ — `mount()` 에). 헤드리스 Edge 는 500px 최소 창이라 420 캡처는 우측이 잘린다; 미리보기 패널은 fixed 요소를 1680 폭으로 잰다 — 둘 다 환경.
-- **다음 할 일**: PLAN §6 순서대로 — 지금은 **Phase 2d**(대기시간 화면 인사이트 카드: 히트맵+황금+예보+병목+품질). 아래 ①~④ 는 이후 단계에 흡수된다.
+- **Phase 2d 완료(09-03)**: 인사이트 카드는 `.card.insight` + `data-state` + `.body/.empty`, 화면 모듈의 `screen.render(cardId, json)` 으로 픽스처 검사.
+  스타일은 `css/insight.css`. 인사이트는 화면이 열릴 때 1회 + 5분(같은 30초 tick 에서 시각으로 가름).
+- **다음 할 일**: PLAN §6 순서대로 — 지금은 **Phase 2e**(실시간·주간식단 화면: 구역 점유율+리포트+영양 추이+TOP5). 아래 ①~④ 는 이후 단계에 흡수된다.
   ① 평소 곡선(`/api/typical`)은 mock 이 170분 사이클을 반복해 써서 스테이징에서는 값이 바닥이다. 실측 이후 확인.
   ② Inside Climate News 는 미국 지역 전력·정치 보도가 많아 "세계적 기후 이슈"와 결이 다른 기사가 섞인다 —
   며칠 지켜본 뒤 교체 여부 판단(후보: UNEP · Climate Home News). ③ 급식 있는 평일에 데스크톱 2컬럼 높이 맞춤 실물 확인.
