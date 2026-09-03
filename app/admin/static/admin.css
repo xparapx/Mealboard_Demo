@@ -29,8 +29,8 @@
 .fold > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; min-height: 32px; }
 .fold > summary::-webkit-details-marker { display: none; }
 .fold > summary i { width: 28px; height: 28px; border-radius: 999px; background: var(--well); position: relative; flex: none; }
-.fold > summary i::after { content: "BE"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; color: var(--ink2); }   /* ▾ — transform 없이(모션 축소 규칙과 무관) */
-.fold[open] > summary i::after { content: "B4"; }
+.fold > summary i::after { content: "▾"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; color: var(--ink2); }   /* ▾ — transform 없이(모션 축소 규칙과 무관) */
+.fold[open] > summary i::after { content: "▴"; }
 .fold > summary:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; border-radius: 8px; }
 pre.log { margin: 10px 0 0; max-height: 300px; overflow: auto; background: var(--well); border-radius: 12px; padding: 12px;
           font: 11.5px/1.5 ui-monospace, Menlo, Consolas, monospace; color: #4A4740; white-space: pre-wrap; word-break: break-all; }
