@@ -45,6 +45,7 @@ def test_영어_줄_파싱은_기호와_Why_를_가른다():
     d = fetch_news.parse_digest_lines(EN_GOOD)
     assert d["bullets"][0].startswith("Global") and len(d["bullets"]) == 3 and d["why"].startswith("today")
     assert fetch_news.parse_digest_lines("1. one\n2) two\n• three")["why"] == ""                   # Why 는 없어도 된다
+    assert fetch_news.parse_digest_lines("- Key Point: alpha\n- Key point: beta\n- gamma")["bullets"] == ["alpha", "beta", "gamma"]   # Qwen3 의 접두어
     assert fetch_news.parse_digest_lines("only one line") is None and fetch_news.parse_digest_lines(None) is None
     assert fetch_news.check_english(BODY, fetch_news.parse_digest_lines(EN_GOOD)) is None
     assert fetch_news.check_english(BODY, fetch_news.parse_digest_lines(EN_GOOD.replace("1.1%", "5.6%"))) == "en:numbers:5.6"   # 지어낸 수치는 영어 단계에서 걸린다
