@@ -60,10 +60,19 @@ def test_한국어_검증은_스키마_길이_한국어():
     assert fetch_news.validate_digest(BODY, {"bullets": KO[:3]})[1] == "ok"                   # why 없음 허용
 
 
-def fake(text):
-    def factory():
-        return LocalLLM(hef="fake.hef", backend=lambda s, u, mt, t, to: text)
+def fake(text, why="Why: it shapes the climate students will live in."):
+    def factory():                                              # Why 후속 질문(WHY_SYSTEM)에는 why 를, 요약 요청에는 text 를
+        return LocalLLM(hef="fake.hef", backend=lambda s, u, mt, t, to: why if s == fetch_news.WHY_SYSTEM else text)
     return factory
+
+
+def test_Why_줄이_없으면_후속_질문으로_채운다():
+    m = fake("- Global emissions rose 1.1% in 2024.
+- Scientists warn the 1.5C limit is slipping.
+- The report calls for faster cuts.")()
+    with m:
+        d, why = fetch_news.digest_with(m, BODY, translate_fn=fake_translate)
+    assert why == "ok" and d["why"] == KO[3]
 
 
 def fake_translate(texts, log=None):

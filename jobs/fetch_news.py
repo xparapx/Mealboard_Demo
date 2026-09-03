@@ -31,8 +31,9 @@ BOILER = re.compile(r"\s*The post .*? appeared first on .*?\.?\s*$", re.S)
 # 요약 자리에 문장 대신 링크 문구만 들어오는 항목이 있다(가디언 만평 등) — 걸러낸다
 JUNK = re.compile(r"\s*(continue reading|read more)\.*\s*$", re.I)
 MIN_SUMMARY = 60          # 이보다 짧으면 카드에서 요약이 제 몫을 못 한다
-BULLET_MAX, WHY_MAX = 120, 80                                    # 한국어 글자 수(DeepL 번역 뒤). 영어 25단어 ≈ 한국어 70~110자
-EN_MAX = 260                                                      # 영어 한 줄 상한 — 모델이 단락을 쏟아내면 거른다
+BULLET_MAX, WHY_MAX = 170, 100                                   # 한국어 글자 수(DeepL 번역 뒤). 09-04 실측: 모델은 '25단어' 를 자주 넘겨 한 줄 40단어까지 쓴다 — 카드에 세 줄이면 읽힌다
+EN_MAX = 360                                                      # 영어 한 줄 상한 — 단락을 쏟아내면 거른다
+WHY_SYSTEM = "You are given a summary of a news article. In one sentence of at most 20 words, say why this matters to high-school students. Output only the sentence."
 CONTEXT_CHARS = int(os.getenv("LLM_CONTEXT_CHARS", "3200"))     # 스파이크(09-04, Qwen2.5-1.5B·HailoRT 5.1.1): 4,000자까지 네 줄 형식 안정 → 3,200
 # 09-04 스파이크 결론: 1.5B 모델은 한국어 문장이 무너지지만(문법·중국어 혼입) 영어 요약은 정확하다. 그래서 요약은 두 단계 —
 # ① 로컬 LLM 이 영어 네 줄(요약 3 + Why) ② DeepL 이 한국어로. 숫자 검사(기사에 없는 숫자 금지)는 ① 의 영어에서, 한국어 검사는 ② 뒤에 한다
@@ -133,6 +134,11 @@ def digest_with(m, body, translate_fn=None):
     en = parse_digest_lines(raw)
     if en is None:
         return None, "en:lines"
+    if not en["why"]:                                              # 모델이 Why 줄을 자주 빠뜨린다(09-04 실측) — 요약 세 줄만 주고 짧게 다시 묻는다
+        w = m.complete(WHY_SYSTEM, "Summary:
+" + "
+".join("- " + b for b in en["bullets"]), max_tokens=60, timeout_s=60)
+        en["why"] = WHY_PREFIX.sub("", (w or "").strip().splitlines()[0] if (w or "").strip() else "").strip().strip('"')
     bad = check_english(text, en)
     if bad:
         return None, bad
