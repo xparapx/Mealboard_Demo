@@ -1968,7 +1968,7 @@ from email.utils import parsedate_to_datetime
 
 from app.config import DATA
 from jobs import newsbody, translators
-from jobs.llm import LLMUnavailable, LocalLLM, URL, numbers_subset, parse_json_object, valid_korean
+from jobs.llm import LLMUnavailable, LocalLLM, URL, numbers, numbers_subset, parse_json_object, valid_korean
 
 FEEDS_FILE = DATA / &quot;news_feeds.json&quot;
 OUT = DATA / &quot;news.json&quot;
@@ -2046,13 +2046,33 @@ def parse_digest_lines(raw):
     return {&quot;bullets&quot;: bullets, &quot;why&quot;: why} if len(bullets) == 3 else None
 
 
+def clip_sentences(s, limit):
+    &quot;&quot;&quot;limit 안에 드는 앞 문장들만(문장 경계). 첫 문장부터 넘으면 &quot;&quot; — 낱말 중간에서 자른 문장은 번역기에 주지 않는다&quot;&quot;&quot;
+    out = &quot;&quot;
+    for sent in SENT.split(s.strip()):
+        if len(out) + len(sent) + 1 &gt; limit:
+            break
+        out = f&quot;{out} {sent}&quot;.strip()
+    return out
+
+
 def check_english(body, d):
-    &quot;&quot;&quot;영어 단계 검증 → reason|None. 줄 길이, 기사에 없는 숫자(모델이 지어낸 수치), 주입 흔적&quot;&quot;&quot;
-    for b in d[&quot;bullets&quot;] + ([d[&quot;why&quot;]] if d[&quot;why&quot;] else []):
+    &quot;&quot;&quot;영어 단계 검증 → reason|None. 긴 줄은 문장 경계에서 줄이고(d 를 고친다), 기사에 없는 숫자(모델이 지어낸 수치)·주입 흔적은 거부.
+    거부 사유에 문제의 숫자를 남긴다 — 운영 로그에서 '본문 표기 차이' 인지 '지어낸 수치' 인지 읽을 수 있게&quot;&quot;&quot;
+    keys = [(&quot;bullets&quot;, i) for i in range(3)] + ([(&quot;why&quot;, None)] if d[&quot;why&quot;] else [])
+    for k, i in keys:
+        b = d[k][i] if i is not None else d[k]
         if len(b) &gt; EN_MAX:
-            return &quot;en:length&quot;
+            b = clip_sentences(b, EN_MAX)
+            if not b:
+                return &quot;en:length&quot;
+            if i is not None:
+                d[k][i] = b
+            else:
+                d[k] = b
         if not numbers_subset(body, b):
-            return &quot;en:numbers&quot;
+            extra = sorted(numbers(b) - numbers(body))
+            return &quot;en:numbers:&quot; + &quot;,&quot;.join(extra[:4])
         if URL.search(b) or &quot;&lt;&quot; in b or &quot;&gt;&quot; in b:
             return &quot;en:format&quot;
     return None

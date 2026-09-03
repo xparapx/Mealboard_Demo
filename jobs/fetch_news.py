@@ -19,7 +19,7 @@ from email.utils import parsedate_to_datetime
 
 from app.config import DATA
 from jobs import newsbody, translators
-from jobs.llm import LLMUnavailable, LocalLLM, URL, numbers_subset, parse_json_object, valid_korean
+from jobs.llm import LLMUnavailable, LocalLLM, URL, numbers, numbers_subset, parse_json_object, valid_korean
 
 FEEDS_FILE = DATA / "news_feeds.json"
 OUT = DATA / "news.json"
@@ -97,13 +97,33 @@ def parse_digest_lines(raw):
     return {"bullets": bullets, "why": why} if len(bullets) == 3 else None
 
 
+def clip_sentences(s, limit):
+    """limit 안에 드는 앞 문장들만(문장 경계). 첫 문장부터 넘으면 "" — 낱말 중간에서 자른 문장은 번역기에 주지 않는다"""
+    out = ""
+    for sent in SENT.split(s.strip()):
+        if len(out) + len(sent) + 1 > limit:
+            break
+        out = f"{out} {sent}".strip()
+    return out
+
+
 def check_english(body, d):
-    """영어 단계 검증 → reason|None. 줄 길이, 기사에 없는 숫자(모델이 지어낸 수치), 주입 흔적"""
-    for b in d["bullets"] + ([d["why"]] if d["why"] else []):
+    """영어 단계 검증 → reason|None. 긴 줄은 문장 경계에서 줄이고(d 를 고친다), 기사에 없는 숫자(모델이 지어낸 수치)·주입 흔적은 거부.
+    거부 사유에 문제의 숫자를 남긴다 — 운영 로그에서 '본문 표기 차이' 인지 '지어낸 수치' 인지 읽을 수 있게"""
+    keys = [("bullets", i) for i in range(3)] + ([("why", None)] if d["why"] else [])
+    for k, i in keys:
+        b = d[k][i] if i is not None else d[k]
         if len(b) > EN_MAX:
-            return "en:length"
+            b = clip_sentences(b, EN_MAX)
+            if not b:
+                return "en:length"
+            if i is not None:
+                d[k][i] = b
+            else:
+                d[k] = b
         if not numbers_subset(body, b):
-            return "en:numbers"
+            extra = sorted(numbers(b) - numbers(body))
+            return "en:numbers:" + ",".join(extra[:4])
         if URL.search(b) or "<" in b or ">" in b:
             return "en:format"
     return None

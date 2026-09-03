@@ -47,7 +47,10 @@ def test_영어_줄_파싱은_기호와_Why_를_가른다():
     assert fetch_news.parse_digest_lines("1. one\n2) two\n• three")["why"] == ""                   # Why 는 없어도 된다
     assert fetch_news.parse_digest_lines("only one line") is None and fetch_news.parse_digest_lines(None) is None
     assert fetch_news.check_english(BODY, fetch_news.parse_digest_lines(EN_GOOD)) is None
-    assert fetch_news.check_english(BODY, fetch_news.parse_digest_lines(EN_GOOD.replace("1.1%", "5.6%"))) == "en:numbers"   # 지어낸 수치는 영어 단계에서 걸린다
+    assert fetch_news.check_english(BODY, fetch_news.parse_digest_lines(EN_GOOD.replace("1.1%", "5.6%"))) == "en:numbers:5.6"   # 지어낸 수치는 영어 단계에서 걸린다
+    long = fetch_news.parse_digest_lines(EN_GOOD.replace("Scientists warn the 1.5C limit is slipping.", "Scientists warn the 1.5C limit is slipping. " + "Extra words here. " * 30))
+    assert fetch_news.check_english(BODY, long) is None and len(long["bullets"][1]) <= fetch_news.EN_MAX                 # 긴 줄은 문장 경계에서 줄인다
+    assert fetch_news.check_english(BODY, {"bullets": ["word " * 100, "b", "c"], "why": ""}) == "en:length"          # 첫 문장부터 넘으면 거부
 
 
 def test_한국어_검증은_스키마_길이_한국어():
