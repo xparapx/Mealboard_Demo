@@ -41,11 +41,12 @@ function renderStatus(st) {
 
 export async function refresh() {
   const typStale = !S.typ || Date.now() - S.typ.at >= TYPICAL_EVERY;
-  const [st, h, t] = await Promise.all([
-    j("/api/status"), j(`/api/history?minutes=${CHART_MIN}`),
-    typStale ? j(`/api/typical?minutes=${CHART_MIN}`).catch(() => ({ state: "no_data", rows: [] })) : null]);
+  const pSt = j("/api/status"), pH = j(`/api/history?minutes=${CHART_MIN}`);
+  const pT = typStale ? j(`/api/typical?minutes=${CHART_MIN}`).catch(() => ({ state: "no_data", rows: [] })) : null;
+  const st = await pSt;
+  renderStatus(st);                                   // 히어로는 상태 116B 만으로 그린다 — 추이·평소 곡선이 휴대폰 회선에서 늦어도 숫자는 먼저
+  const [h, t] = await Promise.all([pH, pT]);
   if (t) S.typ = { at: Date.now(), data: t };
-  renderStatus(st);
   S.last = { rows: h.rows, typ: S.typ.data, st };
   drawChart(h.rows, S.typ.data, st);
 }

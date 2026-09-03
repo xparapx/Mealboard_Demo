@@ -697,22 +697,60 @@ def status():
 <p><code>STALE_SEC</code>: 2분 넘게 새 행이 없으면 마지막 값을 보여주는 대신 "데이터 없음"으로 바꿉니다. 카메라가 죽었는데 화면엔 "3분"이 계속 떠 있는 상황을 막는 장치입니다.</p>
 <figure class="code">
 <figcaption><span class="path">app/routers/history.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
-<pre><code class="lang-python">import datetime as dt
+<pre><code class="lang-python">&quot;&quot;&quot;최근 N분의 대기 이력. 추이 그래프(대기시간 카드)가 30초마다 받는다.
+
+표본은 vision 이 초당 한 번 안팎, mock(고배속)은 초당 세 번까지 쌓이므로 30분이면 수천 행·수백 KB 가 된다 — 휴대폰 회선에서 히어로가
+몇 초씩 비는 원인이었다. 그래서 `step` 초 단위로 묶어 돌려준다(기본 10초 → 30분에 최대 180행). 묶음 안에서 queue·rate·wait 는 평균,
+ts 는 첫 표본, state 는 마지막 표본(끊김·산출 불가가 마지막이면 그대로 드러난다). step=0 이면 원본 그대로.&quot;&quot;&quot;
+import datetime as dt
+
 from fastapi import APIRouter, Query
+
 from ..db import connect
 
 router = APIRouter()
+STEP_DEFAULT, STEP_MAX = 10, 300
+
+
+def _epoch(ts):
+    return dt.datetime.fromisoformat(ts).timestamp()
+
+
+def bucket(rows, step):
+    &quot;&quot;&quot;[{ts, queue_len, rate_per_min, wait_min, state}] → step 초 단위 평균. 순수 함수(테스트 대상). step&lt;=0 이면 그대로&quot;&quot;&quot;
+    if step &lt;= 0 or not rows:
+        return list(rows)
+    out, cur, key = [], [], None
+    for r in rows:
+        k = int(_epoch(r[&quot;ts&quot;]) // step)
+        if key is not None and k != key:
+            out.append(_fold(cur))
+            cur = []
+        key = k
+        cur.append(r)
+    if cur:
+        out.append(_fold(cur))
+    return out
+
+
+def _fold(rs):
+    waits = [r[&quot;wait_min&quot;] for r in rs if r[&quot;wait_min&quot;] is not None]
+    return {&quot;ts&quot;: rs[0][&quot;ts&quot;],
+            &quot;queue_len&quot;: round(sum(r[&quot;queue_len&quot;] or 0 for r in rs) / len(rs)),
+            &quot;rate_per_min&quot;: round(sum(r[&quot;rate_per_min&quot;] or 0 for r in rs) / len(rs), 2),
+            &quot;wait_min&quot;: round(sum(waits) / len(waits), 1) if waits else None,
+            &quot;state&quot;: rs[-1][&quot;state&quot;], &quot;n&quot;: len(rs)}
 
 
 @router.get(&quot;/api/history&quot;)
-def history(minutes: int = Query(120, ge=1, le=1440)):
+def history(minutes: int = Query(120, ge=1, le=1440), step: int = Query(STEP_DEFAULT, ge=0, le=STEP_MAX)):
     since = (dt.datetime.now() - dt.timedelta(minutes=minutes)).isoformat(timespec=&quot;seconds&quot;)
     con = connect()
     rows = con.execute(
         &quot;SELECT ts, queue_len, rate_per_min, wait_min, state &quot;
         &quot;FROM samples WHERE ts &gt;= ? ORDER BY ts&quot;, (since,)).fetchall()
     con.close()
-    return {&quot;minutes&quot;: minutes, &quot;rows&quot;: [dict(r) for r in rows]}</code></pre>
+    return {&quot;minutes&quot;: minutes, &quot;step&quot;: step, &quot;rows&quot;: bucket([dict(r) for r in rows], step)}</code></pre>
 </figure>
 <figure class="code">
 <figcaption><span class="path">app/routers/meal.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
