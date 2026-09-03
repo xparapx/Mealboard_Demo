@@ -22,7 +22,9 @@ export const j = async u => {
 export const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 export const minuteOfDay = d => d.getHours() * 60 + d.getMinutes();
 export const hhmm = d => String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
-export const REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches;   // 전환·부드러운 스크롤·점멸을 생략
+export const REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches;
+/* 인사이트 카드의 빈 상태 문구 — API 의 reason 은 개발자용(파일 이름)일 수 있다. 학생에게는 뜻만 남긴다. null 이면 카드의 기본 문구를 둔다 */
+export const why = r => !r || /reports\.db/.test(r) ? null : /insights\.db/.test(r) ? "집계가 아직 시작되지 않았습니다" : r;   // 전환·부드러운 스크롤·점멸을 생략
 const DESK_MQ = matchMedia("(min-width: 900px)");
 export const desktop = () => DESK_MQ.matches;
 

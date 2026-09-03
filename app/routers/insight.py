@@ -286,7 +286,8 @@ def zones(weeks: int = Query(4, ge=1, le=12), date: dt.date | None = Query(None)
         doc = load_zones(ZONES_JSON)
     except (OSError, ValueError) as e:
         return _no(f"zones.json 문제: {e}", zones=[], bins=[])
-    zlist = [{"id": z["id"], "label": z["name"], "area_m2": round(polygon_area_m2(z["polygon"], doc["floor"]), 1)} for z in doc["zones"]]
+    zlist = [{"id": z["id"], "label": z["name"], "area_m2": round(polygon_area_m2(z["polygon"], doc["floor"]), 1),
+              "polygon": z["polygon"]} for z in doc["zones"]]      # 구역 정의(정규화 다각형)는 설정이지 개인정보가 아니다 — 화면이 평면도 위에 틴트를 그린다
     con = connect_ro()
     if con is None:
         return _no(NO_DB, zones=zlist, bins=[])

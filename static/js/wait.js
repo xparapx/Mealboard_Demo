@@ -1,6 +1,6 @@
 /* 대기시간 화면 — 히어로(지금 줄을 서면) + 추이(최근 30분, 평소 곡선 겹침). 30초 폴링.
    그 아래 인사이트 카드 다섯 장(히트맵 · 황금 구간 · 예보 · 병목 로그 · 측정 품질)은 화면이 열릴 때 1회 + 5분마다 (PLAN §3.5) */
-import { $, j, S, esc, fit, hhmm, minuteOfDay, canvasAuto } from "./core.js";
+import { $, j, S, esc, fit, hhmm, minuteOfDay, canvasAuto, why } from "./core.js";
 
 const BUSY_MIN = 12, EASY_MIN = 5;   // 판정 임계값 (학교마다 다를 수 있음)
 const CHART_MIN = 30;                 // 추이 카드의 시간창(분) — 카드 제목·축 라벨과 함께 바꾼다
@@ -119,9 +119,9 @@ const GOLDEN_WAIT = 3;                       // app/insight_calc.GOLDEN_WAIT 과
 const MAX_COLS = 36;                         // 히트맵 열 상한 — 창이 넓으면(스테이징 all) 구간을 묶는다
 const mm = m => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 const hm = ts => ts ? ts.slice(11, 16) : "";
-const setState = (id, ok, why) => {
+const setState = (id, ok, reason) => {
   const card = $("#" + id); card.dataset.state = ok ? "ok" : "no_data";
-  const e = card.querySelector(".empty"); if (e && why) e.textContent = why;
+  const e = card.querySelector(".empty"), w = why(reason); if (e && w) e.textContent = w;
 };
 
 function renderHeat(d) {

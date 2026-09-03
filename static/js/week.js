@@ -1,5 +1,6 @@
-/* 주간식단 화면 — 이번 주 식단(요일 컬럼). meal.json 이 이미 월~금을 통째로 담고 있다. 오늘급식과 같은 응답을 쓴다 */
-import { $, S, esc } from "./core.js";
+/* 주간식단 화면 — 이번 주 식단(요일 컬럼). meal.json 이 이미 월~금을 통째로 담고 있다. 오늘급식과 같은 응답을 쓴다.
+   아래 인사이트 카드: 주간 영양 추이(kpi 3타일 + 스파크라인) · 메뉴 인기 TOP5(순위 목록). 진입 시 1회 + 5분 */
+import { $, S, esc, j, why } from "./core.js";
 import { splitAllergy, loadMeal } from "./today.js";
 
 const WD = "일월화수목금토";
@@ -25,4 +26,62 @@ export function renderWeek(m) {
       + (w.mar == null ? "" : ` · 미량영양소 <b style="color:var(--ink2)">${w.mar}%</b>`);
 }
 
-export const screen = { every: 300000, poll: () => S.meal ? renderWeek(S.meal) : loadMeal() };
+/* ---------------- 인사이트 카드 ---------------- */
+const setState = (id, ok, reason) => {
+  const card = $("#" + id); card.dataset.state = ok ? "ok" : "no_data";
+  const e = card.querySelector(".empty"), w = why(reason); if (e && w) e.textContent = w;
+};
+const md = w => `${+w.slice(5, 7)}/${+w.slice(8, 10)}`;   // "2026-08-24" → "8/24"
+
+function renderNutrition(d) {
+  const weeks = (d.weeks || []).filter(w => w.energy_pct != null);
+  setState("nutricard", d.state === "ok" && weeks.length > 0, d.reason);
+  if (!weeks.length) return;
+  const last = weeks[weeks.length - 1];
+  const flag = last.energy_pct > 110 ? "많음" : last.energy_pct < 90 ? "적음" : "";
+  $("#nutrikpi").innerHTML =
+    `<div><em>01</em><b>${last.energy_pct}%</b><span>에너지 충족</span><span class="flag">${flag}</span></div>`
+    + `<div><em>02</em><b>${last.macro_ok_days}/${last.days}</b><span>적정비율 충족 일</span></div>`
+    + `<div><em>03</em><b>${last.mar ?? "—"}${last.mar == null ? "" : "%"}</b><span>미량영양소</span></div>`;
+  // 스파크라인 — 주별 에너지 충족률. 100% 기준선은 회색 파선
+  const W = 320, H = 64, pad = 6;
+  const vals = weeks.map(w => w.energy_pct), lo = Math.min(90, ...vals) - 5, hi = Math.max(110, ...vals) + 5;
+  const X = i => weeks.length > 1 ? pad + i / (weeks.length - 1) * (W - 2 * pad) : W / 2;
+  const Y = v => pad + (1 - (v - lo) / (hi - lo)) * (H - 2 * pad);
+  const path = vals.map((v, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
+  $("#nutrispark").innerHTML =
+    `<line x1="${pad}" y1="${Y(100).toFixed(1)}" x2="${W - pad}" y2="${Y(100).toFixed(1)}" stroke="#B9B1A0" stroke-width="1" stroke-dasharray="4 4"/>`
+    + `<path d="${path}" fill="none" stroke="#129793" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
+    + vals.map((v, i) => `<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="${i === vals.length - 1 ? 4 : 2.5}" fill="#129793" stroke="#FFFCF6" stroke-width="1.5"/>`).join("");
+  $("#nutriaxis").innerHTML = `<span>${md(weeks[0].week)} 주</span><span>100% 기준</span><span>${md(last.week)} 주</span>`;
+  $("#nutrifoot").textContent = (d.basis === "nutrition_days" ? `최근 ${weeks.length}주 이력` : "이번 주 식단 캐시(집계 전)") + " · 값은 주별 평균";
+}
+
+function renderTop(d) {
+  const items = d.items || [];
+  setState("topcard", d.state === "ok" && items.length > 0, d.reason);
+  if (!items.length) return;
+  const top = Math.max(1, ...items.map(x => x.popularity || 0));
+  $("#toplead").innerHTML = `<b>${esc(items[0].menu)}</b> 날에 줄이 가장 빨리 늘었습니다`;
+  $("#toplist").innerHTML = items.map((x, i) =>
+    `<li style="--p:${Math.round(100 * (x.popularity || 0) / top)}%"><i>${i + 1}</i><span>${esc(x.menu)}</span><small>${x.n_days}일</small><b>${x.popularity}</b></li>`).join("");
+  $("#topfoot").textContent = `인기 지수 = 줄이 느는 속도와 최대 대기의 평균 대비(100 = 보통) · ${d.min_days}일 이상 나온 메뉴만`;
+}
+
+const RENDER = { nutricard: renderNutrition, topcard: renderTop };
+let lastInsight = 0;
+async function loadInsights() {
+  lastInsight = Date.now();
+  const get = u => j(u).catch(e => (console.error(u, e), { state: "no_data", reason: "서버에 닿지 못했습니다" }));
+  const [n, t] = await Promise.all([get("/api/insight/nutrition?weeks=8"), get("/api/insight/menus?n=5")]);
+  renderNutrition(n); renderTop(t);
+}
+
+export const screen = {
+  every: 300000,
+  async poll() {
+    if (Date.now() - lastInsight >= 300000) loadInsights();
+    return S.meal ? renderWeek(S.meal) : loadMeal();
+  },
+  render(cardId, data) { RENDER[cardId]?.(data); },
+};

@@ -124,6 +124,26 @@
       <div class="empty">표시할 위치 없음</div>
       <div class="note" style="margin-top:10px">영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다</div>
     </section>
+    <!-- 실시간 화면의 인사이트 카드 — 구역 점유율(집계 숫자만, 좌표 없음) · 오늘 리포트(로컬 LLM, Phase 4) -->
+    <section class="card insight" id="zonecard" data-state="no_data">
+      <div class="eyebrow">구역별 점유율</div>
+      <div class="body">
+        <div class="lead" id="zonelead"></div>
+        <div class="stage zonestage"><canvas id="zoneplan"></canvas></div>
+        <div class="chips2 zones" id="zonechips"></div>
+        <div class="note foot" id="zonefoot"></div>
+      </div>
+      <div class="empty" id="zoneempty">구역 집계가 아직 없습니다</div>
+    </section>
+    <section class="card insight" id="reportcard" data-state="no_data">
+      <div class="eyebrow">오늘 리포트</div>
+      <div class="body">
+        <div class="lead" id="reporthead"></div>
+        <p class="report" id="reportbody"></p>
+        <div class="log"><div id="reportchips"></div></div>
+      </div>
+      <div class="empty" id="reportempty">리포트는 급식실 Pi 의 로컬 AI 가 준비되면 나옵니다</div>
+    </section>
   </section>
 
   <!-- ③ 주간식단 -->
@@ -132,6 +152,26 @@
       <div class="eyebrow">이번 주 식단</div>
       <div class="week" id="weekgrid"></div>
       <div class="note" id="weekavg" style="margin-top:12px"></div>
+    </section>
+    <!-- 주간식단 화면의 인사이트 카드 — 주간 영양 추이 · 메뉴 인기 TOP5 -->
+    <section class="card insight" id="nutricard" data-state="no_data">
+      <div class="eyebrow">주간 영양 추이</div>
+      <div class="body">
+        <div class="kpi" id="nutrikpi"></div>
+        <svg class="spark" id="nutrispark" viewBox="0 0 320 64" preserveAspectRatio="none" aria-label="주별 에너지 충족률"></svg>
+        <div class="sparkaxis" id="nutriaxis"></div>
+        <div class="note foot" id="nutrifoot"></div>
+      </div>
+      <div class="empty" id="nutriempty">영양 이력이 아직 없습니다</div>
+    </section>
+    <section class="card insight" id="topcard" data-state="no_data">
+      <div class="eyebrow">메뉴 인기 TOP 5</div>
+      <div class="body">
+        <div class="lead" id="toplead"></div>
+        <ol class="rank" id="toplist"></ol>
+        <div class="note foot" id="topfoot"></div>
+      </div>
+      <div class="empty" id="topempty">2일 이상 나온 메뉴가 아직 없습니다</div>
     </section>
   </section>
 

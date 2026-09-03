@@ -65,6 +65,20 @@
 .rank li small { font-size: 10.5px; color: var(--ink3); font-weight: 500; }
 .rank li b { font-size: 13px; color: var(--teal-ink); }
 
+/* 구역 점유율 — 같은 평면도(floor.js) 위에 구역 틴트, 마커 없음. 칩은 구역별 점유율 */
+.zonestage { position: relative; margin-top: 12px; }
+#zoneplan { display: block; width: 100%; aspect-ratio: 318 / 460; }
+.chips2.zones span { background: var(--teal-tint); color: var(--teal-ink); }
+.chips2.zones span.ghost { background: transparent; box-shadow: inset 0 0 0 1.5px var(--hair); color: var(--ink2); }
+
+/* 오늘 리포트 — 본문 + "AI 작성 · 모델" 칩 */
+.report { margin: 8px 0 0; font-size: 14px; line-height: 1.6; color: #4A4740; }
+#reportchips { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+
+/* 주간 영양 추이 — kpi 3타일(screens.css) + 인라인 SVG 스파크라인 */
+.spark { display: block; width: 100%; height: 64px; margin-top: 14px; }
+.sparkaxis { display: flex; justify-content: space-between; font-size: 10px; color: var(--ink3); margin-top: 4px; }
+
 /* 데스크톱 보드 — 인사이트 카드 자리(5행부터 자동 배치). 폭만 정한다 */
 @media (min-width: 900px) {
   #heatcard { grid-column: 1 / 8; }
@@ -72,4 +86,9 @@
   #forecastcard { grid-column: 1 / 5; }
   #bottlecard { grid-column: 5 / 9; }
   #qualitycard { grid-column: 9 / 13; }
+  #zonecard { grid-column: 1 / 6; }
+  #reportcard { grid-column: 6 / 13; }
+  #nutricard { grid-column: 1 / 7; }
+  #topcard { grid-column: 7 / 13; }
+  #zoneplan { aspect-ratio: 318 / 400; }
 }

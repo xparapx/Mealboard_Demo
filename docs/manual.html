@@ -1101,6 +1101,26 @@ systemctl status mealboard-api --no-pager</code></pre>
       &lt;div class=&quot;empty&quot;&gt;표시할 위치 없음&lt;/div&gt;
       &lt;div class=&quot;note&quot; style=&quot;margin-top:10px&quot;&gt;영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다&lt;/div&gt;
     &lt;/section&gt;
+    &lt;!-- 실시간 화면의 인사이트 카드 — 구역 점유율(집계 숫자만, 좌표 없음) · 오늘 리포트(로컬 LLM, Phase 4) --&gt;
+    &lt;section class=&quot;card insight&quot; id=&quot;zonecard&quot; data-state=&quot;no_data&quot;&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;구역별 점유율&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;lead&quot; id=&quot;zonelead&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;stage zonestage&quot;&gt;&lt;canvas id=&quot;zoneplan&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+        &lt;div class=&quot;chips2 zones&quot; id=&quot;zonechips&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;note foot&quot; id=&quot;zonefoot&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;zoneempty&quot;&gt;구역 집계가 아직 없습니다&lt;/div&gt;
+    &lt;/section&gt;
+    &lt;section class=&quot;card insight&quot; id=&quot;reportcard&quot; data-state=&quot;no_data&quot;&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;오늘 리포트&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;lead&quot; id=&quot;reporthead&quot;&gt;&lt;/div&gt;
+        &lt;p class=&quot;report&quot; id=&quot;reportbody&quot;&gt;&lt;/p&gt;
+        &lt;div class=&quot;log&quot;&gt;&lt;div id=&quot;reportchips&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;reportempty&quot;&gt;리포트는 급식실 Pi 의 로컬 AI 가 준비되면 나옵니다&lt;/div&gt;
+    &lt;/section&gt;
   &lt;/section&gt;
 
   &lt;!-- ③ 주간식단 --&gt;
@@ -1109,6 +1129,26 @@ systemctl status mealboard-api --no-pager</code></pre>
       &lt;div class=&quot;eyebrow&quot;&gt;이번 주 식단&lt;/div&gt;
       &lt;div class=&quot;week&quot; id=&quot;weekgrid&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;note&quot; id=&quot;weekavg&quot; style=&quot;margin-top:12px&quot;&gt;&lt;/div&gt;
+    &lt;/section&gt;
+    &lt;!-- 주간식단 화면의 인사이트 카드 — 주간 영양 추이 · 메뉴 인기 TOP5 --&gt;
+    &lt;section class=&quot;card insight&quot; id=&quot;nutricard&quot; data-state=&quot;no_data&quot;&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;주간 영양 추이&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;kpi&quot; id=&quot;nutrikpi&quot;&gt;&lt;/div&gt;
+        &lt;svg class=&quot;spark&quot; id=&quot;nutrispark&quot; viewBox=&quot;0 0 320 64&quot; preserveAspectRatio=&quot;none&quot; aria-label=&quot;주별 에너지 충족률&quot;&gt;&lt;/svg&gt;
+        &lt;div class=&quot;sparkaxis&quot; id=&quot;nutriaxis&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;note foot&quot; id=&quot;nutrifoot&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;nutriempty&quot;&gt;영양 이력이 아직 없습니다&lt;/div&gt;
+    &lt;/section&gt;
+    &lt;section class=&quot;card insight&quot; id=&quot;topcard&quot; data-state=&quot;no_data&quot;&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;메뉴 인기 TOP 5&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;lead&quot; id=&quot;toplead&quot;&gt;&lt;/div&gt;
+        &lt;ol class=&quot;rank&quot; id=&quot;toplist&quot;&gt;&lt;/ol&gt;
+        &lt;div class=&quot;note foot&quot; id=&quot;topfoot&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;topempty&quot;&gt;2일 이상 나온 메뉴가 아직 없습니다&lt;/div&gt;
     &lt;/section&gt;
   &lt;/section&gt;
 
@@ -3669,7 +3709,8 @@ def zones(weeks: int = Query(4, ge=1, le=12), date: dt.date | None = Query(None)
         doc = load_zones(ZONES_JSON)
     except (OSError, ValueError) as e:
         return _no(f&quot;zones.json 문제: {e}&quot;, zones=[], bins=[])
-    zlist = [{&quot;id&quot;: z[&quot;id&quot;], &quot;label&quot;: z[&quot;name&quot;], &quot;area_m2&quot;: round(polygon_area_m2(z[&quot;polygon&quot;], doc[&quot;floor&quot;]), 1)} for z in doc[&quot;zones&quot;]]
+    zlist = [{&quot;id&quot;: z[&quot;id&quot;], &quot;label&quot;: z[&quot;name&quot;], &quot;area_m2&quot;: round(polygon_area_m2(z[&quot;polygon&quot;], doc[&quot;floor&quot;]), 1),
+              &quot;polygon&quot;: z[&quot;polygon&quot;]} for z in doc[&quot;zones&quot;]]      # 구역 정의(정규화 다각형)는 설정이지 개인정보가 아니다 — 화면이 평면도 위에 틴트를 그린다
     con = connect_ro()
     if con is None:
         return _no(NO_DB, zones=zlist, bins=[])
