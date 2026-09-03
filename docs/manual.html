@@ -100,6 +100,22 @@ details.fold[open] summary{margin-bottom:8px;border-bottom:1px solid var(--line)
 </div>
 <p>읽는 요령: 왼쪽에서 오른쪽으로 데이터가 흐릅니다. 사람 수(또는 mock)가 <code>queue.db</code> 에 숫자로 쌓이고, FastAPI 가 그 숫자를 읽어 대시보드에 주고, cloudflared 가 그 화면을 인터넷으로 내보냅니다. 급식 정보는 별도 경로로 하루 한 번 <code>meal.json</code> 에 저장됩니다. <strong>모든 것은 홈 Pi 한 대 안에서 돕니다.</strong></p>
 
+<h3>포트 지도 — 한 대의 Pi 안에서 여러 프로그램이 손님을 받는 법</h3>
+<p><strong>포트란</strong> — Pi 의 주소(IP)가 아파트 한 동이라면, 포트 번호는 그 안의 호수입니다. 동시에 여러 프로그램이 요청을 받으려면 각자 다른 호수가 있어야 배달이 제 방으로 갑니다. 한 호수에는 한 세대만 살 수 있어서, 두 프로그램이 같은 포트를 열면 두 번째는 "이미 사용 중" 오류로 시작조차 못 합니다. 그래서 이 프로젝트의 서버들은 아래처럼 포트를 나눠 갖습니다. <em>서버가 아닌 것</em>(mock_feed, fetch_neis, rollup, jobs/llm.py 처럼 파일이나 라이브러리를 직접 다루는 작업)은 손님을 받지 않으므로 포트가 없습니다.</p>
+<table class="tbl">
+<thead><tr><th>포트</th><th>프로그램</th><th>듣는 문</th><th>밖에서 닿는 길</th><th>성격</th></tr></thead>
+<tbody>
+<tr><td><b>8100</b></td><td>공개 API + 사용자 화면 (<code>app.main</code>, uvicorn)</td><td>127.0.0.1</td><td>Tailscale Funnel(→ Cloudflare Tunnel 전환 중)이 443 으로 받아 넘겨 줌 — 학생 전원에게 공개</td><td>상주</td></tr>
+<tr><td><b>8101</b></td><td>관리 앱 (<code>app.admin.server</code>)</td><td>127.0.0.1</td><td><code>tailscale serve --https=8443</code> — tailnet(같은 계정 기기)에서만. 또는 SSH 터널 + <code>?key=</code></td><td>상주</td></tr>
+<tr><td><b>8102</b></td><td>vision 디버그 MJPEG (로드맵 ④)</td><td>127.0.0.1</td><td>관리 앱(8101)이 켜져 있을 때만 중계 — 직접 닿는 길 없음</td><td>상주(vision 안)</td></tr>
+<tr><td>—</td><td>메타데이터 소켓 <code>/run/mealboard/meta.sock</code></td><td>파일(AF_UNIX)</td><td>포트가 아니라 파일 — 관리 앱이 구독 중일 때만 vision 이 보냄</td><td>상주(vision 안)</td></tr>
+<tr><td><b>8000</b></td><td>hailo-ollama (Hailo-10H 채팅 서버, 시험용)</td><td>127.0.0.1 (유닛에서 고정 — 기본값 0.0.0.0 은 학교 LAN 전체에 열린다)</td><td>SSH 터널 <code>ssh -L 8000:127.0.0.1:8000 mbpi</code> 뒤 내 PC 의 <code>localhost:8000</code></td><td>필요할 때만 start/stop</td></tr>
+<tr><td>8501 · 1883</td><td>Plant 프로젝트(정지 상태)</td><td>—</td><td>—</td><td>손대지 않음</td></tr>
+<tr><td>443 · 8443</td><td>(Pi 프로그램 아님) Tailscale 이 Funnel(443)·Serve(8443)로 여는 바깥 문</td><td>tailscaled</td><td>위 8100·8101 로 넘겨 줌</td><td>—</td></tr>
+</tbody></table>
+<p><strong>"듣는 문"이 왜 중요한가</strong> — 포트를 열었다고 세상에 보이는 것은 아닙니다. 프로그램은 어느 네트워크에서 오는 손님까지 받을지도 정합니다. <code>127.0.0.1</code> 은 Pi 자기 자신에게서 오는 요청만, <code>0.0.0.0</code> 은 어느 네트워크(학교 Wi-Fi, tailnet)에서 오든 다 받는다는 뜻입니다. 이 프로젝트의 모든 서버는 <code>127.0.0.1</code> 에만 묶고, 바깥으로 내보내는 일은 Tailscale(Funnel/Serve)이나 SSH 터널 같은 <em>중계자</em>에게만 맡깁니다. 그래서 "어느 포트가 누구에게 보이는가"는 서버 설정이 아니라 중계자 설정 한 곳(<code>tailscale serve status</code>)에서 읽을 수 있습니다.</p>
+<p><strong>왜 8100 하나에 다 넣지 않나</strong> — 8100 을 듣는 FastAPI 가 <code>/ollama/…</code> 요청을 8000 으로 넘겨 주면 겉으로는 한 포트처럼 보일 수 있습니다(관리 앱이 MJPEG 를 8102 에서 받아 중계하는 것이 바로 그 방식). 하지만 8100 은 학생 전원에게 열린 문이라 LLM 입구를 붙이면 누구나 AI HAT 을 점유해 대기시간 계산과 경쟁하게 됩니다. 시험 도구는 독립 포트에 두고 켜고 끄는 편이 단순하고 안전합니다.</p>
+
 <h3>준비물</h3>
 <ul>
 <li>Raspberry Pi 5, Raspberry Pi OS 64비트(Debian 13 Trixie, Python 3.13), SSH 접속 가능 — 현재 상태. 학교 Pi 도 같은 OS 로 설치한다</li>
