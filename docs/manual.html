@@ -2084,9 +2084,7 @@ def digest_with(m, body, translate_fn=None):
     if en is None:
         return None, &quot;en:lines&quot;
     if not en[&quot;why&quot;]:                                              # 모델이 Why 줄을 자주 빠뜨린다(09-04 실측) — 요약 세 줄만 주고 짧게 다시 묻는다
-        w = m.complete(WHY_SYSTEM, &quot;Summary:
-&quot; + &quot;
-&quot;.join(&quot;- &quot; + b for b in en[&quot;bullets&quot;]), max_tokens=60, timeout_s=60)
+        w = m.complete(WHY_SYSTEM, &quot;Summary:\n&quot; + &quot;\n&quot;.join(&quot;- &quot; + b for b in en[&quot;bullets&quot;]), max_tokens=60, timeout_s=60)
         en[&quot;why&quot;] = WHY_PREFIX.sub(&quot;&quot;, (w or &quot;&quot;).strip().splitlines()[0] if (w or &quot;&quot;).strip() else &quot;&quot;).strip().strip('&quot;')
     bad = check_english(text, en)
     if bad:

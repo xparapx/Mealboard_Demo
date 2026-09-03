@@ -67,9 +67,7 @@ def fake(text, why="Why: it shapes the climate students will live in."):
 
 
 def test_Why_줄이_없으면_후속_질문으로_채운다():
-    m = fake("- Global emissions rose 1.1% in 2024.
-- Scientists warn the 1.5C limit is slipping.
-- The report calls for faster cuts.")()
+    m = fake("- Global emissions rose 1.1% in 2024.\n- Scientists warn the 1.5C limit is slipping.\n- The report calls for faster cuts.")()
     with m:
         d, why = fetch_news.digest_with(m, BODY, translate_fn=fake_translate)
     assert why == "ok" and d["why"] == KO[3]

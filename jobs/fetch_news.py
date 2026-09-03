@@ -135,9 +135,7 @@ def digest_with(m, body, translate_fn=None):
     if en is None:
         return None, "en:lines"
     if not en["why"]:                                              # 모델이 Why 줄을 자주 빠뜨린다(09-04 실측) — 요약 세 줄만 주고 짧게 다시 묻는다
-        w = m.complete(WHY_SYSTEM, "Summary:
-" + "
-".join("- " + b for b in en["bullets"]), max_tokens=60, timeout_s=60)
+        w = m.complete(WHY_SYSTEM, "Summary:\n" + "\n".join("- " + b for b in en["bullets"]), max_tokens=60, timeout_s=60)
         en["why"] = WHY_PREFIX.sub("", (w or "").strip().splitlines()[0] if (w or "").strip() else "").strip().strip('"')
     bad = check_english(text, en)
     if bad:
