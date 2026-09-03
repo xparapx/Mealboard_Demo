@@ -54,7 +54,7 @@
 - **Phase 3a 완료(09-03, `af59826`)**: `app/admin/auth.py identify()`(fail-closed 5단계), `app/admin/guard.py needs_force()`. 관리 앱 본체는 3b.
 - **Phase 3b 완료(09-03, `68116b2`)**: 관리 앱 `app/admin/server.py`(uvicorn `app.admin.server:app`, 8101), 게이트 미들웨어·워치독·감사(admin.db)·sysctl 허용목록(=deploy/sudoers-mealboard, 테스트로 동일성 검사).
   관리 UI 는 `app/admin/static/admin.js`(core 가 whoami 200 이면 import). Pi: setup_pi.sh 6b(sudoers·journal 그룹·유닛) + `tailscale serve --bg --https=8443 http://127.0.0.1:8101`.
-- **다음 할 일**: PLAN §6 순서대로 — 지금은 **Phase 3d**(zones.json 편집기 — 4점 호모그래피·ROI·구역, `data/zones.local.json` 에 PUT + `.bak` 5개), 이어 Phase 3 말 `/code-review high` + `/security-review`. 3c 까지 Pi 반영됨(관리 앱 8443, mock --meta). 아래 ①~④ 는 이후 단계에 흡수된다.
+- **다음 할 일**: PLAN §6 순서대로 — 지금은 **Phase 3 말 리뷰**(`/code-review high` + `/security-review` — auth·sudoers·스트림 프록시·zones PUT), 그다음 Phase 4. 3d 까지 완료( `/code-review high` + `/security-review`. 3c 까지 Pi 반영됨(관리 앱 8443, mock --meta). 아래 ①~④ 는 이후 단계에 흡수된다.
   ① 평소 곡선(`/api/typical`)은 mock 이 170분 사이클을 반복해 써서 스테이징에서는 값이 바닥이다. 실측 이후 확인.
   ② Inside Climate News 는 미국 지역 전력·정치 보도가 많아 "세계적 기후 이슈"와 결이 다른 기사가 섞인다 —
   며칠 지켜본 뒤 교체 여부 판단(후보: UNEP · Climate Home News). ③ 급식 있는 평일에 데스크톱 12컬럼 보드·모바일 dock 실물 확인.
