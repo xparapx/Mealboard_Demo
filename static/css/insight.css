@@ -7,7 +7,7 @@
 .insight[data-state="no_data"] .body { display: none; }
 .insight[data-state="no_data"] .empty { display: block; }
 
-/* 요일×시각 히트맵 — CSS grid. 셀 색은 --t(0~1)로 멜론 #FF7260 한 램프(09-04, 이전 틸): rgba(var(--heat), .08 + .84·t). 오늘 행 라벨은 차콜, 황금 셀은 차콜 inset 링 */
+/* 요일×시각 히트맵 — CSS grid. 셀 색은 JS 가 plotly Sunsetdark(colors.js)로 inline 에 적는다(09-04); 아래 --heat 램프는 폴백: rgba(var(--heat), .08 + .84·t). 오늘 행 라벨은 차콜, 황금 셀은 차콜 inset 링 */
 .heat { display: grid; grid-template-columns: 22px 1fr; gap: 4px 6px; margin-top: 12px; align-items: stretch; }
 .heat .wd { font-size: 10px; font-weight: 700; color: var(--ink3); display: flex; align-items: center; justify-content: center;
             border-radius: 6px; }
@@ -25,7 +25,7 @@
 .heat .axis { grid-column: 2; display: flex; justify-content: space-between; font-size: 10px; color: var(--ink3); }
 .heat .axis b { font-weight: 700; color: var(--ink2); }
 .heatlegend { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 10.5px; color: var(--ink3); }
-.heatlegend i { width: 56px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, rgba(var(--heat), .08), rgba(var(--heat), .92)); }
+.heatlegend i { width: 56px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #fcde9c, #7c1d6f); }   /* JS 가 Sunsetdark 전체 그라데이션으로 바꾼다 */
 .heatlegend em { font-style: normal; width: 12px; height: 12px; border-radius: 3px; box-shadow: inset 0 0 0 1.5px var(--ink); flex: none; }
 
 /* 칩 행 — 황금 구간(아쿠아, #state 칩 룩)·예보 황금 후보 */
@@ -71,11 +71,12 @@
 .zonestage { position: relative; margin-top: 12px; }
 #zoneplan { display: block; width: 100%; aspect-ratio: 318 / 460; }
 .zoneside { display: flex; flex-direction: column; }
-.chips2.zones span { background: #FBE6DC; color: #7A2F55; }                       /* flare 의 양 끝 — 옅은 살구 바탕에 자주 글자 */
-.chips2.zones span.ghost { background: transparent; box-shadow: inset 0 0 0 1.5px #EBD5C8; color: var(--ink2); }
-.flarelegend { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 10.5px; color: var(--ink3); }
-.flarelegend i { flex: 1 1 0; max-width: 140px; height: 8px; border-radius: 4px;
-                 background: linear-gradient(90deg, #edb081, #e5715e, #c14168, #863071, #4b2362); }   /* floor.js FLARE 와 같은 값 */
+.chips2.zones span { background: var(--well); color: var(--ink); }                 /* 칩은 중립 — 색은 타일(jet)이 맡는다 */
+.chips2.zones span.ghost { background: transparent; box-shadow: inset 0 0 0 1.5px var(--hair); color: var(--ink2); }
+/* 컬러바 — 평면도 우측 하단에 겹쳐 놓는다(09-04 사용자 요청). 종이색 반투명 알약, 그라데이션은 JS 가 jet 으로 채운다 */
+.heatbar { position: absolute; right: 6px; bottom: 6px; display: flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px;
+           background: rgba(255,252,246,.88); box-shadow: var(--e1); font-size: 10px; color: var(--ink2); pointer-events: none; }
+.heatbar i { width: 64px; height: 7px; border-radius: 4px; background: linear-gradient(90deg, #000083, #05ffff, #ffff00, #800000); }
 
 /* 오늘 리포트 — 본문 + "AI 작성 · 모델" 칩 */
 .report { margin: 8px 0 0; font-size: 14px; line-height: 1.6; color: #4A4740; }

@@ -4,9 +4,11 @@
    /api/positions 는 이 화면이 보일 때만 30초마다 — 다른 화면에서는 요청이 나가지 않는다.
    아래 카드: 최근 30분 밀집도(육각 타일별 인원수 합계 — 같은 평면도 위에 flare 히트맵, 30초마다) · 오늘 리포트(로컬 LLM 글, 30분마다) */
 import { $, j, jSoft, S, esc, fit, hm, canvasAuto, setState } from "./core.js";
-import { drawFloor, drawHeat, drawMarkers, geom } from "./floor.js";
+import { JET, gradient } from "./colors.js";
+import { drawFloor, drawHeat, drawMarkers, drawZoneLabels, geom } from "./floor.js";
 
-let G = null;                                          // #plan 의 투영 — 평면도를 그린 크기. 상자가 바뀌면 canvasAuto 가 다시 만든다
+let G = null;
+let ZONES = null;                                      // zones.json 의 구역(정규화 다각형·이름) — 라벨만 그린다. /api/insight/zones 에서 한 번                                          // #plan 의 투영 — 평면도를 그린 크기. 상자가 바뀌면 canvasAuto 가 다시 만든다
 
 function drawFloorLayer() {
   const c = $("#plan"), W = c.clientWidth || 318;
@@ -14,6 +16,12 @@ function drawFloorLayer() {
   const { g } = fit(c, H);
   G = geom(W, H);
   drawFloor(g, G);
+  drawZoneLabels(g, G, ZONES);
+}
+
+async function loadZones() {                           // 구역 정의는 설정이라 하루에 몇 번 바뀌지 않는다 — 부팅 때 + 30분 slow 에서
+  const z = await jSoft("/api/insight/zones?weeks=1");
+  if (z && z.zones && z.zones.length) { ZONES = z.zones; drawFloorLayer(); renderPlan(S.lastPos || { state: "no_data" }); drawZoneCard(); }
 }
 
 export function renderPlan(p) {
@@ -39,13 +47,14 @@ function drawZoneCard() {
   const { g } = fit(c, H);
   const Gz = geom(W, H);
   drawFloor(g, Gz);
-  drawHeat(g, Gz, d.cells, d.grid.cols, d.grid.rows);   // 타일이 진할수록(flare) 최근 30분에 사람이 많았던 자리 — 이름·마커 없음
+  drawZoneLabels(g, Gz, ZONES);
+  drawHeat(g, Gz, d.cells, d.grid.cols, d.grid.rows);   // 타일이 진할수록(jet) 최근 30분에 사람이 많았던 자리 — 마커 없음
 }
 
 /* 최근 30분 밀집도(09-03 사용자 결정: 최근 4주 구역 평균 대신 당일 최근 30분, 히트맵). 30초마다 poll 로 */
 function renderZones(d) {
   const ok = d.state === "ok" && d.cells && d.cells.length;
-  if (!setState("zonecard", ok, d.reason)) { DENS = null; return; }
+  if (!setState("zonecard", ok, d.reason)) { DENS = null; $("#zonebar").hidden = true; return; }
   DENS = d;
   drawZoneCard();
   const top = d.zones[0];
@@ -53,6 +62,7 @@ function renderZones(d) {
   $("#zonechips").innerHTML = d.zones.map((z, i) =>
     `<span class="${i ? "ghost" : ""}">${esc(z.label)}<small>${z.share_pct}% · 평균 ${z.avg_n}명</small></span>`).join("");
   $("#zonefoot").textContent = `${hm(d.since)} 이후 표본 ${d.ticks}개 · 육각 타일 ${d.grid.cols}×${d.grid.rows} 타일별 인원수 합계 · 개별 위치는 저장하지 않습니다`;
+  $("#zonebar").hidden = false;
 }
 
 function renderReport(d) {
@@ -70,13 +80,15 @@ export const screen = {
   mount() {                                            // 부팅 때 core 가 부른다(순환 import 의 TDZ 회피)
     canvasAuto($("#plan"), () => { drawFloorLayer(); renderPlan(S.lastPos || { state: "no_data" }); });
     canvasAuto($("#zoneplan"), drawZoneCard);
+    $("#zonebar").querySelector("i").style.background = gradient(JET);
+    loadZones();
   },
   every: 30000,
   async poll() {                                       // 위치 마커 + 최근 30분 밀집도(둘 다 라이브)
     const [p, z] = await Promise.all([j("/api/positions"), jSoft("/api/insight/density?minutes=30")]);
     S.lastPos = p; renderPlan(p); renderZones(z);
   },
-  async slow() { renderReport(await jSoft("/api/insight/text")); },   // 리포트 — core 가 30분마다
+  async slow() { renderReport(await jSoft("/api/insight/text")); loadZones(); },   // 리포트·구역 정의 — core 가 30분마다
   fail() { S.lastPos = { state: "no_data" }; renderPlan(S.lastPos); },    // 서버에 닿지 못하면 옛 위치를 '지금'처럼 두지 않는다
   activate() { $("#plancard").classList.add("live"); },                   // 점멸은 보일 때만
   deactivate() { $("#plancard").classList.remove("live"); },

@@ -57,14 +57,14 @@
 .meta { display: flex; justify-content: space-between; align-items: center; padding: 0 6px;
         font-size: 11px; color: var(--ink3); }
 
-/* ③ 추이 — 데이터는 한 색(멜론 #FF7260 램프, 09-04), 비교 기준선은 중립 회색 파선. 색을 둘 쓰면 어느 쪽이 실측인지 흐려진다 */
+/* ③ 추이 — 데이터는 한 램프(plotly Sunsetdark, 09-04), 비교 기준선은 중립 회색 파선. 색을 둘 쓰면 어느 쪽이 실측인지 흐려진다 */
 .lead { font-size: 14px; font-weight: 600; color: var(--ink); margin-top: 8px; letter-spacing: -.01em; }
 .lead b { color: var(--teal-ink); font-weight: 600; }
 #chart { display: block; width: 100%; height: 108px; margin-top: 12px; }
 .legend { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 11px; }
 .legend > span { display: inline-flex; align-items: center; gap: 12px; }
 .legend i { font-style: normal; display: inline-flex; align-items: center; gap: 6px; color: var(--ink2); }
-.legend i::before { content: ""; width: 14px; height: 2px; border-radius: 2px; background: var(--melon); flex: none; }
+.legend i::before { content: ""; width: 14px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, #fcde9c, #7c1d6f); flex: none; }
 .legend i.ref { color: var(--ink3); }
 .legend i.ref::before { height: 0; background: none; border-top: 1.5px dashed #B9B1A0; }
 .legend .now { color: var(--ink3); }
@@ -128,7 +128,7 @@ details > summary::-webkit-details-marker { display: none; }
 .kpi .flag:empty { display: none; }
 
 /* ⑥ 영양소 칩 — 토글 없이 항상 펼침. 권장섭취량(RNI) 대비 과부족만 말한다.
-   ±% 의 부호가 곧 색이다 — 0 이상은 푸른 계열, 음수(권장섭취량 미달)는 붉은 계열 그라데이션.
+   색은 JS 가 plotly RdBu(100% = 가운데 흰색, 적음=빨강·많음=파랑)를 inline 으로 적는다(09-04). 아래 data-band 색은 폴백.
    그중 평균필요량(EAR)에도 못 미치는 칸만 멜론 외곽선 + "부족" 글자를 더해 3칸의 "부족 N" 과 맞춘다 */
 .micro { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
 .micro > div { display: flex; flex-direction: column; gap: 5px; }

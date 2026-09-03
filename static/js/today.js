@@ -1,5 +1,6 @@
 /* 오늘급식 화면 — 오늘 중식(메뉴·알레르기·영양 3칸·영양소 칩) + 잔반 탄소. 진입 시 1회 + 5분마다 */
 import { $, j, S, esc } from "./core.js";
+import { RDBU, luma, ramp } from "./colors.js";
 import { renderWeek } from "./week.js";
 
 /* ---------------- ① 알레르기 ----------------
@@ -39,6 +40,12 @@ function bandOf(x) {
   return d >= 10 ? "hi" : d >= 0 ? "mid" : "lo";
 }
 const shortLabel = s => s.replace(/\s*\(.*\)\s*$/, "");   // "비타민A (㎍RAE)" → "비타민A"
+/* 영양소 칩 색 — plotly "RdBu"(09-04 사용자 결정): 권장섭취량 100% 가 가운데 흰색, 50% 이하는 진한 빨강, 150% 이상은 진한 파랑. 글자는 밝기로 검/흰 */
+function chipStyle(pct) {
+  const t = Math.min(1, Math.max(0, ((pct ?? 100) - 50) / 100));
+  const bg = ramp(RDBU, t);
+  return `background:${bg};color:${luma(bg) > .6 ? "#33312D" : "#FFFCF6"}`;
+}
 
 let inflight = null;
 export function loadMeal() {                          // 진행 중이면 그 약속을 나눠 준다 — 두 화면이 동시에 불러도 요청은 하나
@@ -86,7 +93,7 @@ export function renderMeal(m) {
   $("#micro").innerHTML = a.micro.map(x => {
     const d = x.pct - 100, band = bandOf(x);
     const tag = band === "short" ? "<em>부족</em>" : x.band === "과다" ? "<em>과다</em>" : "";
-    return `<div data-band="${band}"><div class="v">${d >= 0 ? "+" : "−"}${Math.abs(d)}%${tag}</div>`
+    return `<div data-band="${band}"><div class="v" style="${chipStyle(x.pct)}">${d >= 0 ? "+" : "−"}${Math.abs(d)}%${tag}</div>`
          + `<div class="n" title="${esc(x.label)}">${esc(shortLabel(x.label))}</div></div>`;
   }).join("");
 

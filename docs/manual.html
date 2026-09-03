@@ -1249,11 +1249,11 @@ systemctl status mealboard-api --no-pager</code></pre>
       &lt;div class=&quot;eyebrow&quot;&gt;최근 30분 밀집도&lt;/div&gt;
       &lt;div class=&quot;body&quot;&gt;
         &lt;div class=&quot;zonewrap&quot;&gt;
-          &lt;div class=&quot;stage zonestage&quot;&gt;&lt;canvas id=&quot;zoneplan&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+          &lt;div class=&quot;stage zonestage&quot;&gt;&lt;canvas id=&quot;zoneplan&quot;&gt;&lt;/canvas&gt;
+            &lt;div class=&quot;heatbar&quot; id=&quot;zonebar&quot; hidden&gt;&lt;span&gt;적음&lt;/span&gt;&lt;i&gt;&lt;/i&gt;&lt;span&gt;많음&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
           &lt;div class=&quot;zoneside&quot;&gt;
             &lt;div class=&quot;lead&quot; id=&quot;zonelead&quot;&gt;&lt;/div&gt;
             &lt;div class=&quot;chips2 zones&quot; id=&quot;zonechips&quot;&gt;&lt;/div&gt;
-            &lt;div class=&quot;flarelegend&quot;&gt;&lt;span&gt;적음&lt;/span&gt;&lt;i&gt;&lt;/i&gt;&lt;span&gt;많음&lt;/span&gt;&lt;/div&gt;
             &lt;div class=&quot;note foot&quot; id=&quot;zonefoot&quot;&gt;&lt;/div&gt;
           &lt;/div&gt;
         &lt;/div&gt;
@@ -1386,10 +1386,10 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v11&quot;;   // 09-04: 육각 밀집도·멜론 램프·실시간뷰 배치 — 옛 셸 캐시를 지운다
+const CACHE = &quot;mealboard-v12&quot;;   // 09-04 밤: plotly 컬러맵(colors.js)·구역 라벨·컬러바 — 옛 셸 캐시를 지운다
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
-  &quot;/js/core.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
+  &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
 
 self.addEventListener(&quot;install&quot;, e =&gt;
   e.waitUntil(caches.open(CACHE).then(c =&gt; c.addAll(SHELL)).then(() =&gt; self.skipWaiting())));
@@ -4895,9 +4895,11 @@ try {
    /api/positions 는 이 화면이 보일 때만 30초마다 — 다른 화면에서는 요청이 나가지 않는다.
    아래 카드: 최근 30분 밀집도(육각 타일별 인원수 합계 — 같은 평면도 위에 flare 히트맵, 30초마다) · 오늘 리포트(로컬 LLM 글, 30분마다) */
 import { $, j, jSoft, S, esc, fit, hm, canvasAuto, setState } from &quot;./core.js&quot;;
-import { drawFloor, drawHeat, drawMarkers, geom } from &quot;./floor.js&quot;;
+import { JET, gradient } from &quot;./colors.js&quot;;
+import { drawFloor, drawHeat, drawMarkers, drawZoneLabels, geom } from &quot;./floor.js&quot;;
 
-let G = null;                                          // #plan 의 투영 — 평면도를 그린 크기. 상자가 바뀌면 canvasAuto 가 다시 만든다
+let G = null;
+let ZONES = null;                                      // zones.json 의 구역(정규화 다각형·이름) — 라벨만 그린다. /api/insight/zones 에서 한 번                                          // #plan 의 투영 — 평면도를 그린 크기. 상자가 바뀌면 canvasAuto 가 다시 만든다
 
 function drawFloorLayer() {
   const c = $(&quot;#plan&quot;), W = c.clientWidth || 318;
@@ -4905,6 +4907,12 @@ function drawFloorLayer() {
   const { g } = fit(c, H);
   G = geom(W, H);
   drawFloor(g, G);
+  drawZoneLabels(g, G, ZONES);
+}
+
+async function loadZones() {                           // 구역 정의는 설정이라 하루에 몇 번 바뀌지 않는다 — 부팅 때 + 30분 slow 에서
+  const z = await jSoft(&quot;/api/insight/zones?weeks=1&quot;);
+  if (z &amp;&amp; z.zones &amp;&amp; z.zones.length) { ZONES = z.zones; drawFloorLayer(); renderPlan(S.lastPos || { state: &quot;no_data&quot; }); drawZoneCard(); }
 }
 
 export function renderPlan(p) {
@@ -4930,13 +4938,14 @@ function drawZoneCard() {
   const { g } = fit(c, H);
   const Gz = geom(W, H);
   drawFloor(g, Gz);
-  drawHeat(g, Gz, d.cells, d.grid.cols, d.grid.rows);   // 타일이 진할수록(flare) 최근 30분에 사람이 많았던 자리 — 이름·마커 없음
+  drawZoneLabels(g, Gz, ZONES);
+  drawHeat(g, Gz, d.cells, d.grid.cols, d.grid.rows);   // 타일이 진할수록(jet) 최근 30분에 사람이 많았던 자리 — 마커 없음
 }
 
 /* 최근 30분 밀집도(09-03 사용자 결정: 최근 4주 구역 평균 대신 당일 최근 30분, 히트맵). 30초마다 poll 로 */
 function renderZones(d) {
   const ok = d.state === &quot;ok&quot; &amp;&amp; d.cells &amp;&amp; d.cells.length;
-  if (!setState(&quot;zonecard&quot;, ok, d.reason)) { DENS = null; return; }
+  if (!setState(&quot;zonecard&quot;, ok, d.reason)) { DENS = null; $(&quot;#zonebar&quot;).hidden = true; return; }
   DENS = d;
   drawZoneCard();
   const top = d.zones[0];
@@ -4944,6 +4953,7 @@ function renderZones(d) {
   $(&quot;#zonechips&quot;).innerHTML = d.zones.map((z, i) =&gt;
     `&lt;span class=&quot;${i ? &quot;ghost&quot; : &quot;&quot;}&quot;&gt;${esc(z.label)}&lt;small&gt;${z.share_pct}% · 평균 ${z.avg_n}명&lt;/small&gt;&lt;/span&gt;`).join(&quot;&quot;);
   $(&quot;#zonefoot&quot;).textContent = `${hm(d.since)} 이후 표본 ${d.ticks}개 · 육각 타일 ${d.grid.cols}×${d.grid.rows} 타일별 인원수 합계 · 개별 위치는 저장하지 않습니다`;
+  $(&quot;#zonebar&quot;).hidden = false;
 }
 
 function renderReport(d) {
@@ -4961,13 +4971,15 @@ export const screen = {
   mount() {                                            // 부팅 때 core 가 부른다(순환 import 의 TDZ 회피)
     canvasAuto($(&quot;#plan&quot;), () =&gt; { drawFloorLayer(); renderPlan(S.lastPos || { state: &quot;no_data&quot; }); });
     canvasAuto($(&quot;#zoneplan&quot;), drawZoneCard);
+    $(&quot;#zonebar&quot;).querySelector(&quot;i&quot;).style.background = gradient(JET);
+    loadZones();
   },
   every: 30000,
   async poll() {                                       // 위치 마커 + 최근 30분 밀집도(둘 다 라이브)
     const [p, z] = await Promise.all([j(&quot;/api/positions&quot;), jSoft(&quot;/api/insight/density?minutes=30&quot;)]);
     S.lastPos = p; renderPlan(p); renderZones(z);
   },
-  async slow() { renderReport(await jSoft(&quot;/api/insight/text&quot;)); },   // 리포트 — core 가 30분마다
+  async slow() { renderReport(await jSoft(&quot;/api/insight/text&quot;)); loadZones(); },   // 리포트·구역 정의 — core 가 30분마다
   fail() { S.lastPos = { state: &quot;no_data&quot; }; renderPlan(S.lastPos); },    // 서버에 닿지 못하면 옛 위치를 '지금'처럼 두지 않는다
   activate() { $(&quot;#plancard&quot;).classList.add(&quot;live&quot;); },                   // 점멸은 보일 때만
   deactivate() { $(&quot;#plancard&quot;).classList.remove(&quot;live&quot;); },
@@ -4983,6 +4995,8 @@ export const screen = {
    대기통로(창가) 오른쪽 · 입구 아래(통로 쪽). 투영: sx=(W−x)·k, sy=y·k — 왜곡 없음.
    테이블 6열 × [6인×3 | 6인×2 | 6인×4+4인], 의자는 도면 기호처럼 테이블 가장자리에 살짝만.
    여기 함수들은 캔버스 컨텍스트 g 와 geom 만 받는다 — DOM 을 모른다 */
+
+import { JET, ramp } from &quot;./colors.js&quot;;
 
 export const ROOM = { W: 15.55, D: 24.65, H: 2.68 };
 const GAP = { door: [0.2, 3.2], dish: [1.6, 4.4], exit: [5.6, 8.4] };   // 입구(아래 벽, 통로 쪽) · 퇴식구·출구(좌측 벽, 위부터)
@@ -5069,8 +5083,24 @@ export function drawFloor(g, G) {
   g.textAlign = &quot;right&quot;;                                            // 레이아웃 바깥(좌측 여백)에
   label(g, G, &quot;퇴식구&quot;, X(ROOM.W) - T - 4 * u, Y((GAP.dish[0] + GAP.dish[1]) / 2) + 4 * u, &quot;#6E6A61&quot;);
   label(g, G, &quot;출구&quot;, X(ROOM.W) - T - 4 * u, Y((GAP.exit[0] + GAP.exit[1]) / 2) + 4 * u, &quot;#6E6A61&quot;);
-  g.textAlign = &quot;center&quot;;
-  label(g, G, &quot;통로&quot;, X(1.1), Y(ROOM.D * .5), &quot;#A9A296&quot;);
+}
+
+/* 구역 이름 라벨 — 사용자 화면(급식실 현황·밀집도)에 zones.json 의 이름을 옅은 회색으로(09-04 사용자 요청, 이전의 고정 &quot;통로&quot; 글자를 대신한다).
+   세로로 긴 구역(길이가 폭의 2.5배 이상 — 출구쪽·입구쪽 통로)은 시계 방향 90° 로 돌려 통로를 따라 읽히게. 배식대 띠(y&lt;0.12)는 위의 &quot;배식대&quot; 글자와 겹쳐 뺀다 */
+export function drawZoneLabels(g, G, zones) {
+  (zones || []).forEach(z =&gt; {
+    const P = z.polygon; if (!P || P.length &lt; 3) return;
+    const xs = P.map(p =&gt; p[0]), ys = P.map(p =&gt; p[1]);
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+    if (cy &lt; 0.12) return;
+    const w = (Math.max(...xs) - Math.min(...xs)) * ROOM.W, h = (Math.max(...ys) - Math.min(...ys)) * ROOM.D;
+    const [sx, sy] = G.P(cx, cy);
+    g.save(); g.translate(sx, sy);
+    if (h &gt; 2.5 * w) g.rotate(Math.PI / 2);                            // 시계 방향 90° — 위에서 아래로 읽힌다
+    g.textAlign = &quot;center&quot;;
+    label(g, G, z.label || z.name || z.id, 0, 4 * (G.fu ?? G.u), &quot;#A9A296&quot;);
+    g.restore();
+  });
 }
 
 /* 흰 halo 라벨 — 마커 위에서도 읽힌다 */
@@ -5118,16 +5148,8 @@ export function drawZones(g, G, zones, occ = {}, labels = true) {
   });
 }
 
-/* 밀집도 팔레트 — seaborn &quot;flare&quot;(09-04 사용자 결정) 를 9단으로 뜬 값(cmap 을 0, 1/8, …, 1 에서 표본). 옅은 살구 → 진한 자주 */
-export const FLARE = [&quot;#edb081&quot;, &quot;#ea916e&quot;, &quot;#e5715e&quot;, &quot;#d9535d&quot;, &quot;#c14168&quot;, &quot;#a3386f&quot;, &quot;#863071&quot;, &quot;#672a6b&quot;, &quot;#4b2362&quot;];
-export function flare(t) {
-  const u = Math.min(1, Math.max(0, t)) * (FLARE.length - 1), i = Math.min(FLARE.length - 2, Math.floor(u)), f = u - i;
-  const a = FLARE[i].match(/\w\w/g).map(h =&gt; parseInt(h, 16)), b = FLARE[i + 1].match(/\w\w/g).map(h =&gt; parseInt(h, 16));
-  return `rgb(${a.map((v, k) =&gt; Math.round(v + (b[k] - v) * f)).join(&quot;,&quot;)})`;
-}
-
 /* 밀집도 육각 타일 — cells = [{i, w}] (i = row*cols+col, w 0~1). 기하는 vision/zones.py(hex_center)와 같다:
-   뾰족한 꼭짓점이 위, 홀수 행은 반 칸 오른쪽, 반지름은 x 로 1/(cols·√3) · y 로 1/(rows·1.5). 값이 있는 타일만 flare 색으로 채우고
+   뾰족한 꼭짓점이 위, 홀수 행은 반 칸 오른쪽, 반지름은 x 로 1/(cols·√3) · y 로 1/(rows·1.5). 값이 있는 타일만 plotly &quot;jet&quot;(colors.js, 09-04) 로 채우고
    나머지는 벌집 윤곽만 아주 옅게. 구역 이름·마커 없음. 최근 30분의 타일별 합계이지 개별 위치가 아니다 */
 export function drawHeat(g, G, cells, cols, rows) {
   const { X, Y } = G, S3 = Math.sqrt(3);
@@ -5149,7 +5171,7 @@ export function drawHeat(g, G, cells, cols, rows) {
   (cells || []).forEach(c =&gt; {
     const w = Math.min(1, Math.max(0, c.w));
     hex(c.i % cols, Math.floor(c.i / cols), .9);
-    g.fillStyle = flare(w); g.globalAlpha = .55 + .4 * w; g.fill();
+    g.fillStyle = ramp(JET, w); g.globalAlpha = .6 + .3 * w; g.fill();
   });
   g.restore();
 }</code></pre>

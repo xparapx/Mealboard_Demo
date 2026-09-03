@@ -1,6 +1,7 @@
 /* 대기시간 화면 — 히어로(지금 줄을 서면) + 추이(최근 30분, 평소 곡선 겹침). 30초 폴링(status·history). 평소 곡선(/api/typical)은 어제까지의
    자료라 5분마다면 충분하다. 그 아래 인사이트 카드 다섯 장 — 황금·병목·품질은 5분(오늘 즉석 계산), 히트맵·예보는 30분(집계) (PLAN §3.5) */
 import { $, j, jSoft, S, esc, fit, hhmm, mm, hm, WD, minuteOfDay, canvasAuto, setState } from "./core.js";
+import { SUNSETDARK, gradient, ramp } from "./colors.js";
 
 const BUSY_MIN = 12, EASY_MIN = 5;   // 판정 임계값 (학교마다 다를 수 있음)
 const CHART_MIN = 30;                 // 추이 카드의 시간창(분) — 카드 제목·축 라벨과 함께 바꾼다
@@ -78,15 +79,14 @@ export function drawChart(rows, typ, st) {
   const path = (arr, fx, fy) => { g.beginPath(); arr.forEach((d, i) => (i ? g.lineTo : g.moveTo).call(g, fx(d), fy(d))); };
 
   g.lineJoin = g.lineCap = "round";
-  // 오늘: 1분 막대 — 값이 클수록 진한 멜론 #FF7260(09-04 사용자 결정, 이전 틸). 선 대신 막대, 그라데이션은 값 크기로.
+  // 오늘: 1분 막대 — plotly "Sunsetdark"(colors.js, 09-04 사용자 결정): 값이 클수록 어둡게. 선 대신 막대.
   // 표본은 10초 묶음으로 오므로 분마다 평균을 낸다. 막대 폭은 30분 창을 균등 분할, 사이 1px 틈
   const byMin = new Map();
   pts.forEach(p => { const k = Math.floor(p.m); const b = byMin.get(k) || { s: 0, n: 0 }; b.s += p.v; b.n++; byMin.set(k, b); });
   const bars = [...byMin.entries()].filter(([m]) => m >= lo && m <= hi).map(([m, b]) => ({ m, v: b.s / b.n })).sort((a, b) => a.m - b.m);
   const bw = Math.max(2, plotW / (CHART_MIN + 1) - 1);
   bars.forEach(b => {
-    const a = .18 + .82 * Math.min(1, b.v / max);                       // 0분 → 옅게, 최대 → 진하게
-    g.fillStyle = `rgba(255,114,96,${a.toFixed(3)})`;
+    g.fillStyle = ramp(SUNSETDARK, b.v / max);                          // 0분 → 옅은 노랑, 최대 → 진한 자주
     const x = X(b.m) - bw / 2, y = Y(b.v), h = Math.max(2, H - padB - y);
     g.beginPath(); g.roundRect ? g.roundRect(x, y, bw, h, [2, 2, 0, 0]) : g.rect(x, y, bw, h); g.fill();
   });
@@ -101,12 +101,12 @@ export function drawChart(rows, typ, st) {
   g.setLineDash([3, 3]); g.strokeStyle = "rgba(209,74,56,.5)"; g.lineWidth = 1.5;
   g.beginPath(); g.moveTo(X(last.m), 2); g.lineTo(X(last.m), H); g.stroke(); g.setLineDash([]);
   g.beginPath(); g.arc(X(last.m), Y(last.v), 4, 0, Math.PI * 2);
-  g.fillStyle = "#C9452F"; g.fill(); g.strokeStyle = "#FFFCF6"; g.lineWidth = 2; g.stroke();
+  g.fillStyle = "#7c1d6f"; g.fill(); g.strokeStyle = "#FFFCF6"; g.lineWidth = 2; g.stroke();
 
   if (ref.length) {
     g.font = "700 9px system-ui, sans-serif"; g.textBaseline = "middle"; g.textAlign = "left";
     const r = ref[ref.length - 1];
-    g.fillStyle = "#C9452F"; g.fillText("오늘", X(last.m) + 8, Y(last.v));
+    g.fillStyle = "#7c1d6f"; g.fillText("오늘", X(last.m) + 8, Y(last.v));
     g.fillStyle = "#A9A296"; g.fillText("평소", X(r.minute_of_day) + 8, Y(r.wait_min));
   }
   // 결론 한 줄 — 곡선을 읽지 않아도 답이 나오게
@@ -150,7 +150,7 @@ function renderHeat(d) {
       const g = grid.get(`${wd}:${col}`);
       if (!g) { html += `<button class="c" type="button" data-none disabled aria-label="자료 없음"></button>`; continue; }
       const w = g.sum / g.n, t = Math.min(1, w / max);
-      html += `<button class="c" type="button" style="--t:${t.toFixed(3)}" data-wd="${wd}" data-min="${lo + col * step}" data-w="${w.toFixed(1)}" data-days="${g.days}"`
+      html += `<button class="c" type="button" style="--t:${t.toFixed(3)};background:${ramp(SUNSETDARK, t)}" data-wd="${wd}" data-min="${lo + col * step}" data-w="${w.toFixed(1)}" data-days="${g.days}"`
         + (w <= golden ? " data-golden" : "") + ` aria-label="${WD[wd]} ${mm(lo + col * step)} 평소 ${w.toFixed(1)}분"></button>`;
     }
     html += "</div>";
@@ -161,7 +161,7 @@ function renderHeat(d) {
   heat.dataset.step = step;
   $("#heatlead").textContent = "셀을 누르면 그 시각의 평소 대기를 읽습니다";
   $("#heatgolden").textContent = `${golden}분 이하 · 황금`;
-  $("#heatfoot").textContent = (d.basis === "weekday" ? `같은 요일 최근 ${d.weeks}주` : `최근 ${d.days}일`) + ` · ${step}분 단위 · 붉을수록 오래 기다렸습니다`;
+  $("#heatfoot").textContent = (d.basis === "weekday" ? `같은 요일 최근 ${d.weeks}주` : `최근 ${d.days}일`) + ` · ${step}분 단위 · 어두울수록 오래 기다렸습니다`;
 }
 function heatClick(e) {                       // 셀 180개에 리스너를 달지 않고 한 번만 위임
   const b = e.target.closest(".c[data-min]"); if (!b) return;
@@ -222,6 +222,7 @@ export const screen = {
   mount() {                                    // 모듈 최상위에서 core 의 도구를 쓰면 순환 import 의 TDZ 에 걸린다 — 부팅 때 core 가 부른다
     canvasAuto($("#chart"), () => S.last && drawChart(S.last.rows, S.last.typ, S.last.st));
     $("#heat").addEventListener("click", heatClick);
+    $(".heatlegend i").style.background = gradient(SUNSETDARK);
   },
   every: 30000,
   async poll() {                              // 라이브 30초 + 즉석 인사이트 5분 (같은 tick 에서 시각으로 가른다)

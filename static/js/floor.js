@@ -6,6 +6,8 @@
    테이블 6열 × [6인×3 | 6인×2 | 6인×4+4인], 의자는 도면 기호처럼 테이블 가장자리에 살짝만.
    여기 함수들은 캔버스 컨텍스트 g 와 geom 만 받는다 — DOM 을 모른다 */
 
+import { JET, ramp } from "./colors.js";
+
 export const ROOM = { W: 15.55, D: 24.65, H: 2.68 };
 const GAP = { door: [0.2, 3.2], dish: [1.6, 4.4], exit: [5.6, 8.4] };   // 입구(아래 벽, 통로 쪽) · 퇴식구·출구(좌측 벽, 위부터)
 
@@ -91,8 +93,24 @@ export function drawFloor(g, G) {
   g.textAlign = "right";                                            // 레이아웃 바깥(좌측 여백)에
   label(g, G, "퇴식구", X(ROOM.W) - T - 4 * u, Y((GAP.dish[0] + GAP.dish[1]) / 2) + 4 * u, "#6E6A61");
   label(g, G, "출구", X(ROOM.W) - T - 4 * u, Y((GAP.exit[0] + GAP.exit[1]) / 2) + 4 * u, "#6E6A61");
-  g.textAlign = "center";
-  label(g, G, "통로", X(1.1), Y(ROOM.D * .5), "#A9A296");
+}
+
+/* 구역 이름 라벨 — 사용자 화면(급식실 현황·밀집도)에 zones.json 의 이름을 옅은 회색으로(09-04 사용자 요청, 이전의 고정 "통로" 글자를 대신한다).
+   세로로 긴 구역(길이가 폭의 2.5배 이상 — 출구쪽·입구쪽 통로)은 시계 방향 90° 로 돌려 통로를 따라 읽히게. 배식대 띠(y<0.12)는 위의 "배식대" 글자와 겹쳐 뺀다 */
+export function drawZoneLabels(g, G, zones) {
+  (zones || []).forEach(z => {
+    const P = z.polygon; if (!P || P.length < 3) return;
+    const xs = P.map(p => p[0]), ys = P.map(p => p[1]);
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+    if (cy < 0.12) return;
+    const w = (Math.max(...xs) - Math.min(...xs)) * ROOM.W, h = (Math.max(...ys) - Math.min(...ys)) * ROOM.D;
+    const [sx, sy] = G.P(cx, cy);
+    g.save(); g.translate(sx, sy);
+    if (h > 2.5 * w) g.rotate(Math.PI / 2);                            // 시계 방향 90° — 위에서 아래로 읽힌다
+    g.textAlign = "center";
+    label(g, G, z.label || z.name || z.id, 0, 4 * (G.fu ?? G.u), "#A9A296");
+    g.restore();
+  });
 }
 
 /* 흰 halo 라벨 — 마커 위에서도 읽힌다 */
@@ -140,16 +158,8 @@ export function drawZones(g, G, zones, occ = {}, labels = true) {
   });
 }
 
-/* 밀집도 팔레트 — seaborn "flare"(09-04 사용자 결정) 를 9단으로 뜬 값(cmap 을 0, 1/8, …, 1 에서 표본). 옅은 살구 → 진한 자주 */
-export const FLARE = ["#edb081", "#ea916e", "#e5715e", "#d9535d", "#c14168", "#a3386f", "#863071", "#672a6b", "#4b2362"];
-export function flare(t) {
-  const u = Math.min(1, Math.max(0, t)) * (FLARE.length - 1), i = Math.min(FLARE.length - 2, Math.floor(u)), f = u - i;
-  const a = FLARE[i].match(/\w\w/g).map(h => parseInt(h, 16)), b = FLARE[i + 1].match(/\w\w/g).map(h => parseInt(h, 16));
-  return `rgb(${a.map((v, k) => Math.round(v + (b[k] - v) * f)).join(",")})`;
-}
-
 /* 밀집도 육각 타일 — cells = [{i, w}] (i = row*cols+col, w 0~1). 기하는 vision/zones.py(hex_center)와 같다:
-   뾰족한 꼭짓점이 위, 홀수 행은 반 칸 오른쪽, 반지름은 x 로 1/(cols·√3) · y 로 1/(rows·1.5). 값이 있는 타일만 flare 색으로 채우고
+   뾰족한 꼭짓점이 위, 홀수 행은 반 칸 오른쪽, 반지름은 x 로 1/(cols·√3) · y 로 1/(rows·1.5). 값이 있는 타일만 plotly "jet"(colors.js, 09-04) 로 채우고
    나머지는 벌집 윤곽만 아주 옅게. 구역 이름·마커 없음. 최근 30분의 타일별 합계이지 개별 위치가 아니다 */
 export function drawHeat(g, G, cells, cols, rows) {
   const { X, Y } = G, S3 = Math.sqrt(3);
@@ -171,7 +181,7 @@ export function drawHeat(g, G, cells, cols, rows) {
   (cells || []).forEach(c => {
     const w = Math.min(1, Math.max(0, c.w));
     hex(c.i % cols, Math.floor(c.i / cols), .9);
-    g.fillStyle = flare(w); g.globalAlpha = .55 + .4 * w; g.fill();
+    g.fillStyle = ramp(JET, w); g.globalAlpha = .6 + .3 * w; g.fill();
   });
   g.restore();
 }
