@@ -184,15 +184,21 @@ details > summary::-webkit-details-marker { display: none; }
 .cmp b { display: block; font-size: 19px; font-weight: 700; color: var(--ink); }
 .cmp span { display: block; font-size: 11px; color: var(--ink2); margin-top: 3px; line-height: 1.45; }
 
-/* ⑨ 이슈 링크 — 제목 1줄 + 출처 + 날짜. 본문 요약 없음 */
+/* ⑨ 이슈 피드 — 제목(원문 링크) · 칩 행(출처 · 날짜 · AI 요약/DeepL 번역) · 요약 3줄(digest.bullets, 틸 점) · "왜 중요한가" 한 줄 · 원문 보기.
+   digest 가 없으면(Phase 4c 전) 요약 2줄 클램프 (PLAN §5.4) */
 .news { list-style: none; margin: 6px 0 0; padding: 0; }
 .news li { display: flex; flex-direction: column; gap: 7px; padding: 13px 0; border-bottom: 1px solid var(--hair); }
 .news li:last-child { border-bottom: 0; }
 /* 헤드라인이 잘리는 것보다 요약이 짧은 편이 낫다 — 제목에 3줄, 요약에 2줄 */
-.news li a { font-size: 13.5px; font-weight: 600; color: var(--ink); line-height: 1.4;
+.news li > a:first-child { font-size: 16px; font-weight: 700; color: var(--ink); line-height: 1.4; letter-spacing: -.01em;
              display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .news li p { margin: 0; font-size: 11.5px; color: var(--ink2); line-height: 1.55;
              display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.news .bullets { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.news .bullets li { display: block; padding: 0 0 0 14px; border: 0; position: relative; font-size: 13.5px; line-height: 1.55; color: #4A4740; }
+.news .bullets li::before { content: ""; position: absolute; left: 0; top: .6em; width: 6px; height: 6px; border-radius: 50%; background: var(--teal); }
+.news .why { font-style: italic; color: var(--ink2); font-size: 12.5px; -webkit-line-clamp: 1; }
+.news a.more { align-self: flex-start; font-size: 11.5px; font-weight: 700; color: var(--teal-ink); }
 .news li div { display: flex; align-items: center; gap: 8px; }
 .news li em { font-style: normal; font-size: 10px; font-weight: 700; color: var(--teal-ink);
               background: var(--teal-tint); border-radius: 6px; padding: 3px 7px; }
