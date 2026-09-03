@@ -35,4 +35,6 @@ ADMIN_USERS = os.getenv("ADMIN_USERS", "")            # Tailscale 로그인, 쉼
 ADMIN_LOCAL_KEY = os.getenv("ADMIN_LOCAL_KEY", "")    # SSH 터널(127.0.0.1) 경로용. 생성: openssl rand -hex 16
 DEBUG_PORT = int(os.getenv("DEBUG_PORT", "8102"))     # vision 디버그 MJPEG (127.0.0.1 전용, 관리 앱이 중계)
 RUN_DIR = Path(os.getenv("RUN_DIR", str(DATA / "run")))   # 메타데이터 소켓 디렉터리 (Pi: /run/mealboard)
+META_UDP_PORT = 8103                                  # AF_UNIX 가 없는 개발 PC(Windows)의 메타데이터 폴백 — UDP 127.0.0.1 (Pi 에서는 쓰지 않는다)
+DEBUG_FLAG = Path("/tmp/debug_on") if os.name != "nt" else RUN_DIR / "debug_on"   # MJPEG 켜짐 계약 파일 (vision 과 공유, PrivateTmp 금지)
 ADMIN_DB_PATH = DATA / "admin.db"                     # 쓰기 주체: 관리 앱 (감사 로그)

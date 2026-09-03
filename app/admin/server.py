@@ -17,7 +17,9 @@ from ..main import REVALIDATE, REVALIDATE_PREFIX
 from ..routers import history, insight, meal, news, positions, status, typical
 from . import audit, sysctl, watchdog
 from .auth import COOKIE, identify, parse_users
+from .routers import stream as stream_router
 from .routers import system
+from .stream import StreamState
 
 mimetypes.add_type("text/javascript", ".js")
 USERS = parse_users(ADMIN_USERS)
@@ -35,6 +37,8 @@ async def _watch(app):
                 if bad and not app.state.lockdown:
                     app.state.lockdown = True
                     audit.log(None, "lockdown.on", "watchdog", f"관리 포트 {ADMIN_PORT} 가 Funnel 에 노출됨", True)
+                    app.state.stream.turn_off(None, reason="lockdown")      # 스트림도 함께 닫는다 — 구독 중이던 SSE 는 bye
+                    app.state.stream.hub.kick()
                 elif not bad and app.state.lockdown:
                     app.state.lockdown = False
                     audit.log(None, "lockdown.off", "watchdog", "노출 해소", True)
@@ -46,9 +50,12 @@ async def _watch(app):
 @contextlib.asynccontextmanager
 async def lifespan(app):
     app.state.lockdown = False
+    app.state.stream = StreamState()
+    await app.state.stream.resume()               # 재시작 전의 MJPEG 플래그: 남은 시간을 이어가거나 만료분을 지운다
     task = asyncio.create_task(_watch(app))
     yield
     task.cancel()
+    app.state.stream.shutdown()
 
 
 def create_app():
@@ -56,6 +63,7 @@ def create_app():
     for r in (status, history, meal, positions, news, typical, insight):
         app.include_router(r.router)
     app.include_router(system.router)
+    app.include_router(stream_router.router)
 
     @app.middleware("http")
     async def gate(request: Request, call_next):

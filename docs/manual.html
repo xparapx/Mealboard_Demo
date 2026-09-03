@@ -383,7 +383,8 @@ Conflicts=mealboard-vision.service
 User=__USER__
 WorkingDirectory=/opt/mealboard
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/opt/mealboard/.venv/bin/python -m jobs.mock_feed --speed 30
+# --meta: 합성 프레임 메타데이터를 관리 앱 소켓(RUN_DIR/meta.sock)에 던진다 — 구독자가 없으면 아무 데도 가지 않는다
+ExecStart=/opt/mealboard/.venv/bin/python -m jobs.mock_feed --speed 30 --meta
 Restart=on-failure
 
 [Install]
@@ -630,6 +631,8 @@ ADMIN_USERS = os.getenv(&quot;ADMIN_USERS&quot;, &quot;&quot;)            # Tail
 ADMIN_LOCAL_KEY = os.getenv(&quot;ADMIN_LOCAL_KEY&quot;, &quot;&quot;)    # SSH 터널(127.0.0.1) 경로용. 생성: openssl rand -hex 16
 DEBUG_PORT = int(os.getenv(&quot;DEBUG_PORT&quot;, &quot;8102&quot;))     # vision 디버그 MJPEG (127.0.0.1 전용, 관리 앱이 중계)
 RUN_DIR = Path(os.getenv(&quot;RUN_DIR&quot;, str(DATA / &quot;run&quot;)))   # 메타데이터 소켓 디렉터리 (Pi: /run/mealboard)
+META_UDP_PORT = 8103                                  # AF_UNIX 가 없는 개발 PC(Windows)의 메타데이터 폴백 — UDP 127.0.0.1 (Pi 에서는 쓰지 않는다)
+DEBUG_FLAG = Path(&quot;/tmp/debug_on&quot;) if os.name != &quot;nt&quot; else RUN_DIR / &quot;debug_on&quot;   # MJPEG 켜짐 계약 파일 (vision 과 공유, PrivateTmp 금지)
 ADMIN_DB_PATH = DATA / &quot;admin.db&quot;                     # 쓰기 주체: 관리 앱 (감사 로그)</code></pre>
 </figure>
 <figure class="code">
@@ -824,6 +827,8 @@ zone_samples 에 인원수만 남긴다(같은 트랜잭션). 구역 정의는 �
 실행:  uv run python -m jobs.mock_feed --speed 30
        --scenario stall : 45~55분 배식 중단 (insufficient_rate 상태 확인용)
        --scenario gap   : 80~90분 데이터 끊김 (no_data 상태 확인용)
+       --meta           : 합성 프레임 메타데이터(META_FPS/초)를 관리 앱 소켓에 던진다 (vision/meta.py, PLAN §4.4 프레임 이벤트 스키마).
+                          구독자가 없으면 sendto 가 실패할 뿐 — 어디에도 남지 않는다
 &quot;&quot;&quot;
 import argparse
 import datetime as dt
@@ -836,10 +841,14 @@ from collections import deque
 
 from app.config import DATA, ZONES_JSON
 from app.db import connect
+from vision.meta import MetaSender
 from vision.waittime import estimate_wait
-from vision.zones import count_by_zone, load_zones
+from vision.zones import count_by_zone, load_zones, zone_of
 
 TICK = 10           # 시뮬레이션 1틱 = 10초
+META_FPS = 5        # --meta 프레임 발행 속도 (vision 디버그 계약과 같은 ≤5fps)
+IMG_W, IMG_H = 1280, 720
+ROI_Y = 0.10        # 바닥 y &lt; ROI_Y 를 배식대 앞 ROI 로 본다 (템플릿 zones.json 의 counter 구역과 같은 띠)
 CAPACITY = 20.0     # 배식대 처리 능력 (명/분)
 CYCLE_MIN = 170     # 11:20 ~ 14:10 을 한 사이클로 보고 반복
 # 실측 좌표계(x=폭 15.55m, y=배식구 벽→출입문 24.65m 의 0~1 정규화, static 탑뷰·zones.json 과 공유):
@@ -890,13 +899,46 @@ def noisy(mu):
     return max(0, round(random.gauss(mu, max(mu, 1) ** 0.5)))
 
 
+def to_image(x, y):
+    &quot;&quot;&quot;바닥 정규화 → 가짜 카메라 이미지 정규화. 배식구 벽 위에서 출입문 쪽을 내려다보는 카메라를 흉내낸다:
+    가까울수록(y 작을수록) 화면 아래·크게, 멀수록 원근으로 가운데로 몬다. 호모그래피 대신 쓰는 합성 투영일 뿐이다&quot;&quot;&quot;
+    depth = 1 - y
+    v = 0.12 + 0.83 * depth
+    u = 0.5 + (x - 0.5) * (0.45 + 0.55 * depth)
+    return round(min(max(u, 0), 1), 3), round(min(max(v, 0), 1), 3)
+
+
+def frame_event(frame_id, ts, pts, zones, rate, wait, state, crossings=()):
+    &quot;&quot;&quot;PLAN §4.4 프레임 이벤트 한 개. 입력은 익명 좌표뿐 — 사람을 식별할 정보는 만들 수도 없다&quot;&quot;&quot;
+    tracks = []
+    for i, p in enumerate(pts):
+        u, v = to_image(p[&quot;x&quot;], p[&quot;y&quot;])
+        h = 0.06 + 0.24 * v
+        w = h * 0.42
+        tracks.append({&quot;id&quot;: 1000 + i, &quot;bbox_norm&quot;: [round(max(u - w / 2, 0), 3), round(max(v - h, 0), 3), round(min(u + w / 2, 1), 3), v],
+                       &quot;foot_xy_norm&quot;: [u, v], &quot;floor_xy_norm&quot;: [p[&quot;x&quot;], p[&quot;y&quot;]],
+                       &quot;in_roi&quot;: p[&quot;y&quot;] &lt; ROI_Y, &quot;zone&quot;: zone_of(p[&quot;x&quot;], p[&quot;y&quot;], zones)})
+    return {&quot;frame_id&quot;: frame_id, &quot;ts&quot;: ts, &quot;fps&quot;: META_FPS, &quot;infer_ms&quot;: round(random.gauss(118, 6), 1),
+            &quot;img_w&quot;: IMG_W, &quot;img_h&quot;: IMG_H, &quot;source&quot;: &quot;mock&quot;, &quot;model&quot;: &quot;mock&quot;,
+            &quot;tracks&quot;: tracks, &quot;crossings&quot;: list(crossings), &quot;zone_counts&quot;: count_by_zone(pts, zones),
+            &quot;roi_count&quot;: sum(1 for t in tracks if t[&quot;in_roi&quot;]), &quot;rate_per_min&quot;: round(rate, 2), &quot;wait_min&quot;: wait, &quot;state&quot;: state}
+
+
+def jitter(pts, d=0.004):
+    &quot;&quot;&quot;프레임 사이의 미세한 흔들림 — 같은 틱 안에서 점이 살아 있어 보이게&quot;&quot;&quot;
+    return [{&quot;x&quot;: round(min(max(p[&quot;x&quot;] + random.uniform(-d, d), 0), 1), 3), &quot;y&quot;: round(min(max(p[&quot;y&quot;] + random.uniform(-d, d), 0), 1), 3)} for p in pts]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument(&quot;--speed&quot;, type=float, default=30, help=&quot;실제 1초당 시뮬레이션 초&quot;)
     ap.add_argument(&quot;--scenario&quot;, choices=[&quot;normal&quot;, &quot;stall&quot;, &quot;gap&quot;], default=&quot;normal&quot;)
+    ap.add_argument(&quot;--meta&quot;, action=&quot;store_true&quot;, help=&quot;합성 프레임 메타데이터를 관리 앱 소켓에 발행&quot;)
     a = ap.parse_args()
 
     con = connect()
+    sender = MetaSender() if a.meta else None
+    frame_id = 0
     try:
         zones = load_zones(ZONES_JSON)[&quot;zones&quot;]               # 템플릿 + zones.local.json overlay
     except (OSError, ValueError) as e:                        # 구역 정의가 깨져도 대기시간 피드는 멈추지 않는다 — 구역 인원수만 빠진다
@@ -920,8 +962,9 @@ def main():
         rate = sum(n for _, n in served_log) / 5.0            # λ (명/분)
         wait, state = estimate_wait(queue, rate)              # W = L / λ
 
-        counts = {}
+        counts, pts, live = {}, [], False
         if not (a.scenario == &quot;gap&quot; and 80 &lt;= m &lt; 90):
+            live = True
             ts = dt.datetime.now().isoformat(timespec=&quot;milliseconds&quot;)
             pts = layout_points(queue)
             counts = count_by_zone(pts, zones)                # 구역별 인원수 — DB 에는 이 숫자만 간다
@@ -938,7 +981,18 @@ def main():
         if sim &gt;= CYCLE_MIN * 60:                             # 한 사이클 끝 → 처음부터
             sim, queue = 0.0, 0
             served_log.clear()
-        time.sleep(TICK / a.speed)
+        pause = TICK / a.speed
+        if sender is None or not live:
+            time.sleep(pause)
+            continue
+        n = max(1, round(pause * META_FPS))                   # 이 틱 동안 보낼 프레임 수 (speed 30 → 0.33초에 2프레임)
+        crossings = [{&quot;id&quot;: 1000 + k, &quot;dir&quot;: &quot;out&quot;, &quot;ts&quot;: ts} for k in range(served)]
+        for k in range(n):
+            frame_id += 1
+            ev = frame_event(frame_id, dt.datetime.now().isoformat(timespec=&quot;milliseconds&quot;), jitter(pts), zones,
+                             rate, wait, state, crossings if k == 0 else ())
+            sender.send(ev)
+            time.sleep(pause / n)
 
 
 if __name__ == &quot;__main__&quot;:
