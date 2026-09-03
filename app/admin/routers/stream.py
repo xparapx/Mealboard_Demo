@@ -46,7 +46,7 @@ async def meta(request: Request):
         q = await st.hub.subscribe()
     except HubFull:
         raise HTTPException(429, {"reason": "subscribers", "max": 3})
-    except OSError as e:
+    except (OSError, TypeError, ValueError) as e:            # 소켓을 열지 못했다(경로·권한·루프 구현) — 500 이 아니라 503 로 말한다
         raise HTTPException(503, {"reason": "bind", "detail": str(e)[:200]})
     audit.log(user, "stream.meta", "subscribe", st.hub.endpoint, True, ip)
 

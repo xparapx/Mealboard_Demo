@@ -147,6 +147,7 @@ class MetaHub(asyncio.DatagramProtocol):
             q.put_nowait(None)
 
     async def _bind(self):
+        """소켓은 직접 bind 해서 sock= 으로 넘긴다 — uvloop(Pi 의 uvicorn[standard]) 는 AF_UNIX 경로를 local_addr 로 받지 않는다"""
         loop = asyncio.get_running_loop()
         if self.unix:
             self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -154,10 +155,26 @@ class MetaHub(asyncio.DatagramProtocol):
                 self.path.unlink()
             except OSError:
                 pass
-            await loop.create_datagram_endpoint(lambda: self, family=socket.AF_UNIX, local_addr=str(self.path))
-            os.chmod(self.path, 0o660)          # 같은 사용자·그룹(mealboard)만 — vision·mock 이 같은 계정으로 돈다
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+            try:
+                sock.bind(str(self.path))
+                os.chmod(self.path, 0o660)      # 같은 사용자·그룹(mealboard)만 — vision·mock 이 같은 계정으로 돈다
+            except OSError:
+                sock.close()
+                raise
         else:
-            await loop.create_datagram_endpoint(lambda: self, local_addr=("127.0.0.1", self.port))
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                sock.bind(("127.0.0.1", self.port))
+            except OSError:
+                sock.close()
+                raise
+        sock.setblocking(False)
+        try:
+            await loop.create_datagram_endpoint(lambda: self, sock=sock)
+        except Exception:
+            sock.close()
+            raise
 
     def _unbind(self):
         if self.transport is not None:
