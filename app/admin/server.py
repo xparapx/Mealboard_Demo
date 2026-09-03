@@ -19,6 +19,7 @@ from . import audit, sysctl, watchdog
 from .auth import COOKIE, identify, parse_users
 from .routers import stream as stream_router
 from .routers import system
+from .routers import zones as zones_router
 from .stream import StreamState
 
 mimetypes.add_type("text/javascript", ".js")
@@ -64,6 +65,7 @@ def create_app():
         app.include_router(r.router)
     app.include_router(system.router)
     app.include_router(stream_router.router)
+    app.include_router(zones_router.router)
 
     @app.middleware("http")
     async def gate(request: Request, call_next):

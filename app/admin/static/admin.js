@@ -6,6 +6,7 @@
    3d(구역 편집기)가 카드를 더한다 */
 import { fit } from "/js/core.js";
 import { drawFloor, drawMarkers, drawZones, geom } from "/js/floor.js";
+import * as zonesEditor from "/admin-ui/zones-editor.js";
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -16,9 +17,9 @@ const age = s => s == null ? "—" : s < 90 ? `${s}초` : s < 5400 ? `${Math.rou
 const mmss = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 const CROSS_MAX = 50;
 
-async function api(path, body) {
+async function api(path, body, method = "POST") {
   const r = await fetch("/api/admin" + path, body === undefined ? { cache: "no-store" }
-    : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    : { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   let j = null; try { j = await r.json(); } catch {}
   return { ok: r.ok, status: r.status, j };
 }
@@ -127,6 +128,7 @@ function build(MB) {
     $("#streamimg").hidden = true; $("#streamimg").removeAttribute("src");
   });
   new ResizeObserver(() => draw()).observe($("#stage"));
+  zonesEditor.mount({ api, confirm, toast, lastFrame: () => ST.last, streamImg: () => $("#streamimg"), onSaved: loadAudit });
 }
 
 function toast(text, bad) {
@@ -309,8 +311,9 @@ export default function (MB) {
   MB.screens.admin = {
     every: 30000,
     async poll() { await Promise.all([loadServices(), loadStreamState()]); if ($("#adminfollow").getAttribute("aria-pressed") === "true") loadLog(); },
-    async slow() { loadAudit(); loadLog(); loadZones(); },
+    async slow() { loadAudit(); loadLog(); loadZones(); zonesEditor.load(); },     // 편집 중(더티)이면 편집기는 다시 읽지 않는다
     deactivate() { if (ST.mode !== "off") setMode("off", { keepFlag: true }); },   // 화면을 떠나면 클라이언트 쪽 스트림은 모두 끊는다(플래그는 타이머가)
     render(cardId, data) { if (cardId === "svccard") loadServices(); },
   };
+  MB.poll("admin", true);          // core 의 부팅 폴링은 이미 지나갔다 — 등록 직후 한 번 강제로(poll + slow)
 }
