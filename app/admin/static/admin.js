@@ -61,7 +61,7 @@ function build(MB) {
       <button type="button" data-mode="off" aria-pressed="true">끄기</button>
       <select id="streammin" aria-label="실사 시간"><option value="2">2분</option><option value="5" selected>5분</option><option value="10">10분</option></select>
     </div>
-    <div class="stage plan" id="stage"><img id="streamimg" alt="" hidden><canvas id="streamcanvas"></canvas><span class="badge" id="streambadge" hidden></span></div>
+    <div class="sstage plan" id="stage"><img id="streamimg" alt="" hidden><canvas id="streamcanvas"></canvas><span class="badge" id="streambadge" hidden></span></div>
     <div class="seg small" id="streamview" role="group" aria-label="보기">
       <button type="button" data-view="plan" aria-pressed="true">평면도</button><button type="button" data-view="frame">프레임</button>
     </div>

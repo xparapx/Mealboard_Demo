@@ -293,7 +293,7 @@ export function mount(deps) {
   <section class="card" id="zoneeditcard">
     <div class="eyebrow">구역 편집기 <span class="dirty" id="zdirty" hidden>저장 안 됨</span></div>
     <div class="seg small" id="zmode" role="group" aria-label="편집 모드"><button type="button" data-zmode="floor" aria-pressed="true">평면도 · 구역</button><button type="button" data-zmode="image">프레임 · ROI · 보정</button></div>
-    <div class="stage plan zstage" id="zstage"><canvas id="zcanvas"></canvas><span class="badge melon" id="zhint" hidden></span></div>
+    <div class="sstage plan zstage" id="zstage"><canvas id="zcanvas"></canvas><span class="badge melon" id="zhint" hidden></span></div>
     <div class="zchips" id="zchips"></div>
     <div class="zfields" id="zfields"></div>
     <div class="zbar"><button type="button" class="pill" id="zsave" disabled>저장</button><button type="button" class="pill ghost" id="zreset" disabled>되돌리기</button><span class="note" id="zinfo">—</span></div>

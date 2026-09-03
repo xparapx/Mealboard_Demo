@@ -37,7 +37,7 @@ dialog.confirm .row { display: flex; justify-content: flex-end; gap: 8px; margin
               opacity: 0; transition: opacity .2s; pointer-events: none; max-width: calc(100% - 32px); }
 #admintoast.on { opacity: 1; }
 #admintoast.bad { background: var(--melon); color: #2B1410; }
-/* 스트림 패널(3c) — 스테이지 16:9 차콜, 실사는 <img> 에만(켤 때 src, 끌 때 비움), 그 위 캔버스 오버레이. 배지 메타=틸 틴트 / 실사=멜론 틴트 */
+/* 스트림 패널(3c) — 스테이지(.sstage — 공개 급식실 카드의 .stage 와 이름을 나눈다: 관리 origin 에서는 공개 CSS 위에 이 파일이 얹힌다) 16:9 차콜, 실사는 <img> 에만(켤 때 src, 끌 때 비움), 그 위 캔버스 오버레이. 배지 메타=틸 틴트 / 실사=멜론 틴트 */
 .streamhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .streamhead .big { margin-top: 6px; }
 .streamhead .big b { font-size: 36px; font-weight: 700; letter-spacing: -.03em; }
@@ -56,13 +56,13 @@ dialog.confirm .row { display: flex; justify-content: flex-end; gap: 8px; margin
 .seg select { font: inherit; font-size: 12.5px; font-weight: 700; min-height: 44px; padding: 0 10px; border-radius: 999px; border: 0; background: var(--well); color: var(--ink); }
 .seg.small { margin-top: 8px; }
 .seg.small button { min-height: 34px; font-size: 11.5px; padding: 5px 8px; }
-.stage { position: relative; aspect-ratio: 16 / 9; margin-top: 12px; border-radius: 16px; overflow: hidden; background: #2B2A27; }
-.stage.plan { background: var(--well); }
-.stage img, .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.stage img { object-fit: contain; background: #000; }
-.stage .badge { position: absolute; top: 10px; right: 10px; font-size: 11px; font-weight: 700; padding: 4px 9px; border-radius: 999px;
+.sstage { position: relative; aspect-ratio: 16 / 9; margin-top: 12px; border-radius: 16px; overflow: hidden; background: #2B2A27; }
+.sstage.plan { background: var(--well); }
+.sstage img, .sstage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.sstage img { object-fit: contain; background: #000; }
+.sstage .badge { position: absolute; top: 10px; right: 10px; font-size: 11px; font-weight: 700; padding: 4px 9px; border-radius: 999px;
                 background: var(--teal-tint); color: var(--teal-ink); box-shadow: var(--e1); }
-.stage .badge.melon { background: var(--melon-tint); color: var(--melon-ink); }
+.sstage .badge.melon { background: var(--melon-tint); color: var(--melon-ink); }
 ul.cross { list-style: none; margin: 10px 0 0; padding: 0; max-height: 300px; overflow: auto; }
 ul.cross li { display: flex; gap: 10px; align-items: baseline; padding: 7px 0; border-bottom: 1px solid var(--hair); font-size: 12.5px; }
 ul.cross li:last-child { border-bottom: 0; }
