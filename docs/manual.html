@@ -1386,7 +1386,7 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v12&quot;;   // 09-04 밤: plotly 컬러맵(colors.js)·구역 라벨·컬러바 — 옛 셸 캐시를 지운다
+const CACHE = &quot;mealboard-v13&quot;;   // 09-04 밤: 밀집도 Sunsetdark — 옛 셸 캐시를 지운다
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
@@ -4895,7 +4895,7 @@ try {
    /api/positions 는 이 화면이 보일 때만 30초마다 — 다른 화면에서는 요청이 나가지 않는다.
    아래 카드: 최근 30분 밀집도(육각 타일별 인원수 합계 — 같은 평면도 위에 flare 히트맵, 30초마다) · 오늘 리포트(로컬 LLM 글, 30분마다) */
 import { $, j, jSoft, S, esc, fit, hm, canvasAuto, setState } from &quot;./core.js&quot;;
-import { JET, gradient } from &quot;./colors.js&quot;;
+import { SUNSETDARK, gradient } from &quot;./colors.js&quot;;
 import { drawFloor, drawHeat, drawMarkers, drawZoneLabels, geom } from &quot;./floor.js&quot;;
 
 let G = null;
@@ -4939,7 +4939,7 @@ function drawZoneCard() {
   const Gz = geom(W, H);
   drawFloor(g, Gz);
   drawZoneLabels(g, Gz, ZONES);
-  drawHeat(g, Gz, d.cells, d.grid.cols, d.grid.rows);   // 타일이 진할수록(jet) 최근 30분에 사람이 많았던 자리 — 마커 없음
+  drawHeat(g, Gz, d.cells, d.grid.cols, d.grid.rows);   // 타일이 어두울수록(Sunsetdark) 최근 30분에 사람이 많았던 자리 — 마커 없음
 }
 
 /* 최근 30분 밀집도(09-03 사용자 결정: 최근 4주 구역 평균 대신 당일 최근 30분, 히트맵). 30초마다 poll 로 */
@@ -4971,7 +4971,7 @@ export const screen = {
   mount() {                                            // 부팅 때 core 가 부른다(순환 import 의 TDZ 회피)
     canvasAuto($(&quot;#plan&quot;), () =&gt; { drawFloorLayer(); renderPlan(S.lastPos || { state: &quot;no_data&quot; }); });
     canvasAuto($(&quot;#zoneplan&quot;), drawZoneCard);
-    $(&quot;#zonebar&quot;).querySelector(&quot;i&quot;).style.background = gradient(JET);
+    $(&quot;#zonebar&quot;).querySelector(&quot;i&quot;).style.background = gradient(SUNSETDARK);
     loadZones();
   },
   every: 30000,
@@ -4996,7 +4996,7 @@ export const screen = {
    테이블 6열 × [6인×3 | 6인×2 | 6인×4+4인], 의자는 도면 기호처럼 테이블 가장자리에 살짝만.
    여기 함수들은 캔버스 컨텍스트 g 와 geom 만 받는다 — DOM 을 모른다 */
 
-import { JET, ramp } from &quot;./colors.js&quot;;
+import { SUNSETDARK, ramp } from &quot;./colors.js&quot;;
 
 export const ROOM = { W: 15.55, D: 24.65, H: 2.68 };
 const GAP = { door: [0.2, 3.2], dish: [1.6, 4.4], exit: [5.6, 8.4] };   // 입구(아래 벽, 통로 쪽) · 퇴식구·출구(좌측 벽, 위부터)
@@ -5149,7 +5149,7 @@ export function drawZones(g, G, zones, occ = {}, labels = true) {
 }
 
 /* 밀집도 육각 타일 — cells = [{i, w}] (i = row*cols+col, w 0~1). 기하는 vision/zones.py(hex_center)와 같다:
-   뾰족한 꼭짓점이 위, 홀수 행은 반 칸 오른쪽, 반지름은 x 로 1/(cols·√3) · y 로 1/(rows·1.5). 값이 있는 타일만 plotly &quot;jet&quot;(colors.js, 09-04) 로 채우고
+   뾰족한 꼭짓점이 위, 홀수 행은 반 칸 오른쪽, 반지름은 x 로 1/(cols·√3) · y 로 1/(rows·1.5). 값이 있는 타일만 plotly &quot;Sunsetdark&quot;(colors.js, 09-04 — 잠깐 jet 을 썼다가 같은 날 되돌림) 로 채우고
    나머지는 벌집 윤곽만 아주 옅게. 구역 이름·마커 없음. 최근 30분의 타일별 합계이지 개별 위치가 아니다 */
 export function drawHeat(g, G, cells, cols, rows) {
   const { X, Y } = G, S3 = Math.sqrt(3);
@@ -5171,7 +5171,7 @@ export function drawHeat(g, G, cells, cols, rows) {
   (cells || []).forEach(c =&gt; {
     const w = Math.min(1, Math.max(0, c.w));
     hex(c.i % cols, Math.floor(c.i / cols), .9);
-    g.fillStyle = ramp(JET, w); g.globalAlpha = .6 + .3 * w; g.fill();
+    g.fillStyle = ramp(SUNSETDARK, w); g.globalAlpha = .7 + .25 * w; g.fill();
   });
   g.restore();
 }</code></pre>

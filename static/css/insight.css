@@ -71,12 +71,12 @@
 .zonestage { position: relative; margin-top: 12px; }
 #zoneplan { display: block; width: 100%; aspect-ratio: 318 / 460; }
 .zoneside { display: flex; flex-direction: column; }
-.chips2.zones span { background: var(--well); color: var(--ink); }                 /* 칩은 중립 — 색은 타일(jet)이 맡는다 */
+.chips2.zones span { background: #fcde9c; color: #7c1d6f; }                        /* Sunsetdark 의 양 끝 — 가장 붐빈 구역 칩 */
 .chips2.zones span.ghost { background: transparent; box-shadow: inset 0 0 0 1.5px var(--hair); color: var(--ink2); }
-/* 컬러바 — 평면도 우측 하단에 겹쳐 놓는다(09-04 사용자 요청). 종이색 반투명 알약, 그라데이션은 JS 가 jet 으로 채운다 */
+/* 컬러바 — 평면도 우측 하단에 겹쳐 놓는다(09-04 사용자 요청). 종이색 반투명 알약, 그라데이션은 JS 가 Sunsetdark 로 채운다 */
 .heatbar { position: absolute; right: 6px; bottom: 6px; display: flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px;
            background: rgba(255,252,246,.88); box-shadow: var(--e1); font-size: 10px; color: var(--ink2); pointer-events: none; }
-.heatbar i { width: 64px; height: 7px; border-radius: 4px; background: linear-gradient(90deg, #000083, #05ffff, #ffff00, #800000); }
+.heatbar i { width: 64px; height: 7px; border-radius: 4px; background: linear-gradient(90deg, #fcde9c, #7c1d6f); }
 
 /* 오늘 리포트 — 본문 + "AI 작성 · 모델" 칩 */
 .report { margin: 8px 0 0; font-size: 14px; line-height: 1.6; color: #4A4740; }

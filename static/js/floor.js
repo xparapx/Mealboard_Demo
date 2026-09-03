@@ -6,7 +6,7 @@
    테이블 6열 × [6인×3 | 6인×2 | 6인×4+4인], 의자는 도면 기호처럼 테이블 가장자리에 살짝만.
    여기 함수들은 캔버스 컨텍스트 g 와 geom 만 받는다 — DOM 을 모른다 */
 
-import { JET, ramp } from "./colors.js";
+import { SUNSETDARK, ramp } from "./colors.js";
 
 export const ROOM = { W: 15.55, D: 24.65, H: 2.68 };
 const GAP = { door: [0.2, 3.2], dish: [1.6, 4.4], exit: [5.6, 8.4] };   // 입구(아래 벽, 통로 쪽) · 퇴식구·출구(좌측 벽, 위부터)
@@ -159,7 +159,7 @@ export function drawZones(g, G, zones, occ = {}, labels = true) {
 }
 
 /* 밀집도 육각 타일 — cells = [{i, w}] (i = row*cols+col, w 0~1). 기하는 vision/zones.py(hex_center)와 같다:
-   뾰족한 꼭짓점이 위, 홀수 행은 반 칸 오른쪽, 반지름은 x 로 1/(cols·√3) · y 로 1/(rows·1.5). 값이 있는 타일만 plotly "jet"(colors.js, 09-04) 로 채우고
+   뾰족한 꼭짓점이 위, 홀수 행은 반 칸 오른쪽, 반지름은 x 로 1/(cols·√3) · y 로 1/(rows·1.5). 값이 있는 타일만 plotly "Sunsetdark"(colors.js, 09-04 — 잠깐 jet 을 썼다가 같은 날 되돌림) 로 채우고
    나머지는 벌집 윤곽만 아주 옅게. 구역 이름·마커 없음. 최근 30분의 타일별 합계이지 개별 위치가 아니다 */
 export function drawHeat(g, G, cells, cols, rows) {
   const { X, Y } = G, S3 = Math.sqrt(3);
@@ -181,7 +181,7 @@ export function drawHeat(g, G, cells, cols, rows) {
   (cells || []).forEach(c => {
     const w = Math.min(1, Math.max(0, c.w));
     hex(c.i % cols, Math.floor(c.i / cols), .9);
-    g.fillStyle = ramp(JET, w); g.globalAlpha = .6 + .3 * w; g.fill();
+    g.fillStyle = ramp(SUNSETDARK, w); g.globalAlpha = .7 + .25 * w; g.fill();
   });
   g.restore();
 }

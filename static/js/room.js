@@ -4,7 +4,7 @@
    /api/positions 는 이 화면이 보일 때만 30초마다 — 다른 화면에서는 요청이 나가지 않는다.
    아래 카드: 최근 30분 밀집도(육각 타일별 인원수 합계 — 같은 평면도 위에 flare 히트맵, 30초마다) · 오늘 리포트(로컬 LLM 글, 30분마다) */
 import { $, j, jSoft, S, esc, fit, hm, canvasAuto, setState } from "./core.js";
-import { JET, gradient } from "./colors.js";
+import { SUNSETDARK, gradient } from "./colors.js";
 import { drawFloor, drawHeat, drawMarkers, drawZoneLabels, geom } from "./floor.js";
 
 let G = null;
@@ -48,7 +48,7 @@ function drawZoneCard() {
   const Gz = geom(W, H);
   drawFloor(g, Gz);
   drawZoneLabels(g, Gz, ZONES);
-  drawHeat(g, Gz, d.cells, d.grid.cols, d.grid.rows);   // 타일이 진할수록(jet) 최근 30분에 사람이 많았던 자리 — 마커 없음
+  drawHeat(g, Gz, d.cells, d.grid.cols, d.grid.rows);   // 타일이 어두울수록(Sunsetdark) 최근 30분에 사람이 많았던 자리 — 마커 없음
 }
 
 /* 최근 30분 밀집도(09-03 사용자 결정: 최근 4주 구역 평균 대신 당일 최근 30분, 히트맵). 30초마다 poll 로 */
@@ -80,7 +80,7 @@ export const screen = {
   mount() {                                            // 부팅 때 core 가 부른다(순환 import 의 TDZ 회피)
     canvasAuto($("#plan"), () => { drawFloorLayer(); renderPlan(S.lastPos || { state: "no_data" }); });
     canvasAuto($("#zoneplan"), drawZoneCard);
-    $("#zonebar").querySelector("i").style.background = gradient(JET);
+    $("#zonebar").querySelector("i").style.background = gradient(SUNSETDARK);
     loadZones();
   },
   every: 30000,
