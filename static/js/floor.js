@@ -87,7 +87,7 @@ export function drawFloor(g, G) {
   // 라벨 — 흰 halo. 평면도 층에 그리므로 통로 라벨 위로 마커가 지나갈 수 있다(마커가 우선)
   g.textAlign = "center";
   label(g, G, "배식대", X(7.5), Y(0) - T - 4 * u, "#D14A38");
-  label(g, G, "입구", X((GAP.door[0] + GAP.door[1]) / 2), Y(ROOM.D) - 5 * u, "#6E6A61");
+  label(g, G, "입구", X((GAP.door[0] + GAP.door[1]) / 2 - 0.7), Y(ROOM.D) - 5 * u, "#6E6A61");   // 문 틈보다 조금 오른쪽(통로 쪽)에 — 09-03 사용자 확인
   g.textAlign = "right";                                            // 레이아웃 바깥(좌측 여백)에
   label(g, G, "퇴식구", X(ROOM.W) - T - 4 * u, Y((GAP.dish[0] + GAP.dish[1]) / 2) + 4 * u, "#6E6A61");
   label(g, G, "출구", X(ROOM.W) - T - 4 * u, Y((GAP.exit[0] + GAP.exit[1]) / 2) + 4 * u, "#6E6A61");
@@ -121,7 +121,7 @@ export function drawMarkers(g, G, points, alpha = 1) {
 
 /* 구역 틴트 — zones = [{id, label, polygon:[[x,y],…]}] (정규화), occ = {id: 0~1 점유 비율}.
    구역 점유율 카드가 쓴다(마커 없음). 틸 한 램프: 비율이 클수록 진하게, 가운데에 이름 */
-export function drawZones(g, G, zones, occ = {}) {
+export function drawZones(g, G, zones, occ = {}, labels = true) {
   (zones || []).forEach(z => {
     if (!z.polygon || z.polygon.length < 3) return;
     const t = Math.min(1, Math.max(0, occ[z.id] ?? 0));
@@ -130,10 +130,11 @@ export function drawZones(g, G, zones, occ = {}) {
     g.closePath();
     g.fillStyle = `rgba(12,109,106,${(.06 + .5 * t).toFixed(3)})`; g.fill();
     g.strokeStyle = "rgba(12,109,106,.35)"; g.lineWidth = 1; g.stroke();
+    if (!labels) return;                                              // 점유율 카드는 아래 칩이 이름·비율을 담는다 — 좌석 위 글자는 읽히지 않아 뺀다
     const cx = z.polygon.reduce((a, p) => a + p[0], 0) / z.polygon.length;
     const cy = z.polygon.reduce((a, p) => a + p[1], 0) / z.polygon.length;
     const [lx, ly] = G.P(cx, cy);
     g.textAlign = "center";
-    label(g, G, z.label || z.id, lx, ly + 4 * G.u, t > .5 ? "#FFFCF6" : "#0C6D6A");
+    label(g, G, z.label || z.id, lx, ly + 4 * G.u, "#0C6D6A");        // 언제나 틸 잉크 + 종이색 테두리(label) — 흰 글자는 테두리와 같아 보이지 않았다
   });
 }

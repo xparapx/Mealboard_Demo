@@ -39,7 +39,7 @@ function drawZoneCard() {
   const { g } = fit(c, H);
   const Gz = geom(W, H);
   drawFloor(g, Gz);
-  drawZones(g, Gz, d.zones, d.occ);
+  drawZones(g, Gz, d.zones, d.occ, false);           // 이름은 아래 칩에 — 평면도 위 글자 없이 틴트만
 }
 
 function renderZones(d) {
