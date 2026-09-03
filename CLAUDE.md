@@ -48,7 +48,12 @@
   순환 import TDZ — `mount()` 에). 헤드리스 Edge 는 500px 최소 창이라 420 캡처는 우측이 잘린다; 미리보기 패널은 fixed 요소를 1680 폭으로 잰다 — 둘 다 환경.
 - **Phase 2d 완료(09-03)**: 인사이트 카드는 `.card.insight` + `data-state` + `.body/.empty`, 화면 모듈의 `screen.render(cardId, json)` 으로 픽스처 검사.
   스타일은 `css/insight.css`. 인사이트는 화면이 열릴 때 1회 + 5분(같은 30초 tick 에서 시각으로 가름).
-- **다음 할 일**: PLAN §6 순서대로 — 지금은 **Phase 2 말 코드리뷰**(§6.1: /code-review high → 확인된 것만 수정 → 정리) → Phase 3a. 아래 ①~④ 는 이후 단계에 흡수된다.
+- **Phase 2 완료(09-03, 2a~2f + 리뷰 10건 반영 `614bb69`)**: 두 박자 폴링(`screen.poll` every / `screen.slow` 30분), `core.setState`·`jSoft`·`mm`·`hm`·`WD` 공용,
+  `#waitcard` 는 `data-level`·`.hastrend` 를 JS 가 적는다(:has 없음), 데스크톱은 `.view > *{max-width:none}` + `grid-auto-flow:dense`, 숨은 카드는 `firstCard()` 가 건너뛴다.
+  히트맵은 API 의 `lunch{lo,hi}`·`golden_wait` 를 쓴다. 남은 메모는 PLAN §7.
+- **Phase 3a 완료(09-03, `af59826`)**: `app/admin/auth.py identify()`(fail-closed 5단계), `app/admin/guard.py needs_force()`. 관리 앱 본체는 3b.
+- **다음 할 일**: PLAN §6 순서대로 — 지금은 **Phase 3b**(tailnet 전용 관리 앱: whoami·상태·재시작·작업·로그·감사 + 유닛·sudoers·setup 6b·admin.js). Pi 의 sudoers 설치와
+  `tailscale serve` 는 사용자 위임(09-03)으로 진행하되 `serve reset`·`funnel reset` 은 절대 금지. 아래 ①~④ 는 이후 단계에 흡수된다.
   ① 평소 곡선(`/api/typical`)은 mock 이 170분 사이클을 반복해 써서 스테이징에서는 값이 바닥이다. 실측 이후 확인.
   ② Inside Climate News 는 미국 지역 전력·정치 보도가 많아 "세계적 기후 이슈"와 결이 다른 기사가 섞인다 —
   며칠 지켜본 뒤 교체 여부 판단(후보: UNEP · Climate Home News). ③ 급식 있는 평일에 데스크톱 12컬럼 보드·모바일 dock 실물 확인.
