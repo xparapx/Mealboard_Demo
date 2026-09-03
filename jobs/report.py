@@ -18,7 +18,7 @@ import sqlite3
 import sys
 import time
 
-from app.config import INSIGHTS_DB_PATH, REPORTS_DB_PATH
+from app.config import INSIGHTS_DB_PATH, REPORTS_DB_PATH, LLM_REPORT
 from app.insight_calc import normalize_menu
 from app.insights_db import connect_ro
 from app.lunch import weekday_of
@@ -114,6 +114,9 @@ def validate_output(inp, out):
 
 def compose(kind, inp, llm_factory=None, busy_wait_s=BUSY_WAIT_S, log=print):
     """→ {engine, model, ok, ms, headline, body, tone, reason}. llm_factory() 가 LocalLLM 컨텍스트 매니저를 준다(테스트는 가짜)"""
+    if llm_factory is None and not LLM_REPORT:                     # 09-04: 실장치 경로는 .env LLM_REPORT=1 일 때만 (테스트의 가짜 factory 는 게이트 밖)
+        out = tpl.render(kind, inp)
+        return {"engine": "template", "model": None, "ok": True, "ms": None, **out, "reason": "llm_disabled"}
     factory = llm_factory or LocalLLM
     for attempt in range(1, BUSY_RETRY + 1):
         try:

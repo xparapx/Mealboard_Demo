@@ -61,7 +61,10 @@
 - **Phase 3 완료(09-03, 리뷰 14건 반영 `5725146`)**: 관리 앱은 `--no-access-log`(키가 저널에 남지 않게), 게이트는 GET 포함 모든 교차 사이트 요청 거부, 실사 자리는 `claim()` 을 await 전에, 릴레이는 off `Event` 로 1초 안에 끊김, `zones.local.json` 에는 **템플릿과 다른 키만**(version 은 절대 안 씀), disabled 카운팅 유닛은 재시작 409. SSH 터널 진입은 `http://127.0.0.1:8101/?key=<ADMIN_LOCAL_KEY>` 한 번(쿠키 12시간). 남은 설계 판단은 PLAN §7(loopback 헤더 위조·/tmp 플래그 선점).
 - **Phase 4b·4c 완료(09-03, `69fc4ad`·`29cbca1`)**: `jobs/llm.py`(LocalLLM, 검증기 — **숫자 부분집합 출처에서 날짜·요일 제외**), `jobs/report.py`(reports.db 유일 writer, 템플릿 폴백, 타이머 05:45·14:20), `jobs/newsbody.py`+`translators.py`+`fetch_news.py`(본문은 메모리에서만, digest → DeepL → 영어). Pi 반영됨(리포트 행·news.json engine=deepl). **4a 스파이크는 `.hef` 확보 뒤**(그때까지 engine=template/deepl). 장치 API 모양은 `jobs/llm.py _hailo_backend` 가 추정 — 스파이크 결과로 고친다.
 - **09-03 오후 개정(사용자 요청)**: 화면은 **한 번에 한 화면**(스와이프 페이저·스크롤 스파이 폐기, dock/레일 탭 즉시 전환, 데스크톱은 화면별 12컬럼 그리드 1920×1080 기준 — `docs/layout.html` 네비게이션 절). 실시간뷰 화면의 구역 점유율은 **당일 최근 30분 밀집도**(`/api/insight/density`, queue.db 즉석) — **09-04 부터 육각 타일 10×18**(`vision/zones.py cell_of/hex_center`, 화면 `floor.js drawHeat` 가 같은 기하) 에 seaborn flare 팔레트, 글은 데스크톱에서 평면도 오른쪽. 추이 막대와 요일×시각 히트맵은 **멜론 #FF7260 램프**(`--heat`). 추이 그래프는 1분 막대. `/api/history` 는 10초 묶음. mock 은 `--speed 2`(5초 주기 더미). 관리 CSS 의 스테이지는 `.sstage`(공개 `.stage` 와 이름 분리).
-- **다음 할 일**: 4a(사용자가 `.hef` 를 받으면 `check_llm.py`) → PLAN §7 메모 정리. 매뉴얼 STEP 16 의 페이저 설명 문단은 이번 개정에 맞춰 손봤다. 아래 ①~④ 는 이후 단계에 흡수된다.
+- **로컬 LLM 가동(09-04)**: Pi 에 `data/models/Qwen2.5-1.5B-Instruct.hef`(공개 경로 `https://dev-public.hailo.ai/v5.1.1/blob/…`, HailoRT 5.1.1 짝, 2.36 GB, 로그인 없음). `.env` `LLM_HEF`·`LLM_CONTEXT_CHARS=4800`.
+  스파이크 결과: 로드 11초, 5~9 tok/s, 6,000자 OK. **한국어 직접 생성은 불가**(문법 붕괴·중국어 혼입) → 기사 요약은 영어 4줄 → DeepL, 리포트는 `LLM_REPORT=0`(규칙 템플릿 유지).
+  HailoRT 5.3.0 은 apt 후보가 없어(로컬 deb) Qwen3-1.7B 는 보류. 모델 교체 시 `check_llm.py` 로 다시 판정.
+- **다음 할 일**: 로드맵 ④ vision 프로토타입(실사 스트림·카운팅의 마지막 조각) → PLAN §7 메모 정리. 매뉴얼 STEP 16 의 페이저 설명 문단은 이번 개정에 맞춰 손봤다. 아래 ①~④ 는 이후 단계에 흡수된다.
   ① 평소 곡선(`/api/typical`)은 mock 이 170분 사이클을 반복해 써서 스테이징에서는 값이 바닥이다. 실측 이후 확인.
   ② Inside Climate News 는 미국 지역 전력·정치 보도가 많아 "세계적 기후 이슈"와 결이 다른 기사가 섞인다 —
   며칠 지켜본 뒤 교체 여부 판단(후보: UNEP · Climate Home News). ③ 급식 있는 평일에 데스크톱 12컬럼 보드·모바일 dock 실물 확인.
@@ -90,7 +93,7 @@ NEIS 급식 API의 메뉴·영양 정보와 함께 웹 대시보드(PWA)로 제�
 | NEIS | `jobs/fetch_neis.py`가 하루 1회(systemd timer 05:40) `data/meal.json` 캐시 → 프론트는 `/api/meal`만 | 키 노출·호출 제한 방지. **프론트에서 NEIS 직접 호출 금지**. 주말·방학의 INFO-200은 오류가 아닌 `no_meal` |
 | 영양 지표 | **에너지 충족률 · 에너지 적정비율(탄55~65/단7~20/지15~30%) · MAR** 세 가지. 코사인 유사도 사용 안 함 | 코사인은 단위 큰 성분(kcal·칼슘·비타민A)이 지배하고 크기 불변. 기준은 `data/nutrition_std.json`(학교별 1행), 영양소별 판정은 EAR~RNI 범위 |
 | 해석 AI | 기본은 숫자→텍스트 LLM. **1순위 로컬 LLM(Hailo-10H GenAI, `jobs/llm.py`)**, 실패·미설치 시 규칙 템플릿. VLM은 예외 경로(디버그·calibrate 보조) | 카운팅 트랙과 SQLite로 완전 분리. 입력은 숫자·정제된 메뉴명·(기사 요약에 한해) 본문뿐 — 프레임·좌표는 절대 넣지 않는다. 출력은 스키마 검증(숫자 부분집합 규칙) 후에만 저장. **점심시간 밖에서만 실행**(HAT·CPU 경합 회피) |
-| 뉴스 | `jobs/fetch_news.py` 가 하루 1회(06:10) 본문을 확보(RSS 전문 → Guardian API → HTML 단락 → 피드 요약)해 **로컬 LLM 한국어 요약(`digest`)** 을 만들고, 실패 시 DeepL 도입부 번역, 그마저 실패면 원문 영어 | 본문은 메모리에서만 쓰고 저장하지 않는다. 화면에는 짧은 자체 요약 + 출처 링크만(저작권). 헤드라인 번역기는 `TRANSLATOR`(deepl · local · none, 기본 deepl) |
+| 뉴스 | `jobs/fetch_news.py` 가 하루 1회(06:10) 본문을 확보(RSS 전문 → Guardian API → HTML 단락 → 피드 요약)해 **로컬 LLM 영어 요약 → DeepL 한국어(`digest`)** 를 만들고(09-04 확정: 1.5B 모델은 한국어 직접 생성이 무너져 영어 요약만 맡긴다. 숫자 검사는 영어 단계에서), 실패 시 DeepL 도입부 번역, 그마저 실패면 원문 영어 | 본문은 메모리에서만 쓰고 저장하지 않는다. 화면에는 짧은 자체 요약 + 출처 링크만(저작권). 헤드라인 번역기는 `TRANSLATOR`(deepl · local · none, 기본 deepl) |
 
 ## 3. 저장소 구조 (선행 레포 계승)
 

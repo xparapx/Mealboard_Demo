@@ -37,14 +37,27 @@ def test_fetch_body_는_rss_전문을_먼저_쓰고_없으면_description():
 BODY = "Global emissions rose 1.1% in 2024 to a record 37.4 billion tonnes, the report said. Scientists warn the 1.5C limit is slipping. " * 8
 
 
-def test_요약_검증은_스키마_길이_한국어_숫자():
-    good = {"bullets": ["2024년 세계 배출량이 1.1% 늘어 37.4억 톤으로 최고였습니다.", "과학자들은 1.5도 한계가 멀어지고 있다고 경고합니다.", "보고서는 감축 속도가 더 빨라야 한다고 봅니다."], "why": "우리가 어른이 될 때의 기후를 지금 결정합니다."}
+EN_GOOD = "- Global emissions rose 1.1% in 2024 to a record 37.4 billion tonnes.\n- Scientists warn the 1.5C limit is slipping.\n- The report calls for faster cuts.\nWhy: today's choices set the climate students will live in."
+KO = ["2024년 세계 배출량이 1.1% 늘어 374억 톤으로 최고였습니다.", "과학자들은 1.5도 한계가 멀어지고 있다고 경고합니다.", "보고서는 감축 속도가 더 빨라야 한다고 봅니다.", "오늘의 선택이 학생들이 살아갈 기후를 정합니다."]
+
+
+def test_영어_줄_파싱은_기호와_Why_를_가른다():
+    d = fetch_news.parse_digest_lines(EN_GOOD)
+    assert d["bullets"][0].startswith("Global") and len(d["bullets"]) == 3 and d["why"].startswith("today")
+    assert fetch_news.parse_digest_lines("1. one\n2) two\n• three")["why"] == ""                   # Why 는 없어도 된다
+    assert fetch_news.parse_digest_lines("only one line") is None and fetch_news.parse_digest_lines(None) is None
+    assert fetch_news.check_english(BODY, fetch_news.parse_digest_lines(EN_GOOD)) is None
+    assert fetch_news.check_english(BODY, fetch_news.parse_digest_lines(EN_GOOD.replace("1.1%", "5.6%"))) == "en:numbers"   # 지어낸 수치는 영어 단계에서 걸린다
+
+
+def test_한국어_검증은_스키마_길이_한국어():
+    good = {"bullets": KO[:3], "why": KO[3]}
     d, why = fetch_news.validate_digest(BODY, good)
-    assert why == "ok" and len(d["bullets"]) == 3
+    assert why == "ok" and len(d["bullets"]) == 3                                            # '374억' 은 번역이 바꾼 단위 — 숫자 검사는 끈다
     assert fetch_news.validate_digest(BODY, {"bullets": ["a", "b"], "why": "w"})[1] == "schema"
-    assert fetch_news.validate_digest(BODY, {**good, "bullets": [good["bullets"][0], "English sentence here", good["bullets"][2]]})[1] == "bullet:hangul"
-    assert fetch_news.validate_digest(BODY, {**good, "why": "배출량이 2030년까지 늘어납니다"})[1] == "why:numbers"       # 2030 은 본문에 없다
-    assert fetch_news.validate_digest(BODY, {**good, "why": "가" * 61})[1] == "why:length"
+    assert fetch_news.validate_digest(BODY, {**good, "bullets": [KO[0], "English sentence here", KO[2]]})[1] == "bullet:hangul"
+    assert fetch_news.validate_digest(BODY, {**good, "why": "가" * 81})[1] == "why:length"
+    assert fetch_news.validate_digest(BODY, {"bullets": KO[:3]})[1] == "ok"                   # why 없음 허용
 
 
 def fake(text):
@@ -53,11 +66,18 @@ def fake(text):
     return factory
 
 
+def fake_translate(texts, log=None):
+    return KO[:len(texts)]
+
+
 def test_digest_all_은_성공한_항목에만_digest(monkeypatch):
     items = [{"source": "A", "title": "t", "summary": "s"}, {"source": "B", "title": "t2", "summary": "s2"}]
-    good = '{"bullets": ["배출량이 1.1% 늘어 37.4억 톤이었습니다.", "1.5도 한계가 멀어지고 있습니다.", "감축이 더 빨라야 합니다."], "why": "지금의 선택이 미래 기후를 정합니다."}'
-    model = fetch_news.digest_all(items, [(BODY, "html"), ("short", "description")], fake(good), log=lambda *a: None)
-    assert model == "fake" and items[0]["digest"]["body_source"] == "html" and items[0]["digest"]["chars_in"] == len(BODY) and "digest" not in items[1]
+    model = fetch_news.digest_all(items, [(BODY, "html"), ("short", "description")], fake(EN_GOOD), log=lambda *a: None, translate_fn=fake_translate)
+    assert model == "fake + DeepL" and items[0]["digest"]["bullets"] == KO[:3] and items[0]["digest"]["why"] == KO[3]
+    assert items[0]["digest"]["body_source"] == "html" and items[0]["digest"]["chars_in"] == len(BODY) and "digest" not in items[1]
+    items3 = [{"source": "A", "title": "t", "summary": "s"}]
+    fetch_news.digest_all(items3, [(BODY, "html")], fake(EN_GOOD), log=lambda *a: None, translate_fn=lambda t, log=None: None)
+    assert "digest" not in items3[0]                                                          # DeepL 이 없으면 요약도 없다(도입부 폴백)
 
     def none_factory():
         raise LLMUnavailable("no hef")

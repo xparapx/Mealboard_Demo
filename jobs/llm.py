@@ -51,8 +51,9 @@ def numbers_subset(src, out):
     return numbers(out) <= numbers(src)
 
 
-def valid_korean(src, out, min_hangul=0.6, len_ratio=None, max_len=None):
-    """→ (ok, reason). 한글 비율(문자 중) ≥ min_hangul, URL·개행·마커 없음, 숫자 부분집합, (선택) 길이비·최대 길이"""
+def valid_korean(src, out, min_hangul=0.6, len_ratio=None, max_len=None, check_numbers=True):
+    """→ (ok, reason). 한글 비율(문자 중) ≥ min_hangul, URL·개행·마커 없음, 숫자 부분집합, (선택) 길이비·최대 길이.
+    check_numbers=False 는 번역기가 옮긴 문장용 — DeepL 은 '37.4 billion' 을 '374억' 으로 바꾸므로 숫자 검사는 번역 전 영어 단계에서 한다"""
     if not isinstance(out, str) or not out.strip():
         return False, "empty"
     if "\n" in out or URL.search(out) or any(m in out for m in MARKERS):
@@ -66,7 +67,7 @@ def valid_korean(src, out, min_hangul=0.6, len_ratio=None, max_len=None):
         r = len(out) / max(1, len(str(src)))
         if not (len_ratio[0] <= r <= len_ratio[1]):
             return False, "ratio"
-    if not numbers_subset(src, out):
+    if check_numbers and not numbers_subset(src, out):
         return False, "numbers"
     return True, "ok"
 
