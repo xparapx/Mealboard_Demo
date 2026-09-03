@@ -165,11 +165,10 @@ details > summary::-webkit-details-marker { display: none; }
 .week [data-wd="4"] { background: #CBC2FB; }   /* 목 · 페리윙클 */
 .week [data-wd="5"] { background: #BFE3F7; }   /* 금 · 스카이블루(09-04, 이전 세이지 #A3F5B4) */
 .week [data-when="past"] > * { opacity: .62; }
-.week [data-when="today"] { background: var(--ink); }
-.week [data-when="today"] .d { color: rgba(255,253,246,.55); }
-.week [data-when="today"] .n, .week [data-when="today"] .m { color: var(--surface); }
+/* 오늘(09-04 개정): 차콜 채움을 버리고 요일색을 유지 — 요일 글자 밑줄 + 메뉴 굵게 + 날짜 진하게로만 표시 */
+.week [data-when="today"] .d { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1.5px; }
+.week [data-when="today"] .n { color: var(--ink); }
 .week [data-when="today"] .m { font-weight: 700; }
-.week [data-when="today"] .k { color: rgba(255,253,246,.55); }
 
 /* ⑧ 잔반 탄소 — 오늘급식 카드의 아래 절(읽기 전용, 개인 기록·선택 없음). 카드 여백을 음수로 밀어 틸 틴트가
    카드 가장자리와 아래 모서리까지 닿는다 — "같은 카드의 다른 종류 정보"라는 신호는 이 틴트 하나뿐 */
