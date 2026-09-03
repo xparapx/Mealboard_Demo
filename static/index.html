@@ -12,7 +12,9 @@
 <body>
 <main>
   <div class="col">
-    <section class="hero" id="hero" data-level="ok">
+    <!-- 대기시간 카드 = 히어로(지금 줄을 서면) + 그 아래 추이(최근 30분). 한 카드, 두 절 (PLAN §3.2) -->
+    <section class="waitcard" id="waitcard">
+    <div class="hero" id="hero" data-level="ok">
       <span class="dot"></span>
       <div class="eyebrow">지금 줄을 서면</div>
       <div class="big" id="bigbox"><b id="wait">—</b><i>분</i></div>
@@ -24,13 +26,8 @@
         <div><b id="queue">—</b><em>명</em><span>대기 중</span></div>
         <div><b id="rate">—</b><em>명/분</em><span>배식 속도</span></div>
       </div>
-    </section>
-
-    <div class="meta">
-      <span>갱신 <span id="updated">—</span> · 30초마다</span><span>추정치 · 배식 초반 오차 큼</span>
     </div>
-
-    <section class="card" id="chartcard" hidden>
+    <div class="trend" id="trend" hidden>
       <div class="eyebrow">최근 30분 예상 대기</div>
       <div class="lead" id="chartlead" hidden></div>
       <canvas id="chart"></canvas>
@@ -38,7 +35,12 @@
         <span><i>오늘</i><i class="ref" id="reflab" hidden>평소</i></span>
         <span class="now">30분 전 → <b>지금</b></span>
       </div>
+    </div>
     </section>
+
+    <div class="meta">
+      <span>갱신 <span id="updated">—</span> · 30초마다</span><span>추정치 · 배식 초반 오차 큼</span>
+    </div>
 
     <section class="card plan" id="plancard" data-state="no_data">
       <div class="eyebrow">급식실 현황</div>
@@ -67,24 +69,24 @@
       </div>
       <div class="eyebrow" id="microlab" style="margin-top:18px" hidden>영양소별 · 권장섭취량 대비</div>
       <div class="micro" id="micro"></div>
+      <!-- 오늘급식 카드의 아래 절 = 잔반 탄소. 카드 하단을 틸 틴트로 채운다 (PLAN §3.2) -->
+      <div class="carbon" id="carbonsec" hidden>
+        <div class="eyebrow">오늘 급식을 다 남기면</div>
+        <div class="co2"><b id="co2">—</b><span id="co2unit">kg CO₂e</span></div>
+        <div class="cmp">
+          <div><b id="vsworld">—</b><span>세계 1인 하루 평균 배출 대비</span></div>
+          <div><b id="vskorea">—</b><span>한국 1인 하루 평균 배출 대비</span></div>
+        </div>
+        <div class="note" style="margin-top:14px">추정치입니다 ·
+          <details style="display:inline"><summary style="display:inline" class="u">산정 기준 보기</summary>
+            <div id="carbonnote" style="margin-top:6px"></div></details></div>
+      </div>
     </section>
 
     <section class="card" id="weekcard" hidden>
       <div class="eyebrow">이번 주 식단</div>
       <div class="week" id="week"></div>
       <div class="note" id="weekavg" style="margin-top:12px"></div>
-    </section>
-
-    <section class="card carbon" id="carboncard" hidden>
-      <div class="eyebrow">오늘 급식을 다 남기면</div>
-      <div class="co2"><b id="co2">—</b><span id="co2unit">kg CO₂e</span></div>
-      <div class="cmp">
-        <div><b id="vsworld">—</b><span>세계 1인 하루 평균 배출 대비</span></div>
-        <div><b id="vskorea">—</b><span>한국 1인 하루 평균 배출 대비</span></div>
-      </div>
-      <div class="note" style="margin-top:14px">추정치입니다 ·
-        <details style="display:inline"><summary style="display:inline" class="u">산정 기준 보기</summary>
-          <div id="carbonnote" style="margin-top:6px"></div></details></div>
     </section>
 
     <section class="card" id="newscard" hidden>

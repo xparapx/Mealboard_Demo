@@ -52,7 +52,7 @@ export function renderMeal(m) {
     // state 는 ok 인데 today 만 없는 날 = 주말·공휴일. 받아오지 못한 것과 구별해서 말한다
     menu.innerHTML = `<li class="main">${m.state === "no_meal" ? "이번 주 급식 정보가 없습니다"
       : m.state === "ok" ? "오늘은 급식이 없습니다" : "급식 정보를 아직 받지 못했습니다"}</li>`;
-    ["#allergybox", "#carboncard", "#microlab"].forEach(s => $(s).hidden = true);
+    ["#allergybox", "#carbonsec", "#microlab"].forEach(s => $(s).hidden = true);
     $("#allergens").innerHTML = ""; $("#micro").innerHTML = "";
     ["#energy", "#ratio", "#mar"].forEach(s => $(s).textContent = "—");
     ["#energyflag", "#marflag"].forEach(s => $(s).textContent = "");
@@ -98,7 +98,7 @@ export function renderMeal(m) {
 /* ⑧ 잔반 탄소 — 계수는 /api/meal 의 carbon_std(= data/carbon_std.json) */
 function renderCarbon(m) {
   const c = m.today && m.today.carbon, cs = m.carbon_std || {};
-  $("#carboncard").hidden = !c;
+  $("#carbonsec").hidden = !c;
   if (!c) return;
   $("#co2").textContent = c.kgco2e.toFixed(1);
   $("#co2unit").textContent = `kg CO₂e · 1인분 약 ${c.portion_g} g 기준`;

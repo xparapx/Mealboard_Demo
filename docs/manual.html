@@ -989,7 +989,9 @@ systemctl status mealboard-api --no-pager</code></pre>
 &lt;body&gt;
 &lt;main&gt;
   &lt;div class=&quot;col&quot;&gt;
-    &lt;section class=&quot;hero&quot; id=&quot;hero&quot; data-level=&quot;ok&quot;&gt;
+    &lt;!-- 대기시간 카드 = 히어로(지금 줄을 서면) + 그 아래 추이(최근 30분). 한 카드, 두 절 (PLAN §3.2) --&gt;
+    &lt;section class=&quot;waitcard&quot; id=&quot;waitcard&quot;&gt;
+    &lt;div class=&quot;hero&quot; id=&quot;hero&quot; data-level=&quot;ok&quot;&gt;
       &lt;span class=&quot;dot&quot;&gt;&lt;/span&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;지금 줄을 서면&lt;/div&gt;
       &lt;div class=&quot;big&quot; id=&quot;bigbox&quot;&gt;&lt;b id=&quot;wait&quot;&gt;—&lt;/b&gt;&lt;i&gt;분&lt;/i&gt;&lt;/div&gt;
@@ -1001,13 +1003,8 @@ systemctl status mealboard-api --no-pager</code></pre>
         &lt;div&gt;&lt;b id=&quot;queue&quot;&gt;—&lt;/b&gt;&lt;em&gt;명&lt;/em&gt;&lt;span&gt;대기 중&lt;/span&gt;&lt;/div&gt;
         &lt;div&gt;&lt;b id=&quot;rate&quot;&gt;—&lt;/b&gt;&lt;em&gt;명/분&lt;/em&gt;&lt;span&gt;배식 속도&lt;/span&gt;&lt;/div&gt;
       &lt;/div&gt;
-    &lt;/section&gt;
-
-    &lt;div class=&quot;meta&quot;&gt;
-      &lt;span&gt;갱신 &lt;span id=&quot;updated&quot;&gt;—&lt;/span&gt; · 30초마다&lt;/span&gt;&lt;span&gt;추정치 · 배식 초반 오차 큼&lt;/span&gt;
     &lt;/div&gt;
-
-    &lt;section class=&quot;card&quot; id=&quot;chartcard&quot; hidden&gt;
+    &lt;div class=&quot;trend&quot; id=&quot;trend&quot; hidden&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;최근 30분 예상 대기&lt;/div&gt;
       &lt;div class=&quot;lead&quot; id=&quot;chartlead&quot; hidden&gt;&lt;/div&gt;
       &lt;canvas id=&quot;chart&quot;&gt;&lt;/canvas&gt;
@@ -1015,7 +1012,12 @@ systemctl status mealboard-api --no-pager</code></pre>
         &lt;span&gt;&lt;i&gt;오늘&lt;/i&gt;&lt;i class=&quot;ref&quot; id=&quot;reflab&quot; hidden&gt;평소&lt;/i&gt;&lt;/span&gt;
         &lt;span class=&quot;now&quot;&gt;30분 전 → &lt;b&gt;지금&lt;/b&gt;&lt;/span&gt;
       &lt;/div&gt;
+    &lt;/div&gt;
     &lt;/section&gt;
+
+    &lt;div class=&quot;meta&quot;&gt;
+      &lt;span&gt;갱신 &lt;span id=&quot;updated&quot;&gt;—&lt;/span&gt; · 30초마다&lt;/span&gt;&lt;span&gt;추정치 · 배식 초반 오차 큼&lt;/span&gt;
+    &lt;/div&gt;
 
     &lt;section class=&quot;card plan&quot; id=&quot;plancard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;급식실 현황&lt;/div&gt;
@@ -1044,24 +1046,24 @@ systemctl status mealboard-api --no-pager</code></pre>
       &lt;/div&gt;
       &lt;div class=&quot;eyebrow&quot; id=&quot;microlab&quot; style=&quot;margin-top:18px&quot; hidden&gt;영양소별 · 권장섭취량 대비&lt;/div&gt;
       &lt;div class=&quot;micro&quot; id=&quot;micro&quot;&gt;&lt;/div&gt;
+      &lt;!-- 오늘급식 카드의 아래 절 = 잔반 탄소. 카드 하단을 틸 틴트로 채운다 (PLAN §3.2) --&gt;
+      &lt;div class=&quot;carbon&quot; id=&quot;carbonsec&quot; hidden&gt;
+        &lt;div class=&quot;eyebrow&quot;&gt;오늘 급식을 다 남기면&lt;/div&gt;
+        &lt;div class=&quot;co2&quot;&gt;&lt;b id=&quot;co2&quot;&gt;—&lt;/b&gt;&lt;span id=&quot;co2unit&quot;&gt;kg CO₂e&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;cmp&quot;&gt;
+          &lt;div&gt;&lt;b id=&quot;vsworld&quot;&gt;—&lt;/b&gt;&lt;span&gt;세계 1인 하루 평균 배출 대비&lt;/span&gt;&lt;/div&gt;
+          &lt;div&gt;&lt;b id=&quot;vskorea&quot;&gt;—&lt;/b&gt;&lt;span&gt;한국 1인 하루 평균 배출 대비&lt;/span&gt;&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;note&quot; style=&quot;margin-top:14px&quot;&gt;추정치입니다 ·
+          &lt;details style=&quot;display:inline&quot;&gt;&lt;summary style=&quot;display:inline&quot; class=&quot;u&quot;&gt;산정 기준 보기&lt;/summary&gt;
+            &lt;div id=&quot;carbonnote&quot; style=&quot;margin-top:6px&quot;&gt;&lt;/div&gt;&lt;/details&gt;&lt;/div&gt;
+      &lt;/div&gt;
     &lt;/section&gt;
 
     &lt;section class=&quot;card&quot; id=&quot;weekcard&quot; hidden&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;이번 주 식단&lt;/div&gt;
       &lt;div class=&quot;week&quot; id=&quot;week&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;note&quot; id=&quot;weekavg&quot; style=&quot;margin-top:12px&quot;&gt;&lt;/div&gt;
-    &lt;/section&gt;
-
-    &lt;section class=&quot;card carbon&quot; id=&quot;carboncard&quot; hidden&gt;
-      &lt;div class=&quot;eyebrow&quot;&gt;오늘 급식을 다 남기면&lt;/div&gt;
-      &lt;div class=&quot;co2&quot;&gt;&lt;b id=&quot;co2&quot;&gt;—&lt;/b&gt;&lt;span id=&quot;co2unit&quot;&gt;kg CO₂e&lt;/span&gt;&lt;/div&gt;
-      &lt;div class=&quot;cmp&quot;&gt;
-        &lt;div&gt;&lt;b id=&quot;vsworld&quot;&gt;—&lt;/b&gt;&lt;span&gt;세계 1인 하루 평균 배출 대비&lt;/span&gt;&lt;/div&gt;
-        &lt;div&gt;&lt;b id=&quot;vskorea&quot;&gt;—&lt;/b&gt;&lt;span&gt;한국 1인 하루 평균 배출 대비&lt;/span&gt;&lt;/div&gt;
-      &lt;/div&gt;
-      &lt;div class=&quot;note&quot; style=&quot;margin-top:14px&quot;&gt;추정치입니다 ·
-        &lt;details style=&quot;display:inline&quot;&gt;&lt;summary style=&quot;display:inline&quot; class=&quot;u&quot;&gt;산정 기준 보기&lt;/summary&gt;
-          &lt;div id=&quot;carbonnote&quot; style=&quot;margin-top:6px&quot;&gt;&lt;/div&gt;&lt;/details&gt;&lt;/div&gt;
     &lt;/section&gt;
 
     &lt;section class=&quot;card&quot; id=&quot;newscard&quot; hidden&gt;

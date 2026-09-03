@@ -52,7 +52,7 @@ export async function refresh() {
 export function drawChart(rows, typ, st) {
   const pts = rows.filter(r => r.wait_min != null)
                   .map(r => ({ m: minuteOfDay(new Date(r.ts)), v: r.wait_min }));
-  $("#chartcard").hidden = pts.length < 2;
+  $("#trend").hidden = pts.length < 2;
   if (pts.length < 2) return;
 
   const hi = minuteOfDay(new Date()), lo = Math.max(0, hi - CHART_MIN);

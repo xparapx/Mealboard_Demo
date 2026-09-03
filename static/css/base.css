@@ -9,6 +9,7 @@
   --e1: 0 1px 2px rgba(51,49,45,.04), 0 10px 26px rgba(51,49,45,.055);
   --e2: 0 16px 36px rgba(51,49,45,.24);
   --r-card: 24px; --r-tile: 16px;
+  --px: 20px; --py: 20px;              /* 카드 안쪽 여백 — 카드 하단 절(탄소)이 음수 여백으로 가장자리까지 채울 때 같은 값을 쓴다 */
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--ground); color: var(--ink); word-break: keep-all;
@@ -16,7 +17,7 @@ body { margin: 0; background: var(--ground); color: var(--ink); word-break: keep
        -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
 main { max-width: 390px; margin: 0 auto; padding: 18px 16px 28px; display: flex; flex-direction: column; gap: 12px; }
 .col { display: flex; flex-direction: column; gap: 12px; }
-.card { background: var(--surface); border-radius: var(--r-card); padding: 20px; box-shadow: var(--e1); }
+.card { background: var(--surface); border-radius: var(--r-card); padding: var(--py) var(--px); box-shadow: var(--e1); }
 .eyebrow { font-size: 11.5px; font-weight: 700; letter-spacing: .10em; color: var(--ink3); }
 .note { font-size: 11px; color: var(--ink3); line-height: 1.55; }
 a { color: var(--teal-ink); text-decoration: none; }

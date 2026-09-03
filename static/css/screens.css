@@ -1,6 +1,11 @@
 /* 화면별 카드 — 히어로·추이·평면도·급식·주간·탄소·이슈, 그리고 데스크톱·hover·모션 축소 미디어 쿼리(맨 끝, 순서 유지) */
-/* ① 히어로 — 상태 4얼굴: ok=차콜+아쿠아 칩 · wait=차콜+멜론 외곽선 칩 · busy=멜론 카드 · off=점선 */
-.hero { position: relative; background: var(--ink); border-radius: 26px; padding: 34px 22px 30px; box-shadow: var(--e2); }
+/* ① 대기시간 카드 — 한 상자, 두 절: 위 히어로(지금 줄을 서면) + 아래 추이(최근 30분). 상자가 radius·그림자를 갖고
+   히어로 절이 상태 4얼굴(ok=차콜+아쿠아 칩 · wait=차콜+멜론 외곽선 칩 · busy=멜론 · off=점선)을 입는다.
+   추이 절은 언제나 카드색 — 곡선(틸)이 밝은 바탕에서 읽히도록. 추이가 없으면(표본 <2) 절만 숨고 카드는 히어로만 남는다 */
+.waitcard { border-radius: 26px; box-shadow: var(--e2); overflow: hidden; background: var(--surface); }
+.hero { position: relative; background: var(--ink); padding: 34px 22px 30px; }
+.trend { padding: 22px var(--px) 24px; }
+.trend .eyebrow { color: var(--ink3); }
 .hero .eyebrow { color: rgba(255,253,246,.52); }
 .dot { position: absolute; right: 22px; top: 24px; width: 10px; height: 10px; border-radius: 50%;
        background: #2FB7B3; box-shadow: 0 0 0 5px rgba(47,183,179,.20); }
@@ -22,7 +27,8 @@
 .stats em { font-style: normal; font-size: 12.5px; font-weight: 500; color: rgba(255,253,246,.58); margin-left: 2px; }
 .stats span { display: block; font-size: 11.5px; color: rgba(255,253,246,.5); margin-top: 3px; }
 
-.hero[data-level="busy"] { background: var(--melon); box-shadow: 0 16px 36px rgba(255,114,96,.32); }
+.hero[data-level="busy"] { background: var(--melon); }
+.waitcard:has(.hero[data-level="busy"]) { box-shadow: 0 16px 36px rgba(255,114,96,.32); }
 .hero[data-level="busy"] .eyebrow, .hero[data-level="busy"] .big i,
 .hero[data-level="busy"] .arrive span { color: rgba(43,20,16,.62); }
 .hero[data-level="busy"] .big b, .hero[data-level="busy"] .arrive b, .hero[data-level="busy"] .stats b { color: #2B1410; }
@@ -35,7 +41,10 @@
 .hero[data-level="wait"] #state { background: transparent; border: 1.5px solid var(--melon); color: #FF9182; }
 .hero[data-level="wait"] .big b { color: rgba(255,253,246,.28); }
 
-.hero[data-level="off"] { background: #FBF8F0; border: 1.5px dashed #D5CDBA; box-shadow: none; }
+.hero[data-level="off"] { background: #FBF8F0; border: 1.5px dashed #D5CDBA; border-radius: 26px 26px 0 0; }
+.waitcard:has(.hero[data-level="off"]) { box-shadow: none; }
+.waitcard:has(.hero[data-level="off"]) .trend { border: 1.5px dashed #D5CDBA; border-top: 0; border-radius: 0 0 26px 26px; }
+.waitcard:has(.hero[data-level="off"]) .hero:last-child { border-radius: 26px; }
 .hero[data-level="off"] .eyebrow { color: #A9A296; }
 .hero[data-level="off"] .big b, .hero[data-level="off"] .big i { color: var(--off); }
 .hero[data-level="off"] .dot { background: var(--off); box-shadow: none; }
@@ -51,7 +60,6 @@
 /* ③ 추이 — 데이터는 한 색(틸), 비교 기준선은 중립 회색 파선. 색을 둘 쓰면 어느 쪽이 실측인지 흐려진다 */
 .lead { font-size: 14px; font-weight: 600; color: var(--ink); margin-top: 8px; letter-spacing: -.01em; }
 .lead b { color: var(--teal-ink); font-weight: 600; }
-#chartcard { padding-top: 26px; padding-bottom: 26px; }
 #chart { display: block; width: 100%; height: 108px; margin-top: 12px; }
 .legend { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 11px; }
 .legend > span { display: inline-flex; align-items: center; gap: 12px; }
@@ -163,8 +171,10 @@ details > summary::-webkit-details-marker { display: none; }
 .week [data-when="today"] .m { font-weight: 700; }
 .week [data-when="today"] .k { color: rgba(255,253,246,.55); }
 
-/* ⑧ 잔반 탄소 — 읽기 전용 정보 카드. 개인 기록·선택은 두지 않는다 */
-.carbon { background: var(--teal-tint2); box-shadow: 0 1px 2px rgba(51,49,45,.04), 0 10px 26px rgba(18,151,147,.09); }
+/* ⑧ 잔반 탄소 — 오늘급식 카드의 아래 절(읽기 전용, 개인 기록·선택 없음). 카드 여백을 음수로 밀어 틸 틴트가
+   카드 가장자리와 아래 모서리까지 닿는다 — "같은 카드의 다른 종류 정보"라는 신호는 이 틴트 하나뿐 */
+.carbon { background: var(--teal-tint2); margin: 20px calc(-1 * var(--px)) calc(-1 * var(--py));
+          padding: 18px var(--px) var(--py); border-radius: 0 0 var(--r-card) var(--r-card); }
 .carbon .eyebrow { color: var(--teal-ink); }
 .co2 { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .co2 b { font-size: 46px; font-weight: 700; letter-spacing: -.035em; line-height: 1; color: var(--teal-ink); }
@@ -200,13 +210,13 @@ details > summary::-webkit-details-marker { display: none; }
   /* 짧은 쪽 컬럼이 흡수하는 높이는 빈 여백이 아니라 더 큰 평면도가 된다 */
   #plancard.grow { display: flex; flex-direction: column; }
   #plancard.grow #plan { flex: 1 1 0; min-height: 320px; aspect-ratio: auto; }
-  .card { padding: 24px 26px; }
+  :root { --px: 26px; --py: 24px; }
   .big b { font-size: 120px; } .big i { font-size: 28px; }
-  #chartcard { padding-top: 32px; padding-bottom: 32px; }
+  .trend { padding-top: 28px; padding-bottom: 30px; }
   #chart { height: 152px; }
 }
 @media (hover: hover) {
-  .card, .hero { transition: transform .18s ease, box-shadow .18s ease; }
+  .card, .waitcard { transition: transform .18s ease, box-shadow .18s ease; }
   .card:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(51,49,45,.05), 0 16px 34px rgba(51,49,45,.08); }
   .pick button { transition: background .12s ease; }
   .news li a:hover { color: var(--teal-ink); }

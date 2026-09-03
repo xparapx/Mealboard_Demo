@@ -260,13 +260,13 @@ tr:last-child td{border-bottom:0}
   <div class="n">1</div><div>지금 서면 몇 분?</div><div>히어로 — 104px 숫자 + 판정 칩(여유/보통/혼잡)</div><div><code>/api/status</code> wait_min, state</div>
   <div class="n">2</div><div>그럼 몇 시에 먹나?</div><div>판정 칩 오른쪽 "배식대 도착 12:21"</div><div>wait_min + 현재 시각 (계산만)</div>
   <div class="n">3</div><div>왜? (줄 길이, 빠지는 속도)</div><div>히어로 하단 두 타일</div><div>queue_len, rate_per_min</div>
-  <div class="n">4</div><div>지금이 평소보다 붐비나</div><div>추이 — 오늘 곡선 + 평소 파선 + 결론 한 줄</div><div><code>/api/history</code> · <code>/api/typical</code></div>
+  <div class="n">4</div><div>지금이 평소보다 붐비나</div><div>추이 — 오늘 곡선 + 평소 파선 + 결론 한 줄. <b>히어로와 한 카드</b>(대기시간 카드의 아래 절, 09-03 통합)</div><div><code>/api/history</code> · <code>/api/typical</code></div>
   <div class="n">5</div><div>줄이 어디까지 늘어섰나</div><div>평면도 위 익명 위치 마커 (영상 아님)</div><div><code>/api/positions</code> n, points</div>
   <div class="n">6</div><div>오늘 뭐 나와? · 내가 못 먹는 게 있나</div><div>메뉴 한 줄 리스트 + 알레르기 번호·칩</div><div><code>/api/meal</code> today.menu[] (번호가 이미 들어 있다)</div>
   <div class="n">7</div><div>오늘 급식은 괜찮은 한 끼인가</div><div>영양 요약 3칸</div><div>assess.energy_pct · macro_ratio_ok · mar</div>
   <div class="n">8</div><div>어느 영양소가 모자라나</div><div>영양소 칩 6개 — 권장섭취량 대비 ±%</div><div>assess.micro[] pct · band</div>
   <div class="n">9</div><div>내일은 뭐 나와?</div><div>이번 주 식단 5행 (오늘 강조)</div><div><code>/api/meal</code> week[] · week_avg</div>
-  <div class="n">10</div><div>남기면 얼마나 배출되나</div><div>탄소 카드 — 전량 잔반 시 CO₂e, 비교 2칸</div><div><code>/api/meal</code> today.carbon</div>
+  <div class="n">10</div><div>남기면 얼마나 배출되나</div><div>탄소 절 — 전량 잔반 시 CO₂e, 비교 2칸. <b>오늘 중식 카드의 아래 절</b>(틸 틴트, 09-03 통합 — 화면 순서상 이번 주 식단보다 앞)</div><div><code>/api/meal</code> today.carbon</div>
   <div class="n">11</div><div>오늘 기후 이슈</div><div>링크 3개 (제목·출처·날짜)</div><div><code>/api/news</code></div>
 </div>
 
@@ -277,16 +277,14 @@ tr:last-child td{border-bottom:0}
     <div class="dim w">390px · 좌우 여백 16px · 카드 간격 12px</div>
     <div class="statusbar"><span>12:14</span><span>●●●</span></div>
 
-    <div style="position:relative"><span class="tag" style="left:-11px;top:2px">1</span><div class="card ticket"><span class="dot"></span>
+    <div style="position:relative"><span class="tag" style="left:-11px;top:2px">1</span><div class="card ticket" style="border-radius:26px 26px 0 0"><span class="dot"></span>
       <div class="eyebrow">지금 줄을 서면</div>
       <div class="big"><span class="num">7</span><span class="unit">분</span></div>
       <div class="vrow"><span class="verdict">여유 · 바로 가세요</span>
         <div class="arrive"><span class="tag" style="left:-24px;top:6px">2</span><em>배식대 도착</em><b>12:21</b></div></div>
       <div class="foot"><div><b>38</b><span>명 대기 중</span></div><div><b>5.2</b><span>명/분 배식 속도</span></div></div>
     </div></div>
-    <div class="meta"><span class="tag" style="left:-27px;top:2px">3</span><span>갱신 12:14:30 · 30초마다</span><span>추정치 · 배식 초반 오차 큼</span></div>
-
-    <div class="card"><span class="tag" style="left:-11px;top:-11px">4</span>
+    <div class="card" style="margin-top:-12px;border-radius:0 0 26px 26px;padding-top:22px"><span class="tag" style="left:-11px;top:-11px">4</span>
       <div class="eyebrow">최근 30분 예상 대기</div>
       <div class="lead2">평소 이 시각보다 <b>3분 짧습니다</b></div>
       <div class="spark">
@@ -303,6 +301,8 @@ tr:last-child td{border-bottom:0}
       </div>
       <div class="lg"><span><em>오늘</em><em class="r">평소 · 같은 요일 8일</em></span><span>30분 전 → <b>지금</b></span></div>
     </div>
+
+    <div class="meta"><span class="tag" style="left:-27px;top:2px">3</span><span>갱신 12:14:30 · 30초마다</span><span>추정치 · 배식 초반 오차 큼</span></div>
 
     <div class="card" style="position:relative"><span class="tag" style="left:-11px;top:-11px">5</span>
       <div class="eyebrow">급식실 현황</div>
@@ -765,7 +765,7 @@ tr:last-child td{border-bottom:0}
       <div class="foot-note">영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다</div>
     </div>
 
-    <div class="card"><span class="tag" style="left:-11px;top:-11px">6</span>
+    <div class="card" style="border-radius:24px 24px 0 0"><span class="tag" style="left:-11px;top:-11px">6</span>
       <div class="eyebrow">오늘 중식</div>
       <ul class="menu"><li class="main hit"><span>돼지고기 김치찜</span><span class="atag">내 알레르기</span><span class="codes">5·6·<b>10</b></span></li><li class=""><span>기장밥</span></li><li class=""><span>근대된장국</span><span class="codes">5·6</span></li><li class=""><span>계란말이</span><span class="codes">1·5</span></li><li class="hit"><span>배추김치</span><span class="atag">내 알레르기</span><span class="codes"><b>9</b>·13</span></li><li class=""><span>오렌지</span></li></ul>
       <div class="chips"><span>1 난류</span><span>5 대두</span><span>6 밀</span><span class="on">9 새우</span><span class="on">10 돼지고기</span><span>13 아황산류</span></div>
@@ -780,13 +780,7 @@ tr:last-child td{border-bottom:0}
       <div class="micro"><div data-b="lo"><div class="v">−8%</div><div class="n">비타민A</div></div><div data-b="hi"><div class="v">+18%</div><div class="n">티아민</div></div><div data-b="mid"><div class="v">+4%</div><div class="n">리보플라빈</div></div><div data-b="short"><div class="v">−26%<em>부족</em></div><div class="n">비타민C</div></div><div data-b="lo"><div class="v">−4%</div><div class="n">칼슘</div></div><div data-b="hi"><div class="v">+10%</div><div class="n">철</div></div></div>
     </div>
 
-    <div class="card"><span class="tag" style="left:-11px;top:-11px">9</span>
-      <div class="eyebrow">이번 주 식단</div>
-      <div class="week"><div data-wd="1" data-w="past"><span class="d">월</span><span class="n">24</span><span class="m">치킨마요덮밥</span><span class="k">외 4가지<br>892 kcal</span></div><div data-wd="2" data-w="past"><span class="d">화</span><span class="n">25</span><span class="m">순두부찌개</span><span class="k">외 4가지<br>838 kcal</span></div><div data-wd="3" data-w="today"><span class="d">수</span><span class="n">26</span><span class="m">돼지고기 김치찜</span><span class="k">외 4가지<br>936 kcal</span></div><div data-wd="4" data-w="future"><span class="d">목</span><span class="n">27</span><span class="m">닭갈비</span><span class="k">외 4가지<br>905 kcal</span></div><div data-wd="5" data-w="future"><span class="d">금</span><span class="n">28</span><span class="m">친환경토마코펜라이스</span><span class="k">외 4가지<br>1012 kcal</span></div></div>
-      <div class="foot-note">이번 주 평균 에너지 충족 <b style="color:#6E6A61">97%</b> · 미량영양소 <b style="color:#6E6A61">91%</b></div>
-    </div>
-
-    <div class="card carbon"><span class="tag" style="left:-11px;top:-11px">10</span>
+    <div class="card carbon" style="margin-top:-12px;border-radius:0 0 24px 24px;box-shadow:none"><span class="tag" style="left:-11px;top:-11px">10</span>
       <div class="eyebrow">오늘 급식을 다 남기면</div>
       <div class="big"><span class="num">1.9</span><span class="unit">kg CO₂e · 1인분 약 480 g 기준</span></div>
       <div class="cmp">
@@ -794,6 +788,12 @@ tr:last-child td{border-bottom:0}
         <div><b>6%</b>한국 1인 하루 평균 배출 대비</div>
       </div>
       <div class="foot-note">추정치입니다 · 산정 기준 보기</div>
+    </div>
+
+    <div class="card"><span class="tag" style="left:-11px;top:-11px">9</span>
+      <div class="eyebrow">이번 주 식단</div>
+      <div class="week"><div data-wd="1" data-w="past"><span class="d">월</span><span class="n">24</span><span class="m">치킨마요덮밥</span><span class="k">외 4가지<br>892 kcal</span></div><div data-wd="2" data-w="past"><span class="d">화</span><span class="n">25</span><span class="m">순두부찌개</span><span class="k">외 4가지<br>838 kcal</span></div><div data-wd="3" data-w="today"><span class="d">수</span><span class="n">26</span><span class="m">돼지고기 김치찜</span><span class="k">외 4가지<br>936 kcal</span></div><div data-wd="4" data-w="future"><span class="d">목</span><span class="n">27</span><span class="m">닭갈비</span><span class="k">외 4가지<br>905 kcal</span></div><div data-wd="5" data-w="future"><span class="d">금</span><span class="n">28</span><span class="m">친환경토마코펜라이스</span><span class="k">외 4가지<br>1012 kcal</span></div></div>
+      <div class="foot-note">이번 주 평균 에너지 충족 <b style="color:#6E6A61">97%</b> · 미량영양소 <b style="color:#6E6A61">91%</b></div>
     </div>
 
     <div class="card"><span class="tag" style="left:-11px;top:-11px">11</span>
@@ -807,16 +807,16 @@ tr:last-child td{border-bottom:0}
   </div>
 
   <div class="notes">
-    <div class="note"><b>1</b><strong>히어로.</strong> 급식 줄의 실물 은유. 숫자 104px/800, 판정 칩이 색과 문장으로 같은 뜻을 두 번 말합니다(색약 대응). 평소엔 차콜, 혼잡이면 카드 전체가 멜론이라 화면을 켜는 순간 구분됩니다. 우상단 틸 점은 "라이브".<span class="api">wait_min → 숫자 · state+wait_min → 칩 문구/색 (여유 ≤5분 · 보통 5~12 · 혼잡 &gt;12)</span></div>
+    <div class="note"><b>1</b><strong>히어로 — 대기시간 카드의 위 절.</strong> 급식 줄의 실물 은유. 숫자 104px/800, 판정 칩이 색과 문장으로 같은 뜻을 두 번 말합니다(색약 대응). 평소엔 차콜, 혼잡이면 절 전체가 멜론이라 화면을 켜는 순간 구분됩니다. 우상단 틸 점은 "라이브". 09-03 부터 추이(4)와 <em>한 카드</em>입니다 — 상자(<code>.waitcard</code>)가 radius 26 과 그림자를 갖고, 히어로는 그 위 절, 추이는 아래 절.<span class="api">wait_min → 숫자 · state+wait_min → 칩 문구/색 (여유 ≤5분 · 보통 5~12 · 혼잡 &gt;12)</span></div>
     <div class="note"><b>2</b><strong>배식대 도착 시각.</strong> "7분"은 머릿속에서 한 번 더 계산해야 하지만 "12:21"은 5교시 시각과 곧바로 견줍니다. 판정 칩 오른쪽의 비어 있던 자리를 써서 히어로 높이는 그대로입니다. 계산만이므로 API 변경 없음.<span class="api">wait_min + 현재 시각</span></div>
     <div class="note"><b>3</b><strong>갱신 메타.</strong> 카드 밖 11px. "추정치" 문구는 지우지 않습니다 — Little's law 가 배식 초반에 과대추정되는 한계를 알리는 유일한 자리.<span class="api">updated_at · stale</span></div>
-    <div class="note"><b>4</b><strong>추이 + 평소 곡선.</strong> 오늘 곡선만으로는 "지금이 평소보다 붐비는지"를 알 수 없습니다. 같은 요일 최근 N주 평균을 회색 파선으로 겹치고, 결론을 카드 머리에 한 문장으로 적습니다 — 곡선을 읽지 않아도 답이 나와야 합니다. 데이터 색은 틸 하나, 비교 기준선은 <em>색이 아니라 선 스타일</em>로 구분합니다. x 축은 인덱스가 아니라 '자정부터 몇 분' — 표본 수가 다른 두 곡선을 같은 시각에 얹으려면 그래야 합니다. 표본이 모자라면 최근 7일로 물러서고 범례 문구도 함께 바뀝니다.<span class="api">/api/history?minutes=120 · /api/typical?minutes=120 (state · basis · days · rows[minute_of_day, wait_min])</span></div>
+    <div class="note"><b>4</b><strong>추이 + 평소 곡선 — 대기시간 카드의 아래 절.</strong> 히어로 바로 아래 카드색 절로 이어집니다(표본이 2점 미만이면 절만 숨고 카드는 히어로만 남습니다). 오늘 곡선만으로는 "지금이 평소보다 붐비는지"를 알 수 없습니다. 같은 요일 최근 N주 평균을 회색 파선으로 겹치고, 결론을 카드 머리에 한 문장으로 적습니다 — 곡선을 읽지 않아도 답이 나와야 합니다. 데이터 색은 틸 하나, 비교 기준선은 <em>색이 아니라 선 스타일</em>로 구분합니다. x 축은 인덱스가 아니라 '자정부터 몇 분' — 표본 수가 다른 두 곡선을 같은 시각에 얹으려면 그래야 합니다. 표본이 모자라면 최근 7일로 물러서고 범례 문구도 함께 바뀝니다.<span class="api">/api/history?minutes=120 · /api/typical?minutes=120 (state · basis · days · rows[minute_of_day, wait_min])</span></div>
     <div class="note"><b>5</b><strong>급식실 현황.</strong> 빈 평면도(벡터) 위에 익명 위치 마커만 — 영상·실사·이력이 전혀 없습니다(CLAUDE.md §2). 배치는 <em>실측 탑뷰</em>(세로형 318:460, 09-02 확정): 배식대 = 위(카메라는 그 오른쪽 끝), 퇴식구→출구 = 좌측 벽 위부터, 대기통로 = 창가 우측 띠, 입구 = 통로 끝단(아래 벽). 벽은 두께 띠로 네 모서리까지 채웁니다. 마커는 <strong>노란 스마일</strong>입니다 — #F6C445 원(r 5.2u, 테두리 없음)에 눈 둘과 웃는 입을 차콜로 얹고, 별도 위 겹 캔버스에서 1.4초 주기로 옅어졌다 밝아집니다(CSS, 0.55~1; 모션 축소 설정이면 정지). 얼굴을 그려도 저장되는 것은 여전히 0~1 좌표 두 개뿐이라 익명성은 그대로입니다.<span class="api">/api/positions state · n · points[{x,y} 0~1] — 파일 하나를 덮어쓸 뿐 이력 없음</span></div>
     <div class="note"><b>6</b><strong>메뉴 + 알레르기.</strong> 2열 격자를 한 줄 리스트로 바꿨습니다 — 번호가 붙으면 2열은 좁습니다. 이름은 왼쪽, 번호는 오른쪽 끝 정렬이라 번호만 세로로 훑을 수 있습니다. NEIS 의 <code>DDISH_NM</code> 은 <code>돼지고기김치찜 (5.6.10.13)</code> 형태로 번호를 붙여 보내므로 <strong>이 값은 이미 meal.json 안에 있었고 화면에서 버려지고 있었습니다</strong>. 내 항목과 겹치는 메뉴는 행 전체를 옅은 멜론으로 덮고 해당 번호만 굵은 멜론 — 테두리 대신 면으로 처리해 카드 안에 선이 늘지 않습니다. 선택은 브라우저에만 저장합니다.<span class="api">today.menu[] 의 꼬리 숫자 · localStorage mb_allergy</span></div>
     <div class="note"><b>7</b><strong>영양 요약 3칸.</strong> 법정 기준의 구조(양·비율·충족)를 그대로 3칸으로. 색은 칸의 정체성(01 틸 · 02 아쿠아 · 03 멜론 틴트), 상태는 우상단 플래그 — 둘을 섞지 않습니다.<span class="api">energy_pct · macro_ratio_ok · mar</span></div>
     <div class="note"><b>8</b><strong>영양소 칩.</strong> v4 의 접힌 막대 6개를 <em>항상 펼친</em> 칩 한 행으로 바꿨습니다. 칩은 권장섭취량(RNI) 대비 과부족만 말합니다. <strong>±% 의 부호가 곧 색</strong>입니다 — 0 이상은 푸른 계열, 음수는 붉은 계열 그라데이션. 그중 평균필요량(EAR)에도 못 미치는 칸(<code>fetch_neis.py</code> 의 <code>band</code>)만 멜론 외곽선과 "부족" 글자를 더해, 3칸의 "부족 N" 플래그가 가리키는 대상을 분명히 합니다. 색만으로 판정하지 않도록 ±% 와 글자를 함께 둡니다.<span class="api">micro[].pct · band (부족 = EAR 미만)</span></div>
     <div class="note"><b>9</b><strong>이번 주 식단.</strong> <code>fetch_neis.py</code> 는 처음부터 월~금 5일치를 <code>week[]</code> 로 저장해 왔는데 화면은 <code>today</code> 만 썼습니다. 서버 변경 없이 카드 하나로 답이 됩니다. <strong>요일이 컬럼</strong>이고 요일마다 색이 다릅니다 — 월 아쿠아 · 화 에그셸 · 수 멜론 · 목 페리윙클 · 금 세이지. 앞의 둘은 브랜드 색을 그대로 쓰고 나머지 셋을 최대한 벌렸습니다(전체쌍 정상시야 최악 ΔE 10.7, 본문 대비 7.2:1 이상). <em>색맹에서는 갈리지 않는 쌍이 남습니다</em> — 다섯 색을 같은 명도대에 놓으면 원리상 그렇습니다. 그래서 칩마다 요일 글자와 날짜를 찍어 색이 유일한 단서가 되지 않게 합니다. 오늘만 램프 밖으로 빠져 차콜입니다. 메뉴 이름은 <code>overflow-wrap:anywhere</code> 로 띄어쓰기 없는 긴 이름(친환경토마코펜라이스)이 칩 밖으로 나가지 않게 하고 세 줄에서 말줄임합니다.<span class="api">week[] · week_avg</span></div>
-    <div class="note"><b>10</b><strong>탄소 카드.</strong> 오늘 1인분을 전부 버렸을 때의 배출량. 1인분 무게는 NEIS 에 없어 kcal ÷ 1.8 kcal/g 로 추정하고, 계수는 <code>data/carbon_std.json</code> 한 파일에 출처와 함께 둡니다. v5 에서 잔반 4버튼과 "이번 달 내가 남긴 급식"을 <strong>지웠습니다</strong> — 자기 신고 값은 정확할 수 없고, 정확하지 않은 수를 개인별로 누적해 보여 주면 측정한 것처럼 읽힙니다. 남은 것은 읽기 전용 사실뿐입니다.<span class="api">/api/meal today.carbon · carbon_std</span></div>
+    <div class="note"><b>10</b><strong>탄소 절 — 오늘 중식 카드의 아래 절.</strong> 09-03 부터 별도 카드가 아니라 오늘 중식 카드 하단의 틸 틴트 절입니다(카드 여백을 음수로 밀어 가장자리까지 채움). 그래서 화면 순서는 6·7·8 → 10 → 9(이번 주 식단)입니다. 오늘 1인분을 전부 버렸을 때의 배출량. 1인분 무게는 NEIS 에 없어 kcal ÷ 1.8 kcal/g 로 추정하고, 계수는 <code>data/carbon_std.json</code> 한 파일에 출처와 함께 둡니다. v5 에서 잔반 4버튼과 "이번 달 내가 남긴 급식"을 <strong>지웠습니다</strong> — 자기 신고 값은 정확할 수 없고, 정확하지 않은 수를 개인별로 누적해 보여 주면 측정한 것처럼 읽힙니다. 남은 것은 읽기 전용 사실뿐입니다.<span class="api">/api/meal today.carbon · carbon_std</span></div>
     <div class="note"><b>11</b><strong>이슈 링크.</strong> 제목·요약·출처·날짜. 요약은 우리가 본문을 읽어 만든 것이 아니라 피드가 스스로 실어 보내는 <code>&lt;description&gt;</code> 이고, 저장 직전에 DeepL 로 한국어로 옮깁니다(실패하면 원문 영어). 기계 번역임을 출처 옆 "번역" 칩으로 밝힙니다. v5 에서 항목 테두리를 없애고 헤어라인 구분선으로 바꿨습니다 — 좌측 컬러 바는 흔한 상투구라 함께 뺐습니다.<span class="api">/api/news items[]</span></div>
   </div>
 </div>
@@ -891,14 +891,15 @@ tr:last-child td{border-bottom:0}
 <tr><td>판정 칩</td><td>13px / 700 / 999px radius / 패딩 9×16</td><td>여유·보통 = 아쿠아 채움 · 배식 대기 = 멜론 1.5px 선 · 혼잡 = 차콜 채움(카드는 멜론) · 없음 = 회색 선</td><td>임계 5·12분은 학교마다 다를 수 있음</td></tr>
 <tr><td>배식대 도착 시각</td><td>11.5px 라벨 + 18px / 700 시각, 우측 정렬</td><td><code>wait_min</code> 이 null 이면 통째로 감춤</td><td>판정 칩과 같은 행 — 히어로 높이가 늘지 않는다</td></tr>
 <tr><td>히어로 하단 두 타일</td><td>radius 16, 배경 rgba(255,253,246,.07), 20px 숫자 + 11.5px 라벨</td><td>—</td><td>v4 의 점선 구분을 타일로 대체</td></tr>
-<tr><td>추이</td><td>높이 92px(데스크톱 130px), 오늘 = 틸 2px + 채움 .24→0, 평소 = #B9B1A0 파선 1.5px</td><td>데이터 &lt;2점이면 카드 숨김. 평소 표본이 없으면 파선·범례·결론 문장을 함께 감춤</td><td>x 축 = 자정부터 몇 분. 오른쪽 34px 은 선 끝 라벨 자리</td></tr>
+<tr><td>대기시간 카드 (통합)</td><td><code>.waitcard</code> = radius 26 + 그림자 e2 + overflow hidden 상자. 위 절 <code>.hero</code>(상태 4얼굴 배경), 아래 절 <code>.trend</code>(카드색, 여백 22·var(--px)·24, 데스크톱 28·30)</td><td>추이 표본 &lt;2점이면 <em>아래 절만</em> 숨고 카드는 히어로만 남는다. busy 면 상자 그림자가 멜론, off 면 상자 그림자 없음 + 아래 절도 점선 테두리(<code>:has()</code>)</td><td>09-03 통합(PLAN §3.2). 갱신 메타는 여전히 카드 밖 아래</td></tr>
+<tr><td>추이</td><td>높이 92px(데스크톱 130px), 오늘 = 틸 2px + 채움 .24→0, 평소 = #B9B1A0 파선 1.5px</td><td>데이터 &lt;2점이면 절 숨김. 평소 표본이 없으면 파선·범례·결론 문장을 함께 감춤</td><td>x 축 = 자정부터 몇 분. 오른쪽 34px 은 선 끝 라벨 자리</td></tr>
 <tr><td>추이 결론 문장</td><td>14px / 600, eyebrow 바로 아래</td><td>|차이| &lt; 1분이면 "평소 이 시각과 비슷합니다"</td><td>그래프를 읽지 않아도 답이 나와야 한다</td></tr>
 <tr><td>메뉴</td><td>주요리 16px / 700, 나머지 14px, 한 줄 리스트</td><td>알레르기 번호는 오른쪽 끝 정렬로 항상 표시</td><td>2열 격자는 번호가 붙으면 좁다 — v5 에서 폐기</td></tr>
 <tr><td>알레르기</td><td>번호 10px · 칩 10px / 700 / radius 6</td><td>내 항목과 겹치면 행 배경 #FFF4F1 + 해당 번호 굵은 멜론 + "내 알레르기" 태그</td><td>식약처 19종. 선택은 localStorage <code>mb_allergy</code>, 서버는 모른다</td></tr>
 <tr><td>영양 3칸</td><td>21px / 700 숫자 + 11px 라벨, 칸 고유 틴트</td><td>우상단 플래그(많음/부족 N)로 상태</td><td>색은 칸의 정체성, 상태는 플래그 — 둘을 섞지 않음</td></tr>
 <tr><td>영양소 칩</td><td>6열 그리드, 칩 높이 52 / radius 14 / 14px 숫자 + 9.5px 라벨</td><td>항상 펼침 (v4 의 details 토글 폐기)</td><td>부족 칩만 멜론 1.5px 인셋 링 + "부족" 글자. 판정은 <code>band</code> 를 따름(EAR 미만)</td></tr>
 <tr><td>이번 주 식단</td><td>5열 그리드, 칩 radius 14 / 요일 10px · 날짜 15px · 메뉴 10.5px · 부제 9.5px</td><td>오늘 칩만 차콜 + 흰 글자. 지난 날은 내용 전체 opacity .62</td><td>요일 5색(월 9BD7D5 · 화 FBE9B7 · 수 F3B2A4 · 목 CBC2FB · 금 A3F5B4). 메뉴명은 3줄 말줄임 + overflow-wrap:anywhere</td></tr>
-<tr><td>탄소 카드</td><td>46px 틸 숫자, 비교 2칸 (배경 흰 카드색)</td><td>읽기 전용 — 입력 없음</td><td>카드 배경만 틸 틴트 — "다른 종류의 카드"임을 알리는 유일한 신호</td></tr>
+<tr><td>탄소 절 (오늘 중식 카드 안)</td><td>46px 틸 숫자, 비교 2칸 (배경 흰 카드색). 카드 여백을 음수로 밀어(<code>margin: 20px −var(--px) −var(--py)</code>) 틴트가 카드 가장자리·아래 모서리(radius 24)까지 닿는다</td><td>읽기 전용 — 입력 없음. 급식 없는 날은 절 통째로 숨김</td><td>09-03 통합: 별도 카드였던 것을 오늘 중식 카드의 아래 절로. 틸 틴트가 "같은 카드의 다른 종류 정보"임을 알리는 유일한 신호</td></tr>
 <tr><td>이슈 링크</td><td>제목 13.5px 2줄 + 요약 11.5px 3줄 + 출처 칩 10px + 날짜 11px</td><td>탭 시 새 창</td><td>최대 3건, 매체별로 한 건씩. 글자 수가 아니라 CSS 줄 수로 자른다. 기계 번역이면 출처 옆에 회색 "번역" 칩</td></tr>
 <tr><td>급식실 현황</td><td>canvas — <b>실측 기반 탑뷰 2D 평면(세로형)</b>. 방 15.55m(폭 x)×24.65m(길이 y), 원점 = 배식구 벽∧창가 통로 구석, <code>/api/positions</code> 의 x,y 는 이 바닥의 0~1 정규화(zones.json 과 공유). 투영 sx=(W−x)·k, sy=y·k — 왜곡이 없어 마커 가독성 최우선. 여백: 좌 50u(퇴식구·출구 라벨 자리)·우 10u·상 22u·하 8u, 카드 비율 318:460. 방향(확정 도면): 배식대 위(y=0 벽 앞 카운터 x 1.5~13.5m 멜론, 카메라는 그 오른쪽 끝=통로 쪽) · 좌측 벽(x=W)에 위부터 퇴식구(y 1.6~4.4m, 안쪽에 회색 싱크대 카운터 3.2×0.85m)→출구(y 5.6~8.4m 틸) · 대기통로 = 창가(x&lt;2.2m) 우측 띠, 창은 우측 벽 하늘빛 세 칸 · <b>입구 = 통로 끝단</b>(아래 벽 x 0.2~3.2m 틸). 테이블 6열(x0 3.2m·간격 1.8m·폭 0.82m)×[6인×3|6인×2|6인×4+4인](블록 사이 통로 1.2m), 의자는 도면 기호식 연두 탭(0.44×0.28m, 테이블 밑 0.08m 걸침), 상판은 부드러운 그림자. 벽은 두께 0.45m 띠, 바닥 타일 줄눈 · 기둥 없음. 라벨은 흰 halo(3u) — 마커 위에서도 읽힌다; 퇴식구·출구는 레이아웃 바깥 좌측, 배식대는 위, 입구는 방 안쪽</td><td>30초 폴링 · no_data 면 opacity .4 + "표시할 위치 없음"</td><td>마커는 스마일 — 노란 원(#F6C445) r=5.2u, 테두리 없음, 눈·입 차콜(#33312D). 1.4초 주기 점멸 — 마커 전용 위 겹 캔버스(#marks)의 CSS opacity 애니메이션(0.55~1), 평면도 층은 데이터·크기 변경 때만 다시 그림. 모션 축소 설정이면 정지. 좌표 0~1 정규화 · 우상단 "N명" 칩</td></tr>
 <tr><td>카드</td><td>radius 24px, 여백 20px(데스크톱 24×26), 그림자 <code>0 1px 2px .04 + 0 10px 26px .055</code></td><td>hover 시 2px 상승</td><td><b>외곽선 없음</b> — v4 의 1.5px 차콜 선을 전부 제거</td></tr>
@@ -911,7 +912,7 @@ tr:last-child td{border-bottom:0}
 <table>
 <tr><th>뷰포트</th><th>레이아웃</th><th>비고</th></tr>
 <tr><td>≤ 899px (모바일)</td><td>단일 컬럼, max-width 390, 카드 간격 12px — 모바일 도면 그대로</td><td>기본</td></tr>
-<tr><td>≥ 900px (데스크톱)</td><td>max-width 1120, grid 2컬럼 <code>1.1fr 1fr</code>, gap 24px, <code>align-items:stretch</code>. 왼쪽 = 히어로 + 갱신 메타 + 추이 + 급식실 현황 / 오른쪽 = 급식 + 이번 주 식단 + 탄소 + 이슈</td><td>히어로 숫자 120px, 추이 130px. 마크업은 <code>.col</code> 두 개로 묶어 두고 모바일에서는 그 래퍼가 그냥 세로 스택</td></tr>
+<tr><td>≥ 900px (데스크톱)</td><td>max-width 1120, grid 2컬럼 <code>1.1fr 1fr</code>, gap 24px, <code>align-items:stretch</code>. 왼쪽 = 대기시간 카드(히어로+추이) + 갱신 메타 + 급식실 현황 / 오른쪽 = 오늘 중식(+탄소 절) + 이번 주 식단 + 이슈</td><td>히어로 숫자 120px, 추이 130px. 카드 여백은 <code>--px:26px; --py:24px</code>. 마크업은 <code>.col</code> 두 개로 묶어 두고 모바일에서는 그 래퍼가 그냥 세로 스택</td></tr>
 <tr><td colspan="3"><b>두 패널의 아래 끝 맞추기.</b> 어느 쪽이 긴지는 그날 데이터에 달렸다(주말이면 급식·탄소 카드가 빠지고, 평일이면 오른쪽이 400px 넘게 길다). 그리드를 stretch 로 두고 <em>양쪽 모두</em> 마지막으로 '보이는' 카드에 <code>.grow</code>(<code>flex:1 1 auto</code>)를 건다 — 긴 쪽은 흡수할 여백이 없어 그대로다. 카드가 <code>hidden</code> 이 될 수 있어 CSS <code>:last-child</code> 로는 안 되고 JS 가 고른다. 흡수한 높이는 여백으로 두지 않는다: 평면도 카드가 늘면 평면도 자체가 커지고(<code>drawPlan</code> 이 폭·높이 둘 다에 맞춰 축척을 정한다), 이슈 카드가 늘면 목록이 벌어진다.</td></tr>
 </table>
 <h4 style="margin:24px 0 8px;font-size:11px;letter-spacing:.18em;color:var(--teal)">고도 체계 (CSS 변수)</h4>
