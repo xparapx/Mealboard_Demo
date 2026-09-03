@@ -1346,6 +1346,7 @@ systemctl status mealboard-api --no-pager</code></pre>
 &lt;script&gt;
 /* 진단: 모듈이 읽히지 않거나(옛 브라우저 문법) 실행 중 오류가 나면 흰 화면 대신 맨 위에 붉은 띠로 오류 문장을 보인다 — 휴대폰에서 원인을 읽을 수 있게 */
 addEventListener(&quot;error&quot;, function (e) {
+  if (/ResizeObserver loop/.test(e.message || &quot;&quot;)) return;   // 브라우저의 무해한 경고(레이아웃이 한 프레임 안에 두 번 바뀜) — 오류가 아니다(09-04 휴대폰 관리 화면에서 확인)
   var d = document.createElement(&quot;pre&quot;), t = e.target &amp;&amp; e.target.src ? &quot;불러오기 실패: &quot; + e.target.src.split(&quot;/&quot;).pop() : &quot;오류: &quot; + e.message + &quot; (&quot; + String(e.filename || &quot;&quot;).split(&quot;/&quot;).pop() + &quot;:&quot; + e.lineno + &quot;)&quot;;
   d.textContent = t; d.style.cssText = &quot;position:fixed;top:0;left:0;right:0;z-index:99;margin:0;padding:8px 12px;background:#C2452D;color:#fff;font:12px/1.4 monospace;white-space:pre-wrap&quot;;
   document.body.appendChild(d);
