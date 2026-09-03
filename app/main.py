@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from .config import BASE
-from .routers import status, history, meal, positions, news, typical
+from .routers import status, history, meal, positions, news, typical, insight
 
 app = FastAPI(title="Mealboard")
 app.include_router(status.router)
@@ -10,6 +10,7 @@ app.include_router(meal.router)
 app.include_router(positions.router)
 app.include_router(news.router)
 app.include_router(typical.router)
+app.include_router(insight.router)      # /api/insight/* — insights.db·reports.db 읽기 전용
 # 화면과 서비스워커는 캐시하더라도 쓰기 전에 반드시 서버에 물어보게 한다.
 # StaticFiles 는 Cache-Control 을 붙이지 않는데, 그러면 브라우저가 Last-Modified 로 신선도를 '추측'한다
 # (경험칙: 파일이 묵은 기간의 10%). 이틀 된 index.html 은 약 5시간 동안 새로 받지 않으므로
