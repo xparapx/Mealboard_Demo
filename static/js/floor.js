@@ -150,11 +150,15 @@ export function drawZones(g, G, zones, occ = {}, labels = true) {
     g.fillStyle = `rgba(12,109,106,${(.06 + .5 * t).toFixed(3)})`; g.fill();
     g.strokeStyle = "rgba(12,109,106,.35)"; g.lineWidth = 1; g.stroke();
     if (!labels) return;                                              // 점유율 카드는 아래 칩이 이름·비율을 담는다 — 좌석 위 글자는 읽히지 않아 뺀다
-    const cx = z.polygon.reduce((a, p) => a + p[0], 0) / z.polygon.length;
-    const cy = z.polygon.reduce((a, p) => a + p[1], 0) / z.polygon.length;
+    const xs = z.polygon.map(p => p[0]), ys = z.polygon.map(p => p[1]);
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+    const w = (Math.max(...xs) - Math.min(...xs)) * ROOM.W, h = (Math.max(...ys) - Math.min(...ys)) * ROOM.D;
     const [lx, ly] = G.P(cx, cy);
+    g.save(); g.translate(lx, ly);
+    if (h > 2.5 * w) g.rotate(Math.PI / 2);                            // 세로로 긴 구역(통로)은 사용자 화면과 같이 시계 방향 90° 회전(09-04)
     g.textAlign = "center";
-    label(g, G, z.label || z.id, lx, ly + 4 * (G.fu ?? G.u), "#0C6D6A");        // 언제나 틸 잉크 + 종이색 테두리(label) — 흰 글자는 테두리와 같아 보이지 않았다
+    label(g, G, z.label || z.id, 0, 4 * (G.fu ?? G.u), "#0C6D6A");
+    g.restore();        // 언제나 틸 잉크 + 종이색 테두리(label) — 흰 글자는 테두리와 같아 보이지 않았다
   });
 }
 
