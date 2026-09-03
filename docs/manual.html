@@ -985,6 +985,7 @@ systemctl status mealboard-api --no-pager</code></pre>
 &lt;link rel=&quot;manifest&quot; href=&quot;/manifest.json&quot;&gt;
 &lt;link rel=&quot;stylesheet&quot; href=&quot;/css/base.css&quot;&gt;
 &lt;link rel=&quot;stylesheet&quot; href=&quot;/css/screens.css&quot;&gt;
+&lt;link rel=&quot;stylesheet&quot; href=&quot;/css/insight.css&quot;&gt;
 &lt;/head&gt;
 &lt;body&gt;
 &lt;!-- 아이콘 스프라이트 — 하단 dock 과 좌측 레일이 같은 5개를 쓴다. 이모지가 아니라 선 아이콘: 기기마다 같은 모양 (PLAN §3.2) --&gt;
@@ -1046,6 +1047,49 @@ systemctl status mealboard-api --no-pager</code></pre>
     &lt;div class=&quot;meta&quot;&gt;
       &lt;span&gt;갱신 &lt;span id=&quot;updated&quot;&gt;—&lt;/span&gt; · 30초마다&lt;/span&gt;&lt;span&gt;추정치 · 배식 초반 오차 큼&lt;/span&gt;
     &lt;/div&gt;
+    &lt;!-- 대기시간 화면의 인사이트 카드 (PLAN §3.2) — 화면이 열릴 때 1회 + 5분마다. no_data 여도 숨기지 않고 이유를 적는다 --&gt;
+    &lt;section class=&quot;card insight&quot; id=&quot;heatcard&quot; data-state=&quot;no_data&quot;&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;요일 · 시각별 평소 대기&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;lead&quot; id=&quot;heatlead&quot;&gt;셀을 누르면 그 시각의 평소 대기를 읽습니다&lt;/div&gt;
+        &lt;div class=&quot;heat&quot; id=&quot;heat&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;heatlegend&quot;&gt;&lt;span&gt;짧음&lt;/span&gt;&lt;i&gt;&lt;/i&gt;&lt;span&gt;긺&lt;/span&gt;&lt;em&gt;&lt;/em&gt;&lt;span&gt;3분 이하 · 황금&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;note foot&quot; id=&quot;heatfoot&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;heatempty&quot;&gt;집계가 아직 없습니다&lt;/div&gt;
+    &lt;/section&gt;
+    &lt;section class=&quot;card insight&quot; id=&quot;goldencard&quot; data-state=&quot;no_data&quot;&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;황금 구간 · 오늘&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;lead&quot; id=&quot;goldenlead&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;chips2&quot; id=&quot;goldenchips&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;note foot&quot;&gt;ok · 대기 3분 이하 · 배식 속도 0.5명/분 이상이 5분 넘게 이어진 구간&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;goldenempty&quot;&gt;오늘은 아직 황금 구간이 없습니다&lt;/div&gt;
+    &lt;/section&gt;
+    &lt;section class=&quot;card insight&quot; id=&quot;forecastcard&quot; data-state=&quot;no_data&quot;&gt;
+      &lt;div class=&quot;eyebrow&quot; id=&quot;forecasteyebrow&quot;&gt;예보&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;lead&quot; id=&quot;forecastlead&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;chips2&quot; id=&quot;forecastchips&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;note foot&quot; id=&quot;forecastfoot&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;forecastempty&quot;&gt;예보를 만들 집계가 아직 모자랍니다&lt;/div&gt;
+    &lt;/section&gt;
+    &lt;section class=&quot;card insight&quot; id=&quot;bottlecard&quot; data-state=&quot;no_data&quot;&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;병목 로그 · 오늘&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;&lt;ul class=&quot;log&quot; id=&quot;bottlelist&quot;&gt;&lt;/ul&gt;
+        &lt;div class=&quot;note foot&quot;&gt;줄이 5명 이상인데 배식이 멈췄거나 평소의 절반 아래로 느려진 구간(2분 이상)&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;bottleempty&quot;&gt;오늘 병목이 없습니다&lt;/div&gt;
+    &lt;/section&gt;
+    &lt;section class=&quot;card insight&quot; id=&quot;qualitycard&quot; data-state=&quot;no_data&quot;&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;측정 품질 · 오늘&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;well&quot; id=&quot;qualitywell&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;note foot&quot; id=&quot;qualityfoot&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;qualityempty&quot;&gt;오늘 표본이 아직 없습니다&lt;/div&gt;
+    &lt;/section&gt;
   &lt;/section&gt;
 
   &lt;!-- ② 실시간 — 탑뷰 평면도 + 익명 위치 마커 (영상 아님) --&gt;
@@ -1148,7 +1192,7 @@ systemctl status mealboard-api --no-pager</code></pre>
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
 const CACHE = &quot;mealboard-v9&quot;;
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
-  &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;,
+  &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
 
 self.addEventListener(&quot;install&quot;, e =&gt;

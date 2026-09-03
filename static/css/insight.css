@@ -1,0 +1,75 @@
+/* 인사이트 카드 — 각 화면의 라이브 카드 아래에 이어지는 카드들 (PLAN §3.5). 라이브 카드와 같은 카드 골격(base.css)에
+   데이터 상태(data-state)·빈 상태(.empty)·히트맵(.heat)·칩(.chips2)·순위(.rank)·바탕 타일(.well) 만 더한다.
+   인사이트 카드는 no_data 여도 숨기지 않는다 — 왜 없는지 한 줄로 말한다 */
+.insight .lead { margin-top: 8px; }
+.insight .foot { margin-top: 12px; }
+.insight .empty { display: none; margin-top: 10px; font-size: 13px; font-weight: 600; color: var(--ink3); }
+.insight[data-state="no_data"] .body { display: none; }
+.insight[data-state="no_data"] .empty { display: block; }
+
+/* 요일×시각 히트맵 — CSS grid. 셀 색은 --t(0~1)로 틸 한 램프: rgba(var(--heat), .08 + .84·t). 오늘 행 라벨은 차콜, 황금 셀은 차콜 inset 링 */
+.heat { display: grid; grid-template-columns: 22px 1fr; gap: 4px 6px; margin-top: 12px; align-items: stretch; }
+.heat .wd { font-size: 10px; font-weight: 700; color: var(--ink3); display: flex; align-items: center; justify-content: center;
+            border-radius: 6px; }
+.heat .wd[data-wd="1"] { background: #9BD7D5; color: #1E4A48; }   /* 요일 5색 — 이번 주 식단 칩과 같은 램프 */
+.heat .wd[data-wd="2"] { background: #FBE9B7; color: #5A4A14; }
+.heat .wd[data-wd="3"] { background: #F3B2A4; color: #5C2A20; }
+.heat .wd[data-wd="4"] { background: #CBC2FB; color: #3A2E6E; }
+.heat .wd[data-wd="5"] { background: #A3F5B4; color: #1E4A2A; }
+.heat .wd[data-today] { background: var(--ink); color: var(--surface); }
+.heat .row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 2px; }
+.heat .c { height: 22px; border-radius: 5px; background: rgba(var(--heat), calc(.08 + .84 * var(--t, 0))); cursor: pointer; border: 0; padding: 0; }
+.heat .c[data-none] { background: var(--well); cursor: default; }
+.heat .c[data-golden] { box-shadow: inset 0 0 0 1.5px var(--ink); }
+.heat .c[aria-pressed="true"] { outline: 2px solid var(--melon); outline-offset: 1px; }
+.heat .axis { grid-column: 2; display: flex; justify-content: space-between; font-size: 10px; color: var(--ink3); }
+.heat .axis b { font-weight: 700; color: var(--ink2); }
+.heatlegend { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 10.5px; color: var(--ink3); }
+.heatlegend i { width: 56px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, rgba(var(--heat), .08), rgba(var(--heat), .92)); }
+.heatlegend em { font-style: normal; width: 12px; height: 12px; border-radius: 3px; box-shadow: inset 0 0 0 1.5px var(--ink); flex: none; }
+
+/* 칩 행 — 황금 구간(아쿠아, #state 칩 룩)·예보 황금 후보 */
+.chips2 { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chips2 span { display: inline-flex; align-items: center; gap: 6px; padding: 8px 13px; border-radius: 999px;
+               background: var(--aqua); color: #223634; font-size: 12.5px; font-weight: 700; }
+.chips2 span small { font-weight: 500; font-size: 11px; opacity: .75; }
+.chips2 span.ghost { background: transparent; box-shadow: inset 0 0 0 1.5px var(--aqua); color: var(--teal-ink); }
+
+/* 로그 목록 — 이슈 링크(.news li)의 해부: 제목 + 칩 행 */
+.log { list-style: none; margin: 6px 0 0; padding: 0; }
+.log li { display: flex; flex-direction: column; gap: 6px; padding: 11px 0; border-bottom: 1px solid var(--hair); }
+.log li:last-child { border-bottom: 0; }
+.log li b { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.log li div { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.log li em { font-style: normal; font-size: 10px; font-weight: 700; border-radius: 6px; padding: 3px 7px;
+             background: var(--melon-tint); color: var(--melon-ink); }
+.log li em.teal { background: var(--teal-tint); color: var(--teal-ink); }
+.log li small { font-size: 11px; color: var(--ink3); }
+
+/* 바탕색 타일 2×2 — 측정 품질 */
+.well { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.well > div { background: var(--well); border-radius: var(--r-tile); padding: 12px 14px; }
+.well b { display: block; font-size: 21px; font-weight: 700; letter-spacing: -.02em; color: var(--ink); }
+.well b i { font-style: normal; font-size: 12px; font-weight: 500; color: var(--ink2); margin-left: 2px; }
+.well span { display: block; font-size: 11px; color: var(--ink2); margin-top: 3px; }
+.well > div[data-warn] b { color: var(--melon-ink); }
+
+/* 순위 목록 — 메뉴 인기 TOP5 (2e) */
+.rank { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; counter-reset: r; }
+.rank li { position: relative; display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px; overflow: hidden;
+           font-size: 13.5px; font-weight: 600; }
+.rank li::before { content: ""; position: absolute; inset: 0; width: var(--p, 0%); background: var(--teal-tint); z-index: 0; }
+.rank li > * { position: relative; z-index: 1; }
+.rank li i { font-style: normal; width: 20px; font-size: 11px; font-weight: 700; color: var(--ink3); font-variant-numeric: tabular-nums; }
+.rank li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank li small { font-size: 10.5px; color: var(--ink3); font-weight: 500; }
+.rank li b { font-size: 13px; color: var(--teal-ink); }
+
+/* 데스크톱 보드 — 인사이트 카드 자리(5행부터 자동 배치). 폭만 정한다 */
+@media (min-width: 900px) {
+  #heatcard { grid-column: 1 / 8; }
+  #goldencard { grid-column: 8 / 13; }
+  #forecastcard { grid-column: 1 / 5; }
+  #bottlecard { grid-column: 5 / 9; }
+  #qualitycard { grid-column: 9 / 13; }
+}

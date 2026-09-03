@@ -6,7 +6,7 @@
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
 const CACHE = "mealboard-v9";
 const SHELL = ["/", "/index.html", "/manifest.json",
-  "/css/base.css", "/css/screens.css",
+  "/css/base.css", "/css/screens.css", "/css/insight.css",
   "/js/core.js", "/js/floor.js", "/js/wait.js", "/js/room.js", "/js/week.js", "/js/today.js", "/js/news.js"];
 
 self.addEventListener("install", e =>

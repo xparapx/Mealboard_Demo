@@ -8,6 +8,7 @@
 <link rel="manifest" href="/manifest.json">
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/screens.css">
+<link rel="stylesheet" href="/css/insight.css">
 </head>
 <body>
 <!-- 아이콘 스프라이트 — 하단 dock 과 좌측 레일이 같은 5개를 쓴다. 이모지가 아니라 선 아이콘: 기기마다 같은 모양 (PLAN §3.2) -->
@@ -69,6 +70,49 @@
     <div class="meta">
       <span>갱신 <span id="updated">—</span> · 30초마다</span><span>추정치 · 배식 초반 오차 큼</span>
     </div>
+    <!-- 대기시간 화면의 인사이트 카드 (PLAN §3.2) — 화면이 열릴 때 1회 + 5분마다. no_data 여도 숨기지 않고 이유를 적는다 -->
+    <section class="card insight" id="heatcard" data-state="no_data">
+      <div class="eyebrow">요일 · 시각별 평소 대기</div>
+      <div class="body">
+        <div class="lead" id="heatlead">셀을 누르면 그 시각의 평소 대기를 읽습니다</div>
+        <div class="heat" id="heat"></div>
+        <div class="heatlegend"><span>짧음</span><i></i><span>긺</span><em></em><span>3분 이하 · 황금</span></div>
+        <div class="note foot" id="heatfoot"></div>
+      </div>
+      <div class="empty" id="heatempty">집계가 아직 없습니다</div>
+    </section>
+    <section class="card insight" id="goldencard" data-state="no_data">
+      <div class="eyebrow">황금 구간 · 오늘</div>
+      <div class="body">
+        <div class="lead" id="goldenlead"></div>
+        <div class="chips2" id="goldenchips"></div>
+        <div class="note foot">ok · 대기 3분 이하 · 배식 속도 0.5명/분 이상이 5분 넘게 이어진 구간</div>
+      </div>
+      <div class="empty" id="goldenempty">오늘은 아직 황금 구간이 없습니다</div>
+    </section>
+    <section class="card insight" id="forecastcard" data-state="no_data">
+      <div class="eyebrow" id="forecasteyebrow">예보</div>
+      <div class="body">
+        <div class="lead" id="forecastlead"></div>
+        <div class="chips2" id="forecastchips"></div>
+        <div class="note foot" id="forecastfoot"></div>
+      </div>
+      <div class="empty" id="forecastempty">예보를 만들 집계가 아직 모자랍니다</div>
+    </section>
+    <section class="card insight" id="bottlecard" data-state="no_data">
+      <div class="eyebrow">병목 로그 · 오늘</div>
+      <div class="body"><ul class="log" id="bottlelist"></ul>
+        <div class="note foot">줄이 5명 이상인데 배식이 멈췄거나 평소의 절반 아래로 느려진 구간(2분 이상)</div></div>
+      <div class="empty" id="bottleempty">오늘 병목이 없습니다</div>
+    </section>
+    <section class="card insight" id="qualitycard" data-state="no_data">
+      <div class="eyebrow">측정 품질 · 오늘</div>
+      <div class="body">
+        <div class="well" id="qualitywell"></div>
+        <div class="note foot" id="qualityfoot"></div>
+      </div>
+      <div class="empty" id="qualityempty">오늘 표본이 아직 없습니다</div>
+    </section>
   </section>
 
   <!-- ② 실시간 — 탑뷰 평면도 + 익명 위치 마커 (영상 아님) -->
