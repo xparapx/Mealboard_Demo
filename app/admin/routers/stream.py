@@ -78,15 +78,18 @@ async def mjpeg(request: Request):
     st = _st(request)
     if not st.is_on():
         raise HTTPException(409, {"reason": "off", "message": "stream/on 으로 먼저 켠다"})
-    if st.viewers >= 1:
+    if not st.claim():                                   # 자리는 await 전에 잡는다 — 두 요청이 연결 대기 사이에 같이 통과하지 않게
         raise HTTPException(409, {"reason": "viewer_busy", "message": "다른 뷰어가 보는 중 (1명)"})
     try:
         status, headers, reader, writer = await st.open_upstream()
     except (OSError, asyncio.TimeoutError):
+        st.release()
         audit.log(request.state.user, "stream.view", "mjpeg", "vision_absent", False, request.client.host)
         raise HTTPException(502, {"reason": "vision_absent", "port": st.port})
-    if status != 200:
+    ctype = headers.get("content-type", "")
+    if status != 200 or not ctype.startswith("multipart/x-mixed-replace"):     # vision 의 503(플래그 불일치) 또는 엉뚱한 서버 — 그대로 흘리지 않는다
         writer.close()
-        raise HTTPException(502, {"reason": "upstream", "status": status})
-    ctype = headers.get("content-type", "multipart/x-mixed-replace; boundary=frame")
-    return StreamingResponse(st.relay(reader, writer, request.state.user, request.client.host), media_type=ctype, headers=NO_STORE)
+        st.release()
+        raise HTTPException(502, {"reason": "upstream", "status": status, "content_type": ctype[:60]})
+    return StreamingResponse(st.relay(reader, writer, request.state.user, request.client.host), media_type=ctype,
+                             headers={**NO_STORE, "X-Content-Type-Options": "nosniff"})

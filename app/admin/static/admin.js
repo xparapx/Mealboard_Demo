@@ -4,7 +4,7 @@
    스트림 패널(3c): 메타 = SSE(/api/admin/stream/meta) 를 평면도(익명 마커) 또는 프레임(bbox) 뷰로 그린다 — 브라우저 메모리에만, 저장 없음.
    실사 = stream/on 으로 플래그를 켠 뒤 <img> 에 mjpeg 프록시를 물린다(켤 때만 src, 끌 때 비움). 화면을 떠나면 클라이언트 쪽은 모두 끊는다.
    3d(구역 편집기)가 카드를 더한다 */
-import { fit } from "/js/core.js";
+import { fit, mm } from "/js/core.js";
 import { drawFloor, drawMarkers, drawZones, geom } from "/js/floor.js";
 import * as zonesEditor from "/admin-ui/zones-editor.js";
 
@@ -138,7 +138,11 @@ function toast(text, bad) {
 
 async function loadServices() {
   const [w, s] = await Promise.all([api("/whoami"), api("/services")]);
-  if (w.ok) { $("#adminwho").textContent = `${w.j.user} · ${w.j.via === "tailscale" ? "tailnet" : "SSH 터널"}`; $("#adminlock").hidden = !w.j.lockdown; }
+  const locked = w.ok ? w.j.lockdown : w.j?.reason === "lockdown";     // lockdown 이면 whoami 자체가 403 — 그 본문의 reason 으로 안다
+  $("#adminlock").hidden = !locked;
+  if (w.ok) $("#adminwho").textContent = `${w.j.user} · ${w.j.via === "tailscale" ? "tailnet" : "SSH 터널"}`;
+  else $("#adminwho").textContent = locked ? "잠김" : "—";
+  if (locked && ST.mode !== "off") setMode("off", { keepFlag: true });
   if (!s.ok) { $("#adminfoot").textContent = `상태를 읽지 못했습니다 (${s.status})`; return; }
   const h = s.j.health || {};
   $("#adminwell").innerHTML = tile(age(h.db_age_s), "", "DB 최신 행", h.db_age_s == null || h.db_age_s > 120)
@@ -148,12 +152,13 @@ async function loadServices() {
     const name = u.unit.replace("mealboard-", ""), ok = u.active === "active", off = u.active === "unknown";
     return `<li><b>${name}</b><em class="${ok ? "teal" : off ? "mute" : "melon"}">${esc(u.active)}${u.sub ? " · " + esc(u.sub) : ""}</em>`
       + (u.restarts ? `<small>재시작 ${u.restarts}회</small>` : "")
-      + (RESTARTABLE.includes(name) ? `<button type="button" class="pill ghost small" data-restart="${name}">재시작</button>` : "") + "</li>";
-  }).join("");
-  $("#adminfoot").textContent = `코드 ${h.git || "?"} · 가동 ${age(h.uptime_s)} · 위치 파일 ${age(h.positions_age_s)} 전 · 급식 창 ${Math.floor(s.j.lunch.lo / 60)}:${String(s.j.lunch.lo % 60).padStart(2, "0")}~${Math.floor(s.j.lunch.hi / 60)}:${String(s.j.lunch.hi % 60).padStart(2, "0")}`;
+      + (u.enabled === "disabled" ? "<small>꺼 둠</small>" : "")
+      + (RESTARTABLE.includes(name) && u.enabled !== "disabled" ? `<button type="button" class="pill ghost small" data-restart="${name}">재시작</button>` : "") + "</li>";
+  }).join("");                                        // disabled 카운팅 유닛(학교 Pi 의 mock)은 버튼도 없다 — 켜면 상대를 끈다(서버도 409)
+  $("#adminfoot").textContent = `코드 ${h.git || "?"} · 가동 ${age(h.uptime_s)} · 위치 파일 ${age(h.positions_age_s)} 전 · 급식 창 ${mm(s.j.lunch.lo)}~${mm(s.j.lunch.hi)}`;
 }
 
-const tile = (v, unit, label, warn) => `<div${warn ? " data-warn" : ""}><b>${v ?? "—"}<i>${unit}</i></b><span>${label}</span></div>`;
+const tile = (v, unit, label, warn) => `<div${warn ? " data-warn" : ""}><b>${esc(v ?? "—")}<i>${esc(unit)}</i></b><span>${label}</span></div>`;   // v 는 프레임 JSON 에서 온다
 
 async function loadLog() {
   const unit = $("#adminunit").value;
@@ -269,7 +274,8 @@ function badge() {
   if (ST.mode === "mjpeg") {
     const rem = st?.until ? Math.max(0, Math.round((new Date(st.until) - Date.now()) / 1000)) : 0;
     b.className = "badge melon"; b.textContent = `실사 · ${mmss(rem)} 남음`;
-    if (st?.until && rem === 0) { setMode("meta"); toast("실사 스트림이 자동 종료됐습니다"); }
+    // 서버가 껐으면(자동 종료·다른 관리자·lockdown) 실사 모드를 떠난다 — 곱게 끝난 multipart 는 <img> error 를 내지 않아 마지막 프레임이 남는다
+    if (rem === 0 || (st && st.state !== "on")) { setMode("meta"); toast("실사 스트림이 종료됐습니다"); }
   } else { b.className = "badge"; b.textContent = `메타 · ${ST.state?.meta?.subscribers ?? "?"}명 구독`; }
 }
 
@@ -315,5 +321,7 @@ export default function (MB) {
     deactivate() { if (ST.mode !== "off") setMode("off", { keepFlag: true }); },   // 화면을 떠나면 클라이언트 쪽 스트림은 모두 끊는다(플래그는 타이머가)
     render(cardId, data) { if (cardId === "svccard") loadServices(); },
   };
+  MB.observe?.("admin");           // 데스크톱 스크롤 스파이에 이 화면의 카드도 넣는다
   MB.poll("admin", true);          // core 의 부팅 폴링은 이미 지나갔다 — 등록 직후 한 번 강제로(poll + slow)
+  if (MB.wanted === "admin") MB.go("admin", { push: false });   // #admin 으로 열었는데 부팅 때는 이 화면이 없어 #wait 로 갔다면 되돌린다
 }

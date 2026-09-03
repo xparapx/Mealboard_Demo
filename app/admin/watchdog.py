@@ -14,6 +14,7 @@ def exposed(status_json, admin_port):
     funnel_on = {hp for hp, on in (st.get("AllowFunnel") or {}).items() if on}
     if not funnel_on:
         return False
+    funnel_ports = {hp.rsplit(":", 1)[-1] for hp in funnel_on}
     needle = f":{admin_port}"
     for hostport, web in (st.get("Web") or {}).items():
         if hostport not in funnel_on:
@@ -24,6 +25,8 @@ def exposed(status_json, admin_port):
                 return True
     # TCP 포워딩(tailscale funnel <port>) 형태도 본다
     for hostport, tcp in (st.get("TCP") or {}).items():
-        if hostport in funnel_on and isinstance(tcp, dict) and str(tcp.get("TCPForward", "")).endswith(needle):
+        # TCP 맵은 포트만 키("10000"), AllowFunnel 은 host:port 키 — 포트로 맞춘다
+        port = str(hostport).rsplit(":", 1)[-1]
+        if port in funnel_ports and isinstance(tcp, dict) and str(tcp.get("TCPForward", "")).endswith(needle):
             return True
     return False

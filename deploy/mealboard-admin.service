@@ -10,7 +10,8 @@ Environment=PYTHONUNBUFFERED=1
 # RUN_DIR=/run/mealboard (메타데이터 소켓, 3c). PrivateTmp 금지 — /tmp/debug_on 이 vision 과의 계약이다
 RuntimeDirectory=mealboard
 RuntimeDirectoryPreserve=yes
-ExecStart=/opt/mealboard/.venv/bin/uvicorn app.admin.server:app --host 127.0.0.1 --port ${ADMIN_PORT} --workers 1
+# --no-access-log: SSH 터널 첫 방문의 ?key= 가 저널(→ 관리 화면 로그 테일)에 남지 않게 (CLAUDE.md §5 인증키 로그 노출 금지)
+ExecStart=/opt/mealboard/.venv/bin/uvicorn app.admin.server:app --host 127.0.0.1 --port ${ADMIN_PORT} --workers 1 --no-access-log
 Restart=on-failure
 RestartSec=3
 

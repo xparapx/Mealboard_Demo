@@ -32,6 +32,46 @@ def test_깨진_플래그는_mtime_10분_규칙으로_본다(tmp_path):
     f.write_text("not json")
     d = flag_read(f)
     assert d["by"] is None and 0 < remaining_s(d) <= stream.MAX_MIN * 60
+    flag_write(f, dt.datetime.now() + dt.timedelta(hours=5), None, 300)     # 손으로 늘린 until 도 mtime+10분을 넘지 못한다
+    assert remaining_s(flag_read(f)) <= stream.MAX_MIN * 60
+
+
+def test_뷰어_자리는_동기적으로_하나만(tmp_path):
+    st = StreamState(flag=tmp_path / "debug_on", port=1, hub=MetaHub(run_dir=tmp_path, port=18107))
+    assert st.claim() and not st.claim() and st.viewers == 1
+    st.release(); st.release()
+    assert st.viewers == 0 and st.claim()
+
+
+def test_스트림_라우트는_전부_async(tmp_path):
+    """루프 타이머(call_later)·Event 를 잡는 엔드포인트가 동기 def 로 돌아가면(스레드풀) 500 — 회귀 방지"""
+    import inspect
+    from app.admin.routers import stream as r
+    assert all(inspect.iscoroutinefunction(route.endpoint) for route in r.router.routes)
+
+
+def test_off_는_릴레이에_바로_전해진다(tmp_path, monkeypatch):
+    monkeypatch.setattr(stream.audit, "log", lambda *a, **k: None)
+
+    async def go():
+        st = StreamState(flag=tmp_path / "debug_on", port=1, hub=MetaHub(run_dir=tmp_path, port=18108))
+        st.turn_on(1, None)
+        assert not st.off.is_set()
+
+        class Stall:                                   # 열려 있지만 아무것도 보내지 않는 upstream
+            async def read(self, n): await asyncio.sleep(3600)
+
+        class W:
+            def close(self): pass
+        st.claim()
+        gen = st.relay(Stall(), W(), None)
+        task = asyncio.ensure_future(gen.__anext__())
+        await asyncio.sleep(0.2)
+        st.turn_off(None)                              # off → 1초 안에 릴레이 종료, 자리 반납
+        with pytest.raises(StopAsyncIteration):
+            await asyncio.wait_for(task, 3)
+        assert st.viewers == 0 and st.off.is_set()
+    asyncio.run(go())
 
 
 def test_응답_머리_파싱():

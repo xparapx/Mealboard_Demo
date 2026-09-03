@@ -52,18 +52,23 @@ def _replace(tmp, dst):
     os.replace(tmp, dst)
 
 
-def write(doc, user, local=None, now=None):
-    """검증 → 백업 → 원자적 쓰기. → (저장된 doc, 백업 파일명 또는 None). 검증 실패는 Invalid(errors)"""
-    local = local or LOCAL
+def write(doc, user, template=None, local=None, now=None):
+    """검증 → 백업 → 원자적 쓰기. → (병합된 doc, 백업 파일명 또는 None). 검증 실패는 Invalid(errors).
+    local 에는 **템플릿과 다른 최상위 키만** 남긴다(+ updated_at/by) — overlay 는 키 단위이므로, 손대지 않은 키(version·floor·note…)는
+    계속 git 템플릿을 따른다. 전체를 쓰면 첫 저장 뒤 템플릿 갱신이 영영 닿지 않고 VERSION 을 올렸을 때 모든 읽기가 죽는다"""
+    template, local = template or TEMPLATE, local or LOCAL
     if not isinstance(doc, dict):
         raise Invalid(["문서가 객체가 아니다"])
-    doc = dict(doc)
+    tpl = json.loads(template.read_text(encoding="utf-8"))
+    doc = {**tpl, **doc}                                   # 빠진 키는 템플릿 값으로 채워 검증한다
     now = now or dt.datetime.now()
     doc["updated_at"] = now.isoformat(timespec="seconds")
     doc["updated_by"] = user
+    doc.pop("version", None); doc["version"] = tpl.get("version")     # version 은 언제나 템플릿의 것
     errors = validate_zones(doc)
     if errors:
         raise Invalid(errors)
+    over = {k: v for k, v in doc.items() if k in ("updated_at", "updated_by") or (k != "version" and tpl.get(k) != v)}
     bak = None
     if local.is_file():
         bak = f"{local.name}.bak-{now.strftime('%Y%m%d-%H%M%S')}"
@@ -71,8 +76,12 @@ def write(doc, user, local=None, now=None):
         for old in backups(local)[KEEP_BAK:]:                 # 최신 KEEP_BAK 개만 — 이 도구가 만든 백업만 지운다
             local.with_name(old).unlink(missing_ok=True)
     tmp = local.with_name(local.name + ".tmp")
-    tmp.write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
-    _replace(tmp, local)
+    tmp.write_text(json.dumps(over, ensure_ascii=False, indent=1), encoding="utf-8")
+    try:
+        _replace(tmp, local)
+    except OSError:
+        tmp.unlink(missing_ok=True)
+        raise
     return doc, bak
 
 

@@ -1,6 +1,7 @@
 """/api/admin/whoami · services · services/{unit}/restart · jobs/{job}/run · logs/{unit} · audit
 신원은 server.py 의 게이트 미들웨어가 request.state.user 에 넣는다 — 여기 오는 요청은 이미 관리자다."""
 import datetime as dt
+import re
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
@@ -12,6 +13,7 @@ from ..guard import needs_force
 
 router = APIRouter(prefix="/api/admin")
 LUNCH_LO, LUNCH_HI = bounds("lunch")            # 가드는 언제나 급식 창(스테이징의 all 창과 무관)
+KEY_RE = re.compile(r"([?&]key=)[^ &\"']+")
 
 
 class Restart(BaseModel):
@@ -36,6 +38,9 @@ def restart(service: str, body: Restart, request: Request):
     if service not in sysctl.RESTARTABLE:
         raise HTTPException(404, "재시작 대상이 아니다")
     now = dt.datetime.now()
+    if service in ("mock", "vision") and sysctl.unit_state(f"mealboard-{service}")["enabled"] == "disabled":
+        # 학교 Pi 의 mock(또는 홈 Pi 의 vision)은 disabled 다 — restart 는 그래도 켜고, Conflicts= 가 살아 있는 쪽을 끈다. force 로도 막는다
+        raise HTTPException(409, {"reason": "disabled", "message": f"{service} 는 이 Pi 에서 꺼 둔 유닛이다 — 켜면 상대 카운팅 유닛이 멈춘다"})
     if needs_force(f"mealboard-{service}", now, LUNCH_LO, LUNCH_HI) and not body.force:
         raise HTTPException(409, {"reason": "lunch_guard", "message": "급식 시간에는 카운팅이 끊긴다 — force 로만 재시작한다"})
     rc, out, err = sysctl.restart(service)
@@ -61,7 +66,8 @@ def logs(unit: str, lines: int = Query(50, ge=1, le=sysctl.MAX_LINES)):
     if unit not in sysctl.LOG_UNITS:
         raise HTTPException(404, "로그 대상이 아니다")
     rc, text = sysctl.journal(unit, lines)
-    return {"state": "ok" if rc == 0 else "no_data", "unit": unit, "lines": text.splitlines()[-lines:], "reason": None if rc == 0 else text}
+    out = [KEY_RE.sub(r"\1***", ln) for ln in text.splitlines()[-lines:]]     # 혹시 남은 ?key= 는 화면에 내지 않는다(2중 안전장치)
+    return {"state": "ok" if rc == 0 else "no_data", "unit": unit, "lines": out, "reason": None if rc == 0 else text}
 
 
 @router.get("/audit")

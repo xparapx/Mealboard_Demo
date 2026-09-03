@@ -70,22 +70,27 @@ def create_app():
     @app.middleware("http")
     async def gate(request: Request, call_next):
         path = request.url.path
-        if path.startswith(GATED):
+        gated = path.startswith(GATED)
+        ident = None
+        if gated or (path == "/" and "key" in request.query_params):
             ident, why = identify(request.headers, request.cookies, request.query_params, USERS, ADMIN_LOCAL_KEY, request.app.state.lockdown)
+        if gated:
             if ident is None:
                 return JSONResponse({"state": "forbidden", "reason": why}, status_code=403)
-            if request.method in ("POST", "PUT", "DELETE", "PATCH"):     # CSRF: JSON 본문만, 교차 사이트 거부, CORS 헤더 없음
+            # CSRF: tailnet 경로는 기기 단위 신원이라 다른 사이트의 <img>·EventSource 도 같은 신원으로 온다 — GET 포함 모든 교차 사이트 요청 거부
+            sfs = request.headers.get("sec-fetch-site")
+            if sfs and sfs not in ("same-origin", "none"):
+                return JSONResponse({"state": "forbidden", "reason": "cross_site"}, status_code=403)
+            if request.method in ("POST", "PUT", "DELETE", "PATCH"):     # 변경 요청은 JSON 본문만, CORS 헤더 없음
                 if not request.headers.get("content-type", "").startswith("application/json"):
                     return JSONResponse({"state": "forbidden", "reason": "json_only"}, status_code=415)
-                sfs = request.headers.get("sec-fetch-site")
-                if sfs and sfs not in ("same-origin", "none"):
-                    return JSONResponse({"state": "forbidden", "reason": "cross_site"}, status_code=403)
             request.state.user = ident
         res = await call_next(request)
         if path in REVALIDATE or path.startswith(REVALIDATE_PREFIX) or path.startswith("/admin-ui/"):
             res.headers["Cache-Control"] = "no-cache"
-        if path == "/api/admin/whoami" and "key" in request.query_params and getattr(request.state, "user", {}).get("via") == "local":
-            # SSH 터널 경로: 첫 방문의 ?key= 를 HttpOnly 쿠키로 옮겨 이후 요청·화면 스크립트가 키를 다시 들고 다니지 않게
+        if "key" in request.query_params and ident is not None and ident.get("via") == "local":
+            # SSH 터널 경로: 첫 방문(`/?key=…` 또는 whoami?key=)의 키를 HttpOnly 쿠키로 옮겨 이후 요청·화면 스크립트가 키를 다시 들고 다니지 않게.
+            # 유닛은 --no-access-log — 이 URL 은 저널에 남지 않는다
             res.set_cookie(COOKIE, request.query_params["key"], httponly=True, samesite="strict", max_age=12 * 3600)
         return res
 

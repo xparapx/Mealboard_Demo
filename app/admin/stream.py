@@ -38,18 +38,20 @@ def clamp_minutes(m):
     return min(max(m, 1), MAX_MIN)
 
 
-def flag_read(path=DEBUG_FLAG, now=None):
-    """플래그 → {'until','by','minutes'} 또는 None. 내용이 깨졌으면 mtime+MAX_MIN 분을 until 로 본다(vision 의 규칙과 같다)"""
+def flag_read(path=DEBUG_FLAG):
+    """플래그 → {'until','by','minutes'} 또는 None. until 은 언제나 mtime+MAX_MIN 분을 넘지 못한다(vision 의 mtime 규칙과 같은 상한 —
+    손으로 고친 파일이나 시계가 뒤로 간 경우에도 10분). 내용이 깨졌으면 그 상한이 곧 until 이다"""
     try:
         st = path.stat()
     except OSError:
         return None
+    cap = dt.datetime.fromtimestamp(st.st_mtime) + dt.timedelta(minutes=MAX_MIN)
     try:
         d = json.loads(path.read_text(encoding="utf-8"))
-        until = dt.datetime.fromisoformat(d["until"])
+        until = min(dt.datetime.fromisoformat(d["until"]), cap)
         return {"until": until, "by": d.get("by"), "minutes": d.get("minutes")}
     except (OSError, ValueError, KeyError, TypeError):
-        return {"until": dt.datetime.fromtimestamp(st.st_mtime) + dt.timedelta(minutes=MAX_MIN), "by": None, "minutes": None}
+        return {"until": cap, "by": None, "minutes": None}
 
 
 def flag_write(path, until, by, minutes):
@@ -97,6 +99,7 @@ class MetaHub(asyncio.DatagramProtocol):
         self.unix = hasattr(socket, "AF_UNIX")
         self.frames = 0
         self.last = None                        # 마지막 데이터그램 시각(monotonic)
+        self._lock = None                       # bind 직렬화 — 루프가 있을 때 만든다
 
     # -- DatagramProtocol
     def connection_made(self, transport):
@@ -128,8 +131,11 @@ class MetaHub(asyncio.DatagramProtocol):
     async def subscribe(self):
         if len(self.subs) >= MAX_SUBS:
             raise HubFull()
-        if self.transport is None:
-            await self._bind()
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        async with self._lock:                  # 동시에 온 두 구독이 둘 다 bind 하지 않게(두 번째는 첫 소켓을 unlink 해 버린다)
+            if self.transport is None:
+                await self._bind()
         q = asyncio.Queue(QUEUE_N)
         self.subs.add(q)
         return q
@@ -195,6 +201,7 @@ class StreamState:
         self.hub = hub or MetaHub()
         self.timer = None
         self.viewers = 0
+        self.off = asyncio.Event()              # off/autooff/lockdown → 릴레이가 다음 1초 안에 끊는다(파일을 폴링하지 않고)
 
     def current(self):
         return flag_read(self.flag)
@@ -225,17 +232,27 @@ class StreamState:
         m = clamp_minutes(minutes)
         until = dt.datetime.now() + dt.timedelta(minutes=m)
         flag_write(self.flag, until, (user or {}).get("user"), m)
+        self.off.clear()
         self._arm(m * 60)
         audit.log(user, "stream.on", "mjpeg", f"{m}분 · until {until.isoformat(timespec='seconds')}", True, ip)
         return self.state()
 
     def turn_off(self, user, ip=None, reason="off"):
-        was = self.is_on()
         self._disarm()
-        removed = flag_remove(self.flag)
-        if was or removed:
+        self.off.set()
+        if flag_remove(self.flag):
             audit.log(user, "stream." + reason, "mjpeg", f"viewers={self.viewers}", True, ip)
         return self.state()
+
+    # -- MJPEG 뷰어 자리(1명). claim 은 await 전에 동기적으로 — 요청 두 개가 연결 대기 사이에 같이 통과하지 않는다
+    def claim(self):
+        if self.viewers >= 1:
+            return False
+        self.viewers += 1
+        return True
+
+    def release(self):
+        self.viewers = max(0, self.viewers - 1)
 
     def _arm(self, seconds):
         self._disarm()
@@ -248,6 +265,7 @@ class StreamState:
 
     def _auto_off(self):
         self.timer = None
+        self.off.set()
         if flag_remove(self.flag):
             audit.log(None, "stream.autooff", "mjpeg", f"viewers={self.viewers}", True)
 
@@ -271,22 +289,26 @@ class StreamState:
         return status, headers, reader, writer
 
     async def relay(self, reader, writer, user, ip=None):
-        """upstream 바이트를 그대로 넘긴다. 플래그가 사라지면(off·autooff) 1초 안에 끊는다. 아무것도 남기지 않는다"""
-        self.viewers += 1
+        """upstream 바이트를 그대로 넘긴다. 자리(claim)는 라우터가 미리 잡았고 여기서 돌려준다. off·autooff·lockdown 이면 1초 안에 끊는다 —
+        upstream 이 멈춘 채 열려 있어도(read 가 돌아오지 않아도) 마찬가지(wait_for 1초). 아무것도 남기지 않는다"""
         t0, nbytes, check = time.monotonic(), 0, time.monotonic()
         audit.log(user, "stream.view", "mjpeg", "open", True, ip)
         try:
-            while True:
-                chunk = await reader.read(65536)
-                if not chunk:
+            while not self.off.is_set():
+                try:
+                    chunk = await asyncio.wait_for(reader.read(65536), 1.0)
+                except asyncio.TimeoutError:
+                    chunk = None                                     # 조용한 upstream — 플래그만 다시 본다
+                if chunk == b"":
                     break
-                nbytes += len(chunk)
-                yield chunk
+                if chunk:
+                    nbytes += len(chunk)
+                    yield chunk
                 if time.monotonic() - check > 1:
                     check = time.monotonic()
                     if not self.is_on():
                         break
         finally:
-            self.viewers -= 1
+            self.release()
             writer.close()
             audit.log(user, "stream.view", "mjpeg", f"close · {round(time.monotonic() - t0)}초 · {nbytes // 1024}KB", True, ip)

@@ -172,9 +172,13 @@ if ("onscrollend" in window) addEventListener("scrollend", landed);
 else { let t; addEventListener("scroll", () => { clearTimeout(t); t = setTimeout(landed, 120); }, { passive: true }); }
 
 /* 데스크톱: 스크롤 스파이 — 화면의 카드(숨은 것 제외) 중 가운데 띠와 가장 많이 겹치는 화면이 현재 */
+let spyIO = null;
+export function observe(name) {                         // 부팅 뒤에 등록된 화면(관리)의 카드도 스파이에 넣는다
+  if (spyIO) [...view(name).children].forEach(c => c.id && spyIO.observe(c));
+}
 function spy() {
   const ratio = {};                                    // 카드 → 겹침 비율. 세 행을 차지하는 실시간 카드가 늘 이기지 않게 비율로 견준다
-  const io = new IntersectionObserver(es => {
+  const io = spyIO = new IntersectionObserver(es => {
     es.forEach(e => { ratio[e.target.id] = e.isIntersecting && !e.target.hidden ? e.intersectionRatio : 0; });
     if (Date.now() < spyLock) return;
     const byView = n => Math.max(0, ...[...view(n).children].map(c => ratio[c.id] || 0));
@@ -187,15 +191,16 @@ function spy() {
 /* ---------------- 부팅 ---------------- */
 $$("[data-go]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); go(a.dataset.go); }));
 addEventListener("hashchange", () => go(location.hash.slice(1), { push: false }));
-addEventListener("keydown", e => {                     // 데스크톱: 1~5 로 이동 (입력란 안에서는 무시)
+addEventListener("keydown", e => {                     // 데스크톱: 1~9 로 이동 — ORDER 길이만큼(관리 화면이 붙으면 6) (입력란 안에서는 무시)
   if (!desktop() || e.altKey || e.ctrlKey || e.metaKey || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
-  const i = "12345".indexOf(e.key); if (i >= 0) go(ORDER[i]);
+  const i = /^[1-9]$/.test(e.key) ? Number(e.key) - 1 : -1; if (i >= 0 && i < ORDER.length) go(ORDER[i]);
 });
 DESK_MQ.addEventListener("change", () => location.reload());   // 페이저 ↔ 보드는 구조가 다르다. 경계를 넘는 일은 드물다 — 새로 그린다
 addEventListener("resize", () => { if (active && !desktop()) scrollTo({ left: view(active).offsetLeft, behavior: "auto" }); mark(active || "wait", false); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden) tick(); });
 
-const start = ORDER.includes(location.hash.slice(1)) ? location.hash.slice(1) : "wait";
+const wanted = location.hash.slice(1);                 // 부팅 때 없는 화면(관리)을 가리켰다면 그 화면이 등록될 때 되돌아간다(MB.wanted)
+const start = ORDER.includes(wanted) ? wanted : "wait";
 ORDER.forEach(n => SCREENS[n].mount?.());              // 캔버스 관찰 등 한 번만 하는 준비
 if (desktop()) {
   active = start; view(start).setAttribute("data-active", ""); mark(start, false);
@@ -209,11 +214,12 @@ if (desktop()) {
 setInterval(tick, 30000);
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
 /* 관리 origin 에서만 관리 뷰를 붙인다 — 호스트명이 아니라 서버가 답하는지로 판단. 공개 origin 에서는 세션당 404 한 번 (PLAN §3.1, Phase 3) */
+window.MB = { S, go, poll, observe, ORDER, NAMES, screens: SCREENS, active: () => active, wanted };   // 콘솔·테스트·관리 모듈의 손잡이
 try {
-  if (sessionStorage.getItem("mb_admin_probe") !== "no")
+  // SSH 터널은 `/?key=…` 로 들어온다(서버가 그 응답에 쿠키를 준다) — 그때는 세션의 '없음' 기억을 무시하고 다시 묻는다
+  if (sessionStorage.getItem("mb_admin_probe") !== "no" || location.search.includes("key="))
     fetch("/api/admin/whoami", { cache: "no-store" }).then(r => {
-      if (r.ok) import("/admin-ui/admin.js").then(m => m.default?.(window.MB)).catch(() => {});
+      if (r.ok) { sessionStorage.removeItem("mb_admin_probe"); import("/admin-ui/admin.js").then(m => m.default?.(window.MB)).catch(() => {}); }
       else sessionStorage.setItem("mb_admin_probe", "no");
     }).catch(() => {});
 } catch {}
-window.MB = { S, go, poll, ORDER, NAMES, screens: SCREENS, active: () => active };   // 콘솔·테스트에서 들여다보기 위한 손잡이

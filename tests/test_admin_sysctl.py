@@ -55,8 +55,9 @@ def test_워치독은_관리_포트가_funnel_에_물릴_때만():
     assert watchdog.exposed(exposed, 8101)
     assert not watchdog.exposed(safe, 8101)
     assert not watchdog.exposed("{broken", 8101) and not watchdog.exposed({}, 8101)
-    tcp = {"AllowFunnel": {"h:443": True}, "TCP": {"h:443": {"TCPForward": "127.0.0.1:8101"}}}
+    tcp = {"AllowFunnel": {"h:10000": True}, "TCP": {"10000": {"TCPForward": "127.0.0.1:8101"}}}   # 실제 JSON: TCP 는 포트만 키
     assert watchdog.exposed(tcp, 8101)
+    assert not watchdog.exposed({"AllowFunnel": {"h:443": True}, "TCP": {"10000": {"TCPForward": "127.0.0.1:8101"}}}, 8101)
 
 
 def test_sudoers_본문_생성기는_같은_목록에서_나온다():

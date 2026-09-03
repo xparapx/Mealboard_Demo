@@ -214,9 +214,11 @@ async function computeH() {
   const pairs = Z.calib.map(p => ({ img: p.img, floor: [r3(clamp01(p.m[0] / W)), r3(clamp01(p.m[1] / L))] }));
   const r = await D.api("/zones/homography", { pairs });
   if (!r.ok) { D.toast(`계산 실패: ${(r.j?.detail?.errors || []).join(" · ") || r.status}`, true); return; }
-  Z.hres = r.j; Z.doc.image_to_floor = r.j.image_to_floor; Z.doc.calib_points = pairs;
+  Z.hres = r.j;
+  if (!r.j.ok) { fields(); D.toast(`오차 ${r.j.reproj_err} ≥ ${r.j.tol} — 점을 다시 찍으세요 (문서에 넣지 않음)`, true); return; }   // 저장하면 422 가 될 H 는 넣지 않는다
+  Z.doc.image_to_floor = r.j.image_to_floor; Z.doc.calib_points = pairs;
   dirty(); fields(); draw();
-  D.toast(r.j.ok ? `호모그래피 계산 — 재투영 오차 ${r.j.reproj_err}` : `오차 ${r.j.reproj_err} ≥ ${r.j.tol} — 점을 다시 찍으세요`, !r.ok);
+  D.toast(`호모그래피 계산 — 재투영 오차 ${r.j.reproj_err}`);
 }
 function clearH() { Z.doc.image_to_floor = null; Z.doc.calib_points = null; Z.hres = null; dirty(); fields(); draw(); }
 

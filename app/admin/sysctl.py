@@ -55,13 +55,14 @@ def start_job(job):
 
 def unit_state(unit):
     """systemctl show 로 상태 한 줄. 없는 기기에서는 'unknown'"""
-    rc, out, _ = run(("systemctl", "show", unit, "--property=ActiveState,SubState,ActiveEnterTimestamp,NRestarts", "--no-pager"))
+    rc, out, _ = run(("systemctl", "show", unit, "--property=ActiveState,SubState,ActiveEnterTimestamp,NRestarts,UnitFileState", "--no-pager"))
     if rc != 0:
-        return {"unit": unit, "active": "unknown", "sub": None, "since": None, "restarts": None}
+        return {"unit": unit, "active": "unknown", "sub": None, "since": None, "restarts": None, "enabled": None}
     kv = dict(line.split("=", 1) for line in out.splitlines() if "=" in line)
     return {"unit": unit, "active": kv.get("ActiveState", "unknown"), "sub": kv.get("SubState"),
             "since": kv.get("ActiveEnterTimestamp") or None,
-            "restarts": int(kv["NRestarts"]) if kv.get("NRestarts", "").isdigit() else None}
+            "restarts": int(kv["NRestarts"]) if kv.get("NRestarts", "").isdigit() else None,
+            "enabled": kv.get("UnitFileState") or None}          # disabled 인 카운팅 유닛은 재시작 대상이 아니다(mock↔vision Conflicts)
 
 
 def journal(unit, lines=50):
