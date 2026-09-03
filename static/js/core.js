@@ -3,9 +3,9 @@
    이 파일이 순서대로 등록해 부팅한다 — 순환 import 이지만 서로를 함수 안에서만 부르므로 안전하다(모듈 평가 시점엔 정의만.
    화면 모듈의 최상위에서 core 의 $ 등을 부르면 TDZ 오류 — 그런 준비는 mount() 에 둔다).
 
-   화면 = 해시(#wait #room #week #today #news). 모바일(<900)은 문서 자체가 가로 스냅 페이저(이웃 화면을 스와이프),
-   데스크톱(≥900)은 다섯 화면을 한 보드에 펼치고 좌측 레일이 그 카드로 스크롤한다.
-   폴링은 보이는 화면만: 모바일은 활성 화면 하나, 데스크톱은 전부. 탭이 숨겨지면(document.hidden) 쉰다.
+   화면 = 해시(#wait #room #week #today #news). 한 번에 한 화면만 보인다(09-03 사용자 결정 — 스와이프 페이저·스크롤 스파이 폐기):
+   모바일(<900)은 하단 dock, 데스크톱(≥900)은 좌측 레일이 곧 전환이고, 세로 스크롤은 그 화면 안만 오간다.
+   데스크톱은 그 화면의 카드를 12컬럼 그리드(1920×1080 기준)에 펼친다. 폴링은 활성 화면 하나만. 탭이 숨겨지면(document.hidden) 쉰다.
    두 박자: poll(라이브, every) 과 slow(집계에서 오는 인사이트, SLOW_EVERY) — 둘 다 core 가 시각으로 가른다 */
 import * as wait from "./wait.js";
 import * as room from "./room.js";
@@ -81,13 +81,10 @@ const ORDER = ["wait", "room", "week", "today", "news"];
 const NAMES = { wait: "대기시간", room: "실시간", week: "주간식단", today: "오늘급식", news: "이슈피드" };
 const SCREENS = { wait: wait.screen, room: room.screen, week: week.screen, today: today.screen, news: news.screen };
 const lastPoll = {}, lastSlow = {};                    // name → 마지막 폴링 시각 (라이브 / 느린 인사이트)
-const scrollYs = {};                                   // 모바일: 화면별 세로 스크롤 위치
+const scrollYs = {};                                   // 화면별 세로 스크롤 위치 — 돌아오면 그 자리
 let active = null;
-let spyLock = 0;                                       // 레일·키보드로 스크롤하는 동안 스파이가 끼어들지 않게
 
 const view = name => document.getElementById(name);
-const pageW = () => view("wait").offsetWidth || innerWidth;   // 페이저 한 칸 = 화면 폭(뷰 요소가 정한다 — innerWidth 는 환경마다 다르다)
-const firstCard = name => view(name).querySelector(":scope > :not([hidden])") || view(name).firstElementChild;   // 숨은 카드(주간식단·이슈)는 건너뛴다
 
 async function poll(name, force) {
   const s = SCREENS[name];
@@ -104,9 +101,9 @@ async function poll(name, force) {
   catch (e) { console.error(name, e); s.fail?.(e); }   // 서버에 닿지 못하면 옛 값을 '지금'처럼 두지 않는다 — 화면이 정한다
 }
 
-function tick() {                                      // 30초마다. 각 화면의 every 에 못 미치면 건너뛴다
-  if (document.hidden) return;
-  (desktop() ? ORDER : [active]).forEach(n => n && poll(n, false));
+function tick() {                                      // 30초마다 활성 화면만. 화면의 every 에 못 미치면 건너뛴다
+  if (document.hidden || !active) return;
+  poll(active, false);
 }
 
 /* dock·레일의 현재 표시 + 문서 제목 + 해시 */
@@ -127,66 +124,22 @@ function enter(sec) {
   cards.forEach(c => { c.classList.add("enter"); c.addEventListener("animationend", () => c.classList.remove("enter"), { once: true }); });
 }
 
-/* 데스크톱: 그 화면의 첫 카드로 부드럽게 스크롤 + 잠깐 링. 스파이는 도착할 때까지 잠근다 */
-function scrollToCard(name) {
-  spyLock = Date.now() + 900;
-  const card = firstCard(name);
-  card.scrollIntoView({ behavior: REDUCE ? "auto" : "smooth", block: "start" });
-  card.classList.add("ring"); setTimeout(() => card.classList.remove("ring"), 900);
-}
-
-/* 화면으로 간다. push=false 는 뒤로가기·스와이프·스파이처럼 이미 일어난 이동을 따라가는 경우 */
-export function go(name, { push = true, swipe = false } = {}) {
+/* 화면으로 간다 — 즉시. 이전 화면은 숨기고(deactivate) 새 화면만 보인다. push=false 는 뒤로가기·해시처럼 이미 일어난 이동 */
+export function go(name, { push = true } = {}) {
   if (!ORDER.includes(name)) name = "wait";
   const prev = active;
-  if (desktop()) {                                     // 보드: 모든 화면이 보이므로 activate/poll 은 부팅 때 한 번. 여기선 표시와 스크롤만
-    if (prev !== name) {
-      active = name;
-      const change = () => mark(name, push);
-      if (!REDUCE && document.startViewTransition) document.startViewTransition(change); else change();
-    }
-    if (push) scrollToCard(name);
-    return;
-  }
-  if (prev === name) return;
+  if (prev === name) { scrollTo({ top: 0, behavior: REDUCE ? "auto" : "smooth" }); mark(name, push); return; }   // 같은 탭 다시 누르면 맨 위로
   if (prev) { scrollYs[prev] = scrollY; SCREENS[prev].deactivate?.(); view(prev).removeAttribute("data-active"); }
   active = name;
   view(name).setAttribute("data-active", "");
   mark(name, push);
-  const top = scrollYs[name] || 0;
-  if (swipe) scrollTo({ top, behavior: "auto" });                                   // 가로는 이미 왔다 — 세로만 그 화면의 자리로
-  else scrollTo({ left: view(name).offsetLeft, top, behavior: REDUCE ? "auto" : "smooth" });
+  scrollTo({ top: scrollYs[name] || 0, behavior: "auto" });
   enter(view(name));
   const first = !(name in lastPoll);
   SCREENS[name].activate?.({ first });
   poll(name, first);
 }
-
-/* 모바일: 스와이프가 끝나면 어느 화면에 멈췄는지 해시를 맞춘다 (scrollend, 없으면 120ms 디바운스) */
-function landed() {
-  if (desktop()) return;
-  const n = ORDER[Math.round(scrollX / pageW())];
-  if (n && n !== active) go(n, { push: false, swipe: true });
-}
-if ("onscrollend" in window) addEventListener("scrollend", landed);
-else { let t; addEventListener("scroll", () => { clearTimeout(t); t = setTimeout(landed, 120); }, { passive: true }); }
-
-/* 데스크톱: 스크롤 스파이 — 화면의 카드(숨은 것 제외) 중 가운데 띠와 가장 많이 겹치는 화면이 현재 */
-let spyIO = null;
-export function observe(name) {                         // 부팅 뒤에 등록된 화면(관리)의 카드도 스파이에 넣는다
-  if (spyIO) [...view(name).children].forEach(c => c.id && spyIO.observe(c));
-}
-function spy() {
-  const ratio = {};                                    // 카드 → 겹침 비율. 세 행을 차지하는 실시간 카드가 늘 이기지 않게 비율로 견준다
-  const io = spyIO = new IntersectionObserver(es => {
-    es.forEach(e => { ratio[e.target.id] = e.isIntersecting && !e.target.hidden ? e.intersectionRatio : 0; });
-    if (Date.now() < spyLock) return;
-    const byView = n => Math.max(0, ...[...view(n).children].map(c => ratio[c.id] || 0));
-    const best = ORDER.filter(n => byView(n) > 0).sort((a, b) => byView(b) - byView(a) || ORDER.indexOf(a) - ORDER.indexOf(b))[0];
-    if (best && best !== active) { active = best; mark(best, false); }
-  }, { rootMargin: "-10% 0px -60% 0px", threshold: [0, .1, .25, .5, .75, 1] });
-  ORDER.forEach(n => [...view(n).children].forEach(c => c.id && io.observe(c)));
-}
+export function observe() {}                           // 호환용 — 스크롤 스파이가 없어졌다(관리 모듈이 등록 뒤 부른다)
 
 /* ---------------- 부팅 ---------------- */
 $$("[data-go]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); go(a.dataset.go); }));
@@ -195,22 +148,13 @@ addEventListener("keydown", e => {                     // 데스크톱: 1~9 로 
   if (!desktop() || e.altKey || e.ctrlKey || e.metaKey || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
   const i = /^[1-9]$/.test(e.key) ? Number(e.key) - 1 : -1; if (i >= 0 && i < ORDER.length) go(ORDER[i]);
 });
-DESK_MQ.addEventListener("change", () => location.reload());   // 페이저 ↔ 보드는 구조가 다르다. 경계를 넘는 일은 드물다 — 새로 그린다
-addEventListener("resize", () => { if (active && !desktop()) scrollTo({ left: view(active).offsetLeft, behavior: "auto" }); mark(active || "wait", false); });
+addEventListener("resize", () => mark(active || "wait", false));   // dock 인디케이터 자리
 document.addEventListener("visibilitychange", () => { if (!document.hidden) tick(); });
 
 const wanted = location.hash.slice(1);                 // 부팅 때 없는 화면(관리)을 가리켰다면 그 화면이 등록될 때 되돌아간다(MB.wanted)
 const start = ORDER.includes(wanted) ? wanted : "wait";
 ORDER.forEach(n => SCREENS[n].mount?.());              // 캔버스 관찰 등 한 번만 하는 준비
-if (desktop()) {
-  active = start; view(start).setAttribute("data-active", ""); mark(start, false);
-  ORDER.forEach(n => { SCREENS[n].activate?.({ first: true }); poll(n, true); });
-  spy();
-  if (start !== "wait") requestAnimationFrame(() => firstCard(start).scrollIntoView({ block: "start" }));
-} else {
-  go(start, { push: false });
-  if (start !== "wait") requestAnimationFrame(() => scrollTo({ left: view(start).offsetLeft, behavior: "auto" }));
-}
+go(start, { push: false });
 setInterval(tick, 30000);
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
 /* 관리 origin 에서만 관리 뷰를 붙인다 — 호스트명이 아니라 서버가 답하는지로 판단. 공개 origin 에서는 세션당 404 한 번 (PLAN §3.1, Phase 3) */

@@ -25,9 +25,9 @@ a { color: var(--teal-ink); text-decoration: none; }
 a.u { border-bottom: 1px solid rgba(12,109,106,.35); }
 [hidden] { display: none !important; }
 
-/* ---- 5화면 골격 (PLAN §3.3) ----
-   모바일(<900): 문서 자체가 가로 스냅 페이저. 화면 다섯 장이 한 줄로 놓이고, 활성 화면만 문서 높이를 정한다.
-   비활성 화면은 sticky + 뷰포트 높이로 잘라 두어 스와이프할 때 이웃 화면의 상단이 보인다. 세로 스크롤은 문서 스크롤 그대로(URL 바 접힘 유지) */
+/* ---- 화면 골격 (09-03 개정) ----
+   한 번에 한 화면만 보인다([data-active]). 모바일(<900): 하단 dock 탭이 전환, 카드는 세로 한 줄. 데스크톱(≥900): 좌측 레일이 전환,
+   그 화면의 카드를 12컬럼 그리드(1920×1080 기준 max 1800px)에 펼친다 — 자리는 screens.css 끝의 미디어 쿼리 */
 .dock a, .rail a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
                    font-size: 11px; font-weight: 700; color: var(--ink3); letter-spacing: -.01em; }
 .dock a svg, .rail a svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.8;
@@ -37,35 +37,28 @@ a.u { border-bottom: 1px solid rgba(12,109,106,.35); }
 .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(5, 1fr);
         height: calc(var(--dock-h) + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);
         background: var(--surface); box-shadow: 0 -1px 0 var(--hair), 0 -8px 24px rgba(51,49,45,.06); }
-.dock a { position: relative; z-index: 1; height: var(--dock-h); }
+.dock a { position: relative; z-index: 1; height: var(--dock-h); -webkit-tap-highlight-color: transparent; }
 .dock .mark { position: absolute; top: 6px; left: 6px; width: 0; height: calc(var(--dock-h) - 12px); border-radius: 14px;
               background: var(--teal-tint); transition: left var(--t-view) var(--ease), width var(--t-view) var(--ease); }
 .rail { display: none; }
 .views { margin: 0; padding: 0; }
-.view { padding: 18px 16px 28px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.view { display: none; }
+.view[data-active] { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 18px 16px 28px; }
 .view > * { width: 100%; max-width: 390px; }
-.card, .waitcard { scroll-margin-top: 24px; }
 .enter { animation: enter var(--t-view) var(--ease); }
 @keyframes enter { from { opacity: 0; transform: translateY(6px); } }
-.ring { box-shadow: 0 0 0 3px var(--teal), var(--e1) !important; }
 @media (max-width: 899px) {
-  html { scroll-snap-type: x mandatory; overflow-x: auto; scrollbar-width: none; }
   body { padding-bottom: calc(var(--dock-h) + env(safe-area-inset-bottom)); }
-  .views { display: flex; width: max-content; }
-  .view { width: 100vw; flex: none; scroll-snap-align: start; scroll-snap-stop: always; }
-  .view:not([data-active]) { position: sticky; top: 0; height: calc(100dvh - var(--dock-h) - env(safe-area-inset-bottom)); overflow: hidden; }
 }
-/* 데스크톱(≥900): 다섯 화면을 12컬럼 보드 한 장에 (PLAN §3.4). 카드 자리는 screens.css 끝의 미디어 쿼리가 정한다 */
 @media (min-width: 900px) {
   .dock { display: none; }
   .rail { position: fixed; left: 14px; top: 40px; z-index: 20; display: flex; flex-direction: column; gap: 6px; width: 56px; }
   .rail a { height: 54px; border-radius: 14px; font-size: 10px; gap: 2px; }
-  .rail a[aria-current="page"] { background: var(--surface); box-shadow: var(--e1); view-transition-name: rail-cur; }
-  .views { max-width: 1120px; margin: 0 auto; padding: 40px 16px 56px 88px; display: grid;
-           grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; align-items: stretch;
-           grid-auto-flow: row dense; }          /* 숨은 카드(주간식단·이슈)가 남긴 자리는 다음 카드가 채운다 */
-  .view { display: contents; }
-  .view > * { max-width: none; }                /* 모바일의 390px 상한은 여기서 푼다 — display:contents 라도 선택자는 그대로 맞는다 */
+  .rail a[aria-current="page"] { background: var(--surface); box-shadow: var(--e1); }
+  .views { max-width: 1800px; margin: 0 auto; padding: 32px 32px 48px 104px; }
+  .view[data-active] { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; align-items: stretch;
+                       grid-auto-flow: row dense; padding: 0; }        /* 숨은 카드가 남긴 자리는 다음 카드가 채운다 */
+  .view > * { max-width: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }

@@ -8,7 +8,8 @@ User=__USER__
 WorkingDirectory=/opt/mealboard
 Environment=PYTHONUNBUFFERED=1
 # --meta: 합성 프레임 메타데이터를 관리 앱 소켓(RUN_DIR/meta.sock)에 던진다 — 구독자가 없으면 아무 데도 가지 않는다
-ExecStart=/opt/mealboard/.venv/bin/python -m jobs.mock_feed --speed 30 --meta
+# --speed 2: 실제 5초마다 한 표본(시뮬레이션 10초) — 실측 카메라 전까지의 더미 주기(09-03 사용자 결정). 170분 사이클이 실제 85분
+ExecStart=/opt/mealboard/.venv/bin/python -m jobs.mock_feed --speed 2 --meta
 Restart=on-failure
 
 [Install]

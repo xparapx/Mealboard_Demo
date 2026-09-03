@@ -80,15 +80,6 @@
 .sparkaxis { display: flex; justify-content: space-between; font-size: 10px; color: var(--ink3); margin-top: 4px; }
 
 /* 데스크톱 보드 — 인사이트 카드 자리(5행부터 자동 배치). 폭만 정한다 */
-@media (min-width: 900px) {
-  #heatcard { grid-column: 1 / 8; }
-  #goldencard { grid-column: 8 / 13; }
-  #forecastcard { grid-column: 1 / 5; }
-  #bottlecard { grid-column: 5 / 9; }
-  #qualitycard { grid-column: 9 / 13; }
-  #zonecard { grid-column: 1 / 6; }
-  #reportcard { grid-column: 6 / 13; }
-  #nutricard { grid-column: 1 / 7; }
-  #topcard { grid-column: 7 / 13; }
+/* 데스크톱 자리는 screens.css 끝의 미디어 쿼리 한 곳에서 정한다(09-03) — 이 파일이 뒤에 읽히므로 여기서 다시 정하면 그것이 이긴다 */
   #zoneplan { aspect-ratio: 318 / 400; }
 }
