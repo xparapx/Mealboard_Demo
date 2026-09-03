@@ -152,6 +152,9 @@ Mealboard_Demo/
 - `mealboard-vision` 재시작: 점심 운영 시간(11:30~14:00)에는 카운팅 공백이 생긴다 — 시간을 확인하고 물을 것
 - 카메라는 **배타적 자원**: calibrate.py·디버그 도구를 띄우려면 vision 서비스를 먼저 내려야 한다 (Plant 프로젝트 실증)
 - systemd 유닛 수정, cloudflared 설정 변경, apt 설치, 타임존 변경(Plant 타이머 시각에 영향)
+- **커널이 올라가는 `apt full-upgrade` 뒤에는 Hailo PCIe 드라이버를 확인**(09-04 실증): `h10-hailort-pcie-driver` 는 dkms 소스인데 dkms 없이 깔려 있어 새 커널(6.18.39)에서
+  모듈이 사라졌다 → `apt install dkms` 후 `apt install --reinstall h10-hailort-pcie-driver` 로 빌드·등록(`/usr/sbin/dkms status` 에 `hailo1x_pci/5.1.1 … installed`). 이제부터는 커널이 바뀌어도 dkms 가 자동 빌드한다.
+  확인 명령: `lsmod | grep hailo` · `hailortcli fw-control identify`
 - sudoers 드롭인(`/etc/sudoers.d/mealboard`) 설치·변경, `tailscale serve` 설정 변경. **`tailscale serve reset`·`funnel reset` 은 절대 실행하지 않는다**(공개 Funnel 443 까지 함께 지워진다)
 
 **금지 (사용자 명시 지시 없이는 절대 불가)**
