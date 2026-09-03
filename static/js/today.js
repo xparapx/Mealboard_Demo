@@ -1,5 +1,5 @@
-/* 오늘급식 화면 — 오늘 중식(메뉴·알레르기·영양 3칸·영양소 칩) + 잔반 탄소 */
-import { $, j, S, esc, balance } from "./core.js";
+/* 오늘급식 화면 — 오늘 중식(메뉴·알레르기·영양 3칸·영양소 칩) + 잔반 탄소. 진입 시 1회 + 5분마다 */
+import { $, j, S, esc } from "./core.js";
 import { renderWeek } from "./week.js";
 
 /* ---------------- ① 알레르기 ----------------
@@ -56,7 +56,6 @@ export function renderMeal(m) {
     $("#allergens").innerHTML = ""; $("#micro").innerHTML = "";
     ["#energy", "#ratio", "#mar"].forEach(s => $(s).textContent = "—");
     ["#energyflag", "#marflag"].forEach(s => $(s).textContent = "");
-    setTimeout(balance, 0);            // 카드가 숨은 뒤에 컬럼 높이를 다시 맞춘다
     return;
   }
   const dishes = m.today.menu.map(splitAllergy);
@@ -92,7 +91,6 @@ export function renderMeal(m) {
   }).join("");
 
   renderCarbon(m);
-  setTimeout(balance, 0);              // 영양 3칸·칩이 붙어 오른쪽이 길어졌을 수 있다
 }
 
 /* ⑧ 잔반 탄소 — 계수는 /api/meal 의 carbon_std(= data/carbon_std.json) */
@@ -107,3 +105,5 @@ function renderCarbon(m) {
   $("#carbonnote").textContent = `1인분 무게 = kcal ÷ 에너지밀도 환산(NEIS 는 g 미제공) · 배출계수: ${cs.ef_source}`
     + ` · 1인 평균: ${cs.capita_source} · 승용차 환산 ${c.car_km} km`;
 }
+
+export const screen = { every: 300000, poll: loadMeal };

@@ -821,6 +821,24 @@ tr:last-child td{border-bottom:0}
   </div>
 </div>
 
+<h2>네비게이션 <small>5화면 · 모바일 하단 dock · 데스크톱 레일 + 보드 (09-03, PLAN §3.3·§3.4)</small></h2>
+<p class="sub">한 장을 길게 내리던 화면이 다섯 장이 됩니다. 해시가 곧 화면(<code>#wait #room #week #today #news</code>)이라 딥링크·뒤로가기가 화면 단위로 동작합니다. 위 도면의 카드 11장은 그대로이고, 어느 화면에 놓이는지만 정합니다.</p>
+<table>
+<tr><th>화면</th><th>해시 · 버튼</th><th>위(라이브 카드)</th><th>아래(인사이트 카드, 2d~2f)</th></tr>
+<tr><td>1</td><td><code>#wait</code> · 시계 · <b>대기시간</b></td><td>대기시간 카드(히어로+추이) + 갱신 메타</td><td>요일×시각 히트맵 · 황금 구간 · 내일 예보 · 병목 로그 · 측정 품질</td></tr>
+<tr><td>2</td><td><code>#room</code> · 평면도+사람 점 · <b>실시간</b></td><td>급식실 현황(탑뷰 + 마커)</td><td>구역 점유율 · 오늘 리포트(LLM)</td></tr>
+<tr><td>3</td><td><code>#week</code> · 달력 · <b>주간식단</b></td><td>이번 주 식단</td><td>주간 영양 추이 · 메뉴 인기 TOP5</td></tr>
+<tr><td>4</td><td><code>#today</code> · 숟가락+포크 나란히 · <b>오늘급식</b></td><td>오늘 중식(+탄소 절)</td><td>—</td></tr>
+<tr><td>5</td><td><code>#news</code> · 피드 줄 · <b>이슈피드</b></td><td>오늘의 이슈 피드</td><td>—</td></tr>
+</table>
+<table>
+<tr><th>요소</th><th>스펙</th><th>동작</th><th>비고</th></tr>
+<tr><td>하단 dock (모바일)</td><td>fixed, 높이 56px + safe-area, 카드색 바탕 + 위쪽 hair 선. 버튼 5 = 24px 선 아이콘(stroke 1.8, currentColor) + 11px/700 라벨(≤5자). 현재 = 틸 잉크 글자 + 아이콘의 <code>.fill</code> 점 틸 채움</td><td>인디케이터 <code>.mark</code>(틸 틴트, radius 14)가 <code>left/width</code> 전환 .24s 로 미끄러진다 — transform 금지 규칙에 안전. 버튼은 앵커(<code>href="#wait"</code>): 탭 = pushState + 부드러운 가로 스크롤</td><td>아이콘은 인라인 SVG 스프라이트 하나를 dock·레일이 공유. 이모지 금지(기기마다 다르다)</td></tr>
+<tr><td>페이저 (모바일)</td><td><code>html{scroll-snap-type:x mandatory}</code>, <code>.views</code> 는 가로 flex, <code>.view</code> 는 100vw + <code>scroll-snap-align:start</code>. 활성 화면(<code>[data-active]</code>)만 문서 높이를 정하고, 비활성 화면은 <code>position:sticky; top:0; height:100dvh−dock; overflow:hidden</code></td><td>스와이프 = 문서 가로 스크롤. <code>scrollend</code>(없으면 120ms 디바운스)에 어느 화면에 멈췄는지 읽어 <code>replaceState</code>. 세로 스크롤은 문서 스크롤 그대로(URL 바 접힘 유지), 화면별 scrollY 저장·복원. 도착 화면 카드에 <code>.enter</code>(opacity + translateY 6px, .24s)</td><td>이웃 화면의 상단이 스와이프 중에 보인다. 모션 축소면 스냅 이동은 즉시, .enter 없음</td></tr>
+<tr><td>레일 + 보드 (데스크톱 ≥900)</td><td>좌측 fixed 56px 레일(같은 5 아이콘, 54px 칸, 현재 = 카드색 + 그림자). 보드 = max-width 1120, 12컬럼 grid, gap 24, 왼쪽 여백 88px(레일 자리). <code>.view</code> 는 <code>display:contents</code> 라 카드가 곧 그리드 아이템</td><td>레일 클릭·키보드 1~5 = 그 화면 첫 카드로 부드럽게 스크롤 + 0.9초 틸 링(<code>.ring</code>). 스크롤 스파이(IntersectionObserver, 화면 가운데 띠)가 현재 아이콘을 켜고 해시를 replaceState. 현재 표시 이동은 View Transition(<code>view-transition-name: rail-cur</code>)</td><td>배치: 1행 대기시간(1~7) · 실시간(8~12, 1~3행) / 2행 갱신 메타 / 3행 오늘급식(1~7) / 4행 주간식단(1~7) · 이슈피드(8~12). 실시간 카드가 늘어난 높이는 평면도가 채운다(캔버스 absolute + canvasAuto). 인사이트 카드는 5행부터</td></tr>
+<tr><td>폴링·생명주기</td><td>각 화면 모듈이 <code>screen = {every, poll, fail, activate, deactivate}</code> 를 내보내고 core 가 30초 tick 에서 <em>보이는 화면</em>만 폴링(모바일 = 활성 1개, 데스크톱 = 전부). 대기시간·실시간 30초, 나머지 진입 시 1회 + 5분</td><td>탭이 숨겨지면(<code>document.hidden</code>) 쉬고, 돌아오면 즉시 한 번. 실시간 화면 밖에서는 <code>/api/positions</code> 요청이 나가지 않는다. 마커 점멸은 활성일 때만(<code>.plan.live</code>). 서버에 닿지 못하면 화면이 '정보 없음'으로 — 옛 값을 지금처럼 두지 않는다</td><td>캔버스는 <code>canvasAuto</code>(ResizeObserver, 폭 0 이면 건너뜀)가 상자 크기 변화에만 다시 그린다. 900px 경계를 넘으면 구조가 다르므로 새로 읽는다</td></tr>
+</table>
+
 <h2>탄소 카드 산식 <small>전문가 판단 · 가정은 전부 파일 한 곳에</small></h2>
 <p class="sub">"가능하다"가 답이지만, 숫자 세 개가 전부 추정이라 <b>추정임을 화면에 쓰고, 계수는 코드가 아니라 <code>data/carbon_std.json</code> 에 출처와 함께</b> 두는 것이 조건입니다. 아래 값은 초안이며 구현 전 출처를 다시 확인해야 합니다.</p>
 <table>
@@ -912,7 +930,7 @@ tr:last-child td{border-bottom:0}
 <table>
 <tr><th>뷰포트</th><th>레이아웃</th><th>비고</th></tr>
 <tr><td>≤ 899px (모바일)</td><td>단일 컬럼, max-width 390, 카드 간격 12px — 모바일 도면 그대로</td><td>기본</td></tr>
-<tr><td>≥ 900px (데스크톱)</td><td>max-width 1120, grid 2컬럼 <code>1.1fr 1fr</code>, gap 24px, <code>align-items:stretch</code>. 왼쪽 = 대기시간 카드(히어로+추이) + 갱신 메타 + 급식실 현황 / 오른쪽 = 오늘 중식(+탄소 절) + 이번 주 식단 + 이슈</td><td>히어로 숫자 120px, 추이 130px. 카드 여백은 <code>--px:26px; --py:24px</code>. 마크업은 <code>.col</code> 두 개로 묶어 두고 모바일에서는 그 래퍼가 그냥 세로 스택</td></tr>
+<tr><td>≥ 900px (데스크톱)</td><td>max-width 1120, <b>12컬럼 보드</b>(09-03, 네비게이션 절 참조): 대기시간(1~7행1) · 실시간(8~12, 행1~3) · 갱신 메타(행2) · 오늘급식(행3) · 주간식단(행4) · 이슈피드(8~12 행4), gap 24px, 좌측 레일 자리 88px</td><td>히어로 숫자 120px, 추이 130px. 카드 여백은 <code>--px:26px; --py:24px</code>. 이전 2컬럼(<code>1.1fr 1fr</code>)과 <code>.grow</code> 높이 맞춤은 폐기 — 그리드 행이 맞춘다. 마크업은 <code>.col</code> 두 개로 묶어 두고 모바일에서는 그 래퍼가 그냥 세로 스택</td></tr>
 <tr><td colspan="3"><b>두 패널의 아래 끝 맞추기.</b> 어느 쪽이 긴지는 그날 데이터에 달렸다(주말이면 급식·탄소 카드가 빠지고, 평일이면 오른쪽이 400px 넘게 길다). 그리드를 stretch 로 두고 <em>양쪽 모두</em> 마지막으로 '보이는' 카드에 <code>.grow</code>(<code>flex:1 1 auto</code>)를 건다 — 긴 쪽은 흡수할 여백이 없어 그대로다. 카드가 <code>hidden</code> 이 될 수 있어 CSS <code>:last-child</code> 로는 안 되고 JS 가 고른다. 흡수한 높이는 여백으로 두지 않는다: 평면도 카드가 늘면 평면도 자체가 커지고(<code>drawPlan</code> 이 폭·높이 둘 다에 맞춰 축척을 정한다), 이슈 카드가 늘면 목록이 벌어진다.</td></tr>
 </table>
 <h4 style="margin:24px 0 8px;font-size:11px;letter-spacing:.18em;color:var(--teal)">고도 체계 (CSS 변수)</h4>

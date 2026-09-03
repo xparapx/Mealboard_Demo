@@ -1,6 +1,5 @@
-/* 대기시간 화면 — 히어로(지금 줄을 서면) + 추이(최근 30분, 평소 곡선 겹침) */
-import { $, j, S, fit, hhmm, minuteOfDay } from "./core.js";
-import { renderPlan } from "./room.js";
+/* 대기시간 화면 — 히어로(지금 줄을 서면) + 추이(최근 30분, 평소 곡선 겹침). 30초 폴링 */
+import { $, j, S, fit, hhmm, minuteOfDay, canvasAuto } from "./core.js";
 
 const BUSY_MIN = 12, EASY_MIN = 5;   // 판정 임계값 (학교마다 다를 수 있음)
 const CHART_MIN = 30;                 // 추이 카드의 시간창(분) — 카드 제목·축 라벨과 함께 바꾼다
@@ -17,11 +16,10 @@ function verdict(st) {
 
 /* ---------------- 대기 상태 ---------------- */
 let lastWait = null;
-export async function refresh() {
-  const st = await j("/api/status");
+function renderStatus(st) {
   const shown = st.wait_min == null ? "—" : String(st.wait_min);
   if (shown !== lastWait) {                          // 값이 실제로 바뀔 때만 0.25s 스케일 펄스
-    $("#wait").textContent = shown;
+    $("#wait-min").textContent = shown;
     if (lastWait !== null) {
       const b = $("#bigbox"); b.classList.remove("pulse"); void b.offsetWidth; b.classList.add("pulse");
       b.addEventListener("animationend", () => b.classList.remove("pulse"), { once: true });
@@ -33,18 +31,20 @@ export async function refresh() {
   $("#state").textContent = verdict(st);
   $("#hero").dataset.level = level(st);
   $("#updated").textContent = st.updated_at ? new Date(st.updated_at).toLocaleTimeString("ko-KR") : "—";
-  // ③ 도착 시각 — 지금 줄을 서면 몇 시에 배식대에 닿는가
-  const ok = st.wait_min != null;
+  // ③ 도착 시각 — 지금 줄을 서면 몇 시에 배식대에 닿는가. 데이터가 끊긴(no_data) 옛 값으로는 계산하지 않는다
+  const ok = st.state !== "no_data" && st.wait_min != null;
   $("#arrive").hidden = !ok;
   if (ok) $("#arriveat").textContent = hhmm(new Date(Date.now() + st.wait_min * 60000));
+}
 
+export async function refresh() {
+  const st = await j("/api/status");
+  renderStatus(st);
   const [h, t] = await Promise.all([
     j(`/api/history?minutes=${CHART_MIN}`),
     j(`/api/typical?minutes=${CHART_MIN}`).catch(() => ({ state: "no_data", rows: [] }))]);
   S.last = { rows: h.rows, typ: t, st };
   drawChart(h.rows, t, st);
-  try { S.lastPos = await j("/api/positions"); } catch { S.lastPos = { state: "no_data" }; }
-  renderPlan(S.lastPos);
 }
 
 /* ---------------- ④ 추이 + 평소 곡선 ----------------
@@ -110,3 +110,10 @@ export function drawChart(rows, typ, st) {
       : `평소 이 시각보다 <b>${Math.abs(d)}분 ${d > 0 ? "짧습니다" : "깁니다"}</b>`;
   }
 }
+
+export const screen = {
+  mount() { canvasAuto($("#chart"), () => S.last && drawChart(S.last.rows, S.last.typ, S.last.st)); },   // 모듈 최상위에서 core 의 도구를 쓰면 순환 import 의 TDZ 에 걸린다 — 부팅 때 core 가 부른다
+  every: 30000,
+  poll: refresh,
+  fail() { renderStatus({ state: "no_data" }); $("#trend").hidden = true; },   // 서버에 닿지 못하면 '정보 없음' — 옛 숫자를 지금처럼 두지 않는다
+};

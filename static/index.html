@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#F5F2E9">
 <title>급식실 대기 안내</title>
 <link rel="manifest" href="/manifest.json">
@@ -10,14 +10,43 @@
 <link rel="stylesheet" href="/css/screens.css">
 </head>
 <body>
-<main>
-  <div class="col">
-    <!-- 대기시간 카드 = 히어로(지금 줄을 서면) + 그 아래 추이(최근 30분). 한 카드, 두 절 (PLAN §3.2) -->
+<!-- 아이콘 스프라이트 — 하단 dock 과 좌측 레일이 같은 5개를 쓴다. 이모지가 아니라 선 아이콘: 기기마다 같은 모양 (PLAN §3.2) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-wait" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-room" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M7 7.5h10"/>
+    <circle class="fill" cx="8.5" cy="13" r="1.4"/><circle class="fill" cx="12.5" cy="16.2" r="1.4"/><circle class="fill" cx="15.6" cy="12" r="1.4"/></symbol>
+  <symbol id="i-week" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-today" viewBox="0 0 24 24"><ellipse cx="8.5" cy="6.6" rx="2.6" ry="3.6"/><path d="M8.5 10.2V21"/>
+    <path d="M13 3v4.5a2.5 2.5 0 0 0 5 0V3M15.5 3v4.5M15.5 10V21"/></symbol>
+  <symbol id="i-news" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="3"/><path d="M7.5 9h9M7.5 12.5h9M7.5 16h5.5"/></symbol>
+</svg>
+
+<!-- 모바일 하단 dock (< 900px). 버튼은 앵커 — 해시가 곧 화면이고 뒤로가기가 화면 단위로 동작한다 -->
+<nav class="dock" role="tablist" aria-label="화면">
+  <i class="mark" aria-hidden="true"></i>
+  <a href="#wait" data-go="wait" role="tab"><svg><use href="#i-wait"/></svg>대기시간</a>
+  <a href="#room" data-go="room" role="tab"><svg><use href="#i-room"/></svg>실시간</a>
+  <a href="#week" data-go="week" role="tab"><svg><use href="#i-week"/></svg>주간식단</a>
+  <a href="#today" data-go="today" role="tab"><svg><use href="#i-today"/></svg>오늘급식</a>
+  <a href="#news" data-go="news" role="tab"><svg><use href="#i-news"/></svg>이슈피드</a>
+</nav>
+<!-- 데스크톱 좌측 레일 (≥ 900px). 다섯 화면을 한 보드에 펼치고, 레일은 그 카드로 스크롤 + 스크롤 스파이 -->
+<aside class="rail" aria-label="화면">
+  <a href="#wait" data-go="wait"><svg><use href="#i-wait"/></svg>대기시간</a>
+  <a href="#room" data-go="room"><svg><use href="#i-room"/></svg>실시간</a>
+  <a href="#week" data-go="week"><svg><use href="#i-week"/></svg>주간식단</a>
+  <a href="#today" data-go="today"><svg><use href="#i-today"/></svg>오늘급식</a>
+  <a href="#news" data-go="news"><svg><use href="#i-news"/></svg>이슈피드</a>
+</aside>
+
+<main class="views">
+  <!-- ① 대기시간 — 히어로(지금 줄을 서면) + 그 아래 추이(최근 30분). 한 카드, 두 절 -->
+  <section class="view" id="wait" role="tabpanel" aria-label="대기시간">
     <section class="waitcard" id="waitcard">
     <div class="hero" id="hero" data-level="ok">
       <span class="dot"></span>
       <div class="eyebrow">지금 줄을 서면</div>
-      <div class="big" id="bigbox"><b id="wait">—</b><i>분</i></div>
+      <div class="big" id="bigbox"><b id="wait-min">—</b><i>분</i></div>
       <div class="verdictrow">
         <span id="state">—</span>
         <div class="arrive" id="arrive" hidden><span>배식대 도착</span><b id="arriveat">—</b></div>
@@ -37,11 +66,13 @@
       </div>
     </div>
     </section>
-
     <div class="meta">
       <span>갱신 <span id="updated">—</span> · 30초마다</span><span>추정치 · 배식 초반 오차 큼</span>
     </div>
+  </section>
 
+  <!-- ② 실시간 — 탑뷰 평면도 + 익명 위치 마커 (영상 아님) -->
+  <section class="view" id="room" role="tabpanel" aria-label="실시간">
     <section class="card plan" id="plancard" data-state="no_data">
       <div class="eyebrow">급식실 현황</div>
       <span class="count" id="posn">—</span>
@@ -49,9 +80,19 @@
       <div class="empty">표시할 위치 없음</div>
       <div class="note" style="margin-top:10px">영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다</div>
     </section>
-  </div>
+  </section>
 
-  <div class="col">
+  <!-- ③ 주간식단 -->
+  <section class="view" id="week" role="tabpanel" aria-label="주간식단">
+    <section class="card" id="weekcard" hidden>
+      <div class="eyebrow">이번 주 식단</div>
+      <div class="week" id="weekgrid"></div>
+      <div class="note" id="weekavg" style="margin-top:12px"></div>
+    </section>
+  </section>
+
+  <!-- ④ 오늘급식 — 중식(메뉴·알레르기·영양) + 아래 절 탄소 -->
+  <section class="view" id="today" role="tabpanel" aria-label="오늘급식">
     <section class="card" id="mealcard">
       <div class="eyebrow">오늘 중식</div>
       <ul class="menu" id="menu"></ul>
@@ -69,7 +110,6 @@
       </div>
       <div class="eyebrow" id="microlab" style="margin-top:18px" hidden>영양소별 · 권장섭취량 대비</div>
       <div class="micro" id="micro"></div>
-      <!-- 오늘급식 카드의 아래 절 = 잔반 탄소. 카드 하단을 틸 틴트로 채운다 (PLAN §3.2) -->
       <div class="carbon" id="carbonsec" hidden>
         <div class="eyebrow">오늘 급식을 다 남기면</div>
         <div class="co2"><b id="co2">—</b><span id="co2unit">kg CO₂e</span></div>
@@ -82,21 +122,18 @@
             <div id="carbonnote" style="margin-top:6px"></div></details></div>
       </div>
     </section>
+  </section>
 
-    <section class="card" id="weekcard" hidden>
-      <div class="eyebrow">이번 주 식단</div>
-      <div class="week" id="week"></div>
-      <div class="note" id="weekavg" style="margin-top:12px"></div>
-    </section>
-
+  <!-- ⑤ 이슈피드 -->
+  <section class="view" id="news" role="tabpanel" aria-label="이슈피드">
     <section class="card" id="newscard" hidden>
-      <div class="eyebrow">오늘의 기후 이슈</div>
-      <ul class="news" id="news"></ul>
+      <div class="eyebrow">오늘의 이슈 피드</div>
+      <ul class="news" id="newslist"></ul>
     </section>
-  </div>
+  </section>
 </main>
 
-<!-- 화면 모듈: js/core.js 가 wait·room·week·today·news 를 불러 부팅한다 (빌드 도구 없음, ES 모듈) -->
+<!-- js/core.js 가 화면 모듈(wait·room·week·today·news)을 불러 등록하고 라우터·폴링을 돌린다 (빌드 도구 없음, ES 모듈) -->
 <script type="module" src="/js/core.js"></script>
 </body>
 </html>

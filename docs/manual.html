@@ -979,7 +979,7 @@ systemctl status mealboard-api --no-pager</code></pre>
 &lt;html lang=&quot;ko&quot;&gt;
 &lt;head&gt;
 &lt;meta charset=&quot;utf-8&quot;&gt;
-&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1, viewport-fit=cover&quot;&gt;
 &lt;meta name=&quot;theme-color&quot; content=&quot;#F5F2E9&quot;&gt;
 &lt;title&gt;급식실 대기 안내&lt;/title&gt;
 &lt;link rel=&quot;manifest&quot; href=&quot;/manifest.json&quot;&gt;
@@ -987,14 +987,43 @@ systemctl status mealboard-api --no-pager</code></pre>
 &lt;link rel=&quot;stylesheet&quot; href=&quot;/css/screens.css&quot;&gt;
 &lt;/head&gt;
 &lt;body&gt;
-&lt;main&gt;
-  &lt;div class=&quot;col&quot;&gt;
-    &lt;!-- 대기시간 카드 = 히어로(지금 줄을 서면) + 그 아래 추이(최근 30분). 한 카드, 두 절 (PLAN §3.2) --&gt;
+&lt;!-- 아이콘 스프라이트 — 하단 dock 과 좌측 레일이 같은 5개를 쓴다. 이모지가 아니라 선 아이콘: 기기마다 같은 모양 (PLAN §3.2) --&gt;
+&lt;svg width=&quot;0&quot; height=&quot;0&quot; style=&quot;position:absolute&quot; aria-hidden=&quot;true&quot;&gt;
+  &lt;symbol id=&quot;i-wait&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;8.5&quot;/&gt;&lt;path d=&quot;M12 7.5V12l3 2&quot;/&gt;&lt;/symbol&gt;
+  &lt;symbol id=&quot;i-room&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;rect x=&quot;3.5&quot; y=&quot;3.5&quot; width=&quot;17&quot; height=&quot;17&quot; rx=&quot;3&quot;/&gt;&lt;path d=&quot;M7 7.5h10&quot;/&gt;
+    &lt;circle class=&quot;fill&quot; cx=&quot;8.5&quot; cy=&quot;13&quot; r=&quot;1.4&quot;/&gt;&lt;circle class=&quot;fill&quot; cx=&quot;12.5&quot; cy=&quot;16.2&quot; r=&quot;1.4&quot;/&gt;&lt;circle class=&quot;fill&quot; cx=&quot;15.6&quot; cy=&quot;12&quot; r=&quot;1.4&quot;/&gt;&lt;/symbol&gt;
+  &lt;symbol id=&quot;i-week&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;rect x=&quot;3.5&quot; y=&quot;5&quot; width=&quot;17&quot; height=&quot;15.5&quot; rx=&quot;2.5&quot;/&gt;&lt;path d=&quot;M3.5 10h17M8 3v4M16 3v4&quot;/&gt;&lt;/symbol&gt;
+  &lt;symbol id=&quot;i-today&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;ellipse cx=&quot;8.5&quot; cy=&quot;6.6&quot; rx=&quot;2.6&quot; ry=&quot;3.6&quot;/&gt;&lt;path d=&quot;M8.5 10.2V21&quot;/&gt;
+    &lt;path d=&quot;M13 3v4.5a2.5 2.5 0 0 0 5 0V3M15.5 3v4.5M15.5 10V21&quot;/&gt;&lt;/symbol&gt;
+  &lt;symbol id=&quot;i-news&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;rect x=&quot;3.5&quot; y=&quot;4&quot; width=&quot;17&quot; height=&quot;16&quot; rx=&quot;3&quot;/&gt;&lt;path d=&quot;M7.5 9h9M7.5 12.5h9M7.5 16h5.5&quot;/&gt;&lt;/symbol&gt;
+&lt;/svg&gt;
+
+&lt;!-- 모바일 하단 dock (&lt; 900px). 버튼은 앵커 — 해시가 곧 화면이고 뒤로가기가 화면 단위로 동작한다 --&gt;
+&lt;nav class=&quot;dock&quot; role=&quot;tablist&quot; aria-label=&quot;화면&quot;&gt;
+  &lt;i class=&quot;mark&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;
+  &lt;a href=&quot;#wait&quot; data-go=&quot;wait&quot; role=&quot;tab&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-wait&quot;/&gt;&lt;/svg&gt;대기시간&lt;/a&gt;
+  &lt;a href=&quot;#room&quot; data-go=&quot;room&quot; role=&quot;tab&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-room&quot;/&gt;&lt;/svg&gt;실시간&lt;/a&gt;
+  &lt;a href=&quot;#week&quot; data-go=&quot;week&quot; role=&quot;tab&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-week&quot;/&gt;&lt;/svg&gt;주간식단&lt;/a&gt;
+  &lt;a href=&quot;#today&quot; data-go=&quot;today&quot; role=&quot;tab&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-today&quot;/&gt;&lt;/svg&gt;오늘급식&lt;/a&gt;
+  &lt;a href=&quot;#news&quot; data-go=&quot;news&quot; role=&quot;tab&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-news&quot;/&gt;&lt;/svg&gt;이슈피드&lt;/a&gt;
+&lt;/nav&gt;
+&lt;!-- 데스크톱 좌측 레일 (≥ 900px). 다섯 화면을 한 보드에 펼치고, 레일은 그 카드로 스크롤 + 스크롤 스파이 --&gt;
+&lt;aside class=&quot;rail&quot; aria-label=&quot;화면&quot;&gt;
+  &lt;a href=&quot;#wait&quot; data-go=&quot;wait&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-wait&quot;/&gt;&lt;/svg&gt;대기시간&lt;/a&gt;
+  &lt;a href=&quot;#room&quot; data-go=&quot;room&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-room&quot;/&gt;&lt;/svg&gt;실시간&lt;/a&gt;
+  &lt;a href=&quot;#week&quot; data-go=&quot;week&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-week&quot;/&gt;&lt;/svg&gt;주간식단&lt;/a&gt;
+  &lt;a href=&quot;#today&quot; data-go=&quot;today&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-today&quot;/&gt;&lt;/svg&gt;오늘급식&lt;/a&gt;
+  &lt;a href=&quot;#news&quot; data-go=&quot;news&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-news&quot;/&gt;&lt;/svg&gt;이슈피드&lt;/a&gt;
+&lt;/aside&gt;
+
+&lt;main class=&quot;views&quot;&gt;
+  &lt;!-- ① 대기시간 — 히어로(지금 줄을 서면) + 그 아래 추이(최근 30분). 한 카드, 두 절 --&gt;
+  &lt;section class=&quot;view&quot; id=&quot;wait&quot; role=&quot;tabpanel&quot; aria-label=&quot;대기시간&quot;&gt;
     &lt;section class=&quot;waitcard&quot; id=&quot;waitcard&quot;&gt;
     &lt;div class=&quot;hero&quot; id=&quot;hero&quot; data-level=&quot;ok&quot;&gt;
       &lt;span class=&quot;dot&quot;&gt;&lt;/span&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;지금 줄을 서면&lt;/div&gt;
-      &lt;div class=&quot;big&quot; id=&quot;bigbox&quot;&gt;&lt;b id=&quot;wait&quot;&gt;—&lt;/b&gt;&lt;i&gt;분&lt;/i&gt;&lt;/div&gt;
+      &lt;div class=&quot;big&quot; id=&quot;bigbox&quot;&gt;&lt;b id=&quot;wait-min&quot;&gt;—&lt;/b&gt;&lt;i&gt;분&lt;/i&gt;&lt;/div&gt;
       &lt;div class=&quot;verdictrow&quot;&gt;
         &lt;span id=&quot;state&quot;&gt;—&lt;/span&gt;
         &lt;div class=&quot;arrive&quot; id=&quot;arrive&quot; hidden&gt;&lt;span&gt;배식대 도착&lt;/span&gt;&lt;b id=&quot;arriveat&quot;&gt;—&lt;/b&gt;&lt;/div&gt;
@@ -1014,11 +1043,13 @@ systemctl status mealboard-api --no-pager</code></pre>
       &lt;/div&gt;
     &lt;/div&gt;
     &lt;/section&gt;
-
     &lt;div class=&quot;meta&quot;&gt;
       &lt;span&gt;갱신 &lt;span id=&quot;updated&quot;&gt;—&lt;/span&gt; · 30초마다&lt;/span&gt;&lt;span&gt;추정치 · 배식 초반 오차 큼&lt;/span&gt;
     &lt;/div&gt;
+  &lt;/section&gt;
 
+  &lt;!-- ② 실시간 — 탑뷰 평면도 + 익명 위치 마커 (영상 아님) --&gt;
+  &lt;section class=&quot;view&quot; id=&quot;room&quot; role=&quot;tabpanel&quot; aria-label=&quot;실시간&quot;&gt;
     &lt;section class=&quot;card plan&quot; id=&quot;plancard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;급식실 현황&lt;/div&gt;
       &lt;span class=&quot;count&quot; id=&quot;posn&quot;&gt;—&lt;/span&gt;
@@ -1026,9 +1057,19 @@ systemctl status mealboard-api --no-pager</code></pre>
       &lt;div class=&quot;empty&quot;&gt;표시할 위치 없음&lt;/div&gt;
       &lt;div class=&quot;note&quot; style=&quot;margin-top:10px&quot;&gt;영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다&lt;/div&gt;
     &lt;/section&gt;
-  &lt;/div&gt;
+  &lt;/section&gt;
 
-  &lt;div class=&quot;col&quot;&gt;
+  &lt;!-- ③ 주간식단 --&gt;
+  &lt;section class=&quot;view&quot; id=&quot;week&quot; role=&quot;tabpanel&quot; aria-label=&quot;주간식단&quot;&gt;
+    &lt;section class=&quot;card&quot; id=&quot;weekcard&quot; hidden&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;이번 주 식단&lt;/div&gt;
+      &lt;div class=&quot;week&quot; id=&quot;weekgrid&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;note&quot; id=&quot;weekavg&quot; style=&quot;margin-top:12px&quot;&gt;&lt;/div&gt;
+    &lt;/section&gt;
+  &lt;/section&gt;
+
+  &lt;!-- ④ 오늘급식 — 중식(메뉴·알레르기·영양) + 아래 절 탄소 --&gt;
+  &lt;section class=&quot;view&quot; id=&quot;today&quot; role=&quot;tabpanel&quot; aria-label=&quot;오늘급식&quot;&gt;
     &lt;section class=&quot;card&quot; id=&quot;mealcard&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;오늘 중식&lt;/div&gt;
       &lt;ul class=&quot;menu&quot; id=&quot;menu&quot;&gt;&lt;/ul&gt;
@@ -1046,7 +1087,6 @@ systemctl status mealboard-api --no-pager</code></pre>
       &lt;/div&gt;
       &lt;div class=&quot;eyebrow&quot; id=&quot;microlab&quot; style=&quot;margin-top:18px&quot; hidden&gt;영양소별 · 권장섭취량 대비&lt;/div&gt;
       &lt;div class=&quot;micro&quot; id=&quot;micro&quot;&gt;&lt;/div&gt;
-      &lt;!-- 오늘급식 카드의 아래 절 = 잔반 탄소. 카드 하단을 틸 틴트로 채운다 (PLAN §3.2) --&gt;
       &lt;div class=&quot;carbon&quot; id=&quot;carbonsec&quot; hidden&gt;
         &lt;div class=&quot;eyebrow&quot;&gt;오늘 급식을 다 남기면&lt;/div&gt;
         &lt;div class=&quot;co2&quot;&gt;&lt;b id=&quot;co2&quot;&gt;—&lt;/b&gt;&lt;span id=&quot;co2unit&quot;&gt;kg CO₂e&lt;/span&gt;&lt;/div&gt;
@@ -1059,21 +1099,18 @@ systemctl status mealboard-api --no-pager</code></pre>
             &lt;div id=&quot;carbonnote&quot; style=&quot;margin-top:6px&quot;&gt;&lt;/div&gt;&lt;/details&gt;&lt;/div&gt;
       &lt;/div&gt;
     &lt;/section&gt;
+  &lt;/section&gt;
 
-    &lt;section class=&quot;card&quot; id=&quot;weekcard&quot; hidden&gt;
-      &lt;div class=&quot;eyebrow&quot;&gt;이번 주 식단&lt;/div&gt;
-      &lt;div class=&quot;week&quot; id=&quot;week&quot;&gt;&lt;/div&gt;
-      &lt;div class=&quot;note&quot; id=&quot;weekavg&quot; style=&quot;margin-top:12px&quot;&gt;&lt;/div&gt;
-    &lt;/section&gt;
-
+  &lt;!-- ⑤ 이슈피드 --&gt;
+  &lt;section class=&quot;view&quot; id=&quot;news&quot; role=&quot;tabpanel&quot; aria-label=&quot;이슈피드&quot;&gt;
     &lt;section class=&quot;card&quot; id=&quot;newscard&quot; hidden&gt;
-      &lt;div class=&quot;eyebrow&quot;&gt;오늘의 기후 이슈&lt;/div&gt;
-      &lt;ul class=&quot;news&quot; id=&quot;news&quot;&gt;&lt;/ul&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;오늘의 이슈 피드&lt;/div&gt;
+      &lt;ul class=&quot;news&quot; id=&quot;newslist&quot;&gt;&lt;/ul&gt;
     &lt;/section&gt;
-  &lt;/div&gt;
+  &lt;/section&gt;
 &lt;/main&gt;
 
-&lt;!-- 화면 모듈: js/core.js 가 wait·room·week·today·news 를 불러 부팅한다 (빌드 도구 없음, ES 모듈) --&gt;
+&lt;!-- js/core.js 가 화면 모듈(wait·room·week·today·news)을 불러 등록하고 라우터·폴링을 돌린다 (빌드 도구 없음, ES 모듈) --&gt;
 &lt;script type=&quot;module&quot; src=&quot;/js/core.js&quot;&gt;&lt;/script&gt;
 &lt;/body&gt;
 &lt;/html&gt;</code></pre>
@@ -1109,10 +1146,10 @@ systemctl status mealboard-api --no-pager</code></pre>
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v8&quot;;
+const CACHE = &quot;mealboard-v9&quot;;
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;,
-  &quot;/js/core.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
+  &quot;/js/core.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
 
 self.addEventListener(&quot;install&quot;, e =&gt;
   e.waitUntil(caches.open(CACHE).then(c =&gt; c.addAll(SHELL)).then(() =&gt; self.skipWaiting())));

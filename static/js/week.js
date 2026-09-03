@@ -1,6 +1,6 @@
-/* 주간식단 화면 — 이번 주 식단(요일 컬럼). meal.json 이 이미 월~금을 통째로 담고 있다. 프론트만 있으면 된다 */
-import { $, esc } from "./core.js";
-import { splitAllergy } from "./today.js";
+/* 주간식단 화면 — 이번 주 식단(요일 컬럼). meal.json 이 이미 월~금을 통째로 담고 있다. 오늘급식과 같은 응답을 쓴다 */
+import { $, S, esc } from "./core.js";
+import { splitAllergy, loadMeal } from "./today.js";
 
 const WD = "일월화수목금토";
 export function renderWeek(m) {
@@ -9,7 +9,7 @@ export function renderWeek(m) {
   if (card.hidden) return;
   const n = new Date();                              // 오늘은 브라우저 시계로 정한다 — meal.json 은 05:40 캐시라 today 가 비는 날이 있다
   const today = `${n.getFullYear()}${String(n.getMonth() + 1).padStart(2, "0")}${String(n.getDate()).padStart(2, "0")}`;
-  $("#week").innerHTML = week.map(d => {
+  $("#weekgrid").innerHTML = week.map(d => {
     const dd = new Date(+d.date.slice(0, 4), +d.date.slice(4, 6) - 1, +d.date.slice(6, 8));
     const when = d.date === today ? "today" : d.date < today ? "past" : "future";
     const main = splitAllergy(d.menu[0]).name;
@@ -24,3 +24,5 @@ export function renderWeek(m) {
     : `이번 주 평균 에너지 충족 <b style="color:var(--ink2)">${w.energy_pct}%</b>`
       + (w.mar == null ? "" : ` · 미량영양소 <b style="color:var(--ink2)">${w.mar}%</b>`);
 }
+
+export const screen = { every: 300000, poll: () => S.meal ? renderWeek(S.meal) : loadMeal() };
