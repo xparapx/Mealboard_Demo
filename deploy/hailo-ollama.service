@@ -14,6 +14,7 @@ Environment=OLLAMA_HOST=127.0.0.1:8000
 ExecStart=/usr/bin/hailo-ollama
 Restart=no
 KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
 TimeoutStopSec=10
 
 [Install]
