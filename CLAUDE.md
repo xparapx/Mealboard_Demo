@@ -67,7 +67,8 @@
   `https://dev-public.hailo.ai/2026_04/Hailo10/` 의 `hailort-pcie-driver_5.3.0_all.deb`·`hailort_5.3.0_arm64.deb`·`hailo-tappas-core_5.3.0_arm64.deb` 설치,
   Python API 는 시스템 패키지가 아니라 **휠(`hailort-5.3.0-cp313…whl`)을 venv 에**(`uv pip install --python .venv/bin/python`, 파일은 `data/models/` 에 보관 — `/tmp` 은 tmpfs 라 재부팅에 지워진다).
   드라이버 소스는 커널 6.15+ 에서 `del_timer_sync` 로 빌드가 깨져 `/usr/src/hailo1x_pci-5.3.0/linux/vdma/monitor.c` 에 `timer_delete_sync` 호환 정의를 넣었다(dkms 가 이 소스를 쓴다 — 재설치하면 다시 패치).
-  5.1.1 로 컴파일된 YOLO hef 와 Qwen2.5 hef 는 5.3.0 에서도 열린다. 다음 모델 후보 Qwen3-1.7B(`v5.3.0/blob/Qwen3-1.7B-Instruct.hef`, 2.88 GB) — `check_llm.py` 로 판정 뒤 교체.
+  5.1.1 로 컴파일된 YOLO hef 와 Qwen2.5 hef 는 5.3.0 에서도 열린다. **운용 모델은 Qwen3-1.7B-Instruct**(`v5.3.0/blob/…`, 2.88 GB, `.env LLM_HEF`, `LLM_CONTEXT_CHARS=4800`):
+  스파이크 go(요약·주입 PASS, 6,000자 OK, 3.6 tok/s), 실제 피드 3/3 요약 성공 + Why 까지. 한국어 직접 생성은 여전히 불가(반복 붕괴) → 영어 → DeepL 2단계 유지. Qwen2.5 파일은 예비로 남겨 둠.
   **`apt install hailo-h10-all` 을 다시 실행하지 말 것**(5.1.1 로 되돌아가며 `hailort` 와 충돌).
 - **다음 할 일**: 로드맵 ④ vision 프로토타입(실사 스트림·카운팅의 마지막 조각) → PLAN §7 메모 정리. 매뉴얼 STEP 16 의 페이저 설명 문단은 이번 개정에 맞춰 손봤다. 아래 ①~④ 는 이후 단계에 흡수된다.
   ① 평소 곡선(`/api/typical`)은 mock 이 170분 사이클을 반복해 써서 스테이징에서는 값이 바닥이다. 실측 이후 확인.
