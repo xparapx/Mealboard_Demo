@@ -1,0 +1,20 @@
+# hailo-ollama — Hailo-10H 위의 Ollama 호환 채팅 서버(시험·모델 탐색용, 09-04 사용자 요청으로 설치).
+# 우리 파이프라인(jobs/llm.py)은 이 서버를 쓰지 않고 hailo_platform.genai 를 직접 부른다. 두 쪽이 동시에 모델을 올리면 HAT 을 두고
+# 경합하므로(뉴스 06:10 타이머·리포트 05:45/14:20) 이 유닛은 enable 하지 않고 필요할 때만 `sudo systemctl start hailo-ollama`,
+# 끝나면 `stop`. 127.0.0.1 에만 묶는다 — 0.0.0.0 기본값은 학교 LAN 전체에 열린다. 밖에서 쓰려면 SSH 터널(`ssh -L 8000:127.0.0.1:8000 mbpi`).
+# 모델 저장소는 ~/.local/share/hailo-ollama/models/blob (sha256_<해시>) — data/models 의 .hef 와 해시가 같으면 하드링크로 잇는다.
+[Unit]
+Description=Mealboard hailo-ollama (Hailo-10H chat server, on demand)
+After=network.target
+
+[Service]
+Type=simple
+User=__USER__
+Environment=OLLAMA_HOST=127.0.0.1:8000
+ExecStart=/usr/bin/hailo-ollama
+Restart=no
+KillSignal=SIGKILL
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

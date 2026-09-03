@@ -72,8 +72,10 @@
   스파이크 go(요약·주입 PASS, 6,000자 OK, 3.6 tok/s), 실제 피드 3/3 요약 성공 + Why 까지. 한국어 직접 생성은 여전히 불가(반복 붕괴) → 영어 → DeepL 2단계 유지. Qwen2.5 파일은 예비로 남겨 둠.
   **`apt install hailo-h10-all` 을 다시 실행하지 말 것**(5.1.1 로 되돌아가며 `hailort` 와 충돌).
 - **세션 인계(09-04 밤, 이 PC=jh-home)**: 저장소·Pi 모두 최신(`git log -1` 로 확인). 오늘 끝난 것 — 화면 손질(육각 밀집도·plotly 컬러맵·구역 라벨·컬러바 우측 상단), 기본 구역 5개,
-  HailoRT 5.3.0 + Qwen3-1.7B(기사 요약 3/3), 휴대폰 Tailscale 로 관리 화면 접속 확인. **미결 질문 2개(사용자 답 대기)**: ⓐ hailo-ollama(5.3.0 deb 공개) 설치할지 — 우리 파이프라인엔 불필요, 시험용
-  ⓑ Plant 규칙 개정 — 사용자는 "포트 8000 은 이제 안 쓴다, Plant 는 GitHub 에 있다" 고 했으나 §0·§2 의 Plant 금지 규칙은 아직 그대로(파일·DB 삭제는 명시 지시 때만).
+  HailoRT 5.3.0 + Qwen3-1.7B(기사 요약 3/3), 휴대폰 Tailscale 로 관리 화면 접속 확인. **hailo-ollama 설치함(09-04 밤, 사용자 결정)**: `hailo_gen_ai_model_zoo_5.3.0_arm64.deb`(공개 경로 `2026_04/Hailo10/`), 모델 저장소 `~/.local/share/hailo-ollama/models/blob/sha256_<해시>` 에
+  `data/models/Qwen3-1.7B-Instruct.hef` 를 하드링크(해시 동일, 재다운로드 없음). 유닛 `deploy/hailo-ollama.service` 는 **enable 하지 않는다** — 필요할 때 `sudo systemctl start hailo-ollama`, 끝나면 stop
+  (뉴스·리포트 타이머와 HAT 경합). `OLLAMA_HOST=127.0.0.1:8000` 고정(기본 0.0.0.0 은 학교 LAN 에 열린다), 밖에서는 `ssh -L 8000:127.0.0.1:8000 mbpi`. 파이프라인은 여전히 `jobs/llm.py` 직접 호출.
+  **미결 질문(사용자 답 대기)**: ⓑ Plant 규칙 개정 — 사용자는 "포트 8000 은 이제 안 쓴다, Plant 는 GitHub 에 있다" 고 했으나 §0·§2 의 Plant 금지 규칙은 아직 그대로(파일·DB 삭제는 명시 지시 때만).
 - **다음 할 일**: ① **로드맵 ④ vision 프로토타입** — 실사 스트림·카운팅의 마지막 조각. 계약은 PLAN §4.4(zone_samples·cell_samples 기록, meta 소켓, DEBUG_PORT 8102 MJPEG, zones.local.json mtime 리로드),
   카메라는 **Camera Module 3 Wide** 기준, YOLO hef 는 5.1.1 컴파일본이 5.3.0 에서 열림(필요 시 5.3.0 model zoo 로 교체). 개발 PC 웹캠·동영상 파일로 먼저.
   ② Cloudflare Tunnel 전환(도메인·토큰은 사용자 준비, README 09-03 저녁 항목의 5단계). ③ 아래 ①~③ 잔여.
@@ -94,7 +96,7 @@ NEIS 급식 API의 메뉴·영양 정보와 함께 웹 대시보드(PWA)로 제�
 | 실행 위치 | 전부 Pi (셀프 호스팅, 모델 B) | 카메라가 Pi에 물리적으로 있음. Netlify 등 호스팅으로 대체 불가(서버가 Pi 안) |
 | DB | SQLite (WAL 모드), **파일당 쓰기 주체 하나** | `queue.db`=vision(또는 mock) · `insights.db`=`jobs/rollup.py` · `reports.db`=`jobs/report.py` · `admin.db`·`data/zones.local.json`=관리 앱. `data/zones.json` 은 git 템플릿(Pi 에서 쓰지 않는다 — 'Pi 는 git pull 만' 유지), 읽는 쪽은 zones.json 위에 zones.local.json 을 덮어 쓴다(overlay). **공개 app 은 SELECT 만** |
 | 백엔드 | FastAPI 단일 Python 스택 | vision 프로세스와 언어 통일. **Pi에 Node.js 설치 금지** |
-| API 포트 | **8100** (.env `API_PORT`), 127.0.0.1 바인딩. 관리 앱 **8101**(`ADMIN_PORT`), vision 디버그 MJPEG **8102**(`DEBUG_PORT`), 메타데이터 소켓 `/run/mealboard/meta.sock` — 전부 127.0.0.1 | 8000·8501·1883 은 Plant. **Funnel(공개)은 8100 만**, 관리 앱은 `tailscale serve --https=8443`(tailnet 전용)으로만 내보낸다. `serve reset`·`funnel reset` 금지(Funnel 443 까지 지워진다) |
+| API 포트 | **8100** (.env `API_PORT`), 127.0.0.1 바인딩. 관리 앱 **8101**(`ADMIN_PORT`), vision 디버그 MJPEG **8102**(`DEBUG_PORT`), 메타데이터 소켓 `/run/mealboard/meta.sock` — 전부 127.0.0.1. hailo-ollama(수동 시작) **8000** 127.0.0.1 | 8501·1883 은 Plant(8000 은 09-04 사용자 확인으로 hailo-ollama 에). **Funnel(공개)은 8100 만**, 관리 앱은 `tailscale serve --https=8443`(tailnet 전용)으로만 내보낸다. `serve reset`·`funnel reset` 금지(Funnel 443 까지 지워진다) |
 | 프론트 | static/ 정적 파일 + fetch 폴링(30초) | React 필요 시 개발 PC에서 빌드한 dist만 복사 |
 | 외부 노출 | 스테이징·시범 운영: **Tailscale Funnel**(고정 주소, 443 아웃바운드). 정식 배포: Cloudflare Tunnel + 유료 도메인 | 학교망 인바운드 차단 대응. 포트포워딩 금지. 둘 다 Pi 가 밖으로 연결을 여는 방식. 팀 SSH 는 tailnet 내부(Funnel 은 공개, 용도 구분) |
 | 대기시간 | Little's law: W = L / λ | L=ROI 점유 인원, λ=배식대 가상선 통과율(5분 이동평균). **ROI 출구변 = λ 측정선**(같은 경계). λ < 0.5명/분이면 `insufficient_rate`로 산출 불가 처리 |
