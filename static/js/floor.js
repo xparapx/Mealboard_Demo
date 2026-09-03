@@ -138,3 +138,15 @@ export function drawZones(g, G, zones, occ = {}, labels = true) {
     label(g, G, z.label || z.id, lx, ly + 4 * G.u, "#0C6D6A");        // 언제나 틸 잉크 + 종이색 테두리(label) — 흰 글자는 테두리와 같아 보이지 않았다
   });
 }
+
+/* 밀집도 격자 — cells = [{i, w}] (i = row*cols+col, w 0~1). 평면도 위에 셀을 틸로 채운다: 값이 클수록 진하게.
+   구역 이름·마커 없음. 최근 30분의 셀별 합계이지 개별 위치가 아니다 */
+export function drawHeat(g, G, cells, cols, rows) {
+  (cells || []).forEach(c => {
+    const col = c.i % cols, row = Math.floor(c.i / cols);
+    const [x0, y0] = G.P(col / cols, row / rows), [x1, y1] = G.P((col + 1) / cols, (row + 1) / rows);
+    const x = Math.min(x0, x1), y = Math.min(y0, y1), w = Math.abs(x1 - x0), h = Math.abs(y1 - y0);
+    g.fillStyle = `rgba(12,109,106,${(.06 + .74 * Math.min(1, Math.max(0, c.w))).toFixed(3)})`;
+    g.fillRect(x + 1, y + 1, Math.max(1, w - 2), Math.max(1, h - 2));
+  });
+}

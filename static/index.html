@@ -124,16 +124,16 @@
       <div class="empty">표시할 위치 없음</div>
       <div class="note" style="margin-top:10px">영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다</div>
     </section>
-    <!-- 실시간 화면의 인사이트 카드 — 구역 점유율(집계 숫자만, 좌표 없음) · 오늘 리포트(로컬 LLM, Phase 4) -->
+    <!-- 실시간 화면의 카드 — 최근 30분 밀집도(격자 셀 인원수 합계, 좌표 없음) · 오늘 리포트(로컬 LLM) -->
     <section class="card insight" id="zonecard" data-state="no_data">
-      <div class="eyebrow">구역별 점유율</div>
+      <div class="eyebrow">최근 30분 밀집도</div>
       <div class="body">
         <div class="lead" id="zonelead"></div>
         <div class="stage zonestage"><canvas id="zoneplan"></canvas></div>
         <div class="chips2 zones" id="zonechips"></div>
         <div class="note foot" id="zonefoot"></div>
       </div>
-      <div class="empty" id="zoneempty">구역 집계가 아직 없습니다</div>
+      <div class="empty" id="zoneempty">최근 30분 표본이 아직 없습니다</div>
     </section>
     <section class="card insight" id="reportcard" data-state="no_data">
       <div class="eyebrow">오늘 리포트</div>

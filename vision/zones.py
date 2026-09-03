@@ -243,6 +243,28 @@ def count_by_zone(points, zones):
     return counts
 
 
+# ---- 밀집도 격자 (09-03 사용자 요청: 최근 30분 히트맵) --------------------------------------
+# 바닥을 GRID_COLS × GRID_ROWS 셀로 나눈 인원수 — 약 3.1m × 3.1m. 구역 인원수와 같은 성격의 집계 숫자이며(CLAUDE.md §2 히트맵 행),
+# 셀 번호 = row * GRID_COLS + col. 개별 좌표·궤적은 여기서도 남지 않는다.
+GRID_COLS, GRID_ROWS = 5, 8
+
+
+def cell_of(x, y, cols=GRID_COLS, rows=GRID_ROWS):
+    """정규화 좌표 → 셀 번호. 1.0 은 마지막 셀에 넣는다(경계 밖으로 새지 않게)"""
+    c = min(cols - 1, max(0, int(x * cols)))
+    r = min(rows - 1, max(0, int(y * rows)))
+    return r * cols + c
+
+
+def count_by_cell(points, cols=GRID_COLS, rows=GRID_ROWS):
+    """셀별 인원수 {cell: n} — 0 인 셀은 넣지 않는다(저장량)"""
+    counts = {}
+    for p in points:
+        k = cell_of(*_xy(p), cols, rows)
+        counts[k] = counts.get(k, 0) + 1
+    return counts
+
+
 # ---- 호모그래피 (이미지 → 바닥) ------------------------------------------------------
 
 def _solve(a, b):

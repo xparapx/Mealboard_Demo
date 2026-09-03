@@ -165,3 +165,10 @@ def test_하루_요약은_창_밖_표본을_버리고_이벤트를_시각순으�
     assert d["typical_rate"] == 6.0 and d["calc_version"] == 1 and d["bins"][0]["bin"] == 690
     assert "golden" not in d and "bottlenecks" not in d          # 이벤트 하나로만 표현한다
     assert all("sec" in s for s in s[20:40])                      # 시각은 한 번만 파싱해 표본에 남긴다
+
+
+def test_밀집도는_틱당_평균과_최댓값_기준_진하기():
+    from app.insight_calc import density
+    out = density({3: 60, 7: 30, 9: 0, 999: 5}, ticks=30, cols=5, rows=8)
+    assert out == [{"i": 3, "avg": 2.0, "w": 1.0}, {"i": 7, "avg": 1.0, "w": 0.5}]     # 0 인 셀·격자 밖 셀은 뺀다
+    assert density({}, 30, 5, 8) == [] and density({1: 5}, 0, 5, 8) == []

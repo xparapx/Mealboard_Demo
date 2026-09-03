@@ -22,7 +22,7 @@ from app.config import DATA, ZONES_JSON
 from app.db import connect
 from vision.meta import MetaSender
 from vision.waittime import estimate_wait
-from vision.zones import count_by_zone, load_zones, zone_of
+from vision.zones import count_by_cell, count_by_zone, load_zones, zone_of
 
 TICK = 10           # 시뮬레이션 1틱 = 10초
 META_FPS = 5        # --meta 프레임 발행 속도 (vision 디버그 계약과 같은 ≤5fps)
@@ -151,7 +151,9 @@ def main():
                         (ts, queue, round(rate, 2), wait, state))
             con.executemany("INSERT OR REPLACE INTO zone_samples VALUES (?,?,?)",
                             [(ts, z, n) for z, n in counts.items()])
-            con.commit()                                      # samples 와 zone_samples 를 한 트랜잭션으로 — 반쪽 표본이 남지 않게
+            con.executemany("INSERT OR REPLACE INTO cell_samples VALUES (?,?,?)",
+                            [(ts, c, n) for c, n in count_by_cell(pts).items()])    # 격자 셀 인원수 — 최근 30분 밀집도용, 숫자만
+            con.commit()                                      # samples·zone_samples·cell_samples 를 한 트랜잭션으로 — 반쪽 표본이 남지 않게
             write_positions(ts, queue, pts)                   # 카메라(=mock) 가 멈추면 이 파일도 멈춘다 → API 가 stale 로 판단
         zone_txt = " ".join(f"{z}={n}" for z, n in counts.items())
         print(f"{m:6.1f}분  대기 {queue:3d}명  처리 {rate:5.1f}/분  예상 {wait}분  {state}  {zone_txt}")

@@ -13,12 +13,12 @@ from contextlib import closing
 from fastapi import APIRouter, Query
 
 from ..config import DB_PATH, FEED_SOURCE, ROLLUP_WINDOW, ZONES_JSON
-from ..insight_calc import GOLDEN_WAIT, day_summary, golden_bins, median_or_none
+from ..insight_calc import GOLDEN_WAIT, day_summary, density, golden_bins, median_or_none
 from ..insights_db import connect_reports_ro, connect_ro, meta
 from ..lunch import BUCKET_MIN, LUNCH_HI, LUNCH_LO, bounds, iso_at, minute_of_day, seconds_of_day, weekday_of
 from ..mealjson import menu_on, nutrition_rows, read_meal
 from .typical import MIN_BUCKETS
-from vision.zones import load_zones, polygon_area_m2
+from vision.zones import GRID_COLS, GRID_ROWS, load_zones, polygon_area_m2
 
 router = APIRouter(prefix="/api/insight")
 LIVE_MIN = 180                 # 오늘 즉석 계산에 쓰는 최근 분
@@ -315,6 +315,35 @@ def zones(weeks: int = Query(4, ge=1, le=12), date: dt.date | None = Query(None)
     peak = max(bins, key=lambda x: x["total"])
     return {"state": "ok", "basis": basis, "date": date, "weeks": None if date else weeks, "window": _window(), "zones": zlist, "bins": bins,
             "peak": {"minute_of_day": peak["minute_of_day"], "total": peak["total"], "avg_n": peak["avg_n"]}}
+
+
+# ---- 7b. 최근 N분 밀집도 (queue.db 즉석, 09-03 사용자 요청) ---------------------------------------
+
+@router.get("/density")
+def density_now(minutes: int = Query(30, ge=5, le=180)):
+    """오늘 최근 minutes 분의 격자 셀별 평균 인원(히트맵)과 구역별 점유율. 집계 파일이 아니라 queue.db 를 읽기 전용으로 즉석 계산 —
+    셀·구역 인원수는 mock/vision 이 표본마다 남긴 숫자이고 개별 좌표는 어디에도 없다. 표본이 없으면 no_data"""
+    since = (dt.datetime.now() - dt.timedelta(minutes=minutes)).isoformat(timespec="seconds")
+    con = connect_ro(DB_PATH, "cell_samples")
+    if con is None:
+        return _no("셀 표본이 아직 없다 — mock/vision 이 cell_samples 를 쓴다", minutes=minutes, cells=[], zones=[])
+    with closing(con):
+        ticks = con.execute("SELECT COUNT(*) FROM samples WHERE ts >= ?", (since,)).fetchone()[0]
+        cell_rows = con.execute("SELECT cell, SUM(n) s FROM cell_samples WHERE ts >= ? GROUP BY cell", (since,)).fetchall()
+        zone_rows = con.execute("SELECT zone, SUM(n) s FROM zone_samples WHERE ts >= ? GROUP BY zone", (since,)).fetchall()
+    if not ticks or not cell_rows:
+        return _no(f"최근 {minutes}분 표본이 없다", minutes=minutes, since=since, ticks=ticks, cells=[], zones=[])
+    try:
+        doc = load_zones(ZONES_JSON)
+        names = {z["id"]: z["name"] for z in doc["zones"]}
+    except (OSError, ValueError):
+        names = {}
+    total = sum(r["s"] for r in zone_rows) or 1
+    zones = [{"id": r["zone"], "label": names.get(r["zone"], r["zone"]), "avg_n": round(r["s"] / ticks, 1), "share_pct": round(100 * r["s"] / total)}
+             for r in sorted(zone_rows, key=lambda r: -r["s"])]
+    return {"state": "ok", "minutes": minutes, "since": since, "ticks": ticks, "grid": {"cols": GRID_COLS, "rows": GRID_ROWS},
+            "cells": density({r["cell"]: r["s"] for r in cell_rows}, ticks, GRID_COLS, GRID_ROWS), "zones": zones,
+            "peak_zone": zones[0]["id"] if zones else None}
 
 
 # ---- 8. LLM 글 (reports.db, Phase 4b 가 채운다) ------------------------------------------------

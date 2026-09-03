@@ -821,12 +821,12 @@ tr:last-child td{border-bottom:0}
   </div>
 </div>
 
-<h2>네비게이션 <small>5화면 · 모바일 하단 dock · 데스크톱 레일 + 보드 (09-03, PLAN §3.3·§3.4)</small></h2>
-<p class="sub">한 장을 길게 내리던 화면이 다섯 장이 됩니다. 해시가 곧 화면(<code>#wait #room #week #today #news</code>)이라 딥링크·뒤로가기가 화면 단위로 동작합니다. 위 도면의 카드 11장은 그대로이고, 어느 화면에 놓이는지만 정합니다.</p>
+<h2>네비게이션 <small>5화면 · 한 번에 한 화면 · 모바일 하단 dock · 데스크톱 레일 + 화면별 12컬럼 (09-03 개정)</small></h2>
+<p class="sub">한 장을 길게 내리던 화면이 다섯 장이 됩니다. 해시가 곧 화면(<code>#wait #room #week #today #news</code>)이라 딥링크·뒤로가기가 화면 단위로 동작합니다. <b>한 번에 한 화면만 보이고</b>(09-03 사용자 결정 — 처음의 가로 스와이프 페이저와 데스크톱 스크롤 스파이는 폐기), 탭을 누르면 즉시 바뀌며 세로 스크롤은 그 화면 안만 오갑니다. 위 도면의 카드는 그대로이고, 어느 화면의 어느 칸에 놓이는지만 정합니다.</p>
 <table>
 <tr><th>화면</th><th>해시 · 버튼</th><th>위(라이브 카드)</th><th>아래(인사이트 카드, 2d~2f)</th></tr>
 <tr><td>1</td><td><code>#wait</code> · 시계 · <b>대기시간</b></td><td>대기시간 카드(히어로+추이) + 갱신 메타</td><td>요일×시각 히트맵 · 황금 구간 · 내일 예보 · 병목 로그 · 측정 품질</td></tr>
-<tr><td>2</td><td><code>#room</code> · 평면도+사람 점 · <b>실시간</b></td><td>급식실 현황(탑뷰 + 마커)</td><td>구역 점유율 · 오늘 리포트(LLM)</td></tr>
+<tr><td>2</td><td><code>#room</code> · 평면도+사람 점 · <b>실시간</b></td><td>급식실 현황(탑뷰 + 마커)</td><td>최근 30분 밀집도(격자 5×8 히트맵 + 구역 칩, 30초마다) · 오늘 리포트(LLM)</td></tr>
 <tr><td>3</td><td><code>#week</code> · 달력 · <b>주간식단</b></td><td>이번 주 식단</td><td>주간 영양 추이 · 메뉴 인기 TOP5</td></tr>
 <tr><td>4</td><td><code>#today</code> · 숟가락+포크 나란히 · <b>오늘급식</b></td><td>오늘 중식(+탄소 절)</td><td>—</td></tr>
 <tr><td>5</td><td><code>#news</code> · 피드 줄 · <b>이슈피드</b></td><td>오늘의 이슈 피드</td><td>—</td></tr>
@@ -835,8 +835,8 @@ tr:last-child td{border-bottom:0}
 <table>
 <tr><th>요소</th><th>스펙</th><th>동작</th><th>비고</th></tr>
 <tr><td>하단 dock (모바일)</td><td>fixed, 높이 56px + safe-area, 카드색 바탕 + 위쪽 hair 선. 버튼 5 = 24px 선 아이콘(stroke 1.8, currentColor) + 11px/700 라벨(≤5자). 현재 = 틸 잉크 글자 + 아이콘의 <code>.fill</code> 점 틸 채움</td><td>인디케이터 <code>.mark</code>(틸 틴트, radius 14)가 <code>left/width</code> 전환 .24s 로 미끄러진다 — transform 금지 규칙에 안전. 버튼은 앵커(<code>href="#wait"</code>): 탭 = pushState + 부드러운 가로 스크롤</td><td>아이콘은 인라인 SVG 스프라이트 하나를 dock·레일이 공유. 이모지 금지(기기마다 다르다)</td></tr>
-<tr><td>페이저 (모바일)</td><td><code>html{scroll-snap-type:x mandatory}</code>, <code>.views</code> 는 가로 flex, <code>.view</code> 는 100vw + <code>scroll-snap-align:start</code>. 활성 화면(<code>[data-active]</code>)만 문서 높이를 정하고, 비활성 화면은 <code>position:sticky; top:0; height:100dvh−dock; overflow:hidden</code></td><td>스와이프 = 문서 가로 스크롤. <code>scrollend</code>(없으면 120ms 디바운스)에 어느 화면에 멈췄는지 읽어 <code>replaceState</code>. 세로 스크롤은 문서 스크롤 그대로(URL 바 접힘 유지), 화면별 scrollY 저장·복원. 도착 화면 카드에 <code>.enter</code>(opacity + translateY 6px, .24s)</td><td>이웃 화면의 상단이 스와이프 중에 보인다. 모션 축소면 스냅 이동은 즉시, .enter 없음</td></tr>
-<tr><td>레일 + 보드 (데스크톱 ≥900)</td><td>좌측 fixed 56px 레일(같은 5 아이콘, 54px 칸, 현재 = 카드색 + 그림자). 보드 = max-width 1120, 12컬럼 grid, gap 24, 왼쪽 여백 88px(레일 자리). <code>.view</code> 는 <code>display:contents</code> 라 카드가 곧 그리드 아이템</td><td>레일 클릭·키보드 1~5 = 그 화면 첫 카드로 부드럽게 스크롤 + 0.9초 틸 링(<code>.ring</code>). 스크롤 스파이(IntersectionObserver, 화면 가운데 띠)가 현재 아이콘을 켜고 해시를 replaceState. 현재 표시 이동은 View Transition(<code>view-transition-name: rail-cur</code>)</td><td>배치: 1행 대기시간(1~7) · 실시간(8~12, 1~3행) / 2행 갱신 메타 / 3행 오늘급식(1~7) / 4행 주간식단(1~7) · 이슈피드(8~12). 실시간 카드가 늘어난 높이는 평면도가 채운다(캔버스 absolute + canvasAuto). 인사이트 카드는 5행부터</td></tr>
+<tr><td>화면 (모바일)</td><td><code>.view</code> 는 <code>display:none</code>, 활성 화면(<code>[data-active]</code>)만 세로 flex 한 줄(카드 max 390px). 문서 스크롤은 세로뿐</td><td>dock 탭 → <code>go()</code> 가 이전 화면을 숨기고 새 화면을 보인다(즉시). 화면별 세로 스크롤 위치를 기억해 돌아오면 그 자리. 같은 탭을 다시 누르면 맨 위로</td><td>스와이프 없음 — 손가락이 스치며 다른 화면으로 넘어가던 문제와 두 번 눌러야 바뀌던 문제가 사라진다</td></tr>
+<tr><td>레일 + 화면 그리드 (데스크톱 ≥900)</td><td>좌측 fixed 56px 레일(같은 아이콘, 현재 = 카드색 + 그림자). 활성 화면이 12컬럼 grid(max 1800px, gap 24, 좌측 여백 104px) — 1920×1080 기준. 대기시간: 히어로 1~5(두 행) · 히트맵 6~12 · 황금 6~8 · 예보 9~12 · 병목 6~8 · 품질 9~12. 실시간: 평면도 1~5(두 행) · 밀집도 6~9(두 행) · 리포트 10~12. 주간식단: 식단 1~12 · 영양 1~6 · TOP5 7~12. 오늘급식·이슈피드: 3~10</td><td>레일 클릭·키보드 1~5(관리 origin 은 6) = 즉시 전환. 폴링은 활성 화면만</td><td>이전의 "다섯 화면을 한 보드에 펼치고 스크롤" 은 폐기 — 사용자가 화면마다 독립된 페이지를 원했다</td></tr>
 <tr><td>폴링·생명주기</td><td>각 화면 모듈이 <code>screen = {every, poll, fail, activate, deactivate}</code> 를 내보내고 core 가 30초 tick 에서 <em>보이는 화면</em>만 폴링(모바일 = 활성 1개, 데스크톱 = 전부). 대기시간·실시간 30초, 나머지 진입 시 1회 + 5분</td><td>탭이 숨겨지면(<code>document.hidden</code>) 쉬고, 돌아오면 즉시 한 번. 실시간 화면 밖에서는 <code>/api/positions</code> 요청이 나가지 않는다. 마커 점멸은 활성일 때만(<code>.plan.live</code>). 서버에 닿지 못하면 화면이 '정보 없음'으로 — 옛 값을 지금처럼 두지 않는다</td><td>캔버스는 <code>canvasAuto</code>(ResizeObserver, 폭 0 이면 건너뜀)가 상자 크기 변화에만 다시 그린다. 900px 경계를 넘으면 구조가 다르므로 새로 읽는다</td></tr>
 </table>
 

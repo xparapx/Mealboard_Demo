@@ -258,3 +258,18 @@ def day_summary(samples, date, lo, hi, now_sec=None):
         "events": sorted(golden + bott + stale + insuff, key=lambda e: e["start_ts"]),
         "bins": bins,
     }
+
+
+# ---- 최근 30분 밀집도 (09-03 사용자 요청) ----------------------------------------------------
+def density(cell_sums, ticks, cols, rows):
+    """{cell: 창 안 인원수 합} + 표본 틱 수 → 셀 목록 [{i, avg, w}]. avg 는 틱당 평균 인원, w 는 최댓값을 1 로 한 진하기(0~1).
+    합이 0 인 셀은 뺀다. 개별 위치가 아니라 셀 단위 합계이므로 사람을 되짚을 수 없다"""
+    if not cell_sums or ticks <= 0:
+        return []
+    top = max(cell_sums.values())
+    out = []
+    for i, s in sorted(cell_sums.items()):
+        if s <= 0 or not (0 <= int(i) < cols * rows):
+            continue
+        out.append({"i": int(i), "avg": round(s / ticks, 2), "w": round(s / top, 3)})
+    return out

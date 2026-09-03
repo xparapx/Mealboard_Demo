@@ -135,3 +135,11 @@ def test_템플릿이_객체가_아니어도_ValueError(tmp_path):
     (tmp_path / "zones.json").write_text("[]", encoding="utf-8")
     with pytest.raises(ValueError):
         load_zones(tmp_path / "zones.json")
+
+
+def test_격자_셀_번호와_셀별_인원수():
+    from vision.zones import GRID_COLS, GRID_ROWS, cell_of, count_by_cell
+    assert cell_of(0, 0) == 0 and cell_of(1, 1) == GRID_COLS * GRID_ROWS - 1 and cell_of(0.99, 0) == GRID_COLS - 1
+    assert cell_of(0.5, 0.5, 4, 4) == 2 * 4 + 2
+    c = count_by_cell([{"x": 0.1, "y": 0.05}, {"x": 0.15, "y": 0.02}, (0.9, 0.9)])
+    assert c == {0: 2, cell_of(0.9, 0.9): 1} and sum(c.values()) == 3

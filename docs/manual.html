@@ -658,6 +658,12 @@ CREATE TABLE IF NOT EXISTS zone_samples (
   n    INTEGER NOT NULL,           -- 그 순간 구역 안 인원수. 숫자만 — 개별 좌표는 남기지 않는다 (CLAUDE.md §2)
   PRIMARY KEY (ts, zone)
 );
+CREATE TABLE IF NOT EXISTS cell_samples (
+  ts   TEXT    NOT NULL,           -- samples.ts 와 같은 시각
+  cell INTEGER NOT NULL,           -- vision/zones.py 격자(GRID_COLS × GRID_ROWS) 셀 번호 = row * cols + col
+  n    INTEGER NOT NULL,           -- 그 순간 셀 안 인원수(0 인 셀은 쓰지 않는다). 최근 30분 밀집도 히트맵의 재료 — 숫자만
+  PRIMARY KEY (ts, cell)
+);
 &quot;&quot;&quot;
 
 
@@ -883,7 +889,7 @@ from app.config import DATA, ZONES_JSON
 from app.db import connect
 from vision.meta import MetaSender
 from vision.waittime import estimate_wait
-from vision.zones import count_by_zone, load_zones, zone_of
+from vision.zones import count_by_cell, count_by_zone, load_zones, zone_of
 
 TICK = 10           # 시뮬레이션 1틱 = 10초
 META_FPS = 5        # --meta 프레임 발행 속도 (vision 디버그 계약과 같은 ≤5fps)
@@ -1012,7 +1018,9 @@ def main():
                         (ts, queue, round(rate, 2), wait, state))
             con.executemany(&quot;INSERT OR REPLACE INTO zone_samples VALUES (?,?,?)&quot;,
                             [(ts, z, n) for z, n in counts.items()])
-            con.commit()                                      # samples 와 zone_samples 를 한 트랜잭션으로 — 반쪽 표본이 남지 않게
+            con.executemany(&quot;INSERT OR REPLACE INTO cell_samples VALUES (?,?,?)&quot;,
+                            [(ts, c, n) for c, n in count_by_cell(pts).items()])    # 격자 셀 인원수 — 최근 30분 밀집도용, 숫자만
+            con.commit()                                      # samples·zone_samples·cell_samples 를 한 트랜잭션으로 — 반쪽 표본이 남지 않게
             write_positions(ts, queue, pts)                   # 카메라(=mock) 가 멈추면 이 파일도 멈춘다 → API 가 stale 로 판단
         zone_txt = &quot; &quot;.join(f&quot;{z}={n}&quot; for z, n in counts.items())
         print(f&quot;{m:6.1f}분  대기 {queue:3d}명  처리 {rate:5.1f}/분  예상 {wait}분  {state}  {zone_txt}&quot;)
@@ -1213,16 +1221,16 @@ systemctl status mealboard-api --no-pager</code></pre>
       &lt;div class=&quot;empty&quot;&gt;표시할 위치 없음&lt;/div&gt;
       &lt;div class=&quot;note&quot; style=&quot;margin-top:10px&quot;&gt;영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다&lt;/div&gt;
     &lt;/section&gt;
-    &lt;!-- 실시간 화면의 인사이트 카드 — 구역 점유율(집계 숫자만, 좌표 없음) · 오늘 리포트(로컬 LLM, Phase 4) --&gt;
+    &lt;!-- 실시간 화면의 카드 — 최근 30분 밀집도(격자 셀 인원수 합계, 좌표 없음) · 오늘 리포트(로컬 LLM) --&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;zonecard&quot; data-state=&quot;no_data&quot;&gt;
-      &lt;div class=&quot;eyebrow&quot;&gt;구역별 점유율&lt;/div&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;최근 30분 밀집도&lt;/div&gt;
       &lt;div class=&quot;body&quot;&gt;
         &lt;div class=&quot;lead&quot; id=&quot;zonelead&quot;&gt;&lt;/div&gt;
         &lt;div class=&quot;stage zonestage&quot;&gt;&lt;canvas id=&quot;zoneplan&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
         &lt;div class=&quot;chips2 zones&quot; id=&quot;zonechips&quot;&gt;&lt;/div&gt;
         &lt;div class=&quot;note foot&quot; id=&quot;zonefoot&quot;&gt;&lt;/div&gt;
       &lt;/div&gt;
-      &lt;div class=&quot;empty&quot; id=&quot;zoneempty&quot;&gt;구역 집계가 아직 없습니다&lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;zoneempty&quot;&gt;최근 30분 표본이 아직 없습니다&lt;/div&gt;
     &lt;/section&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;reportcard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;오늘 리포트&lt;/div&gt;
@@ -2908,6 +2916,28 @@ def count_by_zone(points, zones):
     return counts
 
 
+# ---- 밀집도 격자 (09-03 사용자 요청: 최근 30분 히트맵) --------------------------------------
+# 바닥을 GRID_COLS × GRID_ROWS 셀로 나눈 인원수 — 약 3.1m × 3.1m. 구역 인원수와 같은 성격의 집계 숫자이며(CLAUDE.md §2 히트맵 행),
+# 셀 번호 = row * GRID_COLS + col. 개별 좌표·궤적은 여기서도 남지 않는다.
+GRID_COLS, GRID_ROWS = 5, 8
+
+
+def cell_of(x, y, cols=GRID_COLS, rows=GRID_ROWS):
+    &quot;&quot;&quot;정규화 좌표 → 셀 번호. 1.0 은 마지막 셀에 넣는다(경계 밖으로 새지 않게)&quot;&quot;&quot;
+    c = min(cols - 1, max(0, int(x * cols)))
+    r = min(rows - 1, max(0, int(y * rows)))
+    return r * cols + c
+
+
+def count_by_cell(points, cols=GRID_COLS, rows=GRID_ROWS):
+    &quot;&quot;&quot;셀별 인원수 {cell: n} — 0 인 셀은 넣지 않는다(저장량)&quot;&quot;&quot;
+    counts = {}
+    for p in points:
+        k = cell_of(*_xy(p), cols, rows)
+        counts[k] = counts.get(k, 0) + 1
+    return counts
+
+
 # ---- 호모그래피 (이미지 → 바닥) ------------------------------------------------------
 
 def _solve(a, b):
@@ -3240,7 +3270,22 @@ def day_summary(samples, date, lo, hi, now_sec=None):
         &quot;calc_version&quot;: CALC_VERSION,
         &quot;events&quot;: sorted(golden + bott + stale + insuff, key=lambda e: e[&quot;start_ts&quot;]),
         &quot;bins&quot;: bins,
-    }</code></pre>
+    }
+
+
+# ---- 최근 30분 밀집도 (09-03 사용자 요청) ----------------------------------------------------
+def density(cell_sums, ticks, cols, rows):
+    &quot;&quot;&quot;{cell: 창 안 인원수 합} + 표본 틱 수 → 셀 목록 [{i, avg, w}]. avg 는 틱당 평균 인원, w 는 최댓값을 1 로 한 진하기(0~1).
+    합이 0 인 셀은 뺀다. 개별 위치가 아니라 셀 단위 합계이므로 사람을 되짚을 수 없다&quot;&quot;&quot;
+    if not cell_sums or ticks &lt;= 0:
+        return []
+    top = max(cell_sums.values())
+    out = []
+    for i, s in sorted(cell_sums.items()):
+        if s &lt;= 0 or not (0 &lt;= int(i) &lt; cols * rows):
+            continue
+        out.append({&quot;i&quot;: int(i), &quot;avg&quot;: round(s / ticks, 2), &quot;w&quot;: round(s / top, 3)})
+    return out</code></pre>
 </figure>
 
 <h3>15-4. 하루 단위 집계 — jobs/rollup.py 와 insights.db</h3>
@@ -3615,12 +3660,12 @@ from contextlib import closing
 from fastapi import APIRouter, Query
 
 from ..config import DB_PATH, FEED_SOURCE, ROLLUP_WINDOW, ZONES_JSON
-from ..insight_calc import GOLDEN_WAIT, day_summary, golden_bins, median_or_none
+from ..insight_calc import GOLDEN_WAIT, day_summary, density, golden_bins, median_or_none
 from ..insights_db import connect_reports_ro, connect_ro, meta
 from ..lunch import BUCKET_MIN, LUNCH_HI, LUNCH_LO, bounds, iso_at, minute_of_day, seconds_of_day, weekday_of
 from ..mealjson import menu_on, nutrition_rows, read_meal
 from .typical import MIN_BUCKETS
-from vision.zones import load_zones, polygon_area_m2
+from vision.zones import GRID_COLS, GRID_ROWS, load_zones, polygon_area_m2
 
 router = APIRouter(prefix=&quot;/api/insight&quot;)
 LIVE_MIN = 180                 # 오늘 즉석 계산에 쓰는 최근 분
@@ -3919,6 +3964,35 @@ def zones(weeks: int = Query(4, ge=1, le=12), date: dt.date | None = Query(None)
             &quot;peak&quot;: {&quot;minute_of_day&quot;: peak[&quot;minute_of_day&quot;], &quot;total&quot;: peak[&quot;total&quot;], &quot;avg_n&quot;: peak[&quot;avg_n&quot;]}}
 
 
+# ---- 7b. 최근 N분 밀집도 (queue.db 즉석, 09-03 사용자 요청) ---------------------------------------
+
+@router.get(&quot;/density&quot;)
+def density_now(minutes: int = Query(30, ge=5, le=180)):
+    &quot;&quot;&quot;오늘 최근 minutes 분의 격자 셀별 평균 인원(히트맵)과 구역별 점유율. 집계 파일이 아니라 queue.db 를 읽기 전용으로 즉석 계산 —
+    셀·구역 인원수는 mock/vision 이 표본마다 남긴 숫자이고 개별 좌표는 어디에도 없다. 표본이 없으면 no_data&quot;&quot;&quot;
+    since = (dt.datetime.now() - dt.timedelta(minutes=minutes)).isoformat(timespec=&quot;seconds&quot;)
+    con = connect_ro(DB_PATH, &quot;cell_samples&quot;)
+    if con is None:
+        return _no(&quot;셀 표본이 아직 없다 — mock/vision 이 cell_samples 를 쓴다&quot;, minutes=minutes, cells=[], zones=[])
+    with closing(con):
+        ticks = con.execute(&quot;SELECT COUNT(*) FROM samples WHERE ts &gt;= ?&quot;, (since,)).fetchone()[0]
+        cell_rows = con.execute(&quot;SELECT cell, SUM(n) s FROM cell_samples WHERE ts &gt;= ? GROUP BY cell&quot;, (since,)).fetchall()
+        zone_rows = con.execute(&quot;SELECT zone, SUM(n) s FROM zone_samples WHERE ts &gt;= ? GROUP BY zone&quot;, (since,)).fetchall()
+    if not ticks or not cell_rows:
+        return _no(f&quot;최근 {minutes}분 표본이 없다&quot;, minutes=minutes, since=since, ticks=ticks, cells=[], zones=[])
+    try:
+        doc = load_zones(ZONES_JSON)
+        names = {z[&quot;id&quot;]: z[&quot;name&quot;] for z in doc[&quot;zones&quot;]}
+    except (OSError, ValueError):
+        names = {}
+    total = sum(r[&quot;s&quot;] for r in zone_rows) or 1
+    zones = [{&quot;id&quot;: r[&quot;zone&quot;], &quot;label&quot;: names.get(r[&quot;zone&quot;], r[&quot;zone&quot;]), &quot;avg_n&quot;: round(r[&quot;s&quot;] / ticks, 1), &quot;share_pct&quot;: round(100 * r[&quot;s&quot;] / total)}
+             for r in sorted(zone_rows, key=lambda r: -r[&quot;s&quot;])]
+    return {&quot;state&quot;: &quot;ok&quot;, &quot;minutes&quot;: minutes, &quot;since&quot;: since, &quot;ticks&quot;: ticks, &quot;grid&quot;: {&quot;cols&quot;: GRID_COLS, &quot;rows&quot;: GRID_ROWS},
+            &quot;cells&quot;: density({r[&quot;cell&quot;]: r[&quot;s&quot;] for r in cell_rows}, ticks, GRID_COLS, GRID_ROWS), &quot;zones&quot;: zones,
+            &quot;peak_zone&quot;: zones[0][&quot;id&quot;] if zones else None}
+
+
 # ---- 8. LLM 글 (reports.db, Phase 4b 가 채운다) ------------------------------------------------
 
 @router.get(&quot;/text&quot;)
@@ -4197,7 +4271,15 @@ def test_깨진_로컬_파일은_언제나_ValueError(tmp_path, doc, local):
 def test_템플릿이_객체가_아니어도_ValueError(tmp_path):
     (tmp_path / &quot;zones.json&quot;).write_text(&quot;[]&quot;, encoding=&quot;utf-8&quot;)
     with pytest.raises(ValueError):
-        load_zones(tmp_path / &quot;zones.json&quot;)</code></pre>
+        load_zones(tmp_path / &quot;zones.json&quot;)
+
+
+def test_격자_셀_번호와_셀별_인원수():
+    from vision.zones import GRID_COLS, GRID_ROWS, cell_of, count_by_cell
+    assert cell_of(0, 0) == 0 and cell_of(1, 1) == GRID_COLS * GRID_ROWS - 1 and cell_of(0.99, 0) == GRID_COLS - 1
+    assert cell_of(0.5, 0.5, 4, 4) == 2 * 4 + 2
+    c = count_by_cell([{&quot;x&quot;: 0.1, &quot;y&quot;: 0.05}, {&quot;x&quot;: 0.15, &quot;y&quot;: 0.02}, (0.9, 0.9)])
+    assert c == {0: 2, cell_of(0.9, 0.9): 1} and sum(c.values()) == 3</code></pre>
 </figure>
 <figure class="code">
 <figcaption><span class="path">tests/test_insight_calc.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
@@ -4367,7 +4449,14 @@ def test_하루_요약은_창_밖_표본을_버리고_이벤트를_시각순으�
     assert [e[&quot;kind&quot;] for e in d[&quot;events&quot;]] == [&quot;bottleneck&quot;, &quot;insufficient&quot;, &quot;stale&quot;, &quot;golden&quot;, &quot;stale&quot;]
     assert d[&quot;typical_rate&quot;] == 6.0 and d[&quot;calc_version&quot;] == 1 and d[&quot;bins&quot;][0][&quot;bin&quot;] == 690
     assert &quot;golden&quot; not in d and &quot;bottlenecks&quot; not in d          # 이벤트 하나로만 표현한다
-    assert all(&quot;sec&quot; in s for s in s[20:40])                      # 시각은 한 번만 파싱해 표본에 남긴다</code></pre>
+    assert all(&quot;sec&quot; in s for s in s[20:40])                      # 시각은 한 번만 파싱해 표본에 남긴다
+
+
+def test_밀집도는_틱당_평균과_최댓값_기준_진하기():
+    from app.insight_calc import density
+    out = density({3: 60, 7: 30, 9: 0, 999: 5}, ticks=30, cols=5, rows=8)
+    assert out == [{&quot;i&quot;: 3, &quot;avg&quot;: 2.0, &quot;w&quot;: 1.0}, {&quot;i&quot;: 7, &quot;avg&quot;: 1.0, &quot;w&quot;: 0.5}]     # 0 인 셀·격자 밖 셀은 뺀다
+    assert density({}, 30, 5, 8) == [] and density({1: 5}, 0, 5, 8) == []</code></pre>
 </figure>
 
 <figure class="code">
@@ -4430,11 +4519,11 @@ curl -s https://rsp.taild5f11e.ts.net/api/insight/quality</code></pre>
 </section><section id="s16" class="step">
 <header><span class="stepnum">STEP 16</span><h2>5화면 프론트 — 셸·ES 모듈·해시 라우트</h2><span class="layer">확장</span></header>
 
-<p class="goal">목표: 762줄짜리 <code>index.html</code> 한 장이던 대시보드를 <strong>다섯 화면</strong>(대기시간 · 실시간 · 주간식단 · 오늘급식 · 이슈피드)으로 나누되, 빌드 도구 없이 브라우저가 그대로 읽는 ES 모듈로 만든다. 모바일은 가로로 넘기는 페이저 + 하단 dock, 데스크톱은 좌측 레일 + 12컬럼 보드. 보이는 화면만 폴링한다.</p>
+<p class="goal">목표: 762줄짜리 <code>index.html</code> 한 장이던 대시보드를 <strong>다섯 화면</strong>(대기시간 · 실시간 · 주간식단 · 오늘급식 · 이슈피드)으로 나누되, 빌드 도구 없이 브라우저가 그대로 읽는 ES 모듈로 만든다. 한 번에 한 화면만 보인다(09-03 개정 — 처음의 가로 스와이프 페이저는 손가락이 스치며 화면이 넘어가 폐기): 모바일은 하단 dock, 데스크톱은 좌측 레일이 곧 전환이고, 데스크톱은 그 화면의 카드를 12컬럼 그리드(1920×1080 기준)에 펼친다. 활성 화면만 폴링한다.</p>
 
 <dl class="term"><dt>ES 모듈(ES module)</dt><dd>브라우저가 <code>&lt;script type="module"&gt;</code> 로 직접 읽는 자바스크립트 파일 단위. <code>import/export</code> 로 서로 부르고, 번들러(webpack 같은 빌드 도구)가 필요 없다 — CLAUDE.md 의 "Pi 에 Node.js 설치 금지" 를 지키는 방법.</dd>
 <dt>해시 라우트(hash route)</dt><dd>주소의 <code>#wait</code> 같은 조각으로 화면을 고르는 방식. 서버는 언제나 같은 <code>index.html</code> 을 주고, 화면 전환은 브라우저 안에서만 일어난다. 새로고침·뒤로가기·북마크가 그대로 통한다.</dd>
-<dt>스크롤 스냅(scroll snap)</dt><dd>가로로 밀면 한 화면 단위로 딱 멈추게 하는 CSS. 모바일 페이저는 문서 자체가 스냅 컨테이너다.</dd>
+<dt>활성 화면([data-active])</dt><dd>다섯 <code>section.view</code> 중 이 속성이 붙은 하나만 <code>display</code> 된다. 전환은 속성을 옮기는 것뿐이라 즉시이고, 화면별 세로 스크롤 위치는 <code>core.js</code> 가 기억한다.</dd>
 <dt>순환 import 의 TDZ</dt><dd>core.js 가 화면 모듈을 부르고 화면 모듈이 core.js 를 부를 때, 모듈 <em>최상위</em>에서 상대 모듈의 값을 쓰면 아직 초기화되지 않은 변수를 건드려 <code>ReferenceError</code> 가 난다. 화면 모듈은 core 의 도구를 <code>mount()</code> 안에서만 쓴다.</dd></dl>
 
 <h3>16-1. 구조 — 셸 하나, 화면 모듈 다섯</h3>
@@ -4621,9 +4710,9 @@ try {
    두 겹 캔버스: #plan 에 정적 평면도(floor.js)는 상자 크기가 바뀔 때만(canvasAuto), 그 위 #marks 에 마커만 30초마다.
    점멸은 #marks 의 CSS opacity 애니메이션(1.4초, 0.55~1)이며 이 화면이 활성일 때만 돈다(.plan.live).
    /api/positions 는 이 화면이 보일 때만 30초마다 — 다른 화면에서는 요청이 나가지 않는다.
-   아래 인사이트 카드: 구역별 점유율(집계 숫자만 — 같은 평면도 위에 틴트) · 오늘 리포트(로컬 LLM 글, Phase 4 가 채운다). 30분마다 */
-import { $, j, jSoft, S, esc, fit, mm, canvasAuto, setState } from &quot;./core.js&quot;;
-import { drawFloor, drawMarkers, drawZones, geom } from &quot;./floor.js&quot;;
+   아래 카드: 최근 30분 밀집도(격자 셀별 인원수 합계 — 같은 평면도 위에 히트맵, 30초마다) · 오늘 리포트(로컬 LLM 글, 30분마다) */
+import { $, j, jSoft, S, esc, fit, hm, canvasAuto, setState } from &quot;./core.js&quot;;
+import { drawFloor, drawHeat, drawMarkers, geom } from &quot;./floor.js&quot;;
 
 let G = null;                                          // #plan 의 투영 — 평면도를 그린 크기. 상자가 바뀌면 canvasAuto 가 다시 만든다
 
@@ -4649,36 +4738,29 @@ export function drawPlan(p) {
 }
 
 /* ---------------- 인사이트 카드 ---------------- */
-let ZONES = null;                                      // 마지막 구역 응답 — 상자 크기가 바뀌면 다시 그린다
+let DENS = null;                                       // 마지막 밀집도 응답 — 상자 크기가 바뀌면 다시 그린다
 
 function drawZoneCard() {
-  const d = ZONES; if (!d) return;
+  const d = DENS; if (!d) return;
   const c = $(&quot;#zoneplan&quot;), W = c.clientWidth || 318;
   const H = c.clientHeight || Math.round(W * 460 / 318);
   const { g } = fit(c, H);
   const Gz = geom(W, H);
   drawFloor(g, Gz);
-  drawZones(g, Gz, d.zones, d.occ, false);           // 이름은 아래 칩에 — 평면도 위 글자 없이 틴트만
+  drawHeat(g, Gz, d.cells, d.grid.cols, d.grid.rows);   // 셀이 진할수록 최근 30분에 사람이 많았던 자리 — 이름·마커 없음
 }
 
+/* 최근 30분 밀집도(09-03 사용자 결정: 최근 4주 구역 평균 대신 당일 최근 30분, 히트맵). 30초마다 poll 로 */
 function renderZones(d) {
-  const ok = d.state === &quot;ok&quot; &amp;&amp; d.bins &amp;&amp; d.bins.length &amp;&amp; d.zones &amp;&amp; d.zones.length;
-  if (!setState(&quot;zonecard&quot;, ok, d.reason)) { ZONES = null; return; }
-  // 창 전체의 평균 점유율(%) — 5분 구간 share_pct 의 평균. 틴트는 가장 붐빈 구역을 1 로 정규화
-  const share = {}, avg = {};
-  d.zones.forEach(z =&gt; { share[z.id] = 0; avg[z.id] = 0; });
-  d.bins.forEach(b =&gt; d.zones.forEach(z =&gt; { share[z.id] += b.share_pct?.[z.id] || 0; avg[z.id] += b.avg_n?.[z.id] || 0; }));
-  d.zones.forEach(z =&gt; { share[z.id] /= d.bins.length; avg[z.id] /= d.bins.length; });
-  const top = Math.max(1, ...Object.values(share));
-  const occ = {}; d.zones.forEach(z =&gt; occ[z.id] = share[z.id] / top);
-  ZONES = { zones: d.zones, occ };
+  const ok = d.state === &quot;ok&quot; &amp;&amp; d.cells &amp;&amp; d.cells.length;
+  if (!setState(&quot;zonecard&quot;, ok, d.reason)) { DENS = null; return; }
+  DENS = d;
   drawZoneCard();
-  const busiest = d.zones.slice().sort((a, b) =&gt; share[b.id] - share[a.id])[0];
-  $(&quot;#zonelead&quot;).innerHTML = `&lt;b&gt;${esc(busiest.label)}&lt;/b&gt;에 사람이 가장 많았습니다 (${Math.round(share[busiest.id])}%)`;
-  $(&quot;#zonechips&quot;).innerHTML = d.zones.map(z =&gt;
-    `&lt;span class=&quot;${z.id === busiest.id ? &quot;&quot; : &quot;ghost&quot;}&quot;&gt;${esc(z.label)}&lt;small&gt;${Math.round(share[z.id])}% · 평균 ${avg[z.id].toFixed(1)}명&lt;/small&gt;&lt;/span&gt;`).join(&quot;&quot;);
-  const peak = d.peak ? ` · 가장 붐빈 시각 ${mm(d.peak.minute_of_day)} (${d.peak.total}명)` : &quot;&quot;;
-  $(&quot;#zonefoot&quot;).textContent = (d.basis === &quot;day&quot; ? `${d.date} 하루` : `최근 ${d.weeks}주 평균`) + peak + &quot; · 구역별 인원수만 집계, 개별 위치는 저장하지 않습니다&quot;;
+  const top = d.zones[0];
+  $(&quot;#zonelead&quot;).innerHTML = top ? `최근 ${d.minutes}분, &lt;b&gt;${esc(top.label)}&lt;/b&gt;에 사람이 가장 많았습니다 (${top.share_pct}%)` : `최근 ${d.minutes}분 밀집도`;
+  $(&quot;#zonechips&quot;).innerHTML = d.zones.map((z, i) =&gt;
+    `&lt;span class=&quot;${i ? &quot;ghost&quot; : &quot;&quot;}&quot;&gt;${esc(z.label)}&lt;small&gt;${z.share_pct}% · 평균 ${z.avg_n}명&lt;/small&gt;&lt;/span&gt;`).join(&quot;&quot;);
+  $(&quot;#zonefoot&quot;).textContent = `${hm(d.since)} 이후 표본 ${d.ticks}개 · 격자 ${d.grid.cols}×${d.grid.rows} 셀별 인원수 합계 · 개별 위치는 저장하지 않습니다`;
 }
 
 function renderReport(d) {
@@ -4698,11 +4780,11 @@ export const screen = {
     canvasAuto($(&quot;#zoneplan&quot;), drawZoneCard);
   },
   every: 30000,
-  async poll() { S.lastPos = await j(&quot;/api/positions&quot;); renderPlan(S.lastPos); },
-  async slow() {                                       // 집계·리포트 — core 가 30분마다
-    const [z, t] = await Promise.all([jSoft(&quot;/api/insight/zones?weeks=4&quot;), jSoft(&quot;/api/insight/text&quot;)]);
-    renderZones(z); renderReport(t);
+  async poll() {                                       // 위치 마커 + 최근 30분 밀집도(둘 다 라이브)
+    const [p, z] = await Promise.all([j(&quot;/api/positions&quot;), jSoft(&quot;/api/insight/density?minutes=30&quot;)]);
+    S.lastPos = p; renderPlan(p); renderZones(z);
   },
+  async slow() { renderReport(await jSoft(&quot;/api/insight/text&quot;)); },   // 리포트 — core 가 30분마다
   fail() { S.lastPos = { state: &quot;no_data&quot; }; renderPlan(S.lastPos); },    // 서버에 닿지 못하면 옛 위치를 '지금'처럼 두지 않는다
   activate() { $(&quot;#plancard&quot;).classList.add(&quot;live&quot;); },                   // 점멸은 보일 때만
   deactivate() { $(&quot;#plancard&quot;).classList.remove(&quot;live&quot;); },
@@ -4849,6 +4931,18 @@ export function drawZones(g, G, zones, occ = {}, labels = true) {
     const [lx, ly] = G.P(cx, cy);
     g.textAlign = &quot;center&quot;;
     label(g, G, z.label || z.id, lx, ly + 4 * G.u, &quot;#0C6D6A&quot;);        // 언제나 틸 잉크 + 종이색 테두리(label) — 흰 글자는 테두리와 같아 보이지 않았다
+  });
+}
+
+/* 밀집도 격자 — cells = [{i, w}] (i = row*cols+col, w 0~1). 평면도 위에 셀을 틸로 채운다: 값이 클수록 진하게.
+   구역 이름·마커 없음. 최근 30분의 셀별 합계이지 개별 위치가 아니다 */
+export function drawHeat(g, G, cells, cols, rows) {
+  (cells || []).forEach(c =&gt; {
+    const col = c.i % cols, row = Math.floor(c.i / cols);
+    const [x0, y0] = G.P(col / cols, row / rows), [x1, y1] = G.P((col + 1) / cols, (row + 1) / rows);
+    const x = Math.min(x0, x1), y = Math.min(y0, y1), w = Math.abs(x1 - x0), h = Math.abs(y1 - y0);
+    g.fillStyle = `rgba(12,109,106,${(.06 + .74 * Math.min(1, Math.max(0, c.w))).toFixed(3)})`;
+    g.fillRect(x + 1, y + 1, Math.max(1, w - 2), Math.max(1, h - 2));
   });
 }</code></pre>
 </figure>

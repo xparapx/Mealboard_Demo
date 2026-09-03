@@ -17,6 +17,12 @@ CREATE TABLE IF NOT EXISTS zone_samples (
   n    INTEGER NOT NULL,           -- 그 순간 구역 안 인원수. 숫자만 — 개별 좌표는 남기지 않는다 (CLAUDE.md §2)
   PRIMARY KEY (ts, zone)
 );
+CREATE TABLE IF NOT EXISTS cell_samples (
+  ts   TEXT    NOT NULL,           -- samples.ts 와 같은 시각
+  cell INTEGER NOT NULL,           -- vision/zones.py 격자(GRID_COLS × GRID_ROWS) 셀 번호 = row * cols + col
+  n    INTEGER NOT NULL,           -- 그 순간 셀 안 인원수(0 인 셀은 쓰지 않는다). 최근 30분 밀집도 히트맵의 재료 — 숫자만
+  PRIMARY KEY (ts, cell)
+);
 """
 
 
