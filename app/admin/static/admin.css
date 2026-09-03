@@ -28,9 +28,8 @@
 /* 접기/펼치기(09-04) — 로그 테일·감사 로그. summary 한 줄 = eyebrow + 오른쪽 화살표(열리면 위로) */
 .fold > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; min-height: 32px; }
 .fold > summary::-webkit-details-marker { display: none; }
-.fold > summary i { width: 28px; height: 28px; border-radius: 999px; background: var(--well); position: relative; flex: none; }
-.fold > summary i::after { content: "▾"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; color: var(--ink2); }   /* ▾ — transform 없이(모션 축소 규칙과 무관) */
-.fold[open] > summary i::after { content: "▴"; }
+.fold > summary i { width: 40px; height: 40px; border-radius: 999px; background: var(--well) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236E6A61' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>") center / 22px 22px no-repeat; flex: none; }   /* 셰브론 SVG — 글꼴 화살표는 작고 기울어 보였다(09-04) */
+.fold[open] > summary i { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236E6A61' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M6 15l6-6 6 6'/></svg>"); }
 .fold > summary:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; border-radius: 8px; }
 pre.log { margin: 10px 0 0; max-height: 300px; overflow: auto; background: var(--well); border-radius: 12px; padding: 12px;
           font: 11.5px/1.5 ui-monospace, Menlo, Consolas, monospace; color: #4A4740; white-space: pre-wrap; word-break: break-all; }

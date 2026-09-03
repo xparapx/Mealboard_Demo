@@ -163,7 +163,7 @@ details > summary::-webkit-details-marker { display: none; }
 .week [data-wd="2"] { background: #FBE9B7; }   /* 화 · 에그셸 */
 .week [data-wd="3"] { background: #F3B2A4; }   /* 수 · 멜론 */
 .week [data-wd="4"] { background: #CBC2FB; }   /* 목 · 페리윙클 */
-.week [data-wd="5"] { background: #A3F5B4; }   /* 금 · 세이지 */
+.week [data-wd="5"] { background: #BFE3F7; }   /* 금 · 스카이블루(09-04, 이전 세이지 #A3F5B4) */
 .week [data-when="past"] > * { opacity: .62; }
 .week [data-when="today"] { background: var(--ink); }
 .week [data-when="today"] .d { color: rgba(255,253,246,.55); }
