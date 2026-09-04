@@ -74,6 +74,9 @@
   5.1.1 로 컴파일된 YOLO hef 와 Qwen2.5 hef 는 5.3.0 에서도 열린다. **운용 모델은 Qwen3-1.7B-Instruct**(`v5.3.0/blob/…`, 2.88 GB, `.env LLM_HEF`, `LLM_CONTEXT_CHARS=4800`):
   스파이크 go(요약·주입 PASS, 6,000자 OK, 3.6 tok/s), 실제 피드 3/3 요약 성공 + Why 까지. 한국어 직접 생성은 여전히 불가(반복 붕괴) → 영어 → DeepL 2단계 유지. Qwen2.5 파일은 예비로 남겨 둠.
   **`apt install hailo-h10-all` 을 다시 실행하지 말 것**(5.1.1 로 되돌아가며 `hailort` 와 충돌).
+- **세션 인계(09-04 아침, 학교 PC)**: 저장소·Pi 모두 `fba0fec`. 오늘 아침 끝난 것 — ① 수집 시간창 3개 + 더미데이터 띠(`50b600a`) ② vision 프로토타입 가동, Pi 는 mock → `mealboard-vision`(`d2debda`) ③ 카메라 모드 2304x1296(`204b28f`) ④ 관리 화면 보정 전 null 좌표 가드(`fba0fec`).
+  **지금 꽂힌 카메라는 표준판(66°)** — Wide 모듈은 아직 없음(사용자 확인). 광각은 모듈 교체로만 가능. **사용자 작업 방식 갱신**: Pi 반영(pull·restart)도 Claude 가 `ssh mbpi` 로 직접 한다, 코드 조각을 사용자에게 써 달라는 요청은 하지 않는다(설명만).
+  **다음**: 관리 화면 구역 탭에서 보정 4점·ROI·λ선(표준판으로 연습, Wide 오면 재보정) → 카메라 앞에서 걸어 λ 통과 확인 → CPU fps 가 모자라면 Hailo hef 백엔드.
 - **세션 인계(09-04 밤, 이 PC=jh-home)**: 저장소·Pi 모두 최신(`git log -1` 로 확인). 오늘 끝난 것 — 화면 손질(육각 밀집도·plotly 컬러맵·구역 라벨·컬러바 우측 상단), 기본 구역 5개,
   HailoRT 5.3.0 + Qwen3-1.7B(기사 요약 3/3), 휴대폰 Tailscale 로 관리 화면 접속 확인. **hailo-ollama 설치함(09-04 밤, 사용자 결정)**: `hailo_gen_ai_model_zoo_5.3.0_arm64.deb`(공개 경로 `2026_04/Hailo10/`), 모델 저장소 `~/.local/share/hailo-ollama/models/blob/sha256_<해시>` 에
   `data/models/Qwen3-1.7B-Instruct.hef` 를 하드링크(해시 동일, 재다운로드 없음). 유닛 `deploy/hailo-ollama.service` 는 **enable 하지 않는다** — 필요할 때 `sudo systemctl start hailo-ollama`, 끝나면 stop
