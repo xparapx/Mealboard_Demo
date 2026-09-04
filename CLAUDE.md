@@ -83,6 +83,7 @@
   + `source.py`(picamera|webcam:N|file:) + `counting.py`(라인크로싱·5분 이동합, 순수) + `debug_stream.py`(8102 MJPEG, 플래그 503) + `record.py`(mock 과 공용 기록). Pi 는 **mock disable → `mealboard-vision` enable**(업무 공간 카메라 imx708, 약 3fps).
   **추론은 창 안 또는 관리자가 실사·메타를 보는 동안만**(초점·ROI·보정은 급식 시간과 무관해야 한다 — 사용자 결정), 기록은 창 안만 실측·창 밖은 Simulator 더미. `.env FEED_SOURCE=mock` 은 급식실 이전 전까지 그대로(화면 띠 = 더미).
   호모그래피(`image_to_floor`)·ROI 는 아직 null → L 은 화면 안 전원, λ 0 → `insufficient_rate`, 구역·타일·positions 는 건너뜀 — **관리 화면 구역 탭에서 4점 보정·ROI·λ선을 찍는 것이 다음 실무**. Hailo hef 백엔드는 미착수(CPU 로 충분하면 보류).
+  **화각 주의(09-04)**: 업무 공간 Pi 에 지금 꽂힌 모듈은 **표준판 imx708(66°)** 이다(Wide 는 libcamera 가 `imx708_wide` 로 보고) — Wide 로 바꿔 끼우면 코드 변경 없음. imx708 의 `1536x864` 모드는 중앙 크롭이라 화각이 2/3 로 준다 → `VISION_SIZE=2304x1296`(센서 전체, 2×2 비닝)이 기본.
 - **다음 할 일**: ① 관리 화면에서 보정 4점·ROI·λ선 지정 → 실측 L·λ 확인(카메라 앞에서 걸어 보기) ② Cloudflare Tunnel 전환(도메인·토큰은 사용자 준비, README 09-03 저녁 항목의 5단계). ③ 아래 ①~③ 잔여.
   ① 평소 곡선(`/api/typical`)은 mock 이 170분 사이클을 반복해 써서 스테이징에서는 값이 바닥이다. 실측 이후 확인.
   ② Inside Climate News 는 미국 지역 전력·정치 보도가 많아 "세계적 기후 이슈"와 결이 다른 기사가 섞인다 —

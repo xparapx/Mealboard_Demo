@@ -38,7 +38,7 @@ ADMIN_LOCAL_KEY = os.getenv("ADMIN_LOCAL_KEY", "")    # SSH 터널(127.0.0.1) �
 DEBUG_PORT = int(os.getenv("DEBUG_PORT", "8102"))     # vision 디버그 MJPEG (127.0.0.1 전용, 관리 앱이 중계)
 # 카메라 카운팅 노드 (vision/counter.py, 로드맵 ④). 홈 Pi 에서는 picamera 금지(Plant 카메라와 배타) — webcam:N | file:경로 만
 VIDEO_SOURCE = os.getenv("VIDEO_SOURCE", "picamera")   # picamera | webcam:0 | file:경로
-VISION_SIZE = os.getenv("VISION_SIZE", "1536x864")      # 카메라 요청 해상도 (imx708 의 1536x864 모드 = 비닝, 밝고 빠르다)
+VISION_SIZE = os.getenv("VISION_SIZE", "2304x1296")     # 카메라 요청 해상도. imx708 은 2304x1296 이 센서 전체(2×2 비닝) — 1536x864 는 중앙 크롭이라 화각이 2/3 로 준다(09-04 실측)
 VISION_FPS = float(os.getenv("VISION_FPS", "5"))        # 추론 목표 fps (Pi 5 CPU 의 yolo11n 640 은 3~5)
 VISION_IMGSZ = int(os.getenv("VISION_IMGSZ", "640"))
 VISION_CONF = float(os.getenv("VISION_CONF", "0.35"))

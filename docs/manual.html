@@ -309,7 +309,8 @@ ADMIN_LOCAL_KEY=
 DEBUG_PORT=8102
 # 카메라 카운팅 노드 (vision/counter.py). 소스: picamera | webcam:0 | file:경로. 홈 Pi 는 picamera 금지(Plant 카메라와 배타)
 VIDEO_SOURCE=picamera
-VISION_SIZE=1536x864
+# imx708: 2304x1296 = 센서 전체 화각(2×2 비닝). 1536x864 는 중앙 크롭(화각 2/3) — 쓰지 말 것
+VISION_SIZE=2304x1296
 VISION_FPS=5
 VISION_IMGSZ=640
 VISION_CONF=0.35
@@ -680,7 +681,7 @@ ADMIN_LOCAL_KEY = os.getenv(&quot;ADMIN_LOCAL_KEY&quot;, &quot;&quot;)    # SSH 
 DEBUG_PORT = int(os.getenv(&quot;DEBUG_PORT&quot;, &quot;8102&quot;))     # vision 디버그 MJPEG (127.0.0.1 전용, 관리 앱이 중계)
 # 카메라 카운팅 노드 (vision/counter.py, 로드맵 ④). 홈 Pi 에서는 picamera 금지(Plant 카메라와 배타) — webcam:N | file:경로 만
 VIDEO_SOURCE = os.getenv(&quot;VIDEO_SOURCE&quot;, &quot;picamera&quot;)   # picamera | webcam:0 | file:경로
-VISION_SIZE = os.getenv(&quot;VISION_SIZE&quot;, &quot;1536x864&quot;)      # 카메라 요청 해상도 (imx708 의 1536x864 모드 = 비닝, 밝고 빠르다)
+VISION_SIZE = os.getenv(&quot;VISION_SIZE&quot;, &quot;2304x1296&quot;)     # 카메라 요청 해상도. imx708 은 2304x1296 이 센서 전체(2×2 비닝) — 1536x864 는 중앙 크롭이라 화각이 2/3 로 준다(09-04 실측)
 VISION_FPS = float(os.getenv(&quot;VISION_FPS&quot;, &quot;5&quot;))        # 추론 목표 fps (Pi 5 CPU 의 yolo11n 640 은 3~5)
 VISION_IMGSZ = int(os.getenv(&quot;VISION_IMGSZ&quot;, &quot;640&quot;))
 VISION_CONF = float(os.getenv(&quot;VISION_CONF&quot;, &quot;0.35&quot;))
