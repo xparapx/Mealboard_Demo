@@ -74,7 +74,7 @@ details.fold[open] summary{margin-bottom:8px;border-bottom:1px solid var(--line)
 <nav>
 <h1>Mealboard 구축 매뉴얼</h1>
 <p class="sub">홈 Pi 5 · 카메라 제외 · 2026-08 → 2026-09 확장(STEP 15~18)</p>
-<a href="#s0"><span class="n">0</span><span>시작하기 전에</span><small>읽기</small></a><a href="#s1"><span class="n">1</span><span>Pi 기본 설정 — 시각, 계정, 원격 접속</span><small>Pi</small></a><a href="#s2"><span class="n">2</span><span>저장소 뼈대 — GitHub 에 프로젝트 만들기</span><small>저장소</small></a><a href="#s3"><span class="n">3</span><span>설치 스크립트와 systemd 유닛</span><small>Pi · 저장소</small></a><a href="#s4"><span class="n">4</span><span>대기시간 계산 — 순수 로직과 테스트</span><small>앱</small></a><a href="#s5"><span class="n">5</span><span>데이터베이스와 API</span><small>앱</small></a><a href="#s6"><span class="n">6</span><span>mock_feed — 카메라 대역</span><small>앱</small></a><a href="#s7"><span class="n">7</span><span>대시보드 화면</span><small>앱</small></a><a href="#s8"><span class="n">8</span><span>NEIS 급식 정보와 영양 지표</span><small>데이터</small></a><a href="#s9"><span class="n">9</span><span>외부 공개 — Tailscale Funnel, PWA, QR</span><small>공개</small></a><a href="#s10"><span class="n">10</span><span>검증 체크리스트, 진단 순서, 이식</span><small>운영</small></a><a href="#s11"><span class="n">11</span><span>탄소 카드 — 잔반의 배출량</span><small>확장</small></a><a href="#s12"><span class="n">12</span><span>이슈 링크 — 기후·탄소 뉴스</span><small>확장</small></a><a href="#s13"><span class="n">13</span><span>급식실 현황 — 익명 위치 마커</span><small>확장</small></a><a href="#s14"><span class="n">14</span><span>대시보드 v5 — 스타일 개편과 네 가지 추가</span><small>확장</small></a><a href="#s15"><span class="n">15</span><span>인사이트 집계 — insights.db 와 /api/insight/*</span><small>확장</small></a><a href="#s16"><span class="n">16</span><span>5화면 프론트 — 셸·ES 모듈·해시 라우트</span><small>확장</small></a><a href="#s17"><span class="n">17</span><span>관리 앱 — tailnet 전용 운영·스트림·구역 편집</span><small>확장</small></a><a href="#s18"><span class="n">18</span><span>로컬 LLM — 리포트와 기사 요약</span><small>확장</small></a>
+<a href="#s0"><span class="n">0</span><span>시작하기 전에</span><small>읽기</small></a><a href="#s1"><span class="n">1</span><span>Pi 기본 설정 — 시각, 계정, 원격 접속</span><small>Pi</small></a><a href="#s2"><span class="n">2</span><span>저장소 뼈대 — GitHub 에 프로젝트 만들기</span><small>저장소</small></a><a href="#s3"><span class="n">3</span><span>설치 스크립트와 systemd 유닛</span><small>Pi · 저장소</small></a><a href="#s4"><span class="n">4</span><span>대기시간 계산 — 순수 로직과 테스트</span><small>앱</small></a><a href="#s5"><span class="n">5</span><span>데이터베이스와 API</span><small>앱</small></a><a href="#s6"><span class="n">6</span><span>mock_feed — 카메라 대역</span><small>앱</small></a><a href="#s7"><span class="n">7</span><span>대시보드 화면</span><small>앱</small></a><a href="#s8"><span class="n">8</span><span>NEIS 급식 정보와 영양 지표</span><small>데이터</small></a><a href="#s9"><span class="n">9</span><span>외부 공개 — Cloudflare Tunnel, PWA, QR</span><small>공개</small></a><a href="#s10"><span class="n">10</span><span>검증 체크리스트, 진단 순서, 이식</span><small>운영</small></a><a href="#s11"><span class="n">11</span><span>탄소 카드 — 잔반의 배출량</span><small>확장</small></a><a href="#s12"><span class="n">12</span><span>이슈 링크 — 기후·탄소 뉴스</span><small>확장</small></a><a href="#s13"><span class="n">13</span><span>급식실 현황 — 익명 위치 마커</span><small>확장</small></a><a href="#s14"><span class="n">14</span><span>대시보드 v5 — 스타일 개편과 네 가지 추가</span><small>확장</small></a><a href="#s15"><span class="n">15</span><span>인사이트 집계 — insights.db 와 /api/insight/*</span><small>확장</small></a><a href="#s16"><span class="n">16</span><span>5화면 프론트 — 셸·ES 모듈·해시 라우트</span><small>확장</small></a><a href="#s17"><span class="n">17</span><span>관리 앱 — tailnet 전용 운영·스트림·구역 편집</span><small>확장</small></a><a href="#s18"><span class="n">18</span><span>로컬 LLM — 리포트와 기사 요약</span><small>확장</small></a>
 </nav>
 <main>
 <div class="hero">
@@ -1718,7 +1718,7 @@ curl -s localhost:8100/api/meal | head -c 300</code></pre>
 <dl class="term"><dt>MAR</dt><dd>Mean Adequacy Ratio. 영양학에서 식사의 질을 재는 정립된 지표. 영양소별 충족비(NAR, 1 을 상한)의 평균.</dd></dl>
 
 </section><section id="s9" class="step">
-<header><span class="stepnum">STEP 9</span><h2>외부 공개 — Tailscale Funnel, PWA, QR</h2><span class="layer">공개</span></header>
+<header><span class="stepnum">STEP 9</span><h2>외부 공개 — Cloudflare Tunnel, PWA, QR</h2><span class="layer">공개</span></header>
 <div class="sysmap" aria-label="시스템 지도">
   <div class="lane"><em>개발 흐름</em><div class="node" data-k="pc"><b>개발 PC</b><span>코드 작성 · Claude Code 실행 · git push</span></div><i>git push →</i><div class="node" data-k="gh"><b>GitHub</b><span>저장소 원본 (팀 공용)</span></div><i>git pull →</i><div class="node" data-k="pi"><b>홈 Pi 5</b><span>실제로 서비스가 도는 곳</span></div></div>
   <div class="lane"><em>Pi 안 · 데이터</em><div class="node" data-k="mock"><b>mock_feed</b><span>가짜 대기 인원 생성 (vision 대역)</span></div><i>또는</i><div class="node" data-k="vision"><b>vision</b><span>카메라 카운팅 — 학교 Pi 에서만</span></div><i>쓰기 →</i><div class="node" data-k="db"><b>queue.db</b><span>SQLite · 숫자만 저장</span></div><i>← 읽기</i><div class="node" data-k="api"><b>FastAPI</b><span>/api/status · /api/history · /api/meal</span></div></div>
@@ -1726,88 +1726,75 @@ curl -s localhost:8100/api/meal | head -c 300</code></pre>
   <div class="lane"><em>공개</em><div class="node on" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div><i>→</i><div class="node on" data-k="cf"><b>cloudflared</b><span>학교망 밖으로 내보내는 터널</span></div><i>→ 인터넷 →</i><div class="node on" data-k="user"><b>학생·교사</b><span>QR → 휴대폰</span></div><i>· 전부</i><div class="node" data-k="sysd"><b>systemd</b><span>부팅 시 자동 실행 · 재시작</span></div><i>가 관리</i></div>
 </div>
 
-<p class="goal">목표: 인터넷 어디서든 고정 주소 <code>https://rsp.taild5f11e.ts.net</code> 으로 대시보드가 열리고, 그 주소의 QR 이 있는 상태. 실제로 밟은 경로는 <strong>Quick Tunnel(임시 검증) → Tailscale Funnel(고정, 채택)</strong> 이고, Cloudflare Tunnel + 도메인은 정식 배포 때로 미뤘습니다(맨 아래 접힌 절).</p>
+<p class="goal">목표: 인터넷 어디서든 고정 주소 <code>https://meal.kjhs-meal.com</code> 으로 대시보드가 열리고, 그 주소의 QR 이 있는 상태. 실제로 밟은 경로는 <strong>Quick Tunnel(임시 검증) → Tailscale Funnel(2026-08, 스테이징) → Cloudflare Tunnel + 도메인(2026-09-04, 정식)</strong> 입니다. 학교 망이 Tailscale 릴레이를 막아 Funnel 이 휴대폰에서 끊긴 것이 전환 이유이고, Funnel 은 예비로 켜 둡니다(맨 아래 접힌 절).</p>
 
 <h3>9-1. 왜 터널인가</h3>
-<p>학교망은 밖에서 들어오는 연결을 막습니다. 터널은 Pi 가 <em>밖으로</em> 연결을 열어 두고, 학생의 요청이 그 통로를 거꾸로 타고 들어오는 방식입니다. 포트포워딩도, 고정 IP 도 필요 없고, 443 아웃바운드만 되면 됩니다. Netlify 같은 호스팅으로는 대체되지 않습니다 — 서버(DB·API)가 Pi 안에 있기 때문입니다. Cloudflare Tunnel 과 Tailscale Funnel 은 이 원리가 같고, 차이는 <em>주소를 누가 주느냐</em>입니다: Cloudflare 는 내 도메인이 있어야 하고, Funnel 은 tailnet 이 주는 <code>*.ts.net</code> 주소를 씁니다.</p>
+<p>학교망은 밖에서 들어오는 연결을 막습니다. 터널은 Pi 가 <em>밖으로</em> 연결을 열어 두고, 학생의 요청이 그 통로를 거꾸로 타고 들어오는 방식입니다. 포트포워딩도, 고정 IP 도 필요 없고, 밖으로 나가는 문 하나(Cloudflare 는 7844, Funnel 은 443)만 열려 있으면 됩니다. Netlify 같은 호스팅으로는 대체되지 않습니다 — 서버(DB·API)가 Pi 안에 있기 때문입니다. Cloudflare Tunnel 과 Tailscale Funnel 은 이 원리가 같고, 차이는 <em>주소를 누가 주느냐</em>입니다: Cloudflare 는 내 도메인이 있어야 하고, Funnel 은 tailnet 이 주는 <code>*.ts.net</code> 주소를 씁니다. 그리고 실제로 중요했던 차이 하나 — 학교 망은 Tailscale 의 릴레이 서버(도쿄·싱가포르)를 막았지만 Cloudflare 엣지(인천)로 나가는 7844 는 열어 둔다는 점입니다.</p>
 
 <h3>9-2. Quick Tunnel — 계정 없이 5분 검증 (임시)</h3>
-<p>도메인·계정 없이 주소 하나를 즉시 받아 "휴대폰 데이터로도 열리는가"만 확인하는 용도입니다. 주소가 실행할 때마다 바뀌고 프로세스를 끄면 사라지므로 QR 을 만들면 안 됩니다.</p>
+<p>도메인·계정 없이 주소 하나를 즉시 받아 "휴대폰 데이터로도 열리는가"만 확인하는 용도입니다. 주소가 실행할 때마다 바뀌고 프로세스를 끄면 사라지므로 QR 을 만들면 안 됩니다. 학교 망은 <code>api.trycloudflare.com</code> 도 막고 있어 학교 안에서는 이 방법이 통하지 않습니다(집에서만).</p>
 <figure class="code">
 <figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
 <pre><code class="lang-bash">cloudflared tunnel --url http://127.0.0.1:8100
 # 출력의 https://xxxx-xxxx.trycloudflare.com 을 휴대폰(데이터)에서 연다. 확인 후 Ctrl+C</code></pre>
 </figure>
 
-<h3>9-3. Tailscale Funnel — 고정 주소 (채택)</h3>
-<p>팀 SSH 용으로 이미 Pi 가 tailnet 에 있으므로, 같은 Tailscale 이 공개 주소도 줍니다. 주소는 <code>https://&lt;노드명&gt;.&lt;tailnet 이름&gt;.ts.net</code> — 홈 Pi 는 <code>https://rsp.taild5f11e.ts.net</code>. HTTPS 인증서는 Tailscale 이 자동 발급하고, <code>--bg</code> 로 켠 설정은 tailscaled 가 저장해 재부팅 후에도 유지됩니다.</p>
-<p>절차는 승인 두 번입니다: ① 관리 콘솔에서 tailnet 에 HTTPS 인증서와 Funnel 을 켜 둔다(DNS → "HTTPS Certificates" 활성화, Access controls 의 <code>nodeAttrs</code> 에 <code>funnel</code> 속성 — 첫 실행이 안내하는 링크를 따라가면 그 화면이 열린다). ② Pi 에서 아래를 실행하면 처음 한 번 <strong>승인 링크</strong>가 출력되는데, 그 링크를 브라우저에서 열어 이 노드의 Funnel 을 허용한다.</p>
+<h3>9-3. Cloudflare Tunnel + 도메인 — 고정 주소 (채택)</h3>
+<p><strong>도메인.</strong> Cloudflare Tunnel 의 공개 주소는 "Cloudflare 에 사이트로 등록된 도메인" 밑에만 만들 수 있습니다. 함정 두 가지: ① kro.kr 같은 무료 하위 도메인은 네임서버(NS) 위임을 주지 않아 등록이 안 됩니다. ② 학교 홈페이지 주소(<code>kongjugo.cnehs.kr</code>)는 교육청 소유라 학교가 레코드를 넣을 수 없고, 하위 이름만 위임받는 방식은 Cloudflare 최상위 유료 플랜 전용입니다. 그래서 <strong>Cloudflare Registrar 에서 직접 샀습니다</strong>(<code>kjhs-meal.com</code>, 원가 판매라 연 1만 원대, 자동 갱신은 꺼 둘 수 있음). Registrar 에서 사면 네임서버가 처음부터 Cloudflare 라 "사이트 추가" 절차가 없습니다. 다른 곳에서 샀다면 Cloudflare → Add a site 뒤 NS 를 바꿔야 합니다. Cloudflare 계정·Tunnel·DNS·HTTPS 인증서는 전부 무료 플랜입니다.</p>
+<p><strong>터널.</strong> Cloudflare 대시보드 → Zero Trust → Networks → Tunnels → Create a tunnel → Cloudflared → 이름 <code>mealboard</code>. 다음 화면의 "설치 명령" 끝에 붙은 <code>eyJ…</code> 문자열이 <strong>토큰</strong>입니다 — 화면에는 별표로 가려져 보이므로 반드시 <em>복사 아이콘</em>으로 복사합니다. PC 에 아무것도 설치하지 않고, 명령도 실행하지 않습니다(터널은 Pi 에서, 유닛은 저장소의 것으로 돕니다). 같은 화면의 Public Hostname 탭에서 <code>meal</code> / <code>kjhs-meal.com</code> / <strong>HTTP</strong> / <code>127.0.0.1:8100</code> 을 저장하면 DNS 레코드(<code>meal.kjhs-meal.com</code> → 터널)가 자동으로 생깁니다. <strong>관리 앱 8101 은 절대 매핑하지 않습니다</strong>(tailnet 전용 — STEP 17).</p>
+<p><strong>토큰을 Pi 에 넣기.</strong> 토큰은 <code>.env</code> 의 <code>CF_TUNNEL_TOKEN</code> 한 줄이며, 유닛 <code>deploy/mealboard-cloudflared.service</code> 가 <code>EnvironmentFile</code> 로 읽어 <code>cloudflared tunnel run --token</code> 에 넘깁니다. 설정 파일도 자격증명 json 도 Pi 에 남지 않습니다. 붙여 넣을 때 실제로 겪은 함정: nano 에 오른쪽 클릭으로 붙였더니 아무것도 들어가지 않았고, <code>read -s</code> 로 받았더니 터미널이 보낸 제어 문자(Ctrl+V 의 <code>^V</code>, 방향키·괄호 붙여넣기의 <code>ESC[</code>, 끝의 <code>^D</code>)가 값 안에 섞여 <code>Provided Tunnel token is not valid</code> 가 났습니다. 아래 한 줄은 입력을 화면·히스토리에 남기지 않고 받되, base64 문자만 남기고 나머지를 걷어 낸 뒤 저장합니다.</p>
 <figure class="code">
 <figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
-<pre><code class="lang-bash">sudo tailscale funnel --bg 8100
-# 첫 실행: &quot;Funnel is not enabled ... To enable, visit: https://login.tailscale.com/f/funnel?node=...&quot; 가 나오면
-#   그 링크를 PC 브라우저에서 열어 허용한 뒤 같은 명령을 한 번 더 실행
-# 성공 출력:  Available on the internet:  https://rsp.taild5f11e.ts.net/  |-- proxy http://127.0.0.1:8100
+<pre><code class="lang-bash"># 토큰을 클립보드에 복사한 상태에서. 프롬프트가 뜨면 오른쪽 클릭(또는 Ctrl+Shift+V)으로 붙이고 Enter — 화면에 아무것도 안 보이는 게 정상
+read -rs -p &quot;토큰 붙여넣고 Enter: &quot; T &amp;&amp; T=$(printf %s &quot;$T&quot; | tr -cd &#39;A-Za-z0-9+/=_-&#39;) \
+  &amp;&amp; grep -v &#39;^CF_TUNNEL_TOKEN=&#39; /opt/mealboard/.env &gt; /tmp/env.new &amp;&amp; printf &#39;CF_TUNNEL_TOKEN=%s\n&#39; &quot;$T&quot; &gt;&gt; /tmp/env.new \
+  &amp;&amp; mv /tmp/env.new /opt/mealboard/.env &amp;&amp; chmod 664 /opt/mealboard/.env &amp;&amp; unset T \
+  &amp;&amp; grep -c &#39;^CF_TUNNEL_TOKEN=eyJ&#39; /opt/mealboard/.env         # 1 이면 성공. 토큰은 보통 180~190자
+# 형식만 검사(값은 출력하지 않음): a=계정 32자 hex, t=터널 UUID, s=비밀 — 셋이 나오고 뒤에 extra 가 없어야 한다
+grep &#39;^CF_TUNNEL_TOKEN=&#39; /opt/mealboard/.env | cut -d= -f2- | python3 -c &#39;import sys,base64,json; v=sys.stdin.read().strip(); d=json.loads(base64.b64decode(v+&quot;=&quot;*(-len(v)%4))); print({k:len(str(x)) for k,x in d.items()})&#39;
 
-tailscale funnel status                     # 현재 공개 설정 확인
-# 끄기:  sudo tailscale funnel reset</code></pre>
+sudo systemctl enable --now mealboard-cloudflared
+journalctl -u mealboard-cloudflared -n 20 --no-pager | grep -c &#39;Registered tunnel connection&#39;   # 4 (인천 icn 엣지 4개 연결)
+# 실패 문구가 &quot;Provided Tunnel token is not valid&quot; 면 토큰에 찌꺼기가 남은 것 — 위 검사에서 JSON 뒤에 extra 바이트가 보이면
+# 대시보드에서 다시 복사해 넣는다(값을 손으로 고치지 말 것)</code></pre>
 </figure>
 
-<p>주의할 점 세 가지. Funnel 이 밖에 내보내는 것은 <strong>이 포트 하나</strong>뿐이라 SSH·Plant 의 8000/8501 은 여전히 tailnet 안에서만 보입니다. 공개 포트는 443·8443·10000 중 하나로 매핑되며 여기서는 443(주소에 포트 없음)입니다. 그리고 주소가 tailnet 이름에 묶여 있어 "학교 이름의 정식 주소"는 아닙니다 — 그것이 정식 배포 때 Cloudflare 로 가는 이유입니다.</p>
+<p>주의할 점 세 가지. 터널이 밖에 내보내는 것은 <strong>Public Hostname 에 매핑한 것</strong>뿐이라 SSH·관리 앱·Plant 의 포트는 여전히 tailnet 안에서만 보입니다. HTTPS 종단은 Cloudflare 엣지가 맡고 엣지↔Pi 구간은 터널 안에서 암호화되므로 Pi 에 인증서가 없습니다. 그리고 같은 토큰으로 두 Pi 에서 터널을 켜면 트래픽이 갈립니다 — 학교 Pi 로 옮길 때 홈 Pi 의 유닛은 끕니다.</p>
 
 <h3>9-4. QR</h3>
 <figure class="code">
 <figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
 <pre><code class="lang-bash">sudo apt install -y qrencode
-qrencode -o /opt/mealboard/static/icons/qr.png -s 8 &quot;https://rsp.taild5f11e.ts.net&quot;
-# 이 png 를 급식실 입구에 붙인다. 주소가 바뀌면(정식 배포 전환) 다시 만든다</code></pre>
+qrencode -o /opt/mealboard/static/icons/qr.png -s 8 &quot;https://meal.kjhs-meal.com&quot;
+# 이 png 를 급식실 입구에 붙인다(화면에서는 /icons/qr.png). 주소가 바뀌면 다시 만든다 — git 미추적이 맞다</code></pre>
 </figure>
 
 <h3>확인</h3>
 <ul>
-<li>휴대폰 데이터(집 WiFi 끄고)로 <code>https://rsp.taild5f11e.ts.net</code> 이 열리고 숫자가 30초마다 갱신된다</li>
+<li>휴대폰 데이터(집 WiFi 끄고)와 <strong>학교 Wi‑Fi</strong> 둘 다에서 <code>https://meal.kjhs-meal.com</code> 이 열리고 숫자가 30초마다 갱신된다 — Funnel 은 후자에서 끊겼었다</li>
 <li>브라우저 메뉴에 "홈 화면에 추가"가 뜬다 (PWA)</li>
-<li><code>https://rsp.taild5f11e.ts.net/api/status</code> 는 열리지만 SSH·Streamlit 등 다른 포트는 열리지 않는다 — Funnel 이 8100 만 내보내기 때문</li>
-<li>Pi 를 재부팅해도 <code>tailscale funnel status</code> 에 설정이 남아 있고 주소가 다시 열린다</li>
+<li><code>https://meal.kjhs-meal.com/api/status</code> 는 열리지만 <code>:8101</code> 등 다른 포트·호스트는 열리지 않는다 — 매핑한 것만 나간다</li>
+<li>Pi 를 재부팅해도 <code>systemctl status mealboard-cloudflared</code> 가 active 이고 저널에 Registered 4건이 다시 찍힌다</li>
+<li>Cloudflare 대시보드 Tunnels 목록에서 <code>mealboard</code> 가 HEALTHY</li>
 </ul>
 
 <h3>학교 Pi 로 갈 때</h3>
-<p>Funnel 은 노드 단위 설정이라 옮길 파일이 없습니다. 학교 Pi 를 같은 tailnet 에 넣고 9-3 을 그대로 실행하면 됩니다. 다만 주소가 노드명을 따르므로 학교 Pi 의 호스트명을 <code>rsp</code> 로 맞추거나(홈 Pi 는 그때 이름을 바꾸거나 Funnel 을 끈다) 새 주소로 QR 을 다시 만듭니다.</p>
+<p>옮길 것은 <code>.env</code> 의 <code>CF_TUNNEL_TOKEN</code> 한 줄뿐입니다(안전한 방법으로 — 채팅·커밋 금지). 학교 Pi 에서 <code>setup_pi.sh</code> 7단계가 cloudflared 설치와 유닛 enable 을 하고, 홈 Pi 쪽은 <code>sudo systemctl disable --now mealboard-cloudflared</code> 로 끕니다. 주소·QR 은 그대로입니다. 도메인은 매년 갱신 알림이 오며 자동 갱신을 꺼 두면 만료와 함께 주소가 죽으므로 운영 종료 시점과 맞춥니다.</p>
 
 <details class="fold">
-<summary>정식 배포 시 — Cloudflare Tunnel + 유료 도메인 (접힘)</summary>
-<p>학교 이름이 들어간 정식 주소가 필요해질 때의 경로입니다. <code>cloudflared</code> 는 Pi 에 이미 설치되어 있습니다(9-2 의 Quick Tunnel 에 쓴 그 바이너리). <strong>함정: kro.kr 같은 무료 하위 도메인은 Cloudflare 에 사이트로 등록할 수 없습니다.</strong> Cloudflare 는 도메인의 네임서버(NS)를 자기 것으로 바꿔야 하는데, 하위 도메인 무료 서비스는 NS 위임을 주지 않기 때문입니다. 등록기관에서 산 최상위 도메인(연 1~2만 원)이 있어야 합니다.</p>
+<summary>예비 경로 — Tailscale Funnel (접힘, 켜 둔 채로 둔다)</summary>
+<p>팀 SSH 용으로 Pi 가 tailnet 에 있으므로 같은 Tailscale 이 공개 주소 <code>https://rsp.taild5f11e.ts.net</code> 도 줍니다. 2026-08 스테이징은 이 주소로 돌렸고, 09-03 학교 망이 Tailscale 릴레이를 막으면서 휴대폰에서 끊겨 예비로 내렸습니다(PC 는 tailnet 직결이라 여전히 열린다). 설정은 tailscaled 가 저장해 재부팅 후에도 유지되며, <strong><code>tailscale funnel reset</code>·<code>serve reset</code> 은 실행하지 않습니다</strong> — 관리 앱의 Serve 8443 까지 함께 지워집니다(STEP 17).</p>
 <figure class="code">
 <figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
-<pre><code class="lang-bash"># (설치는 이미 됨) 계정에 도메인이 등록된 상태에서:
-cloudflared tunnel login                     # 링크를 브라우저에서 열어 도메인 선택
-cloudflared tunnel create mealboard          # 출력되는 Tunnel ID 와 json 경로를 메모
-cloudflared tunnel route dns mealboard meal.example.com    # 내 도메인의 서브도메인으로</code></pre>
+<pre><code class="lang-bash">sudo tailscale funnel --bg 8100             # 첫 실행은 승인 링크를 출력 → PC 브라우저에서 허용 후 한 번 더
+tailscale funnel status                     # https://rsp.taild5f11e.ts.net (Funnel on) |-- / proxy http://127.0.0.1:8100
+sudo tailscale funnel --https=443 off       # 끌 때는 이렇게(reset 금지)</code></pre>
 </figure>
-<figure class="code">
-<figcaption><span class="path">deploy/cloudflared-config.yml (저장소용 견본)</span><span class="lang">yaml</span><button class="copy" type="button">복사</button></figcaption>
-<pre><code class="lang-yaml"># /etc/cloudflared/config.yml  — &lt;TUNNEL_ID&gt;, &lt;USER&gt;, 도메인을 실제 값으로
-tunnel: &lt;TUNNEL_ID&gt;
-credentials-file: /home/&lt;USER&gt;/.cloudflared/&lt;TUNNEL_ID&gt;.json
-ingress:
-  - hostname: meal.example.com          # Cloudflare 에 등록한 내 도메인의 서브도메인
-    service: http://127.0.0.1:8100      # Pi 안의 FastAPI (API_PORT 와 같게)
-  - service: http_status:404            # 그 외 요청은 거부</code></pre>
-</figure>
-<figure class="code">
-<figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
-<pre><code class="lang-bash">sudo mkdir -p /etc/cloudflared
-sudo cp /opt/mealboard/deploy/cloudflared-config.yml /etc/cloudflared/config.yml
-sudo nano /etc/cloudflared/config.yml        # &lt;TUNNEL_ID&gt;, &lt;USER&gt;, 도메인 채우기
-sudo cloudflared service install             # systemd 유닛 생성 + 자동 시작
-systemctl status cloudflared --no-pager
-sudo tailscale funnel reset                  # 전환 후 Funnel 은 끈다 (주소 두 개가 공존하면 QR 이 갈린다)</code></pre>
-</figure>
-
-<p>저장소에는 값이 빠진 견본만 두고, 실제 <code>config.yml</code> 과 자격증명 json 은 Pi 에만 있습니다(CLAUDE.md §5 — 터널 자격증명은 커밋·채팅에 노출 금지). 학교 Pi 로 옮길 때는 <code>~/.cloudflared/&lt;ID&gt;.json</code> 과 <code>/etc/cloudflared/config.yml</code> 을 안전한 방법(USB, scp)으로 옮기고 <code>service install</code> 만 하면 같은 주소가 학교 Pi 를 가리킵니다. 홈 Pi 쪽 cloudflared 는 그때 끕니다(같은 터널을 두 곳에서 켜면 트래픽이 갈립니다).</p>
+<p>tailnet 관리 콘솔에서 HTTPS 인증서와 <code>nodeAttrs</code> 의 <code>funnel</code> 속성이 켜져 있어야 하며, 공개 포트는 443·8443·10000 중 하나입니다. 주소가 노드명에 묶여 학교 이름의 정식 주소가 될 수 없다는 점도 Cloudflare 로 간 이유입니다.</p>
 </details>
 
-<dl class="term"><dt>Funnel</dt><dd>Tailscale 의 공개 기능. 평소 tailnet 안에서만 보이는 노드의 포트 하나를 인터넷에 <code>https://노드.tailnet.ts.net</code> 으로 내보낸다. 인증서·주소·443 종단을 Tailscale 이 맡는다.</dd></dl>
+<dl class="term"><dt>Cloudflare Tunnel</dt><dd>Pi 의 <code>cloudflared</code> 가 Cloudflare 엣지(가까운 데이터센터, 여기서는 인천)로 밖을 향해 연결을 4개 열어 두고, 내 도메인으로 온 요청을 그 연결로 받아 <code>127.0.0.1:8100</code> 에 넘긴다. 인증서·DNS·443 종단을 Cloudflare 가 맡는다. 토큰 방식(원격 관리형)은 설정을 대시보드에 두고 Pi 에는 토큰 한 줄만 남긴다.</dd></dl>
+<dl class="term"><dt>Funnel</dt><dd>Tailscale 의 공개 기능. 평소 tailnet 안에서만 보이는 노드의 포트 하나를 인터넷에 <code>https://노드.tailnet.ts.net</code> 으로 내보낸다. 입구가 Tailscale 릴레이라 그 릴레이가 막힌 망에서는 끊긴다.</dd></dl>
 <dl class="term"><dt>Quick Tunnel</dt><dd><code>cloudflared tunnel --url</code> 한 줄로 받는 임시 주소(<code>*.trycloudflare.com</code>). 계정이 필요 없지만 실행마다 바뀌고 보증이 없다 — 검증 전용.</dd></dl>
 
 </section><section id="s10" class="step">
@@ -4771,7 +4758,7 @@ mv data/insights.db data/insights.db.moved      # 옮기면 전부 no_data + rea
 #   FEED_SOURCE=mock
 sudo systemctl start mealboard-rollup && journalctl -u mealboard-rollup -n 5 --no-pager
 systemctl list-timers 'mealboard*'
-curl -s https://rsp.taild5f11e.ts.net/api/insight/quality</code></pre>
+curl -s https://meal.kjhs-meal.com/api/insight/quality</code></pre>
 </figure>
 <p>학교 Pi 로 전환할 때는 mock 을 멈춘 직후 <code>queue.db</code>·<code>insights.db</code> 를 <code>.bak-&lt;시각&gt;</code> 으로 이름을 바꾸고 새로 시작합니다(지우는 도구는 만들지 않습니다). <code>FEED_SOURCE</code> 꼬리표가 있으니 옛 파일을 남겨 두어도 실측 히트맵에 섞이지는 않지만, 파일을 갈라 두는 편이 나중에 덜 헷갈립니다.</p>
 

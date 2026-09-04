@@ -7,10 +7,10 @@
 
 - **홈 Pi 5(64bit, Debian 13 Trixie, 시스템 Python 3.13) = 스테이징.** 학교 Pi도 같은 OS·Python이어야 uv.lock이 그대로 맞는다. 카메라 없음 → `mealboard-vision` 미설치, `mealboard-mock`이 대역.
   로드맵 ④는 개발 PC 웹캠·동영상 파일로 진행. ⑤ 중 uv 셋업·systemd·외부 공개는 홈 Pi 완료, calibrate만 학교 Pi 이전 시.
-- **외부 공개**: **Cloudflare Tunnel 로 전환 중(09-03 오후 사용자 결정)**. 학교 망이 Tailscale 도쿄·싱가포르 릴레이와 Funnel 입구를 막아 Funnel(`https://rsp.taild5f11e.ts.net`)은
-  학교 안팎의 휴대폰에서 끊긴다(PC 는 tailnet 직결이라 된다). Pi 에서 Cloudflare 엣지 포트 7844 는 열려 있음을 확인. 유닛 `deploy/mealboard-cloudflared.service`(토큰 방식,
-  `.env CF_TUNNEL_TOKEN`), 공개 호스트 매핑은 Cloudflare 대시보드에서 `meal.<도메인>` → `http://127.0.0.1:8100` 만(관리 앱 8101 은 절대 매핑 금지). cloudflared 2026.8.3 은 09-03 에 Pi 에 설치했다.
-  Funnel 은 예비로 남겨 둔다(`serve reset`·`funnel reset` 금지는 그대로). kro.kr 류 무료 하위 도메인은 Cloudflare 에 등록 불가 — 도메인은 사용자가 준비.
+- **외부 공개 = Cloudflare Tunnel, 공개 주소 `https://meal.kjhs-meal.com`(09-04 저녁)**. 도메인 `kjhs-meal.com` 은 사용자가 Cloudflare Registrar 에서 구매(NS carioca·roman). 학교 망이 Tailscale 도쿄·싱가포르 릴레이와 Funnel 입구를 막아
+  Funnel(`https://rsp.taild5f11e.ts.net`)은 휴대폰에서 끊긴다(PC 는 tailnet 직결이라 된다) — 예비로 켜 둔다(`serve reset`·`funnel reset` 금지는 그대로). 유닛 `deploy/mealboard-cloudflared.service`(토큰 방식,
+  `.env CF_TUNNEL_TOKEN`, 09-04 enable·active, 인천 엣지 4연결), 호스트 매핑은 Cloudflare 대시보드에서 `meal` → `http://127.0.0.1:8100` 만(관리 앱 8101 은 절대 매핑 금지). cloudflared 2026.8.3.
+  **토큰은 `read -s` 로 받아도 터미널 제어 문자가 섞인다** — 매뉴얼 STEP 9 의 정리 명령(base64 문자만 남김)으로 넣고, `Provided Tunnel token is not valid` 면 값 뒤 찌꺼기를 의심(형식 검사 명령 수록). 학교 홈페이지 도메인(`cnehs.kr`)은 교육청 소유라 못 쓴다.
 - **PI_HOST는 Tailscale 주소**(.env 참조). 공용 체크아웃은 `/opt/mealboard`. **Pi에서 직접 편집 금지, `git pull`만.**
   개발은 각자 PC의 클론에서 하고 Claude Code도 PC에서 실행해 SSH로 Pi를 제어한다.
 - **같은 Pi에 Plant 프로젝트가 정지 상태로 공존**(`~/plant/`, planthub·plantdash·plantsnap 유닛).
@@ -87,7 +87,7 @@
   **추론은 창 안 또는 관리자가 실사·메타를 보는 동안만**(초점·ROI·보정은 급식 시간과 무관해야 한다 — 사용자 결정), 기록은 창 안만 실측·창 밖은 Simulator 더미. **`.env FEED_SOURCE` 가 단일 스위치**(09-04 낮): `mock` 이면 vision 도 창 안에서 더미를 기록해(밀집도·마커 나옴) 띠와 숫자가 한 목소리, `vision` 으로 바꿔야 창 안 실측을 쓴다. 급식실 이전 전까지 `mock`.
   호모그래피(`image_to_floor`)·ROI 는 아직 null → L 은 화면 안 전원, λ 0 → `insufficient_rate`, 구역·타일·positions 는 건너뜀 — **관리 화면 구역 탭에서 4점 보정·ROI·λ선을 찍는 것이 다음 실무**. Hailo hef 백엔드는 미착수(CPU 로 충분하면 보류).
   **화각 주의(09-04)**: 업무 공간 Pi 에 지금 꽂힌 모듈은 **표준판 imx708(66°)** 이다(Wide 는 libcamera 가 `imx708_wide` 로 보고) — Wide 로 바꿔 끼우면 코드 변경 없음. imx708 의 `1536x864` 모드는 중앙 크롭이라 화각이 2/3 로 준다 → `VISION_SIZE=2304x1296`(센서 전체, 2×2 비닝)이 기본.
-- **다음 할 일**: ① 관리 화면에서 보정 4점·ROI·λ선 지정 → 실측 L·λ 확인(카메라 앞에서 걸어 보기) ② Cloudflare Tunnel 전환(도메인·토큰은 사용자 준비, README 09-03 저녁 항목의 5단계). ③ 아래 ①~③ 잔여.
+- **다음 할 일**: ① 관리 화면에서 보정 4점·ROI·λ선 지정 → 실측 L·λ 확인(카메라 앞에서 걸어 보기) ② Cloudflare 마무리 — 사용자가 대시보드 Public Hostname(`meal`/`kjhs-meal.com`/HTTP/`127.0.0.1:8100`)을 저장해야 `meal.kjhs-meal.com` DNS 가 생긴다(09-04 저녁 기준 미완) → 휴대폰 셀룰러·학교 Wi‑Fi 확인. ③ 아래 ①~③ 잔여.
   ① 평소 곡선(`/api/typical`)은 mock 이 170분 사이클을 반복해 써서 스테이징에서는 값이 바닥이다. 실측 이후 확인.
   ② Inside Climate News 는 미국 지역 전력·정치 보도가 많아 "세계적 기후 이슈"와 결이 다른 기사가 섞인다 —
   며칠 지켜본 뒤 교체 여부 판단(후보: UNEP · Climate Home News). ③ 급식 있는 평일에 데스크톱 12컬럼 보드·모바일 dock 실물 확인.
