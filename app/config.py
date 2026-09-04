@@ -25,6 +25,8 @@ def _choice(name, default, allowed):
 API_PORT = int(os.getenv("API_PORT", "8100"))
 LUNCH_START = os.getenv("LUNCH_START", "11:30")     # 형식 검증은 app/lunch.py 가 import 시점에 한다
 LUNCH_END = os.getenv("LUNCH_END", "14:00")
+# 수집 시간창 세 개(09-04 운영 규칙): 카메라 노드는 이 창 안에서만 세고, 창 밖은 더미 곡선 + 화면 '더미데이터' 띠. 형식·겹침 검증은 vision/schedule.py (app/lunch.py import 시점)
+MEAL_WINDOWS = os.getenv("MEAL_WINDOWS", "11:30-12:30 3학년 점심;12:30-13:30 1·2학년 점심;17:30-18:30 석식")
 STALE_SEC = 120                             # 이 시간 넘게 새 행·새 파일이 없으면 '데이터 없음' (status·positions·집계 커버리지 공통)
 ROLLUP_WINDOW = _choice("ROLLUP_WINDOW", "lunch", ("lunch", "all"))   # 집계 창 (스테이징 mock 은 종일 돌므로 all)
 FEED_SOURCE = _choice("FEED_SOURCE", "vision", ("mock", "vision"))    # 집계 행의 출처 표기

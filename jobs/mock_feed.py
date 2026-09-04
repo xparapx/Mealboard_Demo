@@ -3,6 +3,10 @@
 zone_samples 에 인원수만 남긴다(같은 트랜잭션). 구역 정의는 시작할 때 한 번 읽는다(바뀌면 재시작). 읽지 못하면 구역 인원수만 빠진다.
 실제 vision 과 동시에 켜지 말 것 — SQLite 쓰기 주체는 항상 하나.
 
+수집 시간창(09-04 운영 규칙, .env MEAL_WINDOWS): 창이 열리는 순간 곡선을 처음부터(줄 0명) 시작해 그 창의 인파를 흉내내고,
+창 밖에서는 같은 곡선을 '더미' 로 계속 쓴다 — 화면은 /api/status feed 로 "지금은 더미데이터" 띠를 띄운다.
+카메라 노드(vision, 로드맵 ④)는 창 밖에서 추론을 멈추고 여기의 Simulator 를 빌려 같은 더미를 쓴다.
+
 실행:  uv run python -m jobs.mock_feed --speed 30
        --scenario stall : 45~55분 배식 중단 (insufficient_rate 상태 확인용)
        --scenario gap   : 80~90분 데이터 끊김 (no_data 상태 확인용)
@@ -20,6 +24,7 @@ from collections import deque
 
 from app.config import DATA, ZONES_JSON
 from app.db import connect
+from app.lunch import MEALS, meal_now
 from vision.meta import MetaSender
 from vision.waittime import estimate_wait
 from vision.zones import count_by_cell, count_by_zone, load_zones, zone_of
@@ -78,6 +83,50 @@ def noisy(mu):
     return max(0, round(random.gauss(mu, max(mu, 1) ** 0.5)))
 
 
+class Simulator:
+    """더미 인파 곡선 하나. step() 마다 TICK 초를 진행하고 그 순간의 줄·처리율·대기·위치를 돌려준다(DB·파일·시계를 모른다).
+    reset() 은 창이 열리는 순간 줄을 0 에서 다시 시작하려고 mock 이 부른다. 카메라 노드도 창 밖에서 같은 것을 빌려 쓴다"""
+
+    def __init__(self, scenario="normal"):
+        self.scenario = scenario
+        self.reset()
+
+    def reset(self):
+        self.sim, self.queue = 0.0, 0
+        self.served_log = deque()        # (sim_sec, 처리 인원) — 5분 이동평균 계산용
+
+    def step(self):
+        m = self.sim / 60
+        cap = 0 if (self.scenario == "stall" and 45 <= m < 55) else CAPACITY
+        self.queue += noisy(arrival_rate(m) * TICK / 60)          # 줄에 합류
+        served = min(self.queue, noisy(cap * TICK / 60))          # 배식대 통과
+        self.queue -= served
+        self.served_log.append((self.sim, served))
+        while self.served_log and self.served_log[0][0] < self.sim - 300:    # 최근 5분만 유지
+            self.served_log.popleft()
+        rate = sum(n for _, n in self.served_log) / 5.0            # λ (명/분)
+        wait, state = estimate_wait(self.queue, rate)              # W = L / λ
+        gap = self.scenario == "gap" and 80 <= m < 90
+        out = {"m": m, "queue": self.queue, "served": served, "rate": round(rate, 2), "wait": wait, "state": state,
+               "gap": gap, "pts": [] if gap else layout_points(self.queue)}
+        self.sim += TICK
+        if self.sim >= CYCLE_MIN * 60:                             # 한 사이클 끝 → 처음부터
+            self.reset()
+        return out
+
+
+def write_sample(con, ts, r, zones):
+    """samples·zone_samples·cell_samples 를 한 트랜잭션으로(반쪽 표본이 남지 않게) + positions.json. 구역별 인원수를 돌려준다"""
+    counts = count_by_zone(r["pts"], zones)                        # 구역별 인원수 — DB 에는 이 숫자만 간다
+    con.execute("INSERT OR REPLACE INTO samples VALUES (?,?,?,?,?)", (ts, r["queue"], r["rate"], r["wait"], r["state"]))
+    con.executemany("INSERT OR REPLACE INTO zone_samples VALUES (?,?,?)", [(ts, z, n) for z, n in counts.items()])
+    con.executemany("INSERT OR REPLACE INTO cell_samples VALUES (?,?,?)",
+                    [(ts, c, n) for c, n in count_by_cell(r["pts"]).items()])    # 격자 셀 인원수 — 최근 30분 밀집도용, 숫자만
+    con.commit()
+    write_positions(ts, r["queue"], r["pts"])                      # 카메라(=mock) 가 멈추면 이 파일도 멈춘다 → API 가 stale 로 판단
+    return counts
+
+
 def to_image(x, y):
     """바닥 정규화 → 가짜 카메라 이미지 정규화. 배식구 벽 위에서 출입문 쪽을 내려다보는 카메라를 흉내낸다:
     가까울수록(y 작을수록) 화면 아래·크게, 멀수록 원근으로 가운데로 몬다. 호모그래피 대신 쓰는 합성 투영일 뿐이다"""
@@ -108,6 +157,10 @@ def jitter(pts, d=0.004):
     return [{"x": round(min(max(p["x"] + random.uniform(-d, d), 0), 1), 3), "y": round(min(max(p["y"] + random.uniform(-d, d), 0), 1), 3)} for p in pts]
 
 
+def hhmm(minute):
+    return f"{minute // 60:02d}:{minute % 60:02d}"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--speed", type=float, default=30, help="실제 1초당 시뮬레이션 초")
@@ -123,55 +176,36 @@ def main():
     except (OSError, ValueError) as e:                        # 구역 정의가 깨져도 대기시간 피드는 멈추지 않는다 — 구역 인원수만 빠진다
         print(f"구역 정의를 읽지 못했다 - 구역 인원수 없이 계속한다: {e}")
         zones = []
-    served_log = deque()        # (sim_sec, 처리 인원) — 5분 이동평균 계산용
-    queue, sim = 0, 0.0
-    print(f"mock_feed 시작  speed={a.speed}  scenario={a.scenario}  zones={[z['id'] for z in zones]}")
+    sim = Simulator(a.scenario)
+    win = None                                                # 지금 열린 수집 창 — 바뀌는 순간 곡선을 처음부터
+    windows = ", ".join(f"{w.label} {hhmm(w.lo)}~{hhmm(w.hi)}" for w in MEALS) or "없음"
+    print(f"mock_feed 시작  speed={a.speed}  scenario={a.scenario}  zones={[z['id'] for z in zones]}  수집 창: {windows}")
 
     while True:
-        m = sim / 60
-        cap = 0 if (a.scenario == "stall" and 45 <= m < 55) else CAPACITY
-
-        queue += noisy(arrival_rate(m) * TICK / 60)          # 줄에 합류
-        served = min(queue, noisy(cap * TICK / 60))          # 배식대 통과
-        queue -= served
-
-        served_log.append((sim, served))
-        while served_log and served_log[0][0] < sim - 300:    # 최근 5분만 유지
-            served_log.popleft()
-        rate = sum(n for _, n in served_log) / 5.0            # λ (명/분)
-        wait, state = estimate_wait(queue, rate)              # W = L / λ
-
-        counts, pts, live = {}, [], False
-        if not (a.scenario == "gap" and 80 <= m < 90):
-            live = True
+        cur = meal_now(dt.datetime.now())
+        if cur != win:                                        # 창이 열리거나 닫힘 → 줄 0 명에서 다시(창 시작에 인파가 몰려드는 모양)
+            win = cur
+            sim.reset()
+            print("--- " + (f"수집 창 열림: {win.label}" if win else "수집 창 닫힘 - 더미 곡선") + " ---")
+        r = sim.step()
+        counts, live = {}, not r["gap"]
+        if live:
             ts = dt.datetime.now().isoformat(timespec="milliseconds")
-            pts = layout_points(queue)
-            counts = count_by_zone(pts, zones)                # 구역별 인원수 — DB 에는 이 숫자만 간다
-            con.execute("INSERT OR REPLACE INTO samples VALUES (?,?,?,?,?)",
-                        (ts, queue, round(rate, 2), wait, state))
-            con.executemany("INSERT OR REPLACE INTO zone_samples VALUES (?,?,?)",
-                            [(ts, z, n) for z, n in counts.items()])
-            con.executemany("INSERT OR REPLACE INTO cell_samples VALUES (?,?,?)",
-                            [(ts, c, n) for c, n in count_by_cell(pts).items()])    # 격자 셀 인원수 — 최근 30분 밀집도용, 숫자만
-            con.commit()                                      # samples·zone_samples·cell_samples 를 한 트랜잭션으로 — 반쪽 표본이 남지 않게
-            write_positions(ts, queue, pts)                   # 카메라(=mock) 가 멈추면 이 파일도 멈춘다 → API 가 stale 로 판단
+            counts = write_sample(con, ts, r, zones)
         zone_txt = " ".join(f"{z}={n}" for z, n in counts.items())
-        print(f"{m:6.1f}분  대기 {queue:3d}명  처리 {rate:5.1f}/분  예상 {wait}분  {state}  {zone_txt}")
+        tag = win.label if win else "더미"
+        print(f"[{tag}] {r['m']:6.1f}분  대기 {r['queue']:3d}명  처리 {r['rate']:5.1f}/분  예상 {r['wait']}분  {r['state']}  {zone_txt}")
 
-        sim += TICK
-        if sim >= CYCLE_MIN * 60:                             # 한 사이클 끝 → 처음부터
-            sim, queue = 0.0, 0
-            served_log.clear()
         pause = TICK / a.speed
         if sender is None or not live:
             time.sleep(pause)
             continue
         n = max(1, round(pause * META_FPS))                   # 이 틱 동안 보낼 프레임 수 (speed 30 → 0.33초에 2프레임)
-        crossings = [{"id": 1000 + k, "dir": "out", "ts": ts} for k in range(served)]
+        crossings = [{"id": 1000 + k, "dir": "out", "ts": ts} for k in range(r["served"])]
         for k in range(n):
             frame_id += 1
-            ev = frame_event(frame_id, dt.datetime.now().isoformat(timespec="milliseconds"), jitter(pts), zones,
-                             rate, wait, state, crossings if k == 0 else ())
+            ev = frame_event(frame_id, dt.datetime.now().isoformat(timespec="milliseconds"), jitter(r["pts"]), zones,
+                             r["rate"], r["wait"], r["state"], crossings if k == 0 else ())
             sender.send(ev)
             time.sleep(pause / n)
 

@@ -76,6 +76,21 @@ export function setState(id, ok, reason) {
 /* 화면 모듈이 공유하는 최근 응답 — 다시 그릴 때 다시 받지 않기 위해 */
 export const S = { last: null, lastPos: null, meal: null, typ: null };
 
+/* 더미데이터 띠(09-04) — /api/status 의 feed 로 그린다. live(카메라 노드 + 수집 창 안 + 표본 이어짐)면 숨긴다.
+   창 밖: "급식시간이 아닙니다" + 다음 창. 창 안인데 mock: "실측 카메라 연결 전". 어느 화면에 있든 같은 띠 — 대기시간 화면은 30초 status 로, 나머지는 60초 feedTick 으로 */
+export function renderFeed(f) {
+  const bar = $("#feedbar");
+  if (!bar || !f) return;
+  if (f.live) { bar.hidden = true; return; }
+  const n = f.next, when = !n ? "" : n.days === 1 ? " (내일)" : n.days > 1 ? ` (${n.days}일 뒤)` : "";
+  const next = n ? ` · 다음 급식 <b>${esc(n.label)} ${mm(n.lo)}</b>${when}` : "";
+  bar.innerHTML = f.now
+    ? `<b>${esc(f.now.label)}</b> ${mm(f.now.lo)}~${mm(f.now.hi)} · 실측 카메라 연결 전이라 지금 보이는 값은 <b>더미데이터</b>입니다`
+    : `지금은 급식시간이 아닙니다 · 실시간 데이터가 아닌 <b>더미데이터</b>입니다${next}`;
+  bar.hidden = false;
+}
+async function feedTick() { if (document.hidden) return; try { renderFeed((await j("/api/status")).feed); } catch (e) { console.error("feed", e); } }
+
 /* ---------------- 화면 등록 · 라우터 ---------------- */
 const ORDER = ["wait", "room", "week", "today", "news"];
 const NAMES = { wait: "대기시간", room: "실시간뷰", week: "주간식단", today: "오늘급식", news: "이슈피드" };
@@ -156,6 +171,7 @@ const start = ORDER.includes(wanted) ? wanted : "wait";
 ORDER.forEach(n => SCREENS[n].mount?.());              // 캔버스 관찰 등 한 번만 하는 준비
 go(start, { push: false });
 setInterval(tick, 30000);
+feedTick(); setInterval(feedTick, 60000);              // 더미데이터 띠는 화면과 무관하게 60초(status 응답은 200B 남짓)
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
 /* 관리 origin 에서만 관리 뷰를 붙인다 — 호스트명이 아니라 서버가 답하는지로 판단. 공개 origin 에서는 세션당 404 한 번 (PLAN §3.1, Phase 3) */
 window.MB = { S, go, poll, observe, ORDER, NAMES, screens: SCREENS, active: () => active, wanted };   // 콘솔·테스트·관리 모듈의 손잡이

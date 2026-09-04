@@ -17,6 +17,9 @@
   `~/plant/`와 그 DB에는 어떤 이유로도 접근·수정하지 않는다. 포트 8000·8501·1883은 Plant 소유.
 - 홈 Pi에서는 vision 프레임 소스로 `picamera`를 쓰지 않는다(Plant 카메라 타이머와 배타 자원). `webcam|file`만.
 - **카메라는 Camera Module 3 Wide(가로 102°)로 확정(09-04)** — 배식대 오른쪽 끝 구석에서 급식실 폭 15.55 m 전체를 담으려면 약 90° 가 필요해 표준판(66°)·아이폰 전면(약 70°)은 우측이 잘린다. 가장자리 왜곡은 관리 앱의 4점 호모그래피가 흡수. vision(로드맵 ④)은 Wide 기준으로.
+- **수집 시간창(09-04 운영 규칙)**: 3학년 점심 11:30~12:30 · 1·2학년 점심 12:30~13:30 · 석식 17:30~18:30 — `.env MEAL_WINDOWS`('HH:MM-HH:MM 라벨;…'), 파싱·검증은 `vision/schedule.py`(순수), 바인딩은 `app/lunch.py MEALS·meal_now·meal_next`(import 시점 검증).
+  **카메라 노드는 이 창 안에서만 센다.** 창 밖은 `jobs/mock_feed.Simulator` 더미 곡선을 쓰고 `/api/status feed.live=false`(live = 출처 vision ∧ 창 안 ∧ 표본 이어짐) → 화면 맨 위 `#feedbar` 가 "지금은 실시간 데이터가 아닌 더미데이터" 띠를 띄운다(모든 화면).
+  `LUNCH_START~END`(집계·관리 가드용 점심 전체 창)는 별개로 둔다 — 석식은 아직 집계(rollup·히트맵) 밖, 실측 뒤 판단. 창은 시각만 본다(요일 무관).
 - NEIS 인증키(개발계정) 발급 완료. 학교코드 8140036(공주고, 남고), 교육청 N10.
 - **화면은 v5 확정**(2026-08-29 배포). 도면의 단일 출처는 `docs/layout.html`(v5), 구축 절차는 매뉴얼 STEP 14.
   카드에 외곽선을 두지 않는다 — 깊이는 radius 24 + 2단 그림자로. 바탕 `#F5F2E9` / 카드 `#FFFCF6`, 브랜드 3색은 유지.
@@ -78,6 +81,7 @@
   **미결 질문(사용자 답 대기)**: ⓑ Plant 규칙 개정 — 사용자는 "포트 8000 은 이제 안 쓴다, Plant 는 GitHub 에 있다" 고 했으나 §0·§2 의 Plant 금지 규칙은 아직 그대로(파일·DB 삭제는 명시 지시 때만).
 - **다음 할 일**: ① **로드맵 ④ vision 프로토타입** — 실사 스트림·카운팅의 마지막 조각. 계약은 PLAN §4.4(zone_samples·cell_samples 기록, meta 소켓, DEBUG_PORT 8102 MJPEG, zones.local.json mtime 리로드),
   카메라는 **Camera Module 3 Wide** 기준, YOLO hef 는 5.1.1 컴파일본이 5.3.0 에서 열림(필요 시 5.3.0 model zoo 로 교체). 개발 PC 웹캠·동영상 파일로 먼저.
+  수집 창 밖(`app.lunch.meal_now(now) is None`)에서는 추론을 멈추고 `jobs/mock_feed.Simulator` 더미를 같은 `write_sample` 로 쓴다(09-04 운영 규칙). Pi 에 카메라는 이미 연결돼 있다(업무 공간, AP·공유기 설치 뒤 급식실 이동).
   ② Cloudflare Tunnel 전환(도메인·토큰은 사용자 준비, README 09-03 저녁 항목의 5단계). ③ 아래 ①~③ 잔여.
   ① 평소 곡선(`/api/typical`)은 mock 이 170분 사이클을 반복해 써서 스테이징에서는 값이 바닥이다. 실측 이후 확인.
   ② Inside Climate News 는 미국 지역 전력·정치 보도가 많아 "세계적 기후 이슈"와 결이 다른 기사가 섞인다 —
@@ -101,6 +105,7 @@ NEIS 급식 API의 메뉴·영양 정보와 함께 웹 대시보드(PWA)로 제�
 | 외부 노출 | 스테이징·시범 운영: **Tailscale Funnel**(고정 주소, 443 아웃바운드). 정식 배포: Cloudflare Tunnel + 유료 도메인 | 학교망 인바운드 차단 대응. 포트포워딩 금지. 둘 다 Pi 가 밖으로 연결을 여는 방식. 팀 SSH 는 tailnet 내부(Funnel 은 공개, 용도 구분) |
 | 대기시간 | Little's law: W = L / λ | L=ROI 점유 인원, λ=배식대 가상선 통과율(5분 이동평균). **ROI 출구변 = λ 측정선**(같은 경계). λ < 0.5명/분이면 `insufficient_rate`로 산출 불가 처리 |
 | 카운팅 | YOLOv8n/11n + ByteTrack, 기준점은 bbox 바닥 중앙 | 라인크로싱은 부호 변화 + ±20px 완충띠. `imgsz`·프레임 스킵은 설정으로 뺀다(Pi 5 CPU 수 fps) |
+| 수집 시간창 | **3학년 점심 11:30~12:30 · 1·2학년 점심 12:30~13:30 · 석식 17:30~18:30 만 실측**(`.env MEAL_WINDOWS`, `vision/schedule.py`). 창 밖은 더미 곡선(`mock_feed.Simulator`) + 화면 "더미데이터" 띠(`/api/status feed.live`) | 09-04 사용자 운영 규칙. 카메라·HAT 를 급식 때만 쓰고, 학생이 창 밖 숫자를 실측으로 오해하지 않게. 집계 창 `LUNCH_START~END` 와는 별개 |
 | 영상 취급 | **프레임 저장·전송 절대 금지. 숫자만 DB에** | 개인정보 원칙. 학교 협의의 전제 조건. 유일한 예외 = 승인된 디버그 경로(09-03): 관리 앱이 tailnet 안에서만 중계하는 MJPEG(뷰어 1명, ≤10분, 감사 기록, 디스크 접촉 없음) |
 | 디버그 뷰 | 카운트 프로세스 내장, 127.0.0.1 전용 MJPEG, 터치파일(/tmp/debug_on)로 on/off(관리 앱이 켜고 끈다, ≤10분 자동 off, vision 도 mtime 10분 초과면 스스로 끈다. 두 유닛 모두 `PrivateTmp` 금지) | 관리자만 **SSH 터널 또는 tailnet 전용 관리 앱**(Serve 8443 + `ADMIN_USERS` 허용목록)으로 열람. 켜짐 이력(누가·언제·얼마나)은 `data/admin.db` |
 | 히트맵 | 공개 화면은 빈 평면도 위 히트맵·익명 위치 마커(순간 상태만, 개별 위치 이력 저장 없음). 실사+마커는 디버그 뷰 전용. **공간 인사이트는 집계 숫자만**(구역별 점유율·통로 점유 등, 09-03 승인; 09-03 사용자 요청으로 **격자 5×8 셀별 인원수**(`cell_samples`, 약 3m 셀)를 더해 '최근 30분 밀집도' 히트맵을 그린다 — 역시 숫자만) — 개별 좌표·궤적은 어떤 형태로도 저장하지 않는다 | 마커는 `data/positions.json` 한 파일을 덮어쓰기만 하며 `/api/positions` 가 120초 stale 규칙으로 내준다. 집계는 `jobs/rollup.py` 가 `data/insights.db` 에 쓴다(구역 인원수는 vision/mock 이 `queue.db.zone_samples` 에 숫자만 기록). 관리 앱의 **메타데이터 스트림**(bbox·트랙 ID·바닥 좌표)은 인증된 관리자가 구독 중일 때만 실시간 중계 — 저장·버퍼 없음, 구독 이력은 admin.db |

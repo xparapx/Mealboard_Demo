@@ -287,6 +287,8 @@ NEIS_SCHOOL_CODE=8140036
 API_PORT=8100
 LUNCH_START=11:30
 LUNCH_END=14:00
+# 수집 시간창(09-04 운영 규칙) — 카메라 노드는 이 창 안에서만 세고, 창 밖은 더미 곡선 + 화면 '더미데이터' 띠. 'HH:MM-HH:MM 라벨' 을 ; 로 나열. 겹치면 시작 거부
+MEAL_WINDOWS=11:30-12:30 3학년 점심;12:30-13:30 1·2학년 점심;17:30-18:30 석식
 # 이슈 링크 한국어 번역 (jobs/fetch_news.py). 없으면 원문 영어 그대로 나간다
 # DeepL API Free 키는 끝이 :fx 다 — 그걸 보고 무료/유료 엔드포인트를 고른다
 DEEPL_API_KEY=
@@ -657,6 +659,8 @@ def _choice(name, default, allowed):
 API_PORT = int(os.getenv(&quot;API_PORT&quot;, &quot;8100&quot;))
 LUNCH_START = os.getenv(&quot;LUNCH_START&quot;, &quot;11:30&quot;)     # 형식 검증은 app/lunch.py 가 import 시점에 한다
 LUNCH_END = os.getenv(&quot;LUNCH_END&quot;, &quot;14:00&quot;)
+# 수집 시간창 세 개(09-04 운영 규칙): 카메라 노드는 이 창 안에서만 세고, 창 밖은 더미 곡선 + 화면 '더미데이터' 띠. 형식·겹침 검증은 vision/schedule.py (app/lunch.py import 시점)
+MEAL_WINDOWS = os.getenv(&quot;MEAL_WINDOWS&quot;, &quot;11:30-12:30 3학년 점심;12:30-13:30 1·2학년 점심;17:30-18:30 석식&quot;)
 STALE_SEC = 120                             # 이 시간 넘게 새 행·새 파일이 없으면 '데이터 없음' (status·positions·집계 커버리지 공통)
 ROLLUP_WINDOW = _choice(&quot;ROLLUP_WINDOW&quot;, &quot;lunch&quot;, (&quot;lunch&quot;, &quot;all&quot;))   # 집계 창 (스테이징 mock 은 종일 돌므로 all)
 FEED_SOURCE = _choice(&quot;FEED_SOURCE&quot;, &quot;vision&quot;, (&quot;mock&quot;, &quot;vision&quot;))    # 집계 행의 출처 표기
@@ -718,10 +722,24 @@ def connect():
 <figcaption><span class="path">app/routers/status.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
 <pre><code class="lang-python">import datetime as dt
 from fastapi import APIRouter
-from ..config import STALE_SEC          # 이 시간 넘게 새 행이 없으면 '데이터 없음'으로 본다
+from ..config import FEED_SOURCE, STALE_SEC          # STALE_SEC: 이 시간 넘게 새 행이 없으면 '데이터 없음'으로 본다
 from ..db import connect
+from ..lunch import describe, meal_next, meal_now
 
 router = APIRouter()
+
+
+def feed(now, state, source=FEED_SOURCE):
+    &quot;&quot;&quot;'지금 값이 실측인가' — 화면의 더미데이터 띠가 읽는다(09-04). live 는 셋이 모두 맞을 때만:
+    출처가 vision(카메라 노드) · 지금이 수집 창(3학년 점심·1·2학년 점심·석식) 안 · 표본이 끊기지 않음. now 는 열린 창, next 는 다음 창(며칠 뒤 days)&quot;&quot;&quot;
+    w = meal_now(now)
+    nxt = meal_next(now)
+    nxt_d = None
+    if nxt:
+        nxt_d = describe(nxt[0])
+        nxt_d[&quot;days&quot;] = nxt[1]
+    return {&quot;source&quot;: source, &quot;live&quot;: source == &quot;vision&quot; and w is not None and state != &quot;no_data&quot;,
+            &quot;now&quot;: describe(w), &quot;next&quot;: nxt_d}
 
 
 @router.get(&quot;/api/status&quot;)
@@ -729,14 +747,15 @@ def status():
     con = connect()
     row = con.execute(&quot;SELECT * FROM samples ORDER BY ts DESC LIMIT 1&quot;).fetchone()
     con.close()
+    now = dt.datetime.now()
     if row is None:
         return {&quot;state&quot;: &quot;no_data&quot;, &quot;updated_at&quot;: None,
-                &quot;queue_len&quot;: None, &quot;rate_per_min&quot;: None, &quot;wait_min&quot;: None}
-    age = (dt.datetime.now() - dt.datetime.fromisoformat(row[&quot;ts&quot;])).total_seconds()
+                &quot;queue_len&quot;: None, &quot;rate_per_min&quot;: None, &quot;wait_min&quot;: None, &quot;feed&quot;: feed(now, &quot;no_data&quot;)}
+    age = (now - dt.datetime.fromisoformat(row[&quot;ts&quot;])).total_seconds()
     state = &quot;no_data&quot; if age &gt; STALE_SEC else row[&quot;state&quot;]
     return {&quot;state&quot;: state, &quot;updated_at&quot;: row[&quot;ts&quot;], &quot;stale&quot;: age &gt; STALE_SEC,
             &quot;queue_len&quot;: row[&quot;queue_len&quot;], &quot;rate_per_min&quot;: row[&quot;rate_per_min&quot;],
-            &quot;wait_min&quot;: row[&quot;wait_min&quot;]}</code></pre>
+            &quot;wait_min&quot;: row[&quot;wait_min&quot;], &quot;feed&quot;: feed(now, state)}</code></pre>
 </figure>
 <p><code>STALE_SEC</code>: 2분 넘게 새 행이 없으면 마지막 값을 보여주는 대신 "데이터 없음"으로 바꿉니다. 카메라가 죽었는데 화면엔 "3분"이 계속 떠 있는 상황을 막는 장치입니다.</p>
 <figure class="code">
@@ -907,6 +926,10 @@ GET /api/meal      → 8단계 fetch_neis 가 만든 meal.json 그대로</code><
 zone_samples 에 인원수만 남긴다(같은 트랜잭션). 구역 정의는 시작할 때 한 번 읽는다(바뀌면 재시작). 읽지 못하면 구역 인원수만 빠진다.
 실제 vision 과 동시에 켜지 말 것 — SQLite 쓰기 주체는 항상 하나.
 
+수집 시간창(09-04 운영 규칙, .env MEAL_WINDOWS): 창이 열리는 순간 곡선을 처음부터(줄 0명) 시작해 그 창의 인파를 흉내내고,
+창 밖에서는 같은 곡선을 '더미' 로 계속 쓴다 — 화면은 /api/status feed 로 &quot;지금은 더미데이터&quot; 띠를 띄운다.
+카메라 노드(vision, 로드맵 ④)는 창 밖에서 추론을 멈추고 여기의 Simulator 를 빌려 같은 더미를 쓴다.
+
 실행:  uv run python -m jobs.mock_feed --speed 30
        --scenario stall : 45~55분 배식 중단 (insufficient_rate 상태 확인용)
        --scenario gap   : 80~90분 데이터 끊김 (no_data 상태 확인용)
@@ -924,6 +947,7 @@ from collections import deque
 
 from app.config import DATA, ZONES_JSON
 from app.db import connect
+from app.lunch import MEALS, meal_now
 from vision.meta import MetaSender
 from vision.waittime import estimate_wait
 from vision.zones import count_by_cell, count_by_zone, load_zones, zone_of
@@ -982,6 +1006,50 @@ def noisy(mu):
     return max(0, round(random.gauss(mu, max(mu, 1) ** 0.5)))
 
 
+class Simulator:
+    &quot;&quot;&quot;더미 인파 곡선 하나. step() 마다 TICK 초를 진행하고 그 순간의 줄·처리율·대기·위치를 돌려준다(DB·파일·시계를 모른다).
+    reset() 은 창이 열리는 순간 줄을 0 에서 다시 시작하려고 mock 이 부른다. 카메라 노드도 창 밖에서 같은 것을 빌려 쓴다&quot;&quot;&quot;
+
+    def __init__(self, scenario=&quot;normal&quot;):
+        self.scenario = scenario
+        self.reset()
+
+    def reset(self):
+        self.sim, self.queue = 0.0, 0
+        self.served_log = deque()        # (sim_sec, 처리 인원) — 5분 이동평균 계산용
+
+    def step(self):
+        m = self.sim / 60
+        cap = 0 if (self.scenario == &quot;stall&quot; and 45 &lt;= m &lt; 55) else CAPACITY
+        self.queue += noisy(arrival_rate(m) * TICK / 60)          # 줄에 합류
+        served = min(self.queue, noisy(cap * TICK / 60))          # 배식대 통과
+        self.queue -= served
+        self.served_log.append((self.sim, served))
+        while self.served_log and self.served_log[0][0] &lt; self.sim - 300:    # 최근 5분만 유지
+            self.served_log.popleft()
+        rate = sum(n for _, n in self.served_log) / 5.0            # λ (명/분)
+        wait, state = estimate_wait(self.queue, rate)              # W = L / λ
+        gap = self.scenario == &quot;gap&quot; and 80 &lt;= m &lt; 90
+        out = {&quot;m&quot;: m, &quot;queue&quot;: self.queue, &quot;served&quot;: served, &quot;rate&quot;: round(rate, 2), &quot;wait&quot;: wait, &quot;state&quot;: state,
+               &quot;gap&quot;: gap, &quot;pts&quot;: [] if gap else layout_points(self.queue)}
+        self.sim += TICK
+        if self.sim &gt;= CYCLE_MIN * 60:                             # 한 사이클 끝 → 처음부터
+            self.reset()
+        return out
+
+
+def write_sample(con, ts, r, zones):
+    &quot;&quot;&quot;samples·zone_samples·cell_samples 를 한 트랜잭션으로(반쪽 표본이 남지 않게) + positions.json. 구역별 인원수를 돌려준다&quot;&quot;&quot;
+    counts = count_by_zone(r[&quot;pts&quot;], zones)                        # 구역별 인원수 — DB 에는 이 숫자만 간다
+    con.execute(&quot;INSERT OR REPLACE INTO samples VALUES (?,?,?,?,?)&quot;, (ts, r[&quot;queue&quot;], r[&quot;rate&quot;], r[&quot;wait&quot;], r[&quot;state&quot;]))
+    con.executemany(&quot;INSERT OR REPLACE INTO zone_samples VALUES (?,?,?)&quot;, [(ts, z, n) for z, n in counts.items()])
+    con.executemany(&quot;INSERT OR REPLACE INTO cell_samples VALUES (?,?,?)&quot;,
+                    [(ts, c, n) for c, n in count_by_cell(r[&quot;pts&quot;]).items()])    # 격자 셀 인원수 — 최근 30분 밀집도용, 숫자만
+    con.commit()
+    write_positions(ts, r[&quot;queue&quot;], r[&quot;pts&quot;])                      # 카메라(=mock) 가 멈추면 이 파일도 멈춘다 → API 가 stale 로 판단
+    return counts
+
+
 def to_image(x, y):
     &quot;&quot;&quot;바닥 정규화 → 가짜 카메라 이미지 정규화. 배식구 벽 위에서 출입문 쪽을 내려다보는 카메라를 흉내낸다:
     가까울수록(y 작을수록) 화면 아래·크게, 멀수록 원근으로 가운데로 몬다. 호모그래피 대신 쓰는 합성 투영일 뿐이다&quot;&quot;&quot;
@@ -1012,6 +1080,10 @@ def jitter(pts, d=0.004):
     return [{&quot;x&quot;: round(min(max(p[&quot;x&quot;] + random.uniform(-d, d), 0), 1), 3), &quot;y&quot;: round(min(max(p[&quot;y&quot;] + random.uniform(-d, d), 0), 1), 3)} for p in pts]
 
 
+def hhmm(minute):
+    return f&quot;{minute // 60:02d}:{minute % 60:02d}&quot;
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument(&quot;--speed&quot;, type=float, default=30, help=&quot;실제 1초당 시뮬레이션 초&quot;)
@@ -1027,55 +1099,36 @@ def main():
     except (OSError, ValueError) as e:                        # 구역 정의가 깨져도 대기시간 피드는 멈추지 않는다 — 구역 인원수만 빠진다
         print(f&quot;구역 정의를 읽지 못했다 - 구역 인원수 없이 계속한다: {e}&quot;)
         zones = []
-    served_log = deque()        # (sim_sec, 처리 인원) — 5분 이동평균 계산용
-    queue, sim = 0, 0.0
-    print(f&quot;mock_feed 시작  speed={a.speed}  scenario={a.scenario}  zones={[z['id'] for z in zones]}&quot;)
+    sim = Simulator(a.scenario)
+    win = None                                                # 지금 열린 수집 창 — 바뀌는 순간 곡선을 처음부터
+    windows = &quot;, &quot;.join(f&quot;{w.label} {hhmm(w.lo)}~{hhmm(w.hi)}&quot; for w in MEALS) or &quot;없음&quot;
+    print(f&quot;mock_feed 시작  speed={a.speed}  scenario={a.scenario}  zones={[z['id'] for z in zones]}  수집 창: {windows}&quot;)
 
     while True:
-        m = sim / 60
-        cap = 0 if (a.scenario == &quot;stall&quot; and 45 &lt;= m &lt; 55) else CAPACITY
-
-        queue += noisy(arrival_rate(m) * TICK / 60)          # 줄에 합류
-        served = min(queue, noisy(cap * TICK / 60))          # 배식대 통과
-        queue -= served
-
-        served_log.append((sim, served))
-        while served_log and served_log[0][0] &lt; sim - 300:    # 최근 5분만 유지
-            served_log.popleft()
-        rate = sum(n for _, n in served_log) / 5.0            # λ (명/분)
-        wait, state = estimate_wait(queue, rate)              # W = L / λ
-
-        counts, pts, live = {}, [], False
-        if not (a.scenario == &quot;gap&quot; and 80 &lt;= m &lt; 90):
-            live = True
+        cur = meal_now(dt.datetime.now())
+        if cur != win:                                        # 창이 열리거나 닫힘 → 줄 0 명에서 다시(창 시작에 인파가 몰려드는 모양)
+            win = cur
+            sim.reset()
+            print(&quot;--- &quot; + (f&quot;수집 창 열림: {win.label}&quot; if win else &quot;수집 창 닫힘 - 더미 곡선&quot;) + &quot; ---&quot;)
+        r = sim.step()
+        counts, live = {}, not r[&quot;gap&quot;]
+        if live:
             ts = dt.datetime.now().isoformat(timespec=&quot;milliseconds&quot;)
-            pts = layout_points(queue)
-            counts = count_by_zone(pts, zones)                # 구역별 인원수 — DB 에는 이 숫자만 간다
-            con.execute(&quot;INSERT OR REPLACE INTO samples VALUES (?,?,?,?,?)&quot;,
-                        (ts, queue, round(rate, 2), wait, state))
-            con.executemany(&quot;INSERT OR REPLACE INTO zone_samples VALUES (?,?,?)&quot;,
-                            [(ts, z, n) for z, n in counts.items()])
-            con.executemany(&quot;INSERT OR REPLACE INTO cell_samples VALUES (?,?,?)&quot;,
-                            [(ts, c, n) for c, n in count_by_cell(pts).items()])    # 격자 셀 인원수 — 최근 30분 밀집도용, 숫자만
-            con.commit()                                      # samples·zone_samples·cell_samples 를 한 트랜잭션으로 — 반쪽 표본이 남지 않게
-            write_positions(ts, queue, pts)                   # 카메라(=mock) 가 멈추면 이 파일도 멈춘다 → API 가 stale 로 판단
+            counts = write_sample(con, ts, r, zones)
         zone_txt = &quot; &quot;.join(f&quot;{z}={n}&quot; for z, n in counts.items())
-        print(f&quot;{m:6.1f}분  대기 {queue:3d}명  처리 {rate:5.1f}/분  예상 {wait}분  {state}  {zone_txt}&quot;)
+        tag = win.label if win else &quot;더미&quot;
+        print(f&quot;[{tag}] {r['m']:6.1f}분  대기 {r['queue']:3d}명  처리 {r['rate']:5.1f}/분  예상 {r['wait']}분  {r['state']}  {zone_txt}&quot;)
 
-        sim += TICK
-        if sim &gt;= CYCLE_MIN * 60:                             # 한 사이클 끝 → 처음부터
-            sim, queue = 0.0, 0
-            served_log.clear()
         pause = TICK / a.speed
         if sender is None or not live:
             time.sleep(pause)
             continue
         n = max(1, round(pause * META_FPS))                   # 이 틱 동안 보낼 프레임 수 (speed 30 → 0.33초에 2프레임)
-        crossings = [{&quot;id&quot;: 1000 + k, &quot;dir&quot;: &quot;out&quot;, &quot;ts&quot;: ts} for k in range(served)]
+        crossings = [{&quot;id&quot;: 1000 + k, &quot;dir&quot;: &quot;out&quot;, &quot;ts&quot;: ts} for k in range(r[&quot;served&quot;])]
         for k in range(n):
             frame_id += 1
-            ev = frame_event(frame_id, dt.datetime.now().isoformat(timespec=&quot;milliseconds&quot;), jitter(pts), zones,
-                             rate, wait, state, crossings if k == 0 else ())
+            ev = frame_event(frame_id, dt.datetime.now().isoformat(timespec=&quot;milliseconds&quot;), jitter(r[&quot;pts&quot;]), zones,
+                             r[&quot;rate&quot;], r[&quot;wait&quot;], r[&quot;state&quot;], crossings if k == 0 else ())
             sender.send(ev)
             time.sleep(pause / n)
 
@@ -1175,6 +1228,9 @@ systemctl status mealboard-api --no-pager</code></pre>
   &lt;a href=&quot;#today&quot; data-go=&quot;today&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-today&quot;/&gt;&lt;/svg&gt;오늘급식&lt;/a&gt;
   &lt;a href=&quot;#news&quot; data-go=&quot;news&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-news&quot;/&gt;&lt;/svg&gt;이슈피드&lt;/a&gt;
 &lt;/aside&gt;
+
+&lt;!-- 더미데이터 띠(09-04) — 급식 수집 창(3학년 점심·1·2학년 점심·석식) 밖이거나 실측 카메라 전(mock)이면 모든 화면 위에 이유를 적는다. /api/status feed 로 core.js 가 그린다 --&gt;
+&lt;div class=&quot;feedbar&quot; id=&quot;feedbar&quot; role=&quot;status&quot; hidden&gt;&lt;/div&gt;
 
 &lt;main class=&quot;views&quot;&gt;
   &lt;!-- ① 대기시간 — 히어로(지금 줄을 서면) + 그 아래 추이(최근 30분). 한 카드, 두 절 --&gt;
@@ -1403,7 +1459,7 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v19&quot;;   // 09-04: 오늘 메뉴 글자 빛 훑기 — 옛 셸 캐시를 지운다
+const CACHE = &quot;mealboard-v20&quot;;   // 09-04: 더미데이터 띠(#feedbar) — 옛 셸 캐시를 지운다
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
@@ -2631,7 +2687,8 @@ uv run python check_manual.py                           # 불일치 0개
 .env 의 LUNCH_START·LUNCH_END 는 이 모듈을 import 하는 순간 검증된다 — 잘못된 값은 서비스 시작을 막는다(요청 때 500 이 아니라).&quot;&quot;&quot;
 import datetime as dt
 
-from .config import LUNCH_START, LUNCH_END
+from vision.schedule import current, describe, next_after, parse_windows   # noqa: F401  (describe 는 라우터가 이 모듈을 거쳐 쓴다)
+from .config import LUNCH_START, LUNCH_END, MEAL_WINDOWS
 
 BUCKET_MIN = 5          # 5분 단위로 묶는다. 30초 폴링 노이즈를 지우고 곡선을 읽히게
 DAY_MIN = 24 * 60
@@ -2702,7 +2759,21 @@ def weekday_of(date):
     return (d.weekday() + 1) % 7
 
 
-LUNCH_LO, LUNCH_HI = lunch_bounds()     # import 시점 검증. 잘못된 .env 는 여기서 ValueError</code></pre>
+LUNCH_LO, LUNCH_HI = lunch_bounds()     # import 시점 검증. 잘못된 .env 는 여기서 ValueError
+
+# 수집 시간창(09-04): 3학년 점심 · 1·2학년 점심 · 석식. LUNCH_START~END 는 집계·관리 가드용 '점심 전체' 창으로 그대로 두고,
+# 이 세 창은 '지금 값이 실측인가'(카메라 노드 수집 on/off, /api/status feed.live, 화면의 더미데이터 띠) 만 정한다
+MEALS = parse_windows(MEAL_WINDOWS)     # import 시점 검증. 겹침·역순·오타는 여기서 ValueError
+
+
+def meal_now(t):
+    &quot;&quot;&quot;ISO 문자열 또는 datetime → 지금 열린 수집 창(MealWindow) 또는 None&quot;&quot;&quot;
+    return current(MEALS, minute_of_day(t))
+
+
+def meal_next(t):
+    &quot;&quot;&quot;→ (다음에 열릴 창, 며칠 뒤) 또는 None(창이 하나도 없을 때)&quot;&quot;&quot;
+    return next_after(MEALS, minute_of_day(t))</code></pre>
 </figure>
 <p><code>app/config.py</code> 에는 <code>STALE_SEC</code>(status·positions 에 따로 있던 120초를 한곳으로), <code>ZONES_JSON</code>, <code>INSIGHTS_DB_PATH</code>, <code>ROLLUP_WINDOW</code>, <code>FEED_SOURCE</code> 가 늘었습니다(STEP 5 의 수록본이 최신입니다). <code>FEED_SOURCE</code> 는 집계 행에 "이 표본이 mock 인가 카메라인가"를 적는 꼬리표 — 학교 Pi 로 옮긴 뒤 실측 히트맵에 스테이징 가짜 데이터가 섞이지 않게 합니다.</p>
 
@@ -4809,6 +4880,21 @@ export function setState(id, ok, reason) {
 /* 화면 모듈이 공유하는 최근 응답 — 다시 그릴 때 다시 받지 않기 위해 */
 export const S = { last: null, lastPos: null, meal: null, typ: null };
 
+/* 더미데이터 띠(09-04) — /api/status 의 feed 로 그린다. live(카메라 노드 + 수집 창 안 + 표본 이어짐)면 숨긴다.
+   창 밖: &quot;급식시간이 아닙니다&quot; + 다음 창. 창 안인데 mock: &quot;실측 카메라 연결 전&quot;. 어느 화면에 있든 같은 띠 — 대기시간 화면은 30초 status 로, 나머지는 60초 feedTick 으로 */
+export function renderFeed(f) {
+  const bar = $(&quot;#feedbar&quot;);
+  if (!bar || !f) return;
+  if (f.live) { bar.hidden = true; return; }
+  const n = f.next, when = !n ? &quot;&quot; : n.days === 1 ? &quot; (내일)&quot; : n.days &gt; 1 ? ` (${n.days}일 뒤)` : &quot;&quot;;
+  const next = n ? ` · 다음 급식 &lt;b&gt;${esc(n.label)} ${mm(n.lo)}&lt;/b&gt;${when}` : &quot;&quot;;
+  bar.innerHTML = f.now
+    ? `&lt;b&gt;${esc(f.now.label)}&lt;/b&gt; ${mm(f.now.lo)}~${mm(f.now.hi)} · 실측 카메라 연결 전이라 지금 보이는 값은 &lt;b&gt;더미데이터&lt;/b&gt;입니다`
+    : `지금은 급식시간이 아닙니다 · 실시간 데이터가 아닌 &lt;b&gt;더미데이터&lt;/b&gt;입니다${next}`;
+  bar.hidden = false;
+}
+async function feedTick() { if (document.hidden) return; try { renderFeed((await j(&quot;/api/status&quot;)).feed); } catch (e) { console.error(&quot;feed&quot;, e); } }
+
 /* ---------------- 화면 등록 · 라우터 ---------------- */
 const ORDER = [&quot;wait&quot;, &quot;room&quot;, &quot;week&quot;, &quot;today&quot;, &quot;news&quot;];
 const NAMES = { wait: &quot;대기시간&quot;, room: &quot;실시간뷰&quot;, week: &quot;주간식단&quot;, today: &quot;오늘급식&quot;, news: &quot;이슈피드&quot; };
@@ -4889,6 +4975,7 @@ const start = ORDER.includes(wanted) ? wanted : &quot;wait&quot;;
 ORDER.forEach(n =&gt; SCREENS[n].mount?.());              // 캔버스 관찰 등 한 번만 하는 준비
 go(start, { push: false });
 setInterval(tick, 30000);
+feedTick(); setInterval(feedTick, 60000);              // 더미데이터 띠는 화면과 무관하게 60초(status 응답은 200B 남짓)
 if (&quot;serviceWorker&quot; in navigator) navigator.serviceWorker.register(&quot;/sw.js&quot;).catch(() =&gt; {});
 /* 관리 origin 에서만 관리 뷰를 붙인다 — 호스트명이 아니라 서버가 답하는지로 판단. 공개 origin 에서는 세션당 404 한 번 (PLAN §3.1, Phase 3) */
 window.MB = { S, go, poll, observe, ORDER, NAMES, screens: SCREENS, active: () =&gt; active, wanted };   // 콘솔·테스트·관리 모듈의 손잡이

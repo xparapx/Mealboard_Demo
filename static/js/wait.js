@@ -1,6 +1,6 @@
 /* 대기시간 화면 — 히어로(지금 줄을 서면) + 추이(최근 30분, 평소 곡선 겹침). 30초 폴링(status·history). 평소 곡선(/api/typical)은 어제까지의
    자료라 5분마다면 충분하다. 그 아래 인사이트 카드 다섯 장 — 황금·병목·품질은 5분(오늘 즉석 계산), 히트맵·예보는 30분(집계) (PLAN §3.5) */
-import { $, j, jSoft, S, esc, fit, hhmm, mm, hm, WD, minuteOfDay, canvasAuto, setState } from "./core.js";
+import { $, j, jSoft, S, esc, fit, hhmm, mm, hm, WD, minuteOfDay, canvasAuto, setState, renderFeed } from "./core.js";
 import { SUNSETDARK, gradient, ramp } from "./colors.js";
 
 const BUSY_MIN = 12, EASY_MIN = 5;   // 판정 임계값 (학교마다 다를 수 있음)
@@ -38,6 +38,7 @@ function renderStatus(st) {
   const ok = st.state !== "no_data" && st.wait_min != null;
   $("#arrive").hidden = !ok;
   if (ok) $("#arriveat").textContent = hhmm(new Date(Date.now() + st.wait_min * 60000));
+  renderFeed(st.feed);                                 // 더미데이터 띠 — 이 화면은 30초 status 가 오므로 그 김에
 }
 
 export async function refresh() {

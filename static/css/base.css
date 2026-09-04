@@ -42,6 +42,10 @@ a.u { border-bottom: 1px solid rgba(12,109,106,.35); }
               background: var(--teal-tint); transition: left var(--t-view) var(--ease), width var(--t-view) var(--ease); }
 .rail { display: none; }
 .views { margin: 0; padding: 0; }
+/* 더미데이터 띠(09-04) — 화면 위에 붙어 따라온다(sticky). 멜론 틴트 위 멜론 잉크: 경고보다는 '참고' 어조 */
+.feedbar { position: sticky; top: 0; z-index: 15; padding: 9px 16px; text-align: center; font-size: 12px; line-height: 1.45;
+           font-weight: 600; color: var(--melon-ink); background: var(--melon-tint); }
+.feedbar b { font-weight: 800; }
 .view { display: none; }
 .view[data-active] { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 18px 16px 28px; }
 .view > * { width: 100%; max-width: 390px; }
@@ -56,6 +60,7 @@ a.u { border-bottom: 1px solid rgba(12,109,106,.35); }
   .rail a { height: 54px; border-radius: 14px; font-size: 10px; gap: 2px; }
   .rail a[aria-current="page"] { background: var(--surface); box-shadow: var(--e1); }
   .views { max-width: 1800px; margin: 0 auto; padding: 32px 32px 48px 104px; }
+  .feedbar { max-width: 1800px; margin: 0 auto; padding: 10px 32px 10px 104px; font-size: 13px; }
   .view[data-active] { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; align-items: stretch;
                        grid-auto-flow: row dense; padding: 0; }        /* 숨은 카드가 남긴 자리는 다음 카드가 채운다 */
   .view > * { max-width: none; }
