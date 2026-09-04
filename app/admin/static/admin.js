@@ -294,9 +294,11 @@ function draw() {
     const G = geom(w, h);
     drawFloor(g, G);
     if (ST.zones) drawZones(g, G, ST.zones, {});
-    drawMarkers(g, G, tracks.map(t => ({ x: t.floor_xy_norm[0], y: t.floor_xy_norm[1] })));
+    const onFloor = tracks.filter(t => t.floor_xy_norm);      // 호모그래피 보정 전에는 vision 이 바닥 좌표를 null 로 보낸다 — 평면도에는 못 놓는다
+    drawMarkers(g, G, onFloor.map(t => ({ x: t.floor_xy_norm[0], y: t.floor_xy_norm[1] })));
     g.font = `700 ${Math.max(8, 8.5 * G.u)}px system-ui, sans-serif`; g.fillStyle = "#33312D"; g.textAlign = "center";
-    tracks.forEach(t => { const [x, y] = G.P(t.floor_xy_norm[0], t.floor_xy_norm[1]); g.fillText(t.id, x, y - 7 * G.u); });
+    onFloor.forEach(t => { const [x, y] = G.P(t.floor_xy_norm[0], t.floor_xy_norm[1]); g.fillText(t.id, x, y - 7 * G.u); });
+    if (tracks.length && !onFloor.length) { g.font = `600 ${Math.max(10, 11 * G.u)}px system-ui, sans-serif`; g.fillStyle = "#9A958A"; g.fillText(`트랙 ${tracks.length} · 보정 4점이 없어 평면도에 놓지 못함`, w / 2, h / 2); }
     return;
   }
   // 프레임 뷰(합성 배경) 또는 실사 위 오버레이(투명)

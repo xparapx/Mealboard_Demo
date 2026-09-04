@@ -73,7 +73,7 @@ function draw() {
     drawFloor(g, M.G);
     drawZones(g, M.G, Z.doc.zones.map(z => ({ id: z.id, label: z.name, polygon: z.polygon })), {});
     const fr = D.lastFrame?.();                                     // 메타 스트림의 바닥 점 — 정렬 확인용(그리기만, 보관 없음)
-    (fr?.tracks || []).forEach(t => { const [sx, sy] = M.toS(...t.floor_xy_norm); g.beginPath(); g.arc(sx, sy, 3, 0, Math.PI * 2); g.fillStyle = "#F6C445"; g.fill(); });
+    (fr?.tracks || []).filter(t => t.floor_xy_norm).forEach(t => { const [sx, sy] = M.toS(...t.floor_xy_norm); g.beginPath(); g.arc(sx, sy, 3, 0, Math.PI * 2); g.fillStyle = "#F6C445"; g.fill(); });
   } else {
     if (Z.snap) g.drawImage(Z.snap, 0, 0, w, h);
     else { g.fillStyle = "#2B2A27"; g.fillRect(0, 0, w, h); }
