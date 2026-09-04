@@ -1,0 +1,19 @@
+[Unit]
+Description=Mealboard vision (카메라 카운팅 노드 — 프레임은 메모리에만, DB 에는 숫자만)
+After=network.target
+Conflicts=mealboard-mock.service
+
+[Service]
+User=__USER__
+WorkingDirectory=/opt/mealboard
+EnvironmentFile=/opt/mealboard/.env
+Environment=PYTHONUNBUFFERED=1
+# RUN_DIR=/run/mealboard (메타데이터 소켓 — 관리 앱과 공유). PrivateTmp 금지 — /tmp/debug_on 이 관리 앱과의 MJPEG 계약이다
+RuntimeDirectory=mealboard
+RuntimeDirectoryPreserve=yes
+ExecStart=/opt/mealboard/.venv/bin/python -m vision.counter
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

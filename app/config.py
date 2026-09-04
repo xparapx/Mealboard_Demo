@@ -36,6 +36,13 @@ ADMIN_PORT = int(os.getenv("ADMIN_PORT", "8101"))
 ADMIN_USERS = os.getenv("ADMIN_USERS", "")            # Tailscale 로그인, 쉼표 구분 — app/admin/auth.parse_users 가 정리
 ADMIN_LOCAL_KEY = os.getenv("ADMIN_LOCAL_KEY", "")    # SSH 터널(127.0.0.1) 경로용. 생성: openssl rand -hex 16
 DEBUG_PORT = int(os.getenv("DEBUG_PORT", "8102"))     # vision 디버그 MJPEG (127.0.0.1 전용, 관리 앱이 중계)
+# 카메라 카운팅 노드 (vision/counter.py, 로드맵 ④). 홈 Pi 에서는 picamera 금지(Plant 카메라와 배타) — webcam:N | file:경로 만
+VIDEO_SOURCE = os.getenv("VIDEO_SOURCE", "picamera")   # picamera | webcam:0 | file:경로
+VISION_SIZE = os.getenv("VISION_SIZE", "1536x864")      # 카메라 요청 해상도 (imx708 의 1536x864 모드 = 비닝, 밝고 빠르다)
+VISION_FPS = float(os.getenv("VISION_FPS", "5"))        # 추론 목표 fps (Pi 5 CPU 의 yolo11n 640 은 3~5)
+VISION_IMGSZ = int(os.getenv("VISION_IMGSZ", "640"))
+VISION_CONF = float(os.getenv("VISION_CONF", "0.35"))
+YOLO_WEIGHTS = os.getenv("YOLO_WEIGHTS", str(DATA / "models" / "yolo11n.pt"))   # ultralytics 가중치. Hailo hef 백엔드는 다음 단계
 RUN_DIR = Path(os.getenv("RUN_DIR", str(DATA / "run")))   # 메타데이터 소켓 디렉터리 (Pi: /run/mealboard)
 META_UDP_PORT = 8103                                  # AF_UNIX 가 없는 개발 PC(Windows)의 메타데이터 폴백 — UDP 127.0.0.1 (Pi 에서는 쓰지 않는다)
 DEBUG_FLAG = Path("/tmp/debug_on") if os.name != "nt" else RUN_DIR / "debug_on"   # MJPEG 켜짐 계약 파일 (vision 과 공유, PrivateTmp 금지)

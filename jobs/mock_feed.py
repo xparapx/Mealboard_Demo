@@ -15,19 +15,18 @@ zone_samples 에 인원수만 남긴다(같은 트랜잭션). 구역 정의는 �
 """
 import argparse
 import datetime as dt
-import json
 import math
-import os
 import random
 import time
 from collections import deque
 
-from app.config import DATA, ZONES_JSON
+from app.config import ZONES_JSON
 from app.db import connect
 from app.lunch import MEALS, meal_now
 from vision.meta import MetaSender
+from vision.record import write_sample
 from vision.waittime import estimate_wait
-from vision.zones import count_by_cell, count_by_zone, load_zones, zone_of
+from vision.zones import count_by_zone, load_zones, zone_of
 
 TICK = 10           # 시뮬레이션 1틱 = 10초
 META_FPS = 5        # --meta 프레임 발행 속도 (vision 디버그 계약과 같은 ≤5fps)
@@ -38,7 +37,6 @@ CYCLE_MIN = 170     # 11:20 ~ 14:10 을 한 사이클로 보고 반복
 # 실측 좌표계(x=폭 15.55m, y=배식구 벽→출입문 24.65m 의 0~1 정규화, static 탑뷰·zones.json 과 공유):
 # 입구는 통로 끝단(출입문 벽의 창가 쪽) — 문 → 창가 통로 직진 → 배식구 벽(y=0)의 배식대 앞
 PATH = [(0.08, 0.97), (0.05, 0.30), (0.10, 0.07), (0.55, 0.05)]
-POSITIONS = DATA / "positions.json"
 
 
 def arrival_rate(m):
@@ -62,20 +60,6 @@ def layout_points(n):
         y = PATH[k][1] + (PATH[k + 1][1] - PATH[k][1]) * t + random.uniform(-0.02, 0.02)
         pts.append({"x": round(min(max(x, 0), 1), 3), "y": round(min(max(y, 0), 1), 3)})
     return pts
-
-
-def write_positions(ts, queue, pts):
-    """data/positions.json 을 원자적으로 덮어쓴다 (tmp 에 쓰고 os.replace). 순간 상태만, 이력 없음.
-    Windows 에서는 API 가 읽는 순간 os.replace 가 거부될 수 있어 잠깐 재시도하고, 끝내 안 되면 이번 틱은 건너뛴다(옛 파일 유지)."""
-    tmp = POSITIONS.parent / (POSITIONS.name + ".tmp")
-    tmp.write_text(json.dumps({"updated_at": ts, "n": queue, "points": pts}), encoding="utf-8")
-    for _ in range(5):
-        try:
-            os.replace(tmp, POSITIONS)
-            return
-        except PermissionError:
-            time.sleep(0.02)
-    tmp.unlink(missing_ok=True)
 
 
 def noisy(mu):
@@ -113,18 +97,6 @@ class Simulator:
         if self.sim >= CYCLE_MIN * 60:                             # 한 사이클 끝 → 처음부터
             self.reset()
         return out
-
-
-def write_sample(con, ts, r, zones):
-    """samples·zone_samples·cell_samples 를 한 트랜잭션으로(반쪽 표본이 남지 않게) + positions.json. 구역별 인원수를 돌려준다"""
-    counts = count_by_zone(r["pts"], zones)                        # 구역별 인원수 — DB 에는 이 숫자만 간다
-    con.execute("INSERT OR REPLACE INTO samples VALUES (?,?,?,?,?)", (ts, r["queue"], r["rate"], r["wait"], r["state"]))
-    con.executemany("INSERT OR REPLACE INTO zone_samples VALUES (?,?,?)", [(ts, z, n) for z, n in counts.items()])
-    con.executemany("INSERT OR REPLACE INTO cell_samples VALUES (?,?,?)",
-                    [(ts, c, n) for c, n in count_by_cell(r["pts"]).items()])    # 격자 셀 인원수 — 최근 30분 밀집도용, 숫자만
-    con.commit()
-    write_positions(ts, r["queue"], r["pts"])                      # 카메라(=mock) 가 멈추면 이 파일도 멈춘다 → API 가 stale 로 판단
-    return counts
 
 
 def to_image(x, y):
@@ -191,7 +163,7 @@ def main():
         counts, live = {}, not r["gap"]
         if live:
             ts = dt.datetime.now().isoformat(timespec="milliseconds")
-            counts = write_sample(con, ts, r, zones)
+            counts = write_sample(con, ts, r, zones)                  # vision/record.py — 카메라 노드와 같은 기록 함수
         zone_txt = " ".join(f"{z}={n}" for z, n in counts.items())
         tag = win.label if win else "더미"
         print(f"[{tag}] {r['m']:6.1f}분  대기 {r['queue']:3d}명  처리 {r['rate']:5.1f}/분  예상 {r['wait']}분  {r['state']}  {zone_txt}")
