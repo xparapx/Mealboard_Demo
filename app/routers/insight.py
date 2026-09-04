@@ -162,7 +162,7 @@ def menus(n: int = Query(5, ge=1, le=20), min_days: int = Query(MIN_DAYS, ge=1, 
         m = meta(con)
     base = {k: (float(m[k]) if m.get(k) not in (None, "") else None) for k in ("menu_base_rise", "menu_base_wait")}
     if not rows:
-        return _no(f"{min_days}일 이상 나온 메뉴가 아직 없다", items=[], baseline=base)
+        return _no(f"{min_days}회 이상 나온 메뉴 아직 없음", items=[], baseline=base)
     return {"state": "ok", "basis": "menu_stats", "min_days": min_days, "baseline": base, "items": [dict(r) for r in rows]}
 
 
@@ -332,7 +332,7 @@ def density_now(minutes: int = Query(30, ge=5, le=180)):
         cell_rows = con.execute("SELECT cell, SUM(n) s FROM cell_samples WHERE ts >= ? GROUP BY cell", (since,)).fetchall()
         zone_rows = con.execute("SELECT zone, SUM(n) s FROM zone_samples WHERE ts >= ? GROUP BY zone", (since,)).fetchall()
     if not ticks or not cell_rows:
-        return _no(f"최근 {minutes}분 표본이 없다", minutes=minutes, since=since, ticks=ticks, cells=[], zones=[])
+        return _no(f"최근 {minutes}분 표본 없음", minutes=minutes, since=since, ticks=ticks, cells=[], zones=[])
     try:
         doc = load_zones(ZONES_JSON)
         names = {z["id"]: z["name"] for z in doc["zones"]}

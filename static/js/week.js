@@ -1,5 +1,5 @@
 /* 주간식단 화면 — 이번 주 식단(요일 컬럼). meal.json 이 이미 월~금을 통째로 담고 있다. 오늘급식과 같은 응답을 쓴다(loadMeal 이 한 번 받아 둘 다 그린다).
-   아래 인사이트 카드: 주간 영양 추이(kpi 3타일 + 스파크라인) · 메뉴 인기 TOP5(순위 목록). 집계에서 오므로 30분마다 */
+   아래 인사이트 카드: 주간 영양 추이(kpi 3타일 + 스파크라인) · 메뉴 빈도 TOP5(순위 목록). 집계에서 오므로 30분마다 */
 import { $, jSoft, esc, WD, setState } from "./core.js";
 import { splitAllergy, loadMeal } from "./today.js";
 
@@ -58,7 +58,7 @@ function renderTop(d) {
   $("#toplead").innerHTML = `<b>${esc(items[0].menu)}</b> 날에 줄이 가장 빨리 늘었습니다`;
   $("#toplist").innerHTML = items.map((x, i) =>
     `<li style="--p:${Math.round(100 * (x.popularity || 0) / top)}%"><i>${i + 1}</i><span>${esc(x.menu)}</span><small>${x.n_days}일</small><b>${x.popularity}</b></li>`).join("");
-  $("#topfoot").textContent = `인기 지수 = 줄이 느는 속도와 최대 대기의 평균 대비(100 = 보통) · ${d.min_days}일 이상 나온 메뉴만`;
+  $("#topfoot").textContent = `인기 지수 = 줄이 느는 속도와 최대 대기의 평균 대비(100 = 보통) · ${d.min_days}회 이상 나온 메뉴만`;
 }
 
 const RENDER = { nutricard: renderNutrition, topcard: renderTop };

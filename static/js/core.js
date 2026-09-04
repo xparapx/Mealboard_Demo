@@ -77,7 +77,7 @@ export function setState(id, ok, reason) {
 export const S = { last: null, lastPos: null, meal: null, typ: null };
 
 /* 더미데이터 띠(09-04) — /api/status 의 feed 로 그린다. live(카메라 노드 + 수집 창 안 + 표본 이어짐)면 숨긴다.
-   창 밖: "급식시간이 아닙니다" + 다음 창. 창 안인데 mock: "실측 카메라 연결 전". 어느 화면에 있든 같은 띠 — 대기시간 화면은 30초 status 로, 나머지는 60초 feedTick 으로 */
+   창 밖: "급식시간이 아닙니다" + 다음 창. 창 안인데 mock: "급식실 설치 전 시험 운영". 어느 화면에 있든 같은 띠 — 대기시간 화면은 30초 status 로, 나머지는 60초 feedTick 으로 */
 export function renderFeed(f) {
   const bar = $("#feedbar");
   if (!bar || !f) return;
@@ -85,7 +85,7 @@ export function renderFeed(f) {
   const n = f.next, when = !n ? "" : n.days === 1 ? " (내일)" : n.days > 1 ? ` (${n.days}일 뒤)` : "";
   const next = n ? ` · 다음 급식 <b>${esc(n.label)} ${mm(n.lo)}</b>${when}` : "";
   bar.innerHTML = f.now
-    ? `<b>${esc(f.now.label)}</b> ${mm(f.now.lo)}~${mm(f.now.hi)} · 실측 카메라 연결 전이라 지금 보이는 값은 <b>더미데이터</b>입니다`
+    ? `<b>${esc(f.now.label)}</b> ${mm(f.now.lo)}~${mm(f.now.hi)} · 급식실 설치 전 시험 운영 중이라 지금 보이는 값은 <b>더미데이터</b>입니다`
     : `지금은 급식시간이 아닙니다 · 실시간 데이터가 아닌 <b>더미데이터</b>입니다${next}`;
   bar.hidden = false;
 }

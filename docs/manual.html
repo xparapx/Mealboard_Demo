@@ -1318,7 +1318,7 @@ systemctl status mealboard-api --no-pager</code></pre>
           &lt;/div&gt;
         &lt;/div&gt;
       &lt;/div&gt;
-      &lt;div class=&quot;empty&quot; id=&quot;zoneempty&quot;&gt;최근 30분 표본이 아직 없습니다&lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;zoneempty&quot;&gt;최근 30분 표본 없음&lt;/div&gt;
     &lt;/section&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;reportcard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;오늘 리포트&lt;/div&gt;
@@ -1338,7 +1338,7 @@ systemctl status mealboard-api --no-pager</code></pre>
       &lt;div class=&quot;week&quot; id=&quot;weekgrid&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;note&quot; id=&quot;weekavg&quot; style=&quot;margin-top:12px&quot;&gt;&lt;/div&gt;
     &lt;/section&gt;
-    &lt;!-- 주간식단 화면의 인사이트 카드 — 주간 영양 추이 · 메뉴 인기 TOP5 --&gt;
+    &lt;!-- 주간식단 화면의 인사이트 카드 — 주간 영양 추이 · 메뉴 빈도 TOP5 --&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;nutricard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;주간 영양 추이&lt;/div&gt;
       &lt;div class=&quot;body&quot;&gt;
@@ -1350,13 +1350,13 @@ systemctl status mealboard-api --no-pager</code></pre>
       &lt;div class=&quot;empty&quot; id=&quot;nutriempty&quot;&gt;영양 이력이 아직 없습니다&lt;/div&gt;
     &lt;/section&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;topcard&quot; data-state=&quot;no_data&quot;&gt;
-      &lt;div class=&quot;eyebrow&quot;&gt;메뉴 인기 TOP 5&lt;/div&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;메뉴 빈도 TOP 5&lt;/div&gt;
       &lt;div class=&quot;body&quot;&gt;
         &lt;div class=&quot;lead&quot; id=&quot;toplead&quot;&gt;&lt;/div&gt;
         &lt;ol class=&quot;rank&quot; id=&quot;toplist&quot;&gt;&lt;/ol&gt;
         &lt;div class=&quot;note foot&quot; id=&quot;topfoot&quot;&gt;&lt;/div&gt;
       &lt;/div&gt;
-      &lt;div class=&quot;empty&quot; id=&quot;topempty&quot;&gt;2일 이상 나온 메뉴가 아직 없습니다&lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;topempty&quot;&gt;2회 이상 나온 메뉴 아직 없음&lt;/div&gt;
     &lt;/section&gt;
   &lt;/section&gt;
 
@@ -1447,7 +1447,7 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v20&quot;;   // 09-04: 더미데이터 띠(#feedbar) — 옛 셸 캐시를 지운다
+const CACHE = &quot;mealboard-v21&quot;;   // 09-04: 문구 손질(띠·밀집도·메뉴 빈도) — 옛 셸 캐시를 지운다
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
@@ -4063,7 +4063,7 @@ def menus(n: int = Query(5, ge=1, le=20), min_days: int = Query(MIN_DAYS, ge=1, 
         m = meta(con)
     base = {k: (float(m[k]) if m.get(k) not in (None, &quot;&quot;) else None) for k in (&quot;menu_base_rise&quot;, &quot;menu_base_wait&quot;)}
     if not rows:
-        return _no(f&quot;{min_days}일 이상 나온 메뉴가 아직 없다&quot;, items=[], baseline=base)
+        return _no(f&quot;{min_days}회 이상 나온 메뉴 아직 없음&quot;, items=[], baseline=base)
     return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: &quot;menu_stats&quot;, &quot;min_days&quot;: min_days, &quot;baseline&quot;: base, &quot;items&quot;: [dict(r) for r in rows]}
 
 
@@ -4233,7 +4233,7 @@ def density_now(minutes: int = Query(30, ge=5, le=180)):
         cell_rows = con.execute(&quot;SELECT cell, SUM(n) s FROM cell_samples WHERE ts &gt;= ? GROUP BY cell&quot;, (since,)).fetchall()
         zone_rows = con.execute(&quot;SELECT zone, SUM(n) s FROM zone_samples WHERE ts &gt;= ? GROUP BY zone&quot;, (since,)).fetchall()
     if not ticks or not cell_rows:
-        return _no(f&quot;최근 {minutes}분 표본이 없다&quot;, minutes=minutes, since=since, ticks=ticks, cells=[], zones=[])
+        return _no(f&quot;최근 {minutes}분 표본 없음&quot;, minutes=minutes, since=since, ticks=ticks, cells=[], zones=[])
     try:
         doc = load_zones(ZONES_JSON)
         names = {z[&quot;id&quot;]: z[&quot;name&quot;] for z in doc[&quot;zones&quot;]}
@@ -4869,7 +4869,7 @@ export function setState(id, ok, reason) {
 export const S = { last: null, lastPos: null, meal: null, typ: null };
 
 /* 더미데이터 띠(09-04) — /api/status 의 feed 로 그린다. live(카메라 노드 + 수집 창 안 + 표본 이어짐)면 숨긴다.
-   창 밖: &quot;급식시간이 아닙니다&quot; + 다음 창. 창 안인데 mock: &quot;실측 카메라 연결 전&quot;. 어느 화면에 있든 같은 띠 — 대기시간 화면은 30초 status 로, 나머지는 60초 feedTick 으로 */
+   창 밖: &quot;급식시간이 아닙니다&quot; + 다음 창. 창 안인데 mock: &quot;급식실 설치 전 시험 운영&quot;. 어느 화면에 있든 같은 띠 — 대기시간 화면은 30초 status 로, 나머지는 60초 feedTick 으로 */
 export function renderFeed(f) {
   const bar = $(&quot;#feedbar&quot;);
   if (!bar || !f) return;
@@ -4877,7 +4877,7 @@ export function renderFeed(f) {
   const n = f.next, when = !n ? &quot;&quot; : n.days === 1 ? &quot; (내일)&quot; : n.days &gt; 1 ? ` (${n.days}일 뒤)` : &quot;&quot;;
   const next = n ? ` · 다음 급식 &lt;b&gt;${esc(n.label)} ${mm(n.lo)}&lt;/b&gt;${when}` : &quot;&quot;;
   bar.innerHTML = f.now
-    ? `&lt;b&gt;${esc(f.now.label)}&lt;/b&gt; ${mm(f.now.lo)}~${mm(f.now.hi)} · 실측 카메라 연결 전이라 지금 보이는 값은 &lt;b&gt;더미데이터&lt;/b&gt;입니다`
+    ? `&lt;b&gt;${esc(f.now.label)}&lt;/b&gt; ${mm(f.now.lo)}~${mm(f.now.hi)} · 급식실 설치 전 시험 운영 중이라 지금 보이는 값은 &lt;b&gt;더미데이터&lt;/b&gt;입니다`
     : `지금은 급식시간이 아닙니다 · 실시간 데이터가 아닌 &lt;b&gt;더미데이터&lt;/b&gt;입니다${next}`;
   bar.hidden = false;
 }
