@@ -7,6 +7,8 @@
 
 수집 시간창(09-04 운영 규칙, app.lunch.MEALS): 창 안에서만 실측을 기록한다. 창 밖에서는 jobs.mock_feed.Simulator 의 더미 곡선을 같은 write_sample 로 쓰고,
 추론은 관리자가 실사·메타를 보고 있을 때만 돌린다(초점·ROI·보정은 급식 시간과 무관해야 하므로). 아무도 안 보면 IDLE_FPS 로 프레임만 버린다.
+.env FEED_SOURCE 가 단일 스위치다: mock 이면(급식실 설치 전 시험 운영) 창 안에서도 더미를 기록해 화면(더미데이터 띠·밀집도·마커)이 한 목소리를 내고,
+vision 으로 바꾼 뒤에만 창 안 실측을 쓴다 — 실측 숫자가 '더미' 띠 아래 섞여 나가지 않게(09-04 사용자 지적).
 창이 열리는 순간 트랙 기억·λ 이동합을 비운다(Simulator.reset 과 같은 뜻).
 
 프레임은 이 프로세스 메모리에만 있다. 디스크에 쓰지 않고, 밖으로는 MJPEG(관리 앱 중계, tailnet 전용) 뿐이다(CLAUDE.md §2 영상 취급).
@@ -16,7 +18,7 @@ import datetime as dt
 import os
 import time
 
-from app.config import (DEBUG_FLAG, DEBUG_PORT, VIDEO_SOURCE, VISION_CONF, VISION_FPS, VISION_IMGSZ, VISION_SIZE, YOLO_WEIGHTS,
+from app.config import (DEBUG_FLAG, DEBUG_PORT, FEED_SOURCE, VIDEO_SOURCE, VISION_CONF, VISION_FPS, VISION_IMGSZ, VISION_SIZE, YOLO_WEIGHTS,
                         ZONES_JSON)
 from app.db import connect
 from app.lunch import meal_now
@@ -121,7 +123,8 @@ def main():
     win, last_sample, frame_id, infer_ms = None, 0.0, 0, 0.0
     meta_alive = 0.0                                              # 마지막으로 메타 구독자가 있었던 시각(단조)
     period = 1 / VISION_FPS
-    print(f"카메라 {img_w}x{img_h}  MJPEG 127.0.0.1:{DEBUG_PORT}/mjpeg (플래그 {DEBUG_FLAG})")
+    real = FEED_SOURCE == "vision"                                # False 면 창 안에서도 더미 기록(시험 운영)
+    print(f"카메라 {img_w}x{img_h}  MJPEG 127.0.0.1:{DEBUG_PORT}/mjpeg (플래그 {DEBUG_FLAG})  기록={'실측(창 안)' if real else '더미(FEED_SOURCE=mock — 창 안에서도)'}")
 
     while True:
         t0 = time.monotonic()
@@ -132,10 +135,10 @@ def main():
             rate.reset(); sim.reset()
             if zones.counter:
                 zones.counter.reset()
-            print("--- " + (f"수집 창 열림: {win.label} - 실측 기록" if win else "수집 창 닫힘 - 더미 기록, 추론은 관리자가 볼 때만") + " ---")
+            print("--- " + (f"수집 창 열림: {win.label} - {'실측 기록' if real else '더미 기록(시험 운영)'}" if win else "수집 창 닫힘 - 더미 기록, 추론은 관리자가 볼 때만") + " ---")
         zones.reload()
         viewing = stream.wanted() or (t0 - meta_alive < 3)
-        infer = win is not None or viewing
+        infer = (win is not None and real) or viewing
 
         if not infer:                                             # 아무도 안 보고 창 밖: 카메라만 살려 둔다
             frame = src.read()
@@ -206,14 +209,14 @@ def main():
 
         if t0 - last_sample >= SAMPLE_SEC:
             last_sample = t0
-            if win:                                               # 실측 — 숫자(과 바닥 좌표의 순간 상태)만
+            if win and real:                                      # 실측 — 숫자(과 바닥 좌표의 순간 상태)만
                 write_sample(con, ts, {"queue": queue, "rate": round(lam, 2), "wait": wait, "state": state,
                                        "pts": pts if zones.h_img2floor else None}, zones.zones)
                 print(f"[{win.label}] 대기 {queue:3d}명  처리 {lam:5.1f}/분  예상 {wait}분  {state}  추론 {infer_ms:.0f}ms  트랙 {len(tracks)}")
-            else:                                                 # 창 밖 — 화면은 더미, 관리자만 실사를 본다
+            else:                                                 # 창 밖 또는 시험 운영 — 화면은 더미, 관리자만 실사를 본다
                 r = sim.step()
                 write_sample(con, ts, {"queue": r["queue"], "rate": r["rate"], "wait": r["wait"], "state": r["state"], "pts": r["pts"]}, zones.zones)
-                print(f"[더미] (관리자 열람 중: 실측 L={queue} λ={lam:.1f} 추론 {infer_ms:.0f}ms 트랙 {len(tracks)})")
+                print(f"[더미{'·' + win.label if win else ''}] (관리자 열람 중: 실측 L={queue} λ={lam:.1f} 추론 {infer_ms:.0f}ms 트랙 {len(tracks)})")
         time.sleep(max(0, period - (time.monotonic() - t0)))
 
 
