@@ -79,10 +79,11 @@
   `data/models/Qwen3-1.7B-Instruct.hef` 를 하드링크(해시 동일, 재다운로드 없음). 유닛 `deploy/hailo-ollama.service` 는 **enable 하지 않는다** — 필요할 때 `sudo systemctl start hailo-ollama`, 끝나면 stop
   (뉴스·리포트 타이머와 HAT 경합). `OLLAMA_HOST=127.0.0.1:8000` 고정(기본 0.0.0.0 은 학교 LAN 에 열린다), 밖에서는 `ssh -L 8000:127.0.0.1:8000 mbpi`. 파이프라인은 여전히 `jobs/llm.py` 직접 호출.
   **미결 질문(사용자 답 대기)**: ⓑ Plant 규칙 개정 — 사용자는 "포트 8000 은 이제 안 쓴다, Plant 는 GitHub 에 있다" 고 했으나 §0·§2 의 Plant 금지 규칙은 아직 그대로(파일·DB 삭제는 명시 지시 때만).
-- **다음 할 일**: ① **로드맵 ④ vision 프로토타입** — 실사 스트림·카운팅의 마지막 조각. 계약은 PLAN §4.4(zone_samples·cell_samples 기록, meta 소켓, DEBUG_PORT 8102 MJPEG, zones.local.json mtime 리로드),
-  카메라는 **Camera Module 3 Wide** 기준, YOLO hef 는 5.1.1 컴파일본이 5.3.0 에서 열림(필요 시 5.3.0 model zoo 로 교체). 개발 PC 웹캠·동영상 파일로 먼저.
-  수집 창 밖(`app.lunch.meal_now(now) is None`)에서는 추론을 멈추고 `jobs/mock_feed.Simulator` 더미를 같은 `write_sample` 로 쓴다(09-04 운영 규칙). Pi 에 카메라는 이미 연결돼 있다(업무 공간, AP·공유기 설치 뒤 급식실 이동).
-  ② Cloudflare Tunnel 전환(도메인·토큰은 사용자 준비, README 09-03 저녁 항목의 5단계). ③ 아래 ①~③ 잔여.
+- **로드맵 ④ vision 프로토타입 가동(09-04 아침, `d2debda`)**: `vision/counter.py`(YOLO yolo11n CPU + ByteTrack 사람만, ROI 안 L·λ선 통과 λ·W=L/λ 10초 표본, 메타 소켓, zones mtime 리로드)
+  + `source.py`(picamera|webcam:N|file:) + `counting.py`(라인크로싱·5분 이동합, 순수) + `debug_stream.py`(8102 MJPEG, 플래그 503) + `record.py`(mock 과 공용 기록). Pi 는 **mock disable → `mealboard-vision` enable**(업무 공간 카메라 imx708, 약 3fps).
+  **추론은 창 안 또는 관리자가 실사·메타를 보는 동안만**(초점·ROI·보정은 급식 시간과 무관해야 한다 — 사용자 결정), 기록은 창 안만 실측·창 밖은 Simulator 더미. `.env FEED_SOURCE=mock` 은 급식실 이전 전까지 그대로(화면 띠 = 더미).
+  호모그래피(`image_to_floor`)·ROI 는 아직 null → L 은 화면 안 전원, λ 0 → `insufficient_rate`, 구역·타일·positions 는 건너뜀 — **관리 화면 구역 탭에서 4점 보정·ROI·λ선을 찍는 것이 다음 실무**. Hailo hef 백엔드는 미착수(CPU 로 충분하면 보류).
+- **다음 할 일**: ① 관리 화면에서 보정 4점·ROI·λ선 지정 → 실측 L·λ 확인(카메라 앞에서 걸어 보기) ② Cloudflare Tunnel 전환(도메인·토큰은 사용자 준비, README 09-03 저녁 항목의 5단계). ③ 아래 ①~③ 잔여.
   ① 평소 곡선(`/api/typical`)은 mock 이 170분 사이클을 반복해 써서 스테이징에서는 값이 바닥이다. 실측 이후 확인.
   ② Inside Climate News 는 미국 지역 전력·정치 보도가 많아 "세계적 기후 이슈"와 결이 다른 기사가 섞인다 —
   며칠 지켜본 뒤 교체 여부 판단(후보: UNEP · Climate Home News). ③ 급식 있는 평일에 데스크톱 12컬럼 보드·모바일 dock 실물 확인.
@@ -130,7 +131,7 @@ Mealboard_Demo/
 ├── docs/                         # GitHub Pages (index.html + manual.html)
 ├── app/                          # FastAPI: main.py, config.py, db.py, lunch.py, insight_calc.py, insights_db.py, mealjson.py, routers/{status,history,meal,positions,news,typical,insight}.py
 │   └── admin/                    # 관리 앱(별도 프로세스 8101): server.py, auth.py, guard.py, sysctl.py, watchdog.py, audit.py, health.py, stream.py, zones_store.py, routers/{system,stream,zones}.py, static/{admin.js,zones-editor.js,admin.css}
-├── vision/                       # zones.py(구역·ROI·호모그래피), waittime.py, meta.py(메타데이터 발신). 로드맵 ④: counter.py(진입점), source.py(webcam|file|picamera), heatmap.py, debug_stream.py, calibrate.py
+├── vision/                       # counter.py(진입점, 09-04), source.py(picamera|webcam|file), counting.py(라인크로싱·λ), debug_stream.py(8102 MJPEG), record.py(표본 기록), zones.py, waittime.py, meta.py, schedule.py
 ├── jobs/                         # fetch_neis.py, fetch_news.py + newsbody.py + translators.py, mock_feed.py(--meta), rollup.py(→insights.db), report.py + report_templates.py + llm.py(→reports.db)
 ├── static/                       # index.html(셸), css/{base,screens,insight}.css, js/{core,floor,wait,room,week,today,news}.js, manifest.json, sw.js
 ├── data/                         # queue.db, insights.db, reports.db, admin.db, meal.json, news.json, positions.json (git 제외) / 포함: nutrition_std.json, carbon_std.json, news_feeds.json, zones.json(템플릿). 관리 앱의 보정 결과는 미추적 zones.local.json
