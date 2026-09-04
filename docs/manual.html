@@ -1726,7 +1726,7 @@ curl -s localhost:8100/api/meal | head -c 300</code></pre>
   <div class="lane"><em>공개</em><div class="node on" data-k="web"><b>대시보드</b><span>static/ · 30초 폴링 · PWA</span></div><i>→</i><div class="node on" data-k="cf"><b>cloudflared</b><span>학교망 밖으로 내보내는 터널</span></div><i>→ 인터넷 →</i><div class="node on" data-k="user"><b>학생·교사</b><span>QR → 휴대폰</span></div><i>· 전부</i><div class="node" data-k="sysd"><b>systemd</b><span>부팅 시 자동 실행 · 재시작</span></div><i>가 관리</i></div>
 </div>
 
-<p class="goal">목표: 인터넷 어디서든 고정 주소 <code>https://meal.kjhs-meal.com</code> 으로 대시보드가 열리고, 그 주소의 QR 이 있는 상태. 실제로 밟은 경로는 <strong>Quick Tunnel(임시 검증) → Tailscale Funnel(2026-08, 스테이징) → Cloudflare Tunnel + 도메인(2026-09-04, 정식)</strong> 입니다. 학교 망이 Tailscale 릴레이를 막아 Funnel 이 휴대폰에서 끊긴 것이 전환 이유이고, Funnel 은 예비로 켜 둡니다(맨 아래 접힌 절).</p>
+<p class="goal">목표: 인터넷 어디서든 고정 주소 <code>https://kjhs-meal.com</code> 으로 대시보드가 열리고, 그 주소의 QR 이 있는 상태. 실제로 밟은 경로는 <strong>Quick Tunnel(임시 검증) → Tailscale Funnel(2026-08, 스테이징) → Cloudflare Tunnel + 도메인(2026-09-04, 정식)</strong> 입니다. 학교 망이 Tailscale 릴레이를 막아 Funnel 이 휴대폰에서 끊긴 것이 전환 이유이고, Funnel 은 예비로 켜 둡니다(맨 아래 접힌 절).</p>
 
 <h3>9-1. 왜 터널인가</h3>
 <p>학교망은 밖에서 들어오는 연결을 막습니다. 터널은 Pi 가 <em>밖으로</em> 연결을 열어 두고, 학생의 요청이 그 통로를 거꾸로 타고 들어오는 방식입니다. 포트포워딩도, 고정 IP 도 필요 없고, 밖으로 나가는 문 하나(Cloudflare 는 7844, Funnel 은 443)만 열려 있으면 됩니다. Netlify 같은 호스팅으로는 대체되지 않습니다 — 서버(DB·API)가 Pi 안에 있기 때문입니다. Cloudflare Tunnel 과 Tailscale Funnel 은 이 원리가 같고, 차이는 <em>주소를 누가 주느냐</em>입니다: Cloudflare 는 내 도메인이 있어야 하고, Funnel 은 tailnet 이 주는 <code>*.ts.net</code> 주소를 씁니다. 그리고 실제로 중요했던 차이 하나 — 학교 망은 Tailscale 의 릴레이 서버(도쿄·싱가포르)를 막았지만 Cloudflare 엣지(인천)로 나가는 7844 는 열어 둔다는 점입니다.</p>
@@ -1741,7 +1741,7 @@ curl -s localhost:8100/api/meal | head -c 300</code></pre>
 
 <h3>9-3. Cloudflare Tunnel + 도메인 — 고정 주소 (채택)</h3>
 <p><strong>도메인.</strong> Cloudflare Tunnel 의 공개 주소는 "Cloudflare 에 사이트로 등록된 도메인" 밑에만 만들 수 있습니다. 함정 두 가지: ① kro.kr 같은 무료 하위 도메인은 네임서버(NS) 위임을 주지 않아 등록이 안 됩니다. ② 학교 홈페이지 주소(<code>kongjugo.cnehs.kr</code>)는 교육청 소유라 학교가 레코드를 넣을 수 없고, 하위 이름만 위임받는 방식은 Cloudflare 최상위 유료 플랜 전용입니다. 그래서 <strong>Cloudflare Registrar 에서 직접 샀습니다</strong>(<code>kjhs-meal.com</code>, 원가 판매라 연 1만 원대, 자동 갱신은 꺼 둘 수 있음). Registrar 에서 사면 네임서버가 처음부터 Cloudflare 라 "사이트 추가" 절차가 없습니다. 다른 곳에서 샀다면 Cloudflare → Add a site 뒤 NS 를 바꿔야 합니다. Cloudflare 계정·Tunnel·DNS·HTTPS 인증서는 전부 무료 플랜입니다.</p>
-<p><strong>터널.</strong> Cloudflare 대시보드 → Zero Trust → Networks → Tunnels → Create a tunnel → Cloudflared → 이름 <code>mealboard</code>. 다음 화면의 "설치 명령" 끝에 붙은 <code>eyJ…</code> 문자열이 <strong>토큰</strong>입니다 — 화면에는 별표로 가려져 보이므로 반드시 <em>복사 아이콘</em>으로 복사합니다. PC 에 아무것도 설치하지 않고, 명령도 실행하지 않습니다(터널은 Pi 에서, 유닛은 저장소의 것으로 돕니다). 같은 화면의 Public Hostname 탭에서 <code>meal</code> / <code>kjhs-meal.com</code> / <strong>HTTP</strong> / <code>127.0.0.1:8100</code> 을 저장하면 DNS 레코드(<code>meal.kjhs-meal.com</code> → 터널)가 자동으로 생깁니다. <strong>관리 앱 8101 은 절대 매핑하지 않습니다</strong>(tailnet 전용 — STEP 17).</p>
+<p><strong>터널.</strong> Cloudflare 대시보드 → Zero Trust → Networks → Tunnels → Create a tunnel → Cloudflared → 이름 <code>mealboard</code>. 다음 화면의 "설치 명령" 끝에 붙은 <code>eyJ…</code> 문자열이 <strong>토큰</strong>입니다 — 화면에는 별표로 가려져 보이므로 반드시 <em>복사 아이콘</em>으로 복사합니다. PC 에 아무것도 설치하지 않고, 명령도 실행하지 않습니다(터널은 Pi 에서, 유닛은 저장소의 것으로 돕니다). 터널 화면의 <strong>경로 탭 → 경로 추가 → 게시된 애플리케이션 경로</strong>(옛 이름 Public Hostname)에서 하위 도메인은 비우고(루트 <code>kjhs-meal.com</code> — 짧아서 QR·구두 안내에 낫다) 도메인 <code>kjhs-meal.com</code> / 서비스 유형 <strong>HTTP</strong>(S 없는 것) / URL <code>127.0.0.1:8100</code> 을 저장하면 DNS 레코드(<code>kjhs-meal.com</code> → 터널)가 자동으로 생깁니다. 실제로 겪은 함정: 유형이 <code>HTTPS</code> 로 저장되면 Pi 의 평문 8100 에 TLS 악수를 걸어 502 가 나고 저널에 <code>tls: first record does not look like a TLS handshake</code> 가 찍힌다 — 행 오른쪽 <code>···</code> → 편집에서 HTTP 로 바꾼다. <strong>관리 앱 8101 은 절대 매핑하지 않습니다</strong>(tailnet 전용 — STEP 17).</p>
 <p><strong>토큰을 Pi 에 넣기.</strong> 토큰은 <code>.env</code> 의 <code>CF_TUNNEL_TOKEN</code> 한 줄이며, 유닛 <code>deploy/mealboard-cloudflared.service</code> 가 <code>EnvironmentFile</code> 로 읽어 <code>cloudflared tunnel run --token</code> 에 넘깁니다. 설정 파일도 자격증명 json 도 Pi 에 남지 않습니다. 붙여 넣을 때 실제로 겪은 함정: nano 에 오른쪽 클릭으로 붙였더니 아무것도 들어가지 않았고, <code>read -s</code> 로 받았더니 터미널이 보낸 제어 문자(Ctrl+V 의 <code>^V</code>, 방향키·괄호 붙여넣기의 <code>ESC[</code>, 끝의 <code>^D</code>)가 값 안에 섞여 <code>Provided Tunnel token is not valid</code> 가 났습니다. 아래 한 줄은 입력을 화면·히스토리에 남기지 않고 받되, base64 문자만 남기고 나머지를 걷어 낸 뒤 저장합니다.</p>
 <figure class="code">
 <figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
@@ -1765,15 +1765,15 @@ journalctl -u mealboard-cloudflared -n 20 --no-pager | grep -c &#39;Registered t
 <figure class="code">
 <figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
 <pre><code class="lang-bash">sudo apt install -y qrencode
-qrencode -o /opt/mealboard/static/icons/qr.png -s 8 &quot;https://meal.kjhs-meal.com&quot;
+qrencode -o /opt/mealboard/static/icons/qr.png -s 8 &quot;https://kjhs-meal.com&quot;
 # 이 png 를 급식실 입구에 붙인다(화면에서는 /icons/qr.png). 주소가 바뀌면 다시 만든다 — git 미추적이 맞다</code></pre>
 </figure>
 
 <h3>확인</h3>
 <ul>
-<li>휴대폰 데이터(집 WiFi 끄고)와 <strong>학교 Wi‑Fi</strong> 둘 다에서 <code>https://meal.kjhs-meal.com</code> 이 열리고 숫자가 30초마다 갱신된다 — Funnel 은 후자에서 끊겼었다</li>
+<li>휴대폰 데이터(집 WiFi 끄고)와 <strong>학교 Wi‑Fi</strong> 둘 다에서 <code>https://kjhs-meal.com</code> 이 열리고 숫자가 30초마다 갱신된다 — Funnel 은 후자에서 끊겼었다</li>
 <li>브라우저 메뉴에 "홈 화면에 추가"가 뜬다 (PWA)</li>
-<li><code>https://meal.kjhs-meal.com/api/status</code> 는 열리지만 <code>:8101</code> 등 다른 포트·호스트는 열리지 않는다 — 매핑한 것만 나간다</li>
+<li><code>https://kjhs-meal.com/api/status</code> 는 열리지만 <code>:8101</code> 등 다른 포트·호스트는 열리지 않는다 — 매핑한 것만 나간다</li>
 <li>Pi 를 재부팅해도 <code>systemctl status mealboard-cloudflared</code> 가 active 이고 저널에 Registered 4건이 다시 찍힌다</li>
 <li>Cloudflare 대시보드 Tunnels 목록에서 <code>mealboard</code> 가 HEALTHY</li>
 </ul>
@@ -4758,7 +4758,7 @@ mv data/insights.db data/insights.db.moved      # 옮기면 전부 no_data + rea
 #   FEED_SOURCE=mock
 sudo systemctl start mealboard-rollup && journalctl -u mealboard-rollup -n 5 --no-pager
 systemctl list-timers 'mealboard*'
-curl -s https://meal.kjhs-meal.com/api/insight/quality</code></pre>
+curl -s https://kjhs-meal.com/api/insight/quality</code></pre>
 </figure>
 <p>학교 Pi 로 전환할 때는 mock 을 멈춘 직후 <code>queue.db</code>·<code>insights.db</code> 를 <code>.bak-&lt;시각&gt;</code> 으로 이름을 바꾸고 새로 시작합니다(지우는 도구는 만들지 않습니다). <code>FEED_SOURCE</code> 꼬리표가 있으니 옛 파일을 남겨 두어도 실측 히트맵에 섞이지는 않지만, 파일을 갈라 두는 편이 나중에 덜 헷갈립니다.</p>
 
