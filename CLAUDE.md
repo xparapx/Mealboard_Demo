@@ -20,7 +20,7 @@
 - 홈 Pi에서는 vision 프레임 소스로 `picamera`를 쓰지 않는다(Plant 카메라 타이머와 배타 자원). `webcam|file`만.
 - **카메라는 Camera Module 3 Wide(가로 102°)로 확정(09-04)** — 배식대 오른쪽 끝 구석에서 급식실 폭 15.55 m 전체를 담으려면 약 90° 가 필요해 표준판(66°)·아이폰 전면(약 70°)은 우측이 잘린다. 가장자리 왜곡은 관리 앱의 4점 호모그래피가 흡수. vision(로드맵 ④)은 Wide 기준으로.
 - **수집 시간창(09-04 운영 규칙)**: 3학년 점심 11:30~12:30 · 1·2학년 점심 12:30~13:30 · 석식 17:30~18:30 — `.env MEAL_WINDOWS`('HH:MM-HH:MM 라벨;…'), 파싱·검증은 `vision/schedule.py`(순수), 바인딩은 `app/lunch.py MEALS·meal_now·meal_next`(import 시점 검증).
-  **카메라 노드는 이 창 안에서만 센다.** 창 밖은 `jobs/mock_feed.Simulator` 더미 곡선을 쓰고 `/api/status feed.live=false`(live = 출처 vision ∧ 창 안 ∧ 표본 이어짐) → 화면 맨 위 `#feedbar` 가 "지금은 실시간 데이터가 아닌 더미데이터" 띠를 띄운다(모든 화면).
+  **카메라 노드는 이 창 안에서만 세고 기록한다. 창 밖에는 아무 행도 쓰지 않는다**(09-11 사용자 결정 — 옛 `Simulator` 더미 곡선 제거, 판정은 `vision/schedule.should_record`). 표본이 끊기면 `/api/status` 는 120초 뒤 `no_data`, `feed.live=false`(live = 출처 vision ∧ 창 안 ∧ 표본 이어짐) → 화면 맨 위 `#feedbar` 가 "지금은 급식 시간이 아닙니다 · 다음 창" 안내를, 히어로는 '급식 시간이 아닙니다' 를 띄운다(모든 화면). '더미데이터' 문구는 스테이징 mock 출처일 때만.
   `LUNCH_START~END`(집계·관리 가드용 점심 전체 창)는 별개로 둔다 — 석식은 아직 집계(rollup·히트맵) 밖, 실측 뒤 판단. 창은 시각만 본다(요일 무관).
 - NEIS 인증키(개발계정) 발급 완료. 학교코드 8140036(공주고, 남고), 교육청 N10.
 - **화면은 v5 확정**(2026-08-29 배포). 도면의 단일 출처는 `docs/layout.html`(v5), 구축 절차는 매뉴얼 STEP 14.
@@ -85,7 +85,7 @@
      SSID 가 다르면 `sudo nmcli con modify kjhs_meal 802-11-wireless.ssid '<정확한 SSID>'`. AP 가 5 GHz DFS 채널(52~144)만 쓰면 공유기에서 2.4 GHz 또는 36~48 채널로.
   ④ 붙은 뒤 `tailscale status --self` 가 Running 이면 다른 PC 에서 `ssh mbpi` 가 통한다. 확인: `rpicam-hello --list-cameras`(imx708) · `systemctl is-active mealboard-api mealboard-vision mealboard-admin mealboard-cloudflared` · `curl -s 127.0.0.1:8100/api/status`.
   ⑤ 결과(원인·조치)를 README 작업 로그에 한 줄 적고 push. Pi 안의 프로필 변경은 커밋 대상이 아니다.
-  **Pi 가 붙으면 할 일(사용자 요청 '실데이터 반영')**: `.env FEED_SOURCE=vision`·`ROLLUP_WINDOW=lunch` → api·vision·admin 재시작 → `insights.db` 는 `.bak-<시각>` 으로 비켜 두고 새 출처로 집계 → 관리 화면 구역 탭에서 보정 4점·ROI·λ선(없으면 λ=0 이라 '배식 시작 대기'만 나온다) → Cloudflare 공개 주소 `https://kjhs-meal.com` 확인(학교 교직원 망에서는 차단됨 — 휴대폰 셀룰러로).
+  **실데이터 전환 완료(09-11 14:35, 맥북에서 LAN 으로)**: Pi `.env FEED_SOURCE=vision`·`ROLLUP_WINDOW=lunch`(백업 `.env.bak-20260911-1435`), api·vision·admin 재시작, mock 시절 `insights.db` 는 `insights.db.bak-20260911-1435` 로 비켜 둠(rollup 타이머가 새로 만든다). **남은 것: 관리 화면 구역 탭에서 보정 4점·ROI·λ선**(없으면 λ=0 이라 '배식 시작 대기'만 나온다) → Cloudflare 공개 주소 `https://kjhs-meal.com` 확인(학교 교직원 망에서는 차단됨 — 휴대폰 셀룰러로).
 - **세션 인계(09-04 아침, 학교 PC)**: 저장소·Pi 모두 `fba0fec`. 오늘 아침 끝난 것 — ① 수집 시간창 3개 + 더미데이터 띠(`50b600a`) ② vision 프로토타입 가동, Pi 는 mock → `mealboard-vision`(`d2debda`) ③ 카메라 모드 2304x1296(`204b28f`) ④ 관리 화면 보정 전 null 좌표 가드(`fba0fec`).
   **지금 꽂힌 카메라는 표준판(66°)** — Wide 모듈은 아직 없음(사용자 확인). 광각은 모듈 교체로만 가능. **사용자 작업 방식 갱신**: Pi 반영(pull·restart)도 Claude 가 `ssh mbpi` 로 직접 한다, 코드 조각을 사용자에게 써 달라는 요청은 하지 않는다(설명만).
   **다음**: 관리 화면 구역 탭에서 보정 4점·ROI·λ선(표준판으로 연습, Wide 오면 재보정) → 카메라 앞에서 걸어 λ 통과 확인 → CPU fps 가 모자라면 Hailo hef 백엔드.
@@ -96,7 +96,7 @@
   **미결 질문(사용자 답 대기)**: ⓑ Plant 규칙 개정 — 사용자는 "포트 8000 은 이제 안 쓴다, Plant 는 GitHub 에 있다" 고 했으나 §0·§2 의 Plant 금지 규칙은 아직 그대로(파일·DB 삭제는 명시 지시 때만).
 - **로드맵 ④ vision 프로토타입 가동(09-04 아침, `d2debda`)**: `vision/counter.py`(YOLO yolo11n CPU + ByteTrack 사람만, ROI 안 L·λ선 통과 λ·W=L/λ 10초 표본, 메타 소켓, zones mtime 리로드)
   + `source.py`(picamera|webcam:N|file:) + `counting.py`(라인크로싱·5분 이동합, 순수) + `debug_stream.py`(8102 MJPEG, 플래그 503) + `record.py`(mock 과 공용 기록). Pi 는 **mock disable → `mealboard-vision` enable**(업무 공간 카메라 imx708, 약 3fps).
-  **추론은 창 안 또는 관리자가 실사·메타를 보는 동안만**(초점·ROI·보정은 급식 시간과 무관해야 한다 — 사용자 결정), 기록은 창 안만 실측·창 밖은 Simulator 더미. **`.env FEED_SOURCE` 가 단일 스위치**(09-04 낮): `mock` 이면 vision 도 창 안에서 더미를 기록해(밀집도·마커 나옴) 띠와 숫자가 한 목소리, `vision` 으로 바꿔야 창 안 실측을 쓴다. 급식실 이전 전까지 `mock`.
+  **추론은 창 안 또는 관리자가 실사·메타를 보는 동안만**(초점·ROI·보정은 급식 시간과 무관해야 한다 — 사용자 결정), 기록은 창 안 실측만 — **창 밖은 기록 없음(09-11, 옛 Simulator 더미 제거)**. **`.env FEED_SOURCE` 는 출처 스위치**: `vision` 일 때만 카메라 노드가 쓰고, `mock` 이면 카메라 노드는 아무것도 쓰지 않는다(더미는 mock 유닛의 몫, Conflicts 로 배타). 급식실 Pi 는 09-11 부터 `vision`·`ROLLUP_WINDOW=lunch`.
   호모그래피(`image_to_floor`)·ROI 는 아직 null → L 은 화면 안 전원, λ 0 → `insufficient_rate`, 구역·타일·positions 는 건너뜀 — **관리 화면 구역 탭에서 4점 보정·ROI·λ선을 찍는 것이 다음 실무**. Hailo hef 백엔드는 미착수(CPU 로 충분하면 보류).
   **화각 주의(09-04)**: 업무 공간 Pi 에 지금 꽂힌 모듈은 **표준판 imx708(66°)** 이다(Wide 는 libcamera 가 `imx708_wide` 로 보고) — Wide 로 바꿔 끼우면 코드 변경 없음. imx708 의 `1536x864` 모드는 중앙 크롭이라 화각이 2/3 로 준다 → `VISION_SIZE=2304x1296`(센서 전체, 2×2 비닝)이 기본.
 - **다음 할 일**: ① 관리 화면에서 보정 4점·ROI·λ선 지정 → 실측 L·λ 확인(카메라 앞에서 걸어 보기) ② Cloudflare 마무리 — 휴대폰 셀룰러·학교 Wi‑Fi 에서 `https://kjhs-meal.com` 확인, Cloudflare SSL/TLS → Always Use HTTPS 켜기(사용자, 대시보드). ③ 아래 ①~③ 잔여.
@@ -122,7 +122,7 @@ NEIS 급식 API의 메뉴·영양 정보와 함께 웹 대시보드(PWA)로 제�
 | 외부 노출 | 스테이징·시범 운영: **Tailscale Funnel**(고정 주소, 443 아웃바운드). 정식 배포: Cloudflare Tunnel + 유료 도메인 | 학교망 인바운드 차단 대응. 포트포워딩 금지. 둘 다 Pi 가 밖으로 연결을 여는 방식. 팀 SSH 는 tailnet 내부(Funnel 은 공개, 용도 구분) |
 | 대기시간 | Little's law: W = L / λ | L=ROI 점유 인원, λ=배식대 가상선 통과율(5분 이동평균). **ROI 출구변 = λ 측정선**(같은 경계). λ < 0.5명/분이면 `insufficient_rate`로 산출 불가 처리 |
 | 카운팅 | YOLOv8n/11n + ByteTrack, 기준점은 bbox 바닥 중앙 | 라인크로싱은 부호 변화 + ±20px 완충띠. `imgsz`·프레임 스킵은 설정으로 뺀다(Pi 5 CPU 수 fps) |
-| 수집 시간창 | **3학년 점심 11:30~12:30 · 1·2학년 점심 12:30~13:30 · 석식 17:30~18:30 만 실측**(`.env MEAL_WINDOWS`, `vision/schedule.py`). 창 밖은 더미 곡선(`mock_feed.Simulator`) + 화면 "더미데이터" 띠(`/api/status feed.live`) | 09-04 사용자 운영 규칙. 카메라·HAT 를 급식 때만 쓰고, 학생이 창 밖 숫자를 실측으로 오해하지 않게. 집계 창 `LUNCH_START~END` 와는 별개 |
+| 수집 시간창 | **3학년 점심 11:30~12:30 · 1·2학년 점심 12:30~13:30 · 석식 17:30~18:30 만 실측**(`.env MEAL_WINDOWS`, `vision/schedule.py`). 창 밖은 **기록 없음**(09-11 사용자 결정; 옛 더미 곡선 제거) + 화면 "급식 시간이 아닙니다 · 다음 창" 안내(`/api/status feed`) | 09-04 사용자 운영 규칙, 09-11 창 밖 더미 제거. 카메라·HAT 를 급식 때만 쓰고, 학생이 창 밖 숫자를 실측으로 오해하지 않게. 집계 창 `LUNCH_START~END` 와는 별개 |
 | 영상 취급 | **프레임 저장·전송 절대 금지. 숫자만 DB에** | 개인정보 원칙. 학교 협의의 전제 조건. 유일한 예외 = 승인된 디버그 경로(09-03): 관리 앱이 tailnet 안에서만 중계하는 MJPEG(뷰어 1명, ≤10분, 감사 기록, 디스크 접촉 없음) |
 | 디버그 뷰 | 카운트 프로세스 내장, 127.0.0.1 전용 MJPEG, 터치파일(/tmp/debug_on)로 on/off(관리 앱이 켜고 끈다, ≤10분 자동 off, vision 도 mtime 10분 초과면 스스로 끈다. 두 유닛 모두 `PrivateTmp` 금지) | 관리자만 **SSH 터널 또는 tailnet 전용 관리 앱**(Serve 8443 + `ADMIN_USERS` 허용목록)으로 열람. 켜짐 이력(누가·언제·얼마나)은 `data/admin.db` |
 | 히트맵 | 공개 화면은 빈 평면도 위 히트맵·익명 위치 마커(순간 상태만, 개별 위치 이력 저장 없음). 실사+마커는 디버그 뷰 전용. **공간 인사이트는 집계 숫자만**(구역별 점유율·통로 점유 등, 09-03 승인; 09-03 사용자 요청으로 **격자 5×8 셀별 인원수**(`cell_samples`, 약 3m 셀)를 더해 '최근 30분 밀집도' 히트맵을 그린다 — 역시 숫자만) — 개별 좌표·궤적은 어떤 형태로도 저장하지 않는다 | 마커는 `data/positions.json` 한 파일을 덮어쓰기만 하며 `/api/positions` 가 120초 stale 규칙으로 내준다. 집계는 `jobs/rollup.py` 가 `data/insights.db` 에 쓴다(구역 인원수는 vision/mock 이 `queue.db.zone_samples` 에 숫자만 기록). 관리 앱의 **메타데이터 스트림**(bbox·트랙 ID·바닥 좌표)은 인증된 관리자가 구독 중일 때만 실시간 중계 — 저장·버퍼 없음, 구독 이력은 admin.db |

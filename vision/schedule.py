@@ -1,8 +1,8 @@
 """수집 시간창 — 순수 함수. 설정 파일도 시계도 모른다(값은 app/lunch.py 가 .env 에서 묶어 준다).
 
 급식은 하루 세 번 창이 열린다(09-04 운영 규칙): 3학년 점심 11:30~12:30 · 1·2학년 점심 12:30~13:30 · 석식 17:30~18:30.
-카메라 노드(vision)는 이 창 안에서만 사람을 세고, 창 밖에서는 추론을 멈추고 mock 의 더미 곡선으로 화면을 채운다.
-공개 API 는 같은 창으로 '지금 값이 실측인가'(feed.live) 를 판정해 화면이 "더미데이터" 띠를 띄운다.
+카메라 노드(vision)는 이 창 안에서만 사람을 세고 기록한다. 창 밖에서는 추론도 기록도 멈춘다(09-11: 더미 곡선을 쓰지 않는다 —
+화면은 '지금은 급식 시간이 아닙니다 · 다음 창' 안내를 띄운다). 공개 API 는 같은 창으로 '지금 값이 실측인가'(feed.live) 를 판정한다.
 
 .env 표기:  MEAL_WINDOWS=11:30-12:30 3학년 점심;12:30-13:30 1·2학년 점심;17:30-18:30 석식
   항목은 ';' 로 나누고, 항목은 'HH:MM-HH:MM' 뒤에 공백과 라벨(생략 가능, 기본 '급식'). 창은 겹칠 수 없고 자정을 넘길 수 없다.
@@ -45,6 +45,12 @@ def parse_windows(text):
         if n.lo < p.hi:
             raise ValueError(f"창이 겹친다: {p.label} {p.lo}~{p.hi} 와 {n.label} {n.lo}~{n.hi}")
     return out
+
+
+def should_record(window, source):
+    """카메라 노드가 지금 표본을 써야 하는가 — 창이 열려 있고(window 가 MealWindow) 출처가 vision 일 때만.
+    창 밖에서는 아무 행도 쓰지 않는다(옛 더미 곡선 없음). FEED_SOURCE=mock 이면 카메라 노드는 쓰지 않는다 — 더미는 mock 유닛의 몫(Conflicts 로 배타)"""
+    return window is not None and source == "vision"
 
 
 def current(windows, minute):

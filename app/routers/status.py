@@ -8,8 +8,9 @@ router = APIRouter()
 
 
 def feed(now, state, source=FEED_SOURCE):
-    """'지금 값이 실측인가' — 화면의 더미데이터 띠가 읽는다(09-04). live 는 셋이 모두 맞을 때만:
-    출처가 vision(카메라 노드) · 지금이 수집 창(3학년 점심·1·2학년 점심·석식) 안 · 표본이 끊기지 않음. now 는 열린 창, next 는 다음 창(며칠 뒤 days)"""
+    """'지금 값이 실측인가' — 화면 맨 위 안내 띠가 읽는다(09-04). live 는 셋이 모두 맞을 때만:
+    출처가 vision(카메라 노드) · 지금이 수집 창(3학년 점심·1·2학년 점심·석식) 안 · 표본이 끊기지 않음. now 는 열린 창, next 는 다음 창(며칠 뒤 days).
+    창 밖에는 카메라 노드가 아무 행도 쓰지 않으므로(09-11) state 는 120초 뒤 no_data 가 된다 — 화면은 source·now 로 '급식 시간이 아닙니다' 와 '표본 끊김' 을 가른다"""
     w = meal_now(now)
     nxt = meal_next(now)
     nxt_d = None

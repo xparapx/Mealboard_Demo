@@ -4,8 +4,8 @@ zone_samples 에 인원수만 남긴다(같은 트랜잭션). 구역 정의는 �
 실제 vision 과 동시에 켜지 말 것 — SQLite 쓰기 주체는 항상 하나.
 
 수집 시간창(09-04 운영 규칙, .env MEAL_WINDOWS): 창이 열리는 순간 곡선을 처음부터(줄 0명) 시작해 그 창의 인파를 흉내내고,
-창 밖에서는 같은 곡선을 '더미' 로 계속 쓴다 — 화면은 /api/status feed 로 "지금은 더미데이터" 띠를 띄운다.
-카메라 노드(vision, 로드맵 ④)는 창 밖에서 추론을 멈추고 여기의 Simulator 를 빌려 같은 더미를 쓴다.
+창 밖에서는 같은 곡선을 '더미' 로 계속 쓴다 — 화면은 /api/status feed 로 "시험 운영 · 더미데이터" 띠를 띄운다.
+이 더미는 카메라 없는 스테이징(FEED_SOURCE=mock) 전용이다. 카메라 노드(vision)는 09-11 부터 창 밖에 아무것도 쓰지 않는다(Simulator 를 빌리지 않는다).
 
 실행:  uv run python -m jobs.mock_feed --speed 30
        --scenario stall : 45~55분 배식 중단 (insufficient_rate 상태 확인용)

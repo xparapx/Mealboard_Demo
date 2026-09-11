@@ -51,6 +51,15 @@ def test_describe():
     assert describe(None) is None
 
 
+def test_should_record_창_안_vision_만():
+    from vision.schedule import should_record
+    w = W[0]
+    assert should_record(w, "vision") is True
+    assert should_record(None, "vision") is False        # 창 밖: 아무 행도 쓰지 않는다(더미 없음, 09-11)
+    assert should_record(w, "mock") is False             # mock 출처면 카메라 노드는 쓰지 않는다 — 더미는 mock 유닛의 몫
+    assert should_record(None, "mock") is False
+
+
 def test_status_feed_판정():
     from app.routers.status import feed
     lunch = dt.datetime(2026, 9, 4, 12, 0)

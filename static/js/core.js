@@ -76,17 +76,21 @@ export function setState(id, ok, reason) {
 /* 화면 모듈이 공유하는 최근 응답 — 다시 그릴 때 다시 받지 않기 위해 */
 export const S = { last: null, lastPos: null, meal: null, typ: null };
 
-/* 더미데이터 띠(09-04) — /api/status 의 feed 로 그린다. live(카메라 노드 + 수집 창 안 + 표본 이어짐)면 숨긴다.
-   창 밖: "급식시간이 아닙니다" + 다음 창. 창 안인데 mock: "급식실 설치 전 시험 운영". 어느 화면에 있든 같은 띠 — 대기시간 화면은 30초 status 로, 나머지는 60초 feedTick 으로 */
+/* 안내 띠(09-04, 09-11 개정) — /api/status 의 feed 로 그린다. live(카메라 노드 + 수집 창 안 + 표본 이어짐)면 숨긴다.
+   카메라(vision): 창 밖은 "지금은 급식 시간이 아닙니다" + 다음 창(창 밖에는 아무 표본도 없다), 창 안인데 표본이 끊기면 "카메라 표본이 끊겼습니다".
+   스테이징 mock: 값이 더미라는 것을 창 안팎 모두 적는다. 어느 화면에 있든 같은 띠 — 대기시간 화면은 30초 status 로, 나머지는 60초 feedTick 으로 */
 export function renderFeed(f) {
   const bar = $("#feedbar");
   if (!bar || !f) return;
   if (f.live) { bar.hidden = true; return; }
   const n = f.next, when = !n ? "" : n.days === 1 ? " (내일)" : n.days > 1 ? ` (${n.days}일 뒤)` : "";
   const next = n ? ` · 다음 급식 <b>${esc(n.label)} ${mm(n.lo)}</b>${when}` : "";
-  bar.innerHTML = f.now
-    ? `<b>${esc(f.now.label)}</b> ${mm(f.now.lo)}~${mm(f.now.hi)} · 급식실 설치 전 시험 운영 중이라 지금 보이는 값은 <b>더미데이터</b>입니다`
-    : `지금은 급식시간이 아닙니다 · 실시간 데이터가 아닌 <b>더미데이터</b>입니다${next}`;
+  const win = f.now ? `<b>${esc(f.now.label)}</b> ${mm(f.now.lo)}~${mm(f.now.hi)}` : "";
+  bar.innerHTML = f.source === "vision"
+    ? (f.now ? `${win} · 카메라 표본이 끊겼습니다 · 잠시 후 다시 확인해 주세요`
+             : `지금은 <b>급식 시간이 아닙니다</b>${next}`)
+    : (f.now ? `${win} · 급식실 설치 전 시험 운영 중이라 지금 보이는 값은 <b>더미데이터</b>입니다`
+             : `지금은 급식시간이 아닙니다 · 실시간 데이터가 아닌 <b>더미데이터</b>입니다${next}`);
   bar.hidden = false;
 }
 async function feedTick() { if (document.hidden) return; try { renderFeed((await j("/api/status")).feed); } catch (e) { console.error("feed", e); } }

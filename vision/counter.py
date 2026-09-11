@@ -5,11 +5,12 @@
   ② 관리 앱 메타데이터 스트림(bbox·ID·바닥 좌표, vision/meta.py — 구독자가 있을 때만 소켓에 들어간다)
   ③ 디버그 MJPEG(127.0.0.1:DEBUG_PORT, vision/debug_stream.py — 플래그 파일이 있을 때만 인코딩)
 
-수집 시간창(09-04 운영 규칙, app.lunch.MEALS): 창 안에서만 실측을 기록한다. 창 밖에서는 jobs.mock_feed.Simulator 의 더미 곡선을 같은 write_sample 로 쓰고,
-추론은 관리자가 실사·메타를 보고 있을 때만 돌린다(초점·ROI·보정은 급식 시간과 무관해야 하므로). 아무도 안 보면 IDLE_FPS 로 프레임만 버린다.
-.env FEED_SOURCE 가 단일 스위치다: mock 이면(급식실 설치 전 시험 운영) 창 안에서도 더미를 기록해 화면(더미데이터 띠·밀집도·마커)이 한 목소리를 내고,
-vision 으로 바꾼 뒤에만 창 안 실측을 쓴다 — 실측 숫자가 '더미' 띠 아래 섞여 나가지 않게(09-04 사용자 지적).
-창이 열리는 순간 트랙 기억·λ 이동합을 비운다(Simulator.reset 과 같은 뜻).
+수집 시간창(09-04 운영 규칙, app.lunch.MEALS): 창 안에서만 실측을 기록한다. 창 밖에서는 아무 행도 쓰지 않는다(09-11 사용자 결정 — 옛 더미 곡선 제거;
+표본이 끊기면 /api/status 는 120초 뒤 no_data, 화면은 '지금은 급식 시간이 아닙니다 · 다음 창' 안내). 창 밖 추론은 관리자가 실사·메타를 보고 있을 때만
+돌린다(초점·ROI·보정은 급식 시간과 무관해야 하므로). 아무도 안 보면 IDLE_FPS 로 프레임만 버린다.
+.env FEED_SOURCE 는 출처 표기 스위치다: vision 일 때만 이 노드가 기록한다(vision/schedule.should_record). mock 이면 더미는 mock 유닛의 몫이라
+이 노드는 아무것도 쓰지 않는다(두 유닛은 Conflicts 로 배타) — 실측 숫자가 '더미' 띠 아래 섞여 나가지 않게(09-04 사용자 지적).
+창이 열리는 순간 트랙 기억·λ 이동합을 비운다.
 
 프레임은 이 프로세스 메모리에만 있다. 디스크에 쓰지 않고, 밖으로는 MJPEG(관리 앱 중계, tailnet 전용) 뿐이다(CLAUDE.md §2 영상 취급).
 zones.json + zones.local.json 은 mtime 이 바뀌면 2초 안에 다시 읽는다(관리 앱 편집기 저장 → 재시작 없이 반영). 호모그래피(image_to_floor)가 아직 없으면
@@ -22,11 +23,11 @@ from app.config import (DEBUG_FLAG, DEBUG_PORT, FEED_SOURCE, VIDEO_SOURCE, VISIO
                         ZONES_JSON)
 from app.db import connect
 from app.lunch import meal_now
-from jobs.mock_feed import Simulator
 from vision.counting import LineCounter, RateWindow, foot_of_bbox
 from vision.debug_stream import DebugStream, annotate
 from vision.meta import MetaSender
 from vision.record import write_sample
+from vision.schedule import should_record
 from vision.source import open_source, parse_size
 from vision.waittime import estimate_wait
 from vision.zones import LOCAL_NAME, load_zones, point_in_polygon, project, zone_of
@@ -118,13 +119,13 @@ def main():
     stream = DebugStream(DEBUG_PORT, DEBUG_FLAG).start()
     sender = MetaSender()
     con = connect()
-    sim = Simulator()
     rate = RateWindow()
     win, last_sample, frame_id, infer_ms = None, 0.0, 0, 0.0
     meta_alive = 0.0                                              # 마지막으로 메타 구독자가 있었던 시각(단조)
     period = 1 / VISION_FPS
-    real = FEED_SOURCE == "vision"                                # False 면 창 안에서도 더미 기록(시험 운영)
-    print(f"카메라 {img_w}x{img_h}  MJPEG 127.0.0.1:{DEBUG_PORT}/mjpeg (플래그 {DEBUG_FLAG})  기록={'실측(창 안)' if real else '더미(FEED_SOURCE=mock — 창 안에서도)'}")
+    real = FEED_SOURCE == "vision"                                # False 면 이 노드는 아무것도 쓰지 않는다(더미는 mock 유닛의 몫)
+    print(f"카메라 {img_w}x{img_h}  MJPEG 127.0.0.1:{DEBUG_PORT}/mjpeg (플래그 {DEBUG_FLAG})  "
+          f"기록={'실측(창 안만, 창 밖은 기록 없음)' if real else '없음(FEED_SOURCE=mock — mock 유닛이 더미를 쓴다)'}")
 
     while True:
         t0 = time.monotonic()
@@ -132,21 +133,16 @@ def main():
         cur = meal_now(now)
         if cur != win:                                            # 창이 열리거나 닫힘
             win = cur
-            rate.reset(); sim.reset()
+            rate.reset()
             if zones.counter:
                 zones.counter.reset()
-            print("--- " + (f"수집 창 열림: {win.label} - {'실측 기록' if real else '더미 기록(시험 운영)'}" if win else "수집 창 닫힘 - 더미 기록, 추론은 관리자가 볼 때만") + " ---")
+            print("--- " + (f"수집 창 열림: {win.label} - {'실측 기록' if real else '기록 없음(FEED_SOURCE=mock)'}" if win else "수집 창 닫힘 - 기록 없음, 추론은 관리자가 볼 때만") + " ---")
         zones.reload()
         viewing = stream.wanted() or (t0 - meta_alive < 3)
         infer = (win is not None and real) or viewing
 
-        if not infer:                                             # 아무도 안 보고 창 밖: 카메라만 살려 둔다
+        if not infer:                                             # 아무도 안 보고 창 밖: 카메라만 살려 둔다, 아무것도 쓰지 않는다
             frame = src.read()
-            if t0 - last_sample >= SAMPLE_SEC:
-                last_sample = t0
-                r = sim.step()
-                write_sample(con, now.isoformat(timespec="milliseconds"), {"queue": r["queue"], "rate": r["rate"], "wait": r["wait"],
-                                                                            "state": r["state"], "pts": r["pts"]}, zones.zones)
             if sender.send({"frame_id": frame_id, "ts": now.isoformat(timespec="milliseconds"), "fps": IDLE_FPS, "infer_ms": 0,
                             "img_w": img_w, "img_h": img_h, "source": "vision", "model": "idle", "tracks": [], "crossings": [],
                             "zone_counts": {}, "roi_count": 0, "rate_per_min": 0, "wait_min": None, "state": "idle"}):
@@ -201,7 +197,7 @@ def main():
         if sender.send(event):
             meta_alive = time.monotonic()
         if stream.wanted():
-            tag = win.label if win else "dummy"
+            tag = win.label if win else "closed"
             hud = f"{tag}  L={queue}  lambda={lam:.1f}/min  W={wait if wait is not None else '-'}  {state}  infer {infer_ms:.0f}ms  tracks {len(tracks)}"
             jpeg = annotate(frame, tracks, zones.roi_px(), zones.lam_px(), zones.buffer, hud)
             if jpeg:
@@ -209,14 +205,12 @@ def main():
 
         if t0 - last_sample >= SAMPLE_SEC:
             last_sample = t0
-            if win and real:                                      # 실측 — 숫자(과 바닥 좌표의 순간 상태)만
+            if should_record(win, FEED_SOURCE):                   # 실측 — 숫자(과 바닥 좌표의 순간 상태)만
                 write_sample(con, ts, {"queue": queue, "rate": round(lam, 2), "wait": wait, "state": state,
                                        "pts": pts if zones.h_img2floor else None}, zones.zones)
                 print(f"[{win.label}] 대기 {queue:3d}명  처리 {lam:5.1f}/분  예상 {wait}분  {state}  추론 {infer_ms:.0f}ms  트랙 {len(tracks)}")
-            else:                                                 # 창 밖 또는 시험 운영 — 화면은 더미, 관리자만 실사를 본다
-                r = sim.step()
-                write_sample(con, ts, {"queue": r["queue"], "rate": r["rate"], "wait": r["wait"], "state": r["state"], "pts": r["pts"]}, zones.zones)
-                print(f"[더미{'·' + win.label if win else ''}] (관리자 열람 중: 실측 L={queue} λ={lam:.1f} 추론 {infer_ms:.0f}ms 트랙 {len(tracks)})")
+            else:                                                 # 창 밖(또는 mock 출처) — 기록 없음, 관리자만 실사를 본다
+                print(f"[기록 없음{'·' + win.label if win else ''}] (관리자 열람 중: 실측 L={queue} λ={lam:.1f} 추론 {infer_ms:.0f}ms 트랙 {len(tracks)})")
         time.sleep(max(0, period - (time.monotonic() - t0)))
 
 

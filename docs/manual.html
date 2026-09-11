@@ -746,8 +746,9 @@ router = APIRouter()
 
 
 def feed(now, state, source=FEED_SOURCE):
-    &quot;&quot;&quot;'지금 값이 실측인가' — 화면의 더미데이터 띠가 읽는다(09-04). live 는 셋이 모두 맞을 때만:
-    출처가 vision(카메라 노드) · 지금이 수집 창(3학년 점심·1·2학년 점심·석식) 안 · 표본이 끊기지 않음. now 는 열린 창, next 는 다음 창(며칠 뒤 days)&quot;&quot;&quot;
+    &quot;&quot;&quot;'지금 값이 실측인가' — 화면 맨 위 안내 띠가 읽는다(09-04). live 는 셋이 모두 맞을 때만:
+    출처가 vision(카메라 노드) · 지금이 수집 창(3학년 점심·1·2학년 점심·석식) 안 · 표본이 끊기지 않음. now 는 열린 창, next 는 다음 창(며칠 뒤 days).
+    창 밖에는 카메라 노드가 아무 행도 쓰지 않으므로(09-11) state 는 120초 뒤 no_data 가 된다 — 화면은 source·now 로 '급식 시간이 아닙니다' 와 '표본 끊김' 을 가른다&quot;&quot;&quot;
     w = meal_now(now)
     nxt = meal_next(now)
     nxt_d = None
@@ -943,8 +944,8 @@ zone_samples 에 인원수만 남긴다(같은 트랜잭션). 구역 정의는 �
 실제 vision 과 동시에 켜지 말 것 — SQLite 쓰기 주체는 항상 하나.
 
 수집 시간창(09-04 운영 규칙, .env MEAL_WINDOWS): 창이 열리는 순간 곡선을 처음부터(줄 0명) 시작해 그 창의 인파를 흉내내고,
-창 밖에서는 같은 곡선을 '더미' 로 계속 쓴다 — 화면은 /api/status feed 로 &quot;지금은 더미데이터&quot; 띠를 띄운다.
-카메라 노드(vision, 로드맵 ④)는 창 밖에서 추론을 멈추고 여기의 Simulator 를 빌려 같은 더미를 쓴다.
+창 밖에서는 같은 곡선을 '더미' 로 계속 쓴다 — 화면은 /api/status feed 로 &quot;시험 운영 · 더미데이터&quot; 띠를 띄운다.
+이 더미는 카메라 없는 스테이징(FEED_SOURCE=mock) 전용이다. 카메라 노드(vision)는 09-11 부터 창 밖에 아무것도 쓰지 않는다(Simulator 를 빌리지 않는다).
 
 실행:  uv run python -m jobs.mock_feed --speed 30
        --scenario stall : 45~55분 배식 중단 (insufficient_rate 상태 확인용)
@@ -1217,7 +1218,7 @@ systemctl status mealboard-api --no-pager</code></pre>
   &lt;a href=&quot;#news&quot; data-go=&quot;news&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-news&quot;/&gt;&lt;/svg&gt;이슈피드&lt;/a&gt;
 &lt;/aside&gt;
 
-&lt;!-- 더미데이터 띠(09-04) — 급식 수집 창(3학년 점심·1·2학년 점심·석식) 밖이거나 실측 카메라 전(mock)이면 모든 화면 위에 이유를 적는다. /api/status feed 로 core.js 가 그린다 --&gt;
+&lt;!-- 안내 띠(09-04, 09-11 개정) — 급식 수집 창(3학년 점심·1·2학년 점심·석식) 밖이면 '급식 시간이 아닙니다'(카메라는 창 밖에 아무것도 쓰지 않는다), 스테이징 mock 이면 '더미데이터'. /api/status feed 로 core.js 가 그린다 --&gt;
 &lt;div class=&quot;feedbar&quot; id=&quot;feedbar&quot; role=&quot;status&quot; hidden&gt;&lt;/div&gt;
 
 &lt;main class=&quot;views&quot;&gt;
@@ -1447,7 +1448,7 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v21&quot;;   // 09-04: 문구 손질(띠·밀집도·메뉴 빈도) — 옛 셸 캐시를 지운다
+const CACHE = &quot;mealboard-v22&quot;;   // 09-11: 창 밖 더미 제거 — 띠·히어로 문구가 바뀐 셸을 새로 받게
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
@@ -4855,17 +4856,21 @@ export function setState(id, ok, reason) {
 /* 화면 모듈이 공유하는 최근 응답 — 다시 그릴 때 다시 받지 않기 위해 */
 export const S = { last: null, lastPos: null, meal: null, typ: null };
 
-/* 더미데이터 띠(09-04) — /api/status 의 feed 로 그린다. live(카메라 노드 + 수집 창 안 + 표본 이어짐)면 숨긴다.
-   창 밖: &quot;급식시간이 아닙니다&quot; + 다음 창. 창 안인데 mock: &quot;급식실 설치 전 시험 운영&quot;. 어느 화면에 있든 같은 띠 — 대기시간 화면은 30초 status 로, 나머지는 60초 feedTick 으로 */
+/* 안내 띠(09-04, 09-11 개정) — /api/status 의 feed 로 그린다. live(카메라 노드 + 수집 창 안 + 표본 이어짐)면 숨긴다.
+   카메라(vision): 창 밖은 &quot;지금은 급식 시간이 아닙니다&quot; + 다음 창(창 밖에는 아무 표본도 없다), 창 안인데 표본이 끊기면 &quot;카메라 표본이 끊겼습니다&quot;.
+   스테이징 mock: 값이 더미라는 것을 창 안팎 모두 적는다. 어느 화면에 있든 같은 띠 — 대기시간 화면은 30초 status 로, 나머지는 60초 feedTick 으로 */
 export function renderFeed(f) {
   const bar = $(&quot;#feedbar&quot;);
   if (!bar || !f) return;
   if (f.live) { bar.hidden = true; return; }
   const n = f.next, when = !n ? &quot;&quot; : n.days === 1 ? &quot; (내일)&quot; : n.days &gt; 1 ? ` (${n.days}일 뒤)` : &quot;&quot;;
   const next = n ? ` · 다음 급식 &lt;b&gt;${esc(n.label)} ${mm(n.lo)}&lt;/b&gt;${when}` : &quot;&quot;;
-  bar.innerHTML = f.now
-    ? `&lt;b&gt;${esc(f.now.label)}&lt;/b&gt; ${mm(f.now.lo)}~${mm(f.now.hi)} · 급식실 설치 전 시험 운영 중이라 지금 보이는 값은 &lt;b&gt;더미데이터&lt;/b&gt;입니다`
-    : `지금은 급식시간이 아닙니다 · 실시간 데이터가 아닌 &lt;b&gt;더미데이터&lt;/b&gt;입니다${next}`;
+  const win = f.now ? `&lt;b&gt;${esc(f.now.label)}&lt;/b&gt; ${mm(f.now.lo)}~${mm(f.now.hi)}` : &quot;&quot;;
+  bar.innerHTML = f.source === &quot;vision&quot;
+    ? (f.now ? `${win} · 카메라 표본이 끊겼습니다 · 잠시 후 다시 확인해 주세요`
+             : `지금은 &lt;b&gt;급식 시간이 아닙니다&lt;/b&gt;${next}`)
+    : (f.now ? `${win} · 급식실 설치 전 시험 운영 중이라 지금 보이는 값은 &lt;b&gt;더미데이터&lt;/b&gt;입니다`
+             : `지금은 급식시간이 아닙니다 · 실시간 데이터가 아닌 &lt;b&gt;더미데이터&lt;/b&gt;입니다${next}`);
   bar.hidden = false;
 }
 async function feedTick() { if (document.hidden) return; try { renderFeed((await j(&quot;/api/status&quot;)).feed); } catch (e) { console.error(&quot;feed&quot;, e); } }

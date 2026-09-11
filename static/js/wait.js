@@ -13,7 +13,8 @@ function level(st) {
   return st.wait_min > BUSY_MIN ? "busy" : "ok";
 }
 function verdict(st) {
-  return { off: "정보 없음", wait: "배식 시작 대기", busy: "혼잡 · 잠시 후 추천",
+  const closed = st.feed && st.feed.source === "vision" && !st.feed.now;   // 창 밖에는 카메라 표본이 없다(09-11) — '정보 없음' 이 아니라 '급식 시간 아님'
+  return { off: closed ? "급식 시간이 아닙니다" : "정보 없음", wait: "배식 시작 대기", busy: "혼잡 · 잠시 후 추천",
            ok: st.wait_min <= EASY_MIN ? "여유 · 바로 가세요" : "보통" }[level(st)];
 }
 
