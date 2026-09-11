@@ -35,7 +35,7 @@ export const why = r => !r || /reports\.db/.test(r) ? null : /insights\.db/.test
 const DESK_MQ = matchMedia("(min-width: 900px)");
 export const desktop = () => DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = "v26";                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = "v27";                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
@@ -177,7 +177,13 @@ ORDER.forEach(n => SCREENS[n].mount?.());              // 캔버스 관찰 등 �
 go(start, { push: false });
 setInterval(tick, 30000);
 feedTick(); setInterval(feedTick, 60000);              // 더미데이터 띠는 화면과 무관하게 60초(status 응답은 200B 남짓)
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
+  // 새 워커가 이 탭을 넘겨받으면(배포) 한 번 다시 읽는다 — 옛 워커가 캐시해 둔 셸·모듈이 새 API 응답을 옛 방식으로 그리던 문제(09-11).
+  // 처음 설치될 때는 controller 가 없으므로 그때는 재로드하지 않는다. 폼 입력 같은 상태가 없는 화면이라 안전하다
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadController && !window.__mbReloaded) { window.__mbReloaded = true; location.reload(); } });
+}
 /* 관리 origin 에서만 관리 뷰를 붙인다 — 호스트명이 아니라 서버가 답하는지로 판단. 공개 origin 에서는 세션당 404 한 번 (PLAN §3.1, Phase 3) */
 window.MB = { S, go, poll, observe, ORDER, NAMES, screens: SCREENS, active: () => active, wanted };   // 콘솔·테스트·관리 모듈의 손잡이
 try {
