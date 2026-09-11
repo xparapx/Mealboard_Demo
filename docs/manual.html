@@ -1469,7 +1469,7 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v23&quot;;   // 09-11: 주간식단 중식·석식 2행, 오늘급식 2열·알레르기 띠   // 09-11: 창 밖 더미 제거 — 띠·히어로 문구가 바뀐 셸을 새로 받게
+const CACHE = &quot;mealboard-v24&quot;;   // 09-11: 관리 UI 모듈 버전 꼬리표(core.UI_VERSION 과 같이 올린다)
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
@@ -4926,6 +4926,7 @@ export const why = r =&gt; !r || /reports\.db/.test(r) ? null : /insights\.db/.t
 const DESK_MQ = matchMedia(&quot;(min-width: 900px)&quot;);
 export const desktop = () =&gt; DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
+export const UI_VERSION = &quot;v24&quot;;                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
@@ -5074,7 +5075,8 @@ try {
   // SSH 터널은 `/?key=…` 로 들어온다(서버가 그 응답에 쿠키를 준다) — 그때는 세션의 '없음' 기억을 무시하고 다시 묻는다
   if (sessionStorage.getItem(&quot;mb_admin_probe&quot;) !== &quot;no&quot; || location.search.includes(&quot;key=&quot;))
     fetch(&quot;/api/admin/whoami&quot;, { cache: &quot;no-store&quot; }).then(r =&gt; {
-      if (r.ok) { sessionStorage.removeItem(&quot;mb_admin_probe&quot;); import(&quot;/admin-ui/admin.js&quot;).then(m =&gt; m.default?.(window.MB)).catch(() =&gt; {}); }
+      // ?v= 꼬리표(09-11): 배포마다 새 모듈 그래프 — 브라우저 모듈 맵은 탭 수명 동안 재검증하지 않아 편집기가 옛 코드로 남았다. 값은 sw.js CACHE 와 함께 올린다
+      if (r.ok) { sessionStorage.removeItem(&quot;mb_admin_probe&quot;); import(`/admin-ui/admin.js?v=${UI_VERSION}`).then(m =&gt; m.default?.(window.MB)).catch(() =&gt; {}); }
       else sessionStorage.setItem(&quot;mb_admin_probe&quot;, &quot;no&quot;);
     }).catch(() =&gt; {});
 } catch {}</code></pre>
@@ -5563,8 +5565,10 @@ def create_app():
                     return JSONResponse({&quot;state&quot;: &quot;forbidden&quot;, &quot;reason&quot;: &quot;json_only&quot;}, status_code=415)
             request.state.user = ident
         res = await call_next(request)
-        if path in REVALIDATE or path.startswith(REVALIDATE_PREFIX) or path.startswith(&quot;/admin-ui/&quot;):
+        if path in REVALIDATE or path.startswith(REVALIDATE_PREFIX):
             res.headers[&quot;Cache-Control&quot;] = &quot;no-cache&quot;
+        if path.startswith(&quot;/admin-ui/&quot;):           # 관리 UI 스크립트는 저장 자체를 막는다(09-11: 배포 뒤 편집기가 옛 모듈로 남던 문제 — 브라우저 모듈 맵은 탭이 살아 있는 동안 재검증하지 않는다)
+            res.headers[&quot;Cache-Control&quot;] = &quot;no-store&quot;
         if &quot;key&quot; in request.query_params and ident is not None and ident.get(&quot;via&quot;) == &quot;local&quot;:
             # SSH 터널 경로: 첫 방문(`/?key=…` 또는 whoami?key=)의 키를 HttpOnly 쿠키로 옮겨 이후 요청·화면 스크립트가 키를 다시 들고 다니지 않게.
             # 유닛은 --no-access-log — 이 URL 은 저널에 남지 않는다

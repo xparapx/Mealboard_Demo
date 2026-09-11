@@ -81,7 +81,7 @@ function draw() {
     const fr = D.lastFrame?.();
     (fr?.tracks || []).forEach(t => { const [x0, y0, x1, y1] = t.bbox_norm; g.lineWidth = 1; g.strokeStyle = "rgba(255,252,246,.45)"; g.strokeRect(x0 * w, y0 * h, (x1 - x0) * w, (y1 - y0) * h); });
     const H = Z.doc.image_to_floor, Hi = H && inv3(H);
-    if (Hi) Z.doc.zones.forEach(z => {                              // 바닥 구역을 프레임 위에 — 보정이 맞는지 눈으로
+    if (Hi && Z.snap) Z.doc.zones.forEach(z => {                    // 바닥 구역을 프레임 위에 — 보정이 맞는지 눈으로. 스냅이 없으면 검은 바탕에 파선만 남아 지저분하다(09-11)
       g.beginPath();
       z.polygon.forEach(([x, y], i) => { const p = proj(Hi, x, y); if (!p) return; const [sx, sy] = M.toS(...p); (i ? g.lineTo : g.moveTo).call(g, sx, sy); });
       g.closePath(); g.strokeStyle = "rgba(12,109,106,.7)"; g.lineWidth = 1.5; g.setLineDash([5, 4]); g.stroke(); g.setLineDash([]);

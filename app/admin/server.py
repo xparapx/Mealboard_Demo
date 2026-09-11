@@ -93,8 +93,10 @@ def create_app():
                     return JSONResponse({"state": "forbidden", "reason": "json_only"}, status_code=415)
             request.state.user = ident
         res = await call_next(request)
-        if path in REVALIDATE or path.startswith(REVALIDATE_PREFIX) or path.startswith("/admin-ui/"):
+        if path in REVALIDATE or path.startswith(REVALIDATE_PREFIX):
             res.headers["Cache-Control"] = "no-cache"
+        if path.startswith("/admin-ui/"):           # 관리 UI 스크립트는 저장 자체를 막는다(09-11: 배포 뒤 편집기가 옛 모듈로 남던 문제 — 브라우저 모듈 맵은 탭이 살아 있는 동안 재검증하지 않는다)
+            res.headers["Cache-Control"] = "no-store"
         if "key" in request.query_params and ident is not None and ident.get("via") == "local":
             # SSH 터널 경로: 첫 방문(`/?key=…` 또는 whoami?key=)의 키를 HttpOnly 쿠키로 옮겨 이후 요청·화면 스크립트가 키를 다시 들고 다니지 않게.
             # 유닛은 --no-access-log — 이 URL 은 저널에 남지 않는다

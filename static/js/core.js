@@ -35,6 +35,7 @@ export const why = r => !r || /reports\.db/.test(r) ? null : /insights\.db/.test
 const DESK_MQ = matchMedia("(min-width: 900px)");
 export const desktop = () => DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
+export const UI_VERSION = "v24";                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
@@ -183,7 +184,8 @@ try {
   // SSH 터널은 `/?key=…` 로 들어온다(서버가 그 응답에 쿠키를 준다) — 그때는 세션의 '없음' 기억을 무시하고 다시 묻는다
   if (sessionStorage.getItem("mb_admin_probe") !== "no" || location.search.includes("key="))
     fetch("/api/admin/whoami", { cache: "no-store" }).then(r => {
-      if (r.ok) { sessionStorage.removeItem("mb_admin_probe"); import("/admin-ui/admin.js").then(m => m.default?.(window.MB)).catch(() => {}); }
+      // ?v= 꼬리표(09-11): 배포마다 새 모듈 그래프 — 브라우저 모듈 맵은 탭 수명 동안 재검증하지 않아 편집기가 옛 코드로 남았다. 값은 sw.js CACHE 와 함께 올린다
+      if (r.ok) { sessionStorage.removeItem("mb_admin_probe"); import(`/admin-ui/admin.js?v=${UI_VERSION}`).then(m => m.default?.(window.MB)).catch(() => {}); }
       else sessionStorage.setItem("mb_admin_probe", "no");
     }).catch(() => {});
 } catch {}

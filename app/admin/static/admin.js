@@ -4,9 +4,10 @@
    스트림 패널(3c): 메타 = SSE(/api/admin/stream/meta) 를 평면도(익명 마커) 또는 프레임(bbox) 뷰로 그린다 — 브라우저 메모리에만, 저장 없음.
    실사 = stream/on 으로 플래그를 켠 뒤 <img> 에 mjpeg 프록시를 물린다(켤 때만 src, 끌 때 비움). 화면을 떠나면 클라이언트 쪽은 모두 끊는다.
    3d(구역 편집기)가 카드를 더한다 */
-import { fit, mm } from "/js/core.js";
+import { fit, mm, UI_VERSION } from "/js/core.js";
 import { drawFloor, drawMarkers, drawZones, geom } from "/js/floor.js";
-import * as zonesEditor from "/admin-ui/zones-editor.js";
+// 편집기는 동적 import + 버전 꼬리표(09-11): 정적 import 는 URL 이 고정이라 배포 뒤에도 옛 모듈이 남았다
+const zonesEditor = await import(`/admin-ui/zones-editor.js?v=${UI_VERSION}`);
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
