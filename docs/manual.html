@@ -254,6 +254,11 @@ dependencies = [
     &quot;pyjwt[crypto]&gt;=2.13.0&quot;,
 ]
 
+# vision(카메라 카운팅 노드) 의존성 — 선언하지 않으면 `uv sync` 가 venv 에서 지운다(09-11 실증: 관리 앱 pyjwt 추가 sync 뒤 ultralytics 가 사라져 석식 창에 vision 이 죽었다).
+# Pi 에서 `uv sync --group vision`. hailort 는 PyPI 에 없어 setup_pi.sh 가 data/models/*.whl 로 따로 넣는다. picamera2 는 시스템 패키지(--system-site-packages).
+[project.optional-dependencies]
+vision = [&quot;ultralytics&gt;=8.4&quot;, &quot;torch&gt;=2.14&quot;, &quot;torchvision&gt;=0.29&quot;, &quot;opencv-python&gt;=4.10&quot;]
+
 [dependency-groups]
 dev = [&quot;pytest&quot;]
 
@@ -487,7 +492,9 @@ cd &quot;$APP&quot;
 
 echo &quot;== 4. venv — 반드시 이 순서 (picamera2 는 시스템 것을 빌려 씀)&quot;
 [ -d .venv ] || uv venv --system-site-packages
-uv sync
+uv sync --extra vision                     # vision 의존성까지 — 빠뜨리면 sync 가 ultralytics 를 지운다(09-11)
+# Hailo Python API 는 PyPI 에 없다 — data/models/ 의 휠을 venv 에(CLAUDE.md §0 HailoRT 5.3.0)
+for w in data/models/hailort-*.whl; do [ -f &quot;$w&quot; ] &amp;&amp; uv pip install --python .venv/bin/python &quot;$w&quot;; done
 
 echo &quot;== 5. 설정&quot;
 [ -f .env ] || { cp .env.example .env; echo &quot;&gt;&gt; $APP/.env 값을 채우세요 (NEIS_KEY 등)&quot;; }

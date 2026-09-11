@@ -24,7 +24,9 @@ cd "$APP"
 
 echo "== 4. venv — 반드시 이 순서 (picamera2 는 시스템 것을 빌려 씀)"
 [ -d .venv ] || uv venv --system-site-packages
-uv sync
+uv sync --extra vision                     # vision 의존성까지 — 빠뜨리면 sync 가 ultralytics 를 지운다(09-11)
+# Hailo Python API 는 PyPI 에 없다 — data/models/ 의 휠을 venv 에(CLAUDE.md §0 HailoRT 5.3.0)
+for w in data/models/hailort-*.whl; do [ -f "$w" ] && uv pip install --python .venv/bin/python "$w"; done
 
 echo "== 5. 설정"
 [ -f .env ] || { cp .env.example .env; echo ">> $APP/.env 값을 채우세요 (NEIS_KEY 등)"; }
