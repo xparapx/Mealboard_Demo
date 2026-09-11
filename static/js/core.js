@@ -31,7 +31,7 @@ export const hm = ts => ts ? ts.slice(11, 16) : "";                             
 export const WD = "일월화수목금토";
 export const REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches;   // 전환·부드러운 스크롤·점멸을 생략
 /* 인사이트 카드의 빈 상태 문구 — API 의 reason 은 개발자용(파일 이름)일 수 있다. 학생에게는 뜻만 남긴다. null 이면 카드의 기본 문구를 둔다 */
-export const why = r => !r || /reports\.db/.test(r) ? null : /insights\.db/.test(r) ? "집계가 아직 시작되지 않았습니다" : r;
+export const why = r => !r || /reports\.db/.test(r) ? null : /insights\.db/.test(r) ? "일정 기간 데이터 수집 후 반영됩니다" : r;
 const DESK_MQ = matchMedia("(min-width: 900px)");
 export const desktop = () => DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
