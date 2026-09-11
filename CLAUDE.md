@@ -77,6 +77,14 @@
   스파이크 go(요약·주입 PASS, 6,000자 OK, 3.6 tok/s), 실제 피드 3/3 요약 성공 + Why 까지. 한국어 직접 생성은 여전히 불가(반복 붕괴) → 영어 → DeepL 2단계 유지. Qwen2.5 파일은 예비로 남겨 둠.
   **`apt install hailo-h10-all` 을 다시 실행하지 말 것**(5.1.1 로 되돌아가며 `hailort` 와 충돌).
 - **세션 인계(09-11, 학교 PC → 집 PC 로 넘김)**: 저장소 최신은 `git log -1`. 09-09~11 에 한 것 — ① Pi 재부팅으로 카메라 케이블 재인식(케이블은 전원 끄고 꽂기, Pi 5 는 poweroff 뒤 전원 버튼 필요) ② 교체한 모듈도 커널이 `imx708`(표준판)로 보고 — Wide 는 `imx708_wide`·`imx708_wide.json` 이어야 한다, 화각 실측(1 m 에서 가로 1.3 m=66°, 2.4 m=102°)로 정품 여부 판단 ③ 보드는 Pi 5 16 GB(리비전 `e04171`) ④ Pi 를 급식실로 이전, Wi-Fi 프로필 `kjhs_meal`(WPA2-PSK, 우선순위 20) 등록 — **아직 tailnet 에 안 올라옴**(휴대폰은 같은 AP 에 붙음 → AP·인터넷 정상, Pi 쪽 인증 실패 의심: WPA3 전용이면 `nmcli con modify kjhs_meal wifi-sec.key-mgmt sae`). 현장 노트북으로 `ssh xparapx@rsp.local` 또는 이더넷 직결 뒤 `journalctl -u NetworkManager` 로 사유 확인.
+  **현장 Wi-Fi 진단 절차(맥북 세션용, 09-11)** — 맥북을 `kjhs_meal` 에 붙이고(휴대폰은 붙었음 → AP·인터넷 정상) 순서대로:
+  ① `ssh xparapx@rsp.local` 로 붙어 `nmcli -t -f NAME,DEVICE con show --active` · `nmcli -t -f IP4.ADDRESS,IP4.GATEWAY dev show wlan0` · `curl -s -m 5 -o /dev/null -w '%{http_code}' https://controlplane.tailscale.com/`.
+     붙으면 Pi 는 AP 에 있는 것. `kjhs_meal` 활성인데 controlplane 이 000 이면 AP 상위 망이 Tailscale 을 막는 것(정보부에 차단 해제 요청, 그동안 학생 화면은 Cloudflare `kjhs-meal.com` 으로만).
+  ② `rsp.local` 이 안 잡히면 Pi 가 AP 에 못 붙은 것 → 이더넷으로 맥북과 직결(USB-C 어댑터) 뒤 같은 이름으로 접속, `journalctl -u NetworkManager -n 40 --no-pager` 에서 kjhs·auth·secret·fail·wpa 줄로 사유 확인.
+  ③ 사유가 `secrets were required`·`association took too long`·WPA3 면 `sudo nmcli con modify kjhs_meal wifi-sec.key-mgmt sae && sudo nmcli con up kjhs_meal`. 비밀번호 오타면 `sudo nmcli con modify kjhs_meal wifi-sec.psk '<비밀번호>'`(채팅·커밋에 값 남기지 말 것).
+     SSID 가 다르면 `sudo nmcli con modify kjhs_meal 802-11-wireless.ssid '<정확한 SSID>'`. AP 가 5 GHz DFS 채널(52~144)만 쓰면 공유기에서 2.4 GHz 또는 36~48 채널로.
+  ④ 붙은 뒤 `tailscale status --self` 가 Running 이면 다른 PC 에서 `ssh mbpi` 가 통한다. 확인: `rpicam-hello --list-cameras`(imx708) · `systemctl is-active mealboard-api mealboard-vision mealboard-admin mealboard-cloudflared` · `curl -s 127.0.0.1:8100/api/status`.
+  ⑤ 결과(원인·조치)를 README 작업 로그에 한 줄 적고 push. Pi 안의 프로필 변경은 커밋 대상이 아니다.
   **Pi 가 붙으면 할 일(사용자 요청 '실데이터 반영')**: `.env FEED_SOURCE=vision`·`ROLLUP_WINDOW=lunch` → api·vision·admin 재시작 → `insights.db` 는 `.bak-<시각>` 으로 비켜 두고 새 출처로 집계 → 관리 화면 구역 탭에서 보정 4점·ROI·λ선(없으면 λ=0 이라 '배식 시작 대기'만 나온다) → Cloudflare 공개 주소 `https://kjhs-meal.com` 확인(학교 교직원 망에서는 차단됨 — 휴대폰 셀룰러로).
 - **세션 인계(09-04 아침, 학교 PC)**: 저장소·Pi 모두 `fba0fec`. 오늘 아침 끝난 것 — ① 수집 시간창 3개 + 더미데이터 띠(`50b600a`) ② vision 프로토타입 가동, Pi 는 mock → `mealboard-vision`(`d2debda`) ③ 카메라 모드 2304x1296(`204b28f`) ④ 관리 화면 보정 전 null 좌표 가드(`fba0fec`).
   **지금 꽂힌 카메라는 표준판(66°)** — Wide 모듈은 아직 없음(사용자 확인). 광각은 모듈 교체로만 가능. **사용자 작업 방식 갱신**: Pi 반영(pull·restart)도 Claude 가 `ssh mbpi` 로 직접 한다, 코드 조각을 사용자에게 써 달라는 요청은 하지 않는다(설명만).
