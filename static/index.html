@@ -224,11 +224,20 @@
     </section>
   </section>
 
-  <!-- ⑤ 이슈피드 -->
+  <!-- ⑤ 이슈피드(09-11 확장) — 기후·환경(차콜 카드) · 기술·과학·IT(틸 카드) 두 섹션 + 오늘의 키워드(워드클라우드, 제목·요약 낱말 빈도) -->
   <section class="view" id="news" role="tabpanel" aria-label="이슈피드">
     <section class="card" id="newscard" hidden>
-      <div class="eyebrow">오늘의 이슈 피드</div>
+      <div class="eyebrow">기후 · 환경 이슈</div>
       <ul class="news" id="newslist"></ul>
+    </section>
+    <section class="card tech" id="techcard" hidden>
+      <div class="eyebrow">기술 · 과학 · IT 이슈</div>
+      <ul class="news" id="techlist"></ul>
+    </section>
+    <section class="card" id="cloudcard" hidden>
+      <div class="eyebrow">오늘의 키워드</div>
+      <div class="cloud" id="cloud"></div>
+      <div class="note" style="margin-top:10px">오늘 실린 기사 제목·요약에 자주 나온 낱말 · 크기는 빈도 · <span class="ck c">기후</span> <span class="ck t">기술</span> <span class="ck b">둘 다</span></div>
     </section>
   </section>
 </main>

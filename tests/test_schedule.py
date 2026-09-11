@@ -69,4 +69,24 @@ def test_status_feed_판정():
     assert feed(lunch, "ok", source="mock")["live"] is False             # 스테이징 mock 은 창 안이어도 더미
     f = feed(night, "ok", source="vision")
     assert f["live"] is False and f["now"] is None
-    assert f["next"]["label"] == "3학년 점심" and f["next"]["days"] == 1 and f["next"]["lo"] == 680
+    assert f["next"]["label"] == "3학년 점심" and f["next"]["days"] == 3 and f["next"]["lo"] == 680   # 2026-09-04 는 금요일 → 월요일(3일 뒤)
+
+
+def test_다음_급식_날은_주말과_급식_없는_날을_건너뛴다():
+    """09-11: 토요일 밤 '내일 11:20' 은 틀리다. NEIS 캐시 범위에서는 캐시가 진실, 밖에서는 주말만 건너뛴다"""
+    from app.lunch import next_meal_day
+    sat = dt.datetime(2026, 9, 12, 20, 0)                                   # 토
+    assert next_meal_day(sat) == (dt.date(2026, 9, 14), 2)                   # 월
+    week = ["20260914", "20260916", "20260917", "20260918"]                  # 화(9/15) 급식 없음(공휴일 가정)
+    assert next_meal_day(dt.datetime(2026, 9, 15, 9, 0), week) == (dt.date(2026, 9, 16), 1)     # 화(공휴일) → 수. 날짜 단위 판단(시각은 next_with_day 가 본다)
+    assert next_meal_day(dt.datetime(2026, 9, 14, 9, 0), week) == (dt.date(2026, 9, 14), 0)
+    assert next_meal_day(dt.datetime(2026, 9, 19, 9, 0), week) == (dt.date(2026, 9, 21), 2)   # 캐시 밖 → 다음 월요일
+
+
+def test_status_next_는_날짜와_요일을_준다(monkeypatch):
+    from app.routers import status
+    monkeypatch.setattr(status, "read_meal", lambda: {"week": [{"date": "20260914", "menu": ["x"]}]})
+    n = status.next_with_day(dt.datetime(2026, 9, 12, 20, 0))                # 토요일 밤
+    assert n["date"] == "2026-09-14" and n["weekday"] == "월" and n["days"] == 2 and n["label"] == "3학년 점심"
+    n = status.next_with_day(dt.datetime(2026, 9, 14, 12, 0))                # 월 점심 중 → 같은 날 다음 창
+    assert n["date"] == "2026-09-14" and n["days"] == 0 and n["label"] == "1·2학년 점심"

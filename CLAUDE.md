@@ -28,6 +28,8 @@
   위치 마커는 노란 스마일(테두리 없음, 위 겹 캔버스 #marks 의 CSS 점멸 1.4초 0.55~1 — JS 루프로 되돌리지 말 것), 이번 주 식단은 요일이 컬럼(요일 5색 — 금은 스카이블루 #BFE3F7, 오늘은 요일색 유지 + 숨쉬기 애니메이션(scale, 모션 축소 시 정지)·메뉴 굵게; 09-04 부터 차콜 채움 없음). 데스크톱은 09-03 부터 12컬럼 보드(두 패널 높이 맞춤은 폐기).
 - **`static/sw.js` 는 화면을 네트워크 우선으로 받는다.** 캐시 우선으로 되돌리지 말 것 — v1 이 그랬다가 배포가
   브라우저에 도달하지 못했다. 화면이 크게 바뀌면 `CACHE` 이름을 올린다(이름이 곧 무효화 스위치).
+- **이슈피드는 두 섹션(09-11)**: `data/news_feeds.json` 의 `category` 로 climate(기후·환경, 차콜 카드) / tech(기술·과학·IT, 틸 카드 — Ars Technica·Ars Science·ScienceDaily·IEEE Spectrum, 검증 09-11; MIT TR·phys.org 는 학교 망 불가, Nature 는 item 0, The Verge 는 Atom 이라 제외). `news.json` 은 `sections[]` + `keywords[[word,n]]`(제목·요약 영어 낱말 빈도 상위 40, 불용어 제거) + 호환용 `items`(=climate). 화면은 두 카드 + '오늘의 키워드' 워드클라우드(라이브러리 없음, 크기 5단·색은 출처).
+  **급식 시간 자동 전환(09-11)**: 해시 없이 열면 창 밖에는 이슈피드에서 시작, 창이 열리는 순간 대기시간으로 한 번 전환(사용자가 탭을 누른 뒤에는 개입 안 함, 아이콘 순서 불변). 띠의 '다음 급식' 은 `status.next_with_day`(NEIS 캐시의 급식 있는 날 우선, 범위 밖은 주말 제외) — 날짜를 못 정하면 문구 생략.
 - **이슈 링크는 해외 기후 매체 4곳**(Carbon Brief · Inside Climate News · The Guardian · Yale Climate Connections)에서
   제목·피드 요약을 받아 **DeepL API Free** 로 한국어로 옮긴다. 키는 Pi `.env` 의 `DEEPL_API_KEY`(동작 확인 완료).
   키가 없거나 호출이 실패하면 원문 영어로 나갈 뿐 아무것도 깨지지 않는다. 요약은 반드시 문장 경계에서 자른다 —

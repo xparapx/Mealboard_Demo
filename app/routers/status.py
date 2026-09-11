@@ -2,9 +2,39 @@ import datetime as dt
 from fastapi import APIRouter
 from ..config import FEED_SOURCE, STALE_SEC          # STALE_SEC: 이 시간 넘게 새 행이 없으면 '데이터 없음'으로 본다
 from ..db import connect
-from ..lunch import describe, meal_next, meal_now
+from ..lunch import describe, meal_next, meal_now, next_meal_day
+from ..mealjson import read_meal
 
 router = APIRouter()
+WD = "월화수목금토일"
+
+
+def next_with_day(now):
+    """다음 창 + 그 창이 실제로 열리는 급식 날(주말·공휴일 건너뜀). 오늘 남은 창이 있어도 오늘이 급식 없는 날이면 다음 급식 날의 첫 창.
+    → dict(label, lo, hi, days, date, weekday) 또는 None"""
+    nxt = meal_next(now)
+    if not nxt:
+        return None
+    win, days = nxt
+    dates = [d.get("date", "") for d in (read_meal().get("week") or []) if d.get("menu")]
+    if days == 0:                                          # 오늘 안에 다음 창이 있다 — 오늘이 급식 있는 날일 때만 그대로
+        nd = next_meal_day(now, dates)
+        if nd and nd[1] == 0:
+            d, k = nd
+        else:
+            nd = next_meal_day(now + dt.timedelta(days=1), dates)
+            if not nd:
+                return None
+            d, k = nd[0], nd[1] + 1
+            win = meal_next(now.replace(hour=0, minute=0))[0]    # 그날의 첫 창
+    else:
+        nd = next_meal_day(now + dt.timedelta(days=1), dates)
+        if not nd:
+            return None
+        d, k = nd[0], nd[1] + 1
+    out = describe(win)
+    out.update({"days": k, "date": d.isoformat(), "weekday": WD[d.weekday()]})
+    return out
 
 
 def feed(now, state, source=FEED_SOURCE):
@@ -12,13 +42,8 @@ def feed(now, state, source=FEED_SOURCE):
     출처가 vision(카메라 노드) · 지금이 수집 창(3학년 점심·1·2학년 점심·석식) 안 · 표본이 끊기지 않음. now 는 열린 창, next 는 다음 창(며칠 뒤 days).
     창 밖에는 카메라 노드가 아무 행도 쓰지 않으므로(09-11) state 는 120초 뒤 no_data 가 된다 — 화면은 source·now 로 '급식 시간이 아닙니다' 와 '표본 끊김' 을 가른다"""
     w = meal_now(now)
-    nxt = meal_next(now)
-    nxt_d = None
-    if nxt:
-        nxt_d = describe(nxt[0])
-        nxt_d["days"] = nxt[1]
     return {"source": source, "live": source == "vision" and w is not None and state != "no_data",
-            "now": describe(w), "next": nxt_d}
+            "now": describe(w), "next": next_with_day(now)}
 
 
 @router.get("/api/status")

@@ -210,11 +210,39 @@ def fetch(url):
         return ET.fromstring(r.read())
 
 
-def collect(cfg, log=print):
-    """피드마다 한 바구니 → 매체별 한 건씩 돌아가며 최대 max_items. `_content`(전문)·`_order`(본문 전략)는 메모리용 — 저장 전 지운다"""
+# 워드클라우드 재료(09-11): 제목·요약의 영어 낱말 빈도. 불용어·짧은 낱말·숫자를 빼고 상위 N. 학생 화면은 이 숫자 목록만 받는다
+STOP = set("""a an the and or but if of to in on at by for with from as is are was were be been being this that these those it its
+they them their he she his her we our you your i not no yes so than then there here what which who whom whose when where why how
+all any both each few more most other some such only own same too very can will just should now new says said say one two three
+after before over under again further once about into through during between out off up down also may might must could would
+has have had do does did done get got make made use used using also per cent percent year years week weeks day days time first last
+like across around among against without within while still already ever never even much many less least via amid despite toward
+report reports reported study studies found finds finding show shows showed according world global us uk u.s. mr ms dr
+due having being goes going went come comes came take takes took give gives gave set sets put puts back way ways thing things""".split())
+WORD = re.compile(r"[A-Za-z][A-Za-z\-']{2,}")
+
+
+def keyword_counts(items, top=40):
+    """[{title, summary, digest?}] → [[word, n], …] 빈도순 상위 top. 영어 원문 기준(제목·요약·영어 요약 줄) — 화면은 크기·색으로만 쓴다"""
+    counts = {}
+    for x in items:
+        text = " ".join([x.get("title", ""), x.get("summary", "")])          # 영어 원문 제목·요약만(요약 본문은 저장하지 않으므로)
+        for w in WORD.findall(text):
+            k = w.lower().strip("-'")
+            if len(k) < 3 or k in STOP:
+                continue
+            counts[k] = counts.get(k, 0) + 1
+    return sorted(([k, n] for k, n in counts.items() if n >= 1), key=lambda kv: (-kv[1], kv[0]))[:top]
+
+
+def collect(cfg, log=print, category=None):
+    """피드마다 한 바구니 → 매체별 한 건씩 돌아가며 최대 max_items. `_content`(전문)·`_order`(본문 전략)는 메모리용 — 저장 전 지운다.
+    category 가 주어지면 그 섹션의 피드만(09-11: climate·tech 두 섹션). 없으면 전부"""
     limit = cfg.get("summary_chars", 150)
     items = []
     for f in cfg["feeds"]:
+        if category and f.get("category", "climate") != category:
+            continue
         try:
             root = fetch(f["url"])
         except Exception as e:                       # 피드 하나가 죽어도 나머지는 진행
@@ -256,9 +284,12 @@ def collect(cfg, log=print):
     return top
 
 
-def build(cfg, log=print, llm_factory=None):
-    """→ news.json 문서. 본문은 이 함수 안에서만 산다"""
-    top = collect(cfg, log)
+SECTIONS = (("climate", "기후 · 환경"), ("tech", "기술 · 과학 · IT"))
+
+
+def build_section(cfg, category, log=print, llm_factory=None):
+    """한 섹션의 items 를 만든다(수집 → 본문 → 요약 → 번역). 본문은 이 함수 안에서만 산다 → (items, model, translated)"""
+    top = collect(cfg, log, category)
     bodies = []
     for x in top:
         body, source = newsbody.fetch_body(x, x.get("_order"), log)
@@ -269,9 +300,23 @@ def build(cfg, log=print, llm_factory=None):
     for x in top:
         x.pop("_content", None); x.pop("_order", None)
     translated = translators.translate(top, clean, log, llm_factory)
-    engine = "llm" if any(x.get("digest") for x in top) else translated or "none"
-    return {"fetched_at": dt.datetime.now().isoformat(timespec="seconds"), "state": "ok" if top else "no_data",
-            "translated": bool(translated), "engine": engine, "model": model, "items": top}
+    return top, model, translated
+
+
+def build(cfg, log=print, llm_factory=None):
+    """→ news.json 문서. 09-11: 두 섹션(climate·tech) + 키워드 빈도. `items` 는 첫 섹션(climate)을 그대로 두어 옛 화면·테스트와 호환"""
+    cats = [c for c, _ in SECTIONS if any(f.get("category", "climate") == c for f in cfg["feeds"])] or ["climate"]
+    sections, model, translated = [], None, None
+    for c in cats:
+        items, m, t = build_section(cfg, c, log, llm_factory)
+        sections.append({"id": c, "label": dict(SECTIONS).get(c, c), "items": items})
+        model, translated = model or m, translated or t
+    all_items = [x for s in sections for x in s["items"]]
+    engine = "llm" if any(x.get("digest") for x in all_items) else translated or "none"
+    return {"fetched_at": dt.datetime.now().isoformat(timespec="seconds"), "state": "ok" if all_items else "no_data",
+            "translated": bool(translated), "engine": engine, "model": model,
+            "items": sections[0]["items"], "sections": sections,
+            "keywords": keyword_counts(all_items, cfg.get("keywords_top", 40))}
 
 
 def main():

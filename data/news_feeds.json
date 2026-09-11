@@ -1,43 +1,87 @@
 {
-  "note": "기후 이슈 RSS. 국내보다 세계적으로 주목받는 주제를 다루기 위해 해외 공신력 있는 매체로 구성했다. 주소는 curl 로 200·XML·description 유무를 확인한 뒤에만 추가할 것. 학교·지역에 맞게 교체 가능. `body` 는 본문 확보 전략 순서(jobs/newsbody.py: rss_content·guardian_api·html·description) — 본문은 요약 입력으로만 쓰고 저장하지 않는다.",
-  "max_items": 3,
-  "summary_chars": 180,
-  "feeds": [
-    {
-      "name": "Carbon Brief",
-      "url": "https://www.carbonbrief.org/feed/",
-      "body": [
-        "rss_content",
-        "html",
-        "description"
-      ]
-    },
-    {
-      "name": "Inside Climate News",
-      "url": "https://insideclimatenews.org/feed/",
-      "body": [
-        "rss_content",
-        "html",
-        "description"
-      ]
-    },
-    {
-      "name": "The Guardian",
-      "url": "https://www.theguardian.com/environment/climate-crisis/rss",
-      "body": [
-        "guardian_api",
-        "html",
-        "description"
-      ]
-    },
-    {
-      "name": "Yale Climate Connections",
-      "url": "https://yaleclimateconnections.org/feed/",
-      "body": [
-        "rss_content",
-        "html",
-        "description"
-      ]
-    }
-  ]
+ "note": "이슈 피드 RSS 두 섹션(09-11): climate = 기후·환경, tech = 최신 기술·과학·IT. 국내보다 세계적으로 주목받는 주제를 다루기 위해 해외 공신력 있는 매체로 구성했다. 주소는 curl 로 200·XML·description 유무를 확인한 뒤에만 추가할 것. 학교·지역에 맞게 교체 가능. `body` 는 본문 확보 전략 순서(jobs/newsbody.py: rss_content·guardian_api·html·description) — 본문은 요약 입력으로만 쓰고 저장하지 않는다. max_items 는 섹션마다. tech 후보 검증(09-11, 학교 PC): MIT TR·phys.org 는 연결 불가, Nature 는 item 0, The Verge 는 Atom(현재 파서는 RSS item 만) — 제외.",
+ "max_items": 3,
+ "summary_chars": 180,
+ "keywords_top": 40,
+ "feeds": [
+  {
+   "name": "Carbon Brief",
+   "category": "climate",
+   "url": "https://www.carbonbrief.org/feed/",
+   "body": [
+    "rss_content",
+    "html",
+    "description"
+   ]
+  },
+  {
+   "name": "Inside Climate News",
+   "category": "climate",
+   "url": "https://insideclimatenews.org/feed/",
+   "body": [
+    "rss_content",
+    "html",
+    "description"
+   ]
+  },
+  {
+   "name": "The Guardian",
+   "category": "climate",
+   "url": "https://www.theguardian.com/environment/climate-crisis/rss",
+   "body": [
+    "guardian_api",
+    "html",
+    "description"
+   ]
+  },
+  {
+   "name": "Yale Climate Connections",
+   "category": "climate",
+   "url": "https://yaleclimateconnections.org/feed/",
+   "body": [
+    "rss_content",
+    "html",
+    "description"
+   ]
+  },
+  {
+   "name": "Ars Technica",
+   "category": "tech",
+   "url": "https://feeds.arstechnica.com/arstechnica/technology-lab",
+   "body": [
+    "rss_content",
+    "html",
+    "description"
+   ]
+  },
+  {
+   "name": "Ars Technica Science",
+   "category": "tech",
+   "url": "https://feeds.arstechnica.com/arstechnica/science",
+   "body": [
+    "rss_content",
+    "html",
+    "description"
+   ]
+  },
+  {
+   "name": "ScienceDaily",
+   "category": "tech",
+   "url": "https://www.sciencedaily.com/rss/top/technology.xml",
+   "body": [
+    "html",
+    "description"
+   ]
+  },
+  {
+   "name": "IEEE Spectrum",
+   "category": "tech",
+   "url": "https://spectrum.ieee.org/feeds/feed.rss",
+   "body": [
+    "rss_content",
+    "html",
+    "description"
+   ]
+  }
+ ]
 }

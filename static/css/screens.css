@@ -228,6 +228,20 @@ details > summary::-webkit-details-marker { display: none; }
               background: var(--teal-tint); border-radius: 6px; padding: 3px 7px; }
 .news li em.ko { color: var(--ink3); background: var(--hair); }   /* 기계 번역임을 숨기지 않는다 */
 .news li small { font-size: 11px; color: var(--ink3); }
+/* 기술·과학·IT 섹션(09-11) — 틸 잉크 바탕, 타일 윗선은 아쿠아. 기후(차콜·멜론 선)와 팔레트를 갈라 두 섹션이 한눈에 구분된다 */
+#techcard { background: var(--teal-ink); box-shadow: var(--e2); }
+#techcard .eyebrow { color: rgba(255,253,246,.7); }
+#techcard .news li { border-top-color: var(--aqua); }
+#techcard .news .bullets li::before { background: var(--teal-ink); }
+#techcard .news li em { color: var(--teal-ink); background: var(--teal-tint); }
+/* 오늘의 키워드(09-11) — 흐름 배치 워드클라우드. 크기 5단(빈도), 색은 출처(기후 멜론 잉크 · 기술 틸 잉크 · 둘 다 차콜). 라이브러리 없음 */
+.cloud { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 4px 12px; margin-top: 12px; padding: 6px 2px; line-height: 1.15; }
+.cloud span { font-weight: 700; letter-spacing: -.01em; white-space: nowrap; transition: transform .15s var(--ease); }
+.cloud span:hover { transform: scale(1.08); }
+.cloud .w1 { font-size: 12px; font-weight: 500; opacity: .75; } .cloud .w2 { font-size: 15px; opacity: .85; } .cloud .w3 { font-size: 19px; } .cloud .w4 { font-size: 25px; } .cloud .w5 { font-size: 33px; letter-spacing: -.02em; }
+.cloud .c { color: var(--melon-ink); } .cloud .t { color: var(--teal-ink); } .cloud .b { color: var(--ink); }
+.ck { font-weight: 700; padding: 1px 6px; border-radius: 6px; }
+.ck.c { color: var(--melon-ink); background: var(--melon-tint); } .ck.t { color: var(--teal-ink); background: var(--teal-tint); } .ck.b { color: var(--surface); background: var(--ink); }
 
 /* 데스크톱 — 화면마다 12컬럼 그리드(1920×1080 기준, 09-03 개정). 왼쪽 5컬럼은 라이브 카드(대기시간·평면도)가 두 행을 차지하고
    오른쪽 7컬럼에 인사이트 카드가 두 열로 놓인다. 카드가 하나뿐인 화면(오늘급식·이슈피드)은 가운데 8컬럼 */
@@ -262,7 +276,11 @@ details > summary::-webkit-details-marker { display: none; }
   #nutricard { grid-column: 1 / 7; grid-row: 2; }
   #topcard { grid-column: 7 / 13; grid-row: 2; }
   /* 오늘급식 · 이슈피드 — 카드 하나, 가운데 */
-  #mealcard, #newscard { grid-column: 3 / 11; grid-row: 1; }
+  #mealcard { grid-column: 3 / 11; grid-row: 1; }
+  /* 이슈피드(09-11): 두 섹션이 나란히(각 6컬럼), 키워드 구름은 아래 한 행 전체 */
+  #newscard { grid-column: 1 / 7; grid-row: 1; }
+  #techcard { grid-column: 7 / 13; grid-row: 1; }
+  #cloudcard { grid-column: 1 / 13; grid-row: 2; }
   .meals { grid-template-columns: 1fr 1fr; gap: 22px; }
   .big b { font-size: 120px; } .big i { font-size: 28px; }
   .trend { padding-top: 28px; padding-bottom: 30px; }

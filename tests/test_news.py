@@ -117,9 +117,24 @@ def test_번역기_폴백_체인(monkeypatch):
 
 def test_build_는_본문을_저장하지_않는다(monkeypatch):
     cfg = {"max_items": 2, "feeds": [{"name": "F", "url": "x", "body": ["rss_content", "description"]}]}
-    monkeypatch.setattr(fetch_news, "collect", lambda cfg, log: [{"title": "T", "summary": "s" * 80, "link": "https://e/1", "source": "F", "date": "09-03",
+    monkeypatch.setattr(fetch_news, "collect", lambda cfg, log, category=None: [{"title": "T", "summary": "s" * 80, "link": "https://e/1", "source": "F", "date": "09-03",
                                                                   "_content": "<p>" + ("Body text here. " * 40) + "</p>", "_order": ["rss_content", "description"]}])
     monkeypatch.setenv("TRANSLATOR", "none")
     doc = fetch_news.build(cfg, log=lambda *a: None, llm_factory=lambda: (_ for _ in ()).throw(LLMUnavailable("x")))
     x = doc["items"][0]
     assert doc["engine"] == "none" and "digest" not in x and "_content" not in x and "_order" not in x and "Body text" not in str(doc)
+
+
+def test_build_는_두_섹션과_키워드를_만든다(monkeypatch):
+    """09-11: climate·tech 섹션 + 제목·요약 낱말 빈도. items 는 첫 섹션(호환)"""
+    cfg = {"max_items": 2, "feeds": [{"name": "C", "category": "climate", "url": "x", "body": ["description"]},
+                                     {"name": "T", "category": "tech", "url": "y", "body": ["description"]}]}
+    def fake(cfg, log, category=None):
+        w = "Heatwave heatwave record" if category == "climate" else "Chip chip record"
+        return [{"title": w, "summary": "s" * 80, "link": f"https://e/{category}", "source": category, "date": "09-11", "_content": "", "_order": ["description"]}]
+    monkeypatch.setattr(fetch_news, "collect", fake)
+    monkeypatch.setenv("TRANSLATOR", "none")
+    doc = fetch_news.build(cfg, log=lambda *a: None, llm_factory=lambda: (_ for _ in ()).throw(LLMUnavailable("x")))
+    assert [s["id"] for s in doc["sections"]] == ["climate", "tech"] and doc["items"] == doc["sections"][0]["items"]
+    kw = dict(doc["keywords"])
+    assert kw["record"] == 2 and kw["heatwave"] == 2 and kw["chip"] == 2 and "sss" not in kw

@@ -91,3 +91,21 @@ def meal_now(t):
 def meal_next(t):
     """→ (다음에 열릴 창, 며칠 뒤) 또는 None(창이 하나도 없을 때)"""
     return next_after(MEALS, minute_of_day(t))
+
+
+def next_meal_day(t, meal_dates=(), max_days=14):
+    """다음에 급식이 있는 날(09-11 사용자 지적: 토요일 밤에 '내일 11:20' 은 틀리다) → (date, days) 또는 None.
+    meal_dates 는 NEIS 캐시(meal.json week[].date, 'YYYYMMDD') — 있는 범위에서는 그것이 진실(공휴일·시험일도 반영), 범위 밖은 주말만 건너뛴다"""
+    t = _as_dt(t)
+    today = t.date()
+    known = {dt.date.fromisoformat(f"{d[:4]}-{d[4:6]}-{d[6:8]}") for d in meal_dates if len(d) == 8 and d.isdigit()}
+    horizon = max(known) if known else None
+    for k in range(0, max_days + 1):
+        d = today + dt.timedelta(days=k)
+        if horizon and d <= horizon:
+            ok = d in known
+        else:
+            ok = d.weekday() < 5
+        if ok:
+            return d, k
+    return None

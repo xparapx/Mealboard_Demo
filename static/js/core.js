@@ -35,7 +35,7 @@ export const why = r => !r || /reports\.db/.test(r) ? null : /insights\.db/.test
 const DESK_MQ = matchMedia("(min-width: 900px)");
 export const desktop = () => DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = "v27";                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = "v28";                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
@@ -84,8 +84,9 @@ export function renderFeed(f) {
   const bar = $("#feedbar");
   if (!bar || !f) return;
   if (f.live) { bar.hidden = true; return; }
-  const n = f.next, when = !n ? "" : n.days === 1 ? " (내일)" : n.days > 1 ? ` (${n.days}일 뒤)` : "";
-  const next = n ? ` · 다음 급식 <b>${esc(n.label)} ${mm(n.lo)}</b>${when}` : "";
+  // 다음 급식(09-11): 서버가 급식 있는 날(주말·공휴일 제외, NEIS 캐시 기준)을 준다. 날짜를 못 정하면 '급식 시간이 아닙니다' 만 남긴다
+  const n = f.next, when = !n ? "" : n.days === 0 ? "" : n.days === 1 ? " (내일)" : n.weekday ? ` (${esc(n.weekday)}요일)` : ` (${n.days}일 뒤)`;
+  const next = n && n.date ? ` · 다음 급식 <b>${esc(n.label)} ${mm(n.lo)}</b>${when}` : "";
   const win = f.now ? `<b>${esc(f.now.label)}</b> ${mm(f.now.lo)}~${mm(f.now.hi)}` : "";
   bar.innerHTML = f.source === "vision"
     ? (f.now ? `${win} · 카메라 표본이 끊겼습니다 · 잠시 후 다시 확인해 주세요`
@@ -94,7 +95,16 @@ export function renderFeed(f) {
              : `지금은 급식시간이 아닙니다 · 실시간 데이터가 아닌 <b>더미데이터</b>입니다${next}`);
   bar.hidden = false;
 }
-async function feedTick() { if (document.hidden) return; try { renderFeed((await j("/api/status")).feed); } catch (e) { console.error("feed", e); } }
+/* 급식 시간 자동 전환(09-11 사용자 요청): 해시 없이 열면 창 밖에는 이슈피드에서 시작하고, 창이 열리는 순간 대기시간으로 한 번 넘어간다.
+   사용자가 탭을 직접 누른 뒤(userNav)에는 개입하지 않는다. 아이콘 순서는 그대로 */
+let userNav = false, wasInWindow = null;
+function autoSwitch(f) {
+  const inWin = !!(f && f.now);
+  if (wasInWindow === null) { wasInWindow = inWin; return; }
+  if (inWin && !wasInWindow && !userNav && active === "news") go("wait", { push: false });
+  wasInWindow = inWin;
+}
+async function feedTick() { if (document.hidden) return; try { const f = (await j("/api/status")).feed; renderFeed(f); autoSwitch(f); } catch (e) { console.error("feed", e); } }
 
 /* ---------------- 화면 등록 · 라우터 ---------------- */
 const ORDER = ["wait", "room", "week", "today", "news"];
@@ -162,7 +172,7 @@ export function go(name, { push = true } = {}) {
 export function observe() {}                           // 호환용 — 스크롤 스파이가 없어졌다(관리 모듈이 등록 뒤 부른다)
 
 /* ---------------- 부팅 ---------------- */
-$$("[data-go]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); go(a.dataset.go); }));
+$$("[data-go]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); userNav = true; go(a.dataset.go); }));
 addEventListener("hashchange", () => go(location.hash.slice(1), { push: false }));
 addEventListener("keydown", e => {                     // 데스크톱: 1~9 로 이동 — ORDER 길이만큼(관리 화면이 붙으면 6) (입력란 안에서는 무시)
   if (!desktop() || e.altKey || e.ctrlKey || e.metaKey || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
@@ -172,11 +182,21 @@ addEventListener("resize", () => mark(active || "wait", false));   // dock 인�
 document.addEventListener("visibilitychange", () => { if (!document.hidden) tick(); });
 
 const wanted = location.hash.slice(1);                 // 부팅 때 없는 화면(관리)을 가리켰다면 그 화면이 등록될 때 되돌아간다(MB.wanted)
-const start = ORDER.includes(wanted) ? wanted : "wait";
 ORDER.forEach(n => SCREENS[n].mount?.());              // 캔버스 관찰 등 한 번만 하는 준비
-go(start, { push: false });
-setInterval(tick, 30000);
-feedTick(); setInterval(feedTick, 60000);              // 더미데이터 띠는 화면과 무관하게 60초(status 응답은 200B 남짓)
+// 시작 화면(09-11): 해시가 있으면 그대로, 없으면 status 를 먼저 보고 급식 창 밖이면 이슈피드·안이면 대기시간. status 가 늦어도 대기시간으로 시작한다
+async function boot() {
+  let start = ORDER.includes(wanted) ? wanted : null;
+  let f = null;
+  if (!start) {
+    try { f = (await Promise.race([j("/api/status"), new Promise((_, rej) => setTimeout(rej, 1500))])).feed; } catch {}
+    start = f && !f.now ? "news" : "wait";
+  }
+  go(start, { push: false });
+  if (f) { renderFeed(f); wasInWindow = !!f.now; }
+  setInterval(tick, 30000);
+  feedTick(); setInterval(feedTick, 60000);            // 안내 띠·자동 전환은 화면과 무관하게 60초(status 응답은 200B 남짓)
+}
+boot();
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").catch(() => {});
   // 새 워커가 이 탭을 넘겨받으면(배포) 한 번 다시 읽는다 — 옛 워커가 캐시해 둔 셸·모듈이 새 API 응답을 옛 방식으로 그리던 문제(09-11).
