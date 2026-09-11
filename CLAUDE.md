@@ -11,10 +11,8 @@
   Funnel(`https://rsp.taild5f11e.ts.net`)은 휴대폰에서 끊긴다(PC 는 tailnet 직결이라 된다) — 예비로 켜 둔다(`serve reset`·`funnel reset` 금지는 그대로). 유닛 `deploy/mealboard-cloudflared.service`(토큰 방식,
   `.env CF_TUNNEL_TOKEN`, 09-04 enable·active, 인천 엣지 4연결), 경로(옛 Public Hostname)는 Cloudflare 대시보드 '경로 추가 → 게시된 애플리케이션'에 루트 `kjhs-meal.com` → **HTTP** `127.0.0.1:8100` 하나만(HTTPS 로 저장하면 502; 관리 앱 8101 은 절대 매핑 금지). cloudflared 2026.8.3. 09-04 22:00 공개 주소에서 화면·API·QR 200 확인.
   **토큰은 `read -s` 로 받아도 터미널 제어 문자가 섞인다** — 매뉴얼 STEP 9 의 정리 명령(base64 문자만 남김)으로 넣고, `Provided Tunnel token is not valid` 면 값 뒤 찌꺼기를 의심(형식 검사 명령 수록). 학교 홈페이지 도메인(`cnehs.kr`)은 교육청 소유라 못 쓴다.
-- **PI_HOST는 Tailscale 주소**(.env 참조). 공용 체크아웃은 `/opt/mealboard`. **Pi에서 직접 편집 금지, `git pull`만.**
-  **주 작업 PC 는 집 PC(jh-home, 09-11 사용자 결정)** — 로컬 세션 `Mealboard_Demo_jh-Home` 에서 작업·커밋·푸시·Pi 반영을 전부 한다(학교 망은 시간대에 따라 Tailscale·SSH 를 막지만 집 망은 아니다).
-  다른 기기(휴대폰·맥북·학교 PC)는 **Remote Control 로 집 PC 세션을 조종**한다 — 집 PC 는 항상 켜 두고 잠자기 끔. 학교 PC 로컬 세션은 현장 진단용 예비(Pi 키 있음).
-  어느 PC 든 **세션 시작 때 `git pull` 부터**, 다른 PC 에서 고친 것은 즉시 push — 커밋은 한 곳에서만 쌓이게.
+- **PI_HOST는 Tailscale 주소**(.env 참조). 공용 체크아웃은 `/opt/mealboard`.
+  **작업 방식 개정(09-12 사용자 결정): 개발·편집은 Pi(SBC)에 SSH 로 붙어 `/opt/mealboard` 워크트리에서 직접 한다** — 그 자리에서 커밋·push 까지(옛 'PC 에서 커밋 → Pi 는 pull만' 구조 폐기, PC 마다 pull/clone 하던 번거로움 제거). 세션 시작 때 `git pull` 로 원격과 맞추고, 작업 끝나면 push — 단일 체크아웃이 곧 배포본이므로 코드 반영은 해당 서비스 restart 만 하면 된다. 다른 PC 의 옛 로컬 체크아웃에서 커밋하지 말 것(하게 되면 즉시 push + Pi 에서 pull).
 - **같은 Pi에 Plant 프로젝트가 정지 상태로 공존**(`~/plant/`, planthub·plantdash·plantsnap 유닛).
   `~/plant/`와 그 DB에는 어떤 이유로도 접근·수정하지 않는다. 포트 8000·8501·1883은 Plant 소유.
 - 홈 Pi에서는 vision 프레임 소스로 `picamera`를 쓰지 않는다(Plant 카메라 타이머와 배타 자원). `webcam|file`만.
@@ -192,7 +190,7 @@ Mealboard_Demo/
 
 **허용 (자유롭게)**
 - 읽기 전체: `systemctl status`, `journalctl -u <svc> -n 100`, DB SELECT, `ls`, `cat`, `ss -tlnp`, `vcgencmd measure_temp`, `timedatectl`
-- 코드 반영: `/opt/mealboard`에서 `git pull` 후 해당 서비스만 `sudo systemctl restart mealboard-api`(vision·mock은 아래 주의 참조). 의존성이 바뀌면 `uv sync`, 유닛이 바뀌면 `bash setup_pi.sh`
+- 코드 반영: **09-12 부터 `/opt/mealboard` 워크트리에서 직접 편집·커밋 → 해당 서비스만 `sudo systemctl restart mealboard-api`**(vision·mock은 아래 주의 참조). 다른 곳에서 커밋된 것이 있으면 `git pull` 먼저. 의존성이 바뀌면 `uv sync`(**vision 은 반드시 `uv sync --extra vision`**), 유닛이 바뀌면 `bash setup_pi.sh`
 
 **주의 (실행 전 사용자에게 확인)**
 - `mealboard-vision` 재시작: 점심 운영 시간(11:30~14:00)에는 카운팅 공백이 생긴다 — 시간을 확인하고 물을 것
@@ -204,7 +202,7 @@ Mealboard_Demo/
 - sudoers 드롭인(`/etc/sudoers.d/mealboard`) 설치·변경, `tailscale serve` 설정 변경. **`tailscale serve reset`·`funnel reset` 은 절대 실행하지 않는다**(공개 Funnel 443 까지 함께 지워진다)
 
 **금지 (사용자 명시 지시 없이는 절대 불가)**
-- `/opt/mealboard` 안에서 파일 직접 편집 — 코드는 PC에서 커밋해 pull한다
+- ~~`/opt/mealboard` 안에서 파일 직접 편집~~ → **09-12 개정: Pi 워크트리 직접 편집·커밋·push 가 표준**(§0 작업 방식). 단, 편집한 것은 커밋하지 않은 채 방치하지 말 것 — 워크트리가 곧 운영본이다
 - `data/` 내 파일 삭제·초기화, DB의 DELETE/DROP/UPDATE — 정리 도구를 만들 때는 반드시 ①빈 조건이면 실행 거부 ②실행 전 `queue.db.bak-<시각>` 자동 백업 ③되돌리는 명령 출력, 세 겹을 갖출 것 (Plant 프로젝트에서 `--fix`로 220행을 잃은 사고의 재발 방지 규칙)
 - `~/plant/` 및 Plant 유닛(planthub·plantdash·plantsnap) 접근·수정
 - 프레임 이미지를 디스크에 저장하거나 외부로 전송하는 코드 작성 — 어떤 디버깅 목적이라도 사용자 승인 필요(승인된 예외는 §2 영상 취급·디버그 뷰 행뿐)
@@ -223,7 +221,7 @@ Mealboard_Demo/
 - **커밋 전 확인**: `git status`에 data/(.gitignore 예외 4개 제외)·.env가 없을 것 (있다면 .gitignore부터 수정)
 - 코드와 매뉴얼 동기화: `<pre>` 수록 코드를 바꾼 커밋은 docs/manual.html도 같은 커밋에서 갱신,
   `check_manual.py`류 대조 도구가 생기면 커밋 전 실행
-- push는 매 작업 세션 종료 시. 사용자가 요청하면 중간에도. Pi는 자동으로 pull하지 않는다 — 배포는 사람(또는 `/deploy`)이 명시적으로
+- push는 매 작업 세션 종료 시. 사용자가 요청하면 중간에도. **09-12 부터 작업 장소가 Pi 워크트리 자체**이므로 커밋이 곧 배포본 — 서비스 restart 로 반영하고, push 로 GitHub 백업을 유지한다
 - README 「작업 로그」는 의미 있는 변경마다 갱신 (커밋마다는 아님)
 
 ## 7. Claude Code 확장 요소 (필요한 것만)
