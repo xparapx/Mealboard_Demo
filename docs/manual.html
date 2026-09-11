@@ -294,7 +294,7 @@ API_PORT=8100
 LUNCH_START=11:30
 LUNCH_END=14:00
 # 수집 시간창(09-04 운영 규칙) — 카메라 노드는 이 창 안에서만 세고, 창 밖은 더미 곡선 + 화면 '더미데이터' 띠. 'HH:MM-HH:MM 라벨' 을 ; 로 나열. 겹치면 시작 거부
-MEAL_WINDOWS=11:30-12:30 3학년 점심;12:30-13:30 1·2학년 점심;17:30-18:30 석식
+MEAL_WINDOWS=11:20-12:30 3학년 점심;12:30-13:30 1·2학년 점심;17:00-18:30 석식
 # 이슈 링크 한국어 번역 (jobs/fetch_news.py). 없으면 원문 영어 그대로 나간다
 # DeepL API Free 키는 끝이 :fx 다 — 그걸 보고 무료/유료 엔드포인트를 고른다
 DEEPL_API_KEY=
@@ -681,7 +681,8 @@ API_PORT = int(os.getenv(&quot;API_PORT&quot;, &quot;8100&quot;))
 LUNCH_START = os.getenv(&quot;LUNCH_START&quot;, &quot;11:30&quot;)     # 형식 검증은 app/lunch.py 가 import 시점에 한다
 LUNCH_END = os.getenv(&quot;LUNCH_END&quot;, &quot;14:00&quot;)
 # 수집 시간창 세 개(09-04 운영 규칙): 카메라 노드는 이 창 안에서만 세고, 창 밖은 더미 곡선 + 화면 '더미데이터' 띠. 형식·겹침 검증은 vision/schedule.py (app/lunch.py import 시점)
-MEAL_WINDOWS = os.getenv(&quot;MEAL_WINDOWS&quot;, &quot;11:30-12:30 3학년 점심;12:30-13:30 1·2학년 점심;17:30-18:30 석식&quot;)
+# 09-11: 시작을 10~30분 앞당긴다(교사 식사 등 시간표 밖 유동) — 중식 11:20, 석식 17:00. 끝은 그대로
+MEAL_WINDOWS = os.getenv(&quot;MEAL_WINDOWS&quot;, &quot;11:20-12:30 3학년 점심;12:30-13:30 1·2학년 점심;17:00-18:30 석식&quot;)
 STALE_SEC = 120                             # 이 시간 넘게 새 행·새 파일이 없으면 '데이터 없음' (status·positions·집계 커버리지 공통)
 ROLLUP_WINDOW = _choice(&quot;ROLLUP_WINDOW&quot;, &quot;lunch&quot;, (&quot;lunch&quot;, &quot;all&quot;))   # 집계 창 (스테이징 mock 은 종일 돌므로 all)
 FEED_SOURCE = _choice(&quot;FEED_SOURCE&quot;, &quot;vision&quot;, (&quot;mock&quot;, &quot;vision&quot;))    # 집계 행의 출처 표기
@@ -1375,11 +1376,16 @@ systemctl status mealboard-api --no-pager</code></pre>
     &lt;/section&gt;
   &lt;/section&gt;
 
-  &lt;!-- ④ 오늘급식 — 중식(메뉴·알레르기·영양) + 아래 절 탄소 --&gt;
+  &lt;!-- ④ 오늘급식 — 중식·석식 2열(09-11) + 알레르기 요약 + 영양(중식 기준) + 아래 절 탄소 --&gt;
   &lt;section class=&quot;view&quot; id=&quot;today&quot; role=&quot;tabpanel&quot; aria-label=&quot;오늘급식&quot;&gt;
     &lt;section class=&quot;card&quot; id=&quot;mealcard&quot;&gt;
-      &lt;div class=&quot;eyebrow&quot;&gt;오늘 중식&lt;/div&gt;
-      &lt;ul class=&quot;menu&quot; id=&quot;menu&quot;&gt;&lt;/ul&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;오늘 급식&lt;/div&gt;
+      &lt;div class=&quot;meals&quot;&gt;
+        &lt;div class=&quot;meal&quot; id=&quot;lunchcol&quot;&gt;&lt;div class=&quot;mlabel&quot;&gt;중식 &lt;span id=&quot;lunchkcal&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;ul class=&quot;menu&quot; id=&quot;menu&quot;&gt;&lt;/ul&gt;&lt;/div&gt;
+        &lt;div class=&quot;meal&quot; id=&quot;dinnercol&quot;&gt;&lt;div class=&quot;mlabel&quot;&gt;석식 &lt;span id=&quot;dinnerkcal&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;ul class=&quot;menu&quot; id=&quot;dinnermenu&quot;&gt;&lt;/ul&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;!-- 알레르기 요약 — 내 알레르기가 오늘 메뉴에 있으면 멜론 띠로 먼저 말하고, 칩은 내 것을 앞에(09-11) --&gt;
+      &lt;div class=&quot;awarn&quot; id=&quot;awarn&quot; hidden&gt;&lt;/div&gt;
       &lt;div class=&quot;chips&quot; id=&quot;allergens&quot;&gt;&lt;/div&gt;
       &lt;details id=&quot;allergybox&quot; hidden&gt;
         &lt;summary class=&quot;note&quot; style=&quot;margin-top:8px&quot;&gt;내 알레르기 &lt;b id=&quot;mysummary&quot; style=&quot;color:var(--melon-ink)&quot;&gt;없음&lt;/b&gt; ·
@@ -1392,6 +1398,7 @@ systemctl status mealboard-api --no-pager</code></pre>
         &lt;div&gt;&lt;em&gt;02&lt;/em&gt;&lt;b id=&quot;ratio&quot;&gt;—&lt;/b&gt;&lt;span&gt;탄·단·지 비율&lt;/span&gt;&lt;/div&gt;
         &lt;div&gt;&lt;em&gt;03&lt;/em&gt;&lt;b id=&quot;mar&quot;&gt;—&lt;/b&gt;&lt;span&gt;미량영양소&lt;/span&gt;&lt;span class=&quot;flag&quot; id=&quot;marflag&quot;&gt;&lt;/span&gt;&lt;/div&gt;
       &lt;/div&gt;
+      &lt;div class=&quot;note&quot; style=&quot;margin-top:6px&quot;&gt;영양 지표는 중식 기준&lt;/div&gt;
       &lt;div class=&quot;eyebrow&quot; id=&quot;microlab&quot; style=&quot;margin-top:18px&quot; hidden&gt;영양소별 · 권장섭취량 대비&lt;/div&gt;
       &lt;div class=&quot;micro&quot; id=&quot;micro&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;carbon&quot; id=&quot;carbonsec&quot; hidden&gt;
@@ -1462,7 +1469,7 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v22&quot;;   // 09-11: 창 밖 더미 제거 — 띠·히어로 문구가 바뀐 셸을 새로 받게
+const CACHE = &quot;mealboard-v23&quot;;   // 09-11: 주간식단 중식·석식 2행, 오늘급식 2열·알레르기 띠   // 09-11: 창 밖 더미 제거 — 띠·히어로 문구가 바뀐 셸을 새로 받게
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
@@ -1662,12 +1669,15 @@ def carbon(kcal):
             &quot;estimate&quot;: True}
 
 
-def fetch(from_ymd, to_ymd):
+MEAL_LUNCH, MEAL_DINNER = &quot;2&quot;, &quot;3&quot;                        # NEIS MMEAL_SC_CODE: 1 조식 · 2 중식 · 3 석식
+
+
+def fetch(from_ymd, to_ymd, meal_code=MEAL_LUNCH):
     q = urllib.parse.urlencode({
         &quot;KEY&quot;: os.environ[&quot;NEIS_KEY&quot;], &quot;Type&quot;: &quot;json&quot;,
         &quot;ATPT_OFCDC_SC_CODE&quot;: os.environ[&quot;NEIS_ATPT_CODE&quot;],
         &quot;SD_SCHUL_CODE&quot;: os.environ[&quot;NEIS_SCHOOL_CODE&quot;],
-        &quot;MMEAL_SC_CODE&quot;: &quot;2&quot;,                                 # 2 = 중식
+        &quot;MMEAL_SC_CODE&quot;: meal_code,
         &quot;MLSV_FROM_YMD&quot;: from_ymd, &quot;MLSV_TO_YMD&quot;: to_ymd})
     with urllib.request.urlopen(URL + &quot;?&quot; + q, timeout=20) as r:
         data = json.load(r)
@@ -1681,14 +1691,26 @@ def main():
     monday = today - dt.timedelta(days=today.weekday())
     friday = monday + dt.timedelta(days=4)
     rows, code = fetch(monday.strftime(&quot;%Y%m%d&quot;), friday.strftime(&quot;%Y%m%d&quot;))
+    # 석식(09-11 사용자 요청): 메뉴·kcal·영양소만 붙인다. 영양 지표 3종·탄소·집계·인사이트는 중식 기준 그대로(week[].menu/kcal/assess 는 중식).
+    # 석식 조회가 실패해도 중식은 나간다 — 학교가 석식을 안 하는 날(INFO-200)이 정상 경로다
+    try:
+        dinner_rows, _ = fetch(monday.strftime(&quot;%Y%m%d&quot;), friday.strftime(&quot;%Y%m%d&quot;), MEAL_DINNER)
+    except Exception as e:                                          # 네트워크·형식 오류 — 석식만 비운다
+        print(f&quot;석식 조회 실패 - 중식만 저장한다: {e}&quot;)
+        dinner_rows = []
+    dinner = {r[&quot;MLSV_YMD&quot;]: r for r in dinner_rows}
 
     week = []
     for r in rows:
         n = parse_ntr(r.get(&quot;NTR_INFO&quot;, &quot;&quot;))
         kcal = parse_kcal(r.get(&quot;CAL_INFO&quot;))
         menu = [m.strip() for m in r.get(&quot;DDISH_NM&quot;, &quot;&quot;).split(&quot;&lt;br/&gt;&quot;) if m.strip()]
+        d = dinner.get(r[&quot;MLSV_YMD&quot;])
         week.append({&quot;date&quot;: r[&quot;MLSV_YMD&quot;], &quot;menu&quot;: menu, &quot;kcal&quot;: kcal,
-                     &quot;nutrients&quot;: n, &quot;assess&quot;: assess(kcal, n), &quot;carbon&quot;: carbon(kcal)})
+                     &quot;nutrients&quot;: n, &quot;assess&quot;: assess(kcal, n), &quot;carbon&quot;: carbon(kcal),
+                     &quot;dinner&quot;: None if d is None else {
+                         &quot;menu&quot;: [m.strip() for m in d.get(&quot;DDISH_NM&quot;, &quot;&quot;).split(&quot;&lt;br/&gt;&quot;) if m.strip()],
+                         &quot;kcal&quot;: parse_kcal(d.get(&quot;CAL_INFO&quot;)), &quot;nutrients&quot;: parse_ntr(d.get(&quot;NTR_INFO&quot;, &quot;&quot;))}})
 
     def avg(key):
         vals = [d[&quot;assess&quot;][key] for d in week if d[&quot;assess&quot;][key] is not None]
@@ -1704,7 +1726,7 @@ def main():
            &quot;carbon_std&quot;: {&quot;ef_source&quot;: CARBON[&quot;ef_source&quot;], &quot;capita_source&quot;: CARBON[&quot;capita_source&quot;]},
            &quot;week&quot;: week}
     MEAL_JSON.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding=&quot;utf-8&quot;)
-    print(f&quot;저장 {MEAL_JSON}  {len(week)}일치  {code}&quot;)
+    print(f&quot;저장 {MEAL_JSON}  {len(week)}일치  {code}  석식 {sum(1 for d in week if d['dinner'])}일&quot;)
 
 
 if __name__ == &quot;__main__&quot;:
@@ -6012,6 +6034,20 @@ def write(doc, user, template=None, local=None, now=None):
         tmp.unlink(missing_ok=True)
         raise
     return doc, bak
+
+
+def reset(local=None, now=None):
+    &quot;&quot;&quot;템플릿으로 초기화(09-11 사용자 요청) — local 을 지우지 않고 `.bak-&lt;시각&gt;` 으로 옮긴다(되돌리기 가능, KEEP_BAK 규칙 동일).
+    → 백업 파일명 또는 None(local 이 없었음). 읽는 쪽(vision·API)은 다음 읽기부터 템플릿만 본다&quot;&quot;&quot;
+    local = local or LOCAL
+    if not local.is_file():
+        return None
+    now = now or dt.datetime.now()
+    bak = f&quot;{local.name}.bak-{now.strftime('%Y%m%d-%H%M%S')}&quot;
+    _replace(local, local.with_name(bak))
+    for old in backups(local)[KEEP_BAK:]:
+        local.with_name(old).unlink(missing_ok=True)
+    return bak
 
 
 def _pair_ok(p):

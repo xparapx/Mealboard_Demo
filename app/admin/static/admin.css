@@ -77,6 +77,11 @@ ul.cross li small { color: var(--ink3); font-size: 11.5px; }
 /* 구역 편집기(3d) — 핸들 r6·히트 44, 저장 틸 · 되돌리기 hair · 삭제 멜론, 더티 표시 */
 .zstage { touch-action: none; cursor: crosshair; }
 .zstage canvas { touch-action: none; }
+/* 배치 대기(λ 변 선택·보정점 찍기) 중임을 테두리로 — '다음 클릭이 무엇인지' 상태 표시등(09-11) */
+.zstage.arming { box-shadow: inset 0 0 0 3px var(--melon); }
+.zrow.calib.sel { background: var(--teal-tint2); border-radius: 12px; padding: 4px 8px; margin-left: -8px; }
+.zrow.calib input:disabled, .zrow.calib select:disabled { opacity: .45; }
+.pill.danger-ghost { background: transparent; box-shadow: inset 0 0 0 1.5px var(--melon-tint); color: var(--melon-ink); margin-left: auto; }
 .dirty { font-size: 10px; font-weight: 700; margin-left: 8px; padding: 3px 8px; border-radius: 999px; background: var(--melon-tint); color: var(--melon-ink); vertical-align: middle; }
 .zchips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .zfields { margin-top: 10px; }

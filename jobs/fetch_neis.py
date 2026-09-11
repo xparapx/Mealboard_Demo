@@ -88,12 +88,15 @@ def carbon(kcal):
             "estimate": True}
 
 
-def fetch(from_ymd, to_ymd):
+MEAL_LUNCH, MEAL_DINNER = "2", "3"                        # NEIS MMEAL_SC_CODE: 1 조식 · 2 중식 · 3 석식
+
+
+def fetch(from_ymd, to_ymd, meal_code=MEAL_LUNCH):
     q = urllib.parse.urlencode({
         "KEY": os.environ["NEIS_KEY"], "Type": "json",
         "ATPT_OFCDC_SC_CODE": os.environ["NEIS_ATPT_CODE"],
         "SD_SCHUL_CODE": os.environ["NEIS_SCHOOL_CODE"],
-        "MMEAL_SC_CODE": "2",                                 # 2 = 중식
+        "MMEAL_SC_CODE": meal_code,
         "MLSV_FROM_YMD": from_ymd, "MLSV_TO_YMD": to_ymd})
     with urllib.request.urlopen(URL + "?" + q, timeout=20) as r:
         data = json.load(r)
@@ -107,14 +110,26 @@ def main():
     monday = today - dt.timedelta(days=today.weekday())
     friday = monday + dt.timedelta(days=4)
     rows, code = fetch(monday.strftime("%Y%m%d"), friday.strftime("%Y%m%d"))
+    # 석식(09-11 사용자 요청): 메뉴·kcal·영양소만 붙인다. 영양 지표 3종·탄소·집계·인사이트는 중식 기준 그대로(week[].menu/kcal/assess 는 중식).
+    # 석식 조회가 실패해도 중식은 나간다 — 학교가 석식을 안 하는 날(INFO-200)이 정상 경로다
+    try:
+        dinner_rows, _ = fetch(monday.strftime("%Y%m%d"), friday.strftime("%Y%m%d"), MEAL_DINNER)
+    except Exception as e:                                          # 네트워크·형식 오류 — 석식만 비운다
+        print(f"석식 조회 실패 - 중식만 저장한다: {e}")
+        dinner_rows = []
+    dinner = {r["MLSV_YMD"]: r for r in dinner_rows}
 
     week = []
     for r in rows:
         n = parse_ntr(r.get("NTR_INFO", ""))
         kcal = parse_kcal(r.get("CAL_INFO"))
         menu = [m.strip() for m in r.get("DDISH_NM", "").split("<br/>") if m.strip()]
+        d = dinner.get(r["MLSV_YMD"])
         week.append({"date": r["MLSV_YMD"], "menu": menu, "kcal": kcal,
-                     "nutrients": n, "assess": assess(kcal, n), "carbon": carbon(kcal)})
+                     "nutrients": n, "assess": assess(kcal, n), "carbon": carbon(kcal),
+                     "dinner": None if d is None else {
+                         "menu": [m.strip() for m in d.get("DDISH_NM", "").split("<br/>") if m.strip()],
+                         "kcal": parse_kcal(d.get("CAL_INFO")), "nutrients": parse_ntr(d.get("NTR_INFO", ""))}})
 
     def avg(key):
         vals = [d["assess"][key] for d in week if d["assess"][key] is not None]
@@ -130,7 +145,7 @@ def main():
            "carbon_std": {"ef_source": CARBON["ef_source"], "capita_source": CARBON["capita_source"]},
            "week": week}
     MEAL_JSON.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(f"저장 {MEAL_JSON}  {len(week)}일치  {code}")
+    print(f"저장 {MEAL_JSON}  {len(week)}일치  {code}  석식 {sum(1 for d in week if d['dinner'])}일")
 
 
 if __name__ == "__main__":

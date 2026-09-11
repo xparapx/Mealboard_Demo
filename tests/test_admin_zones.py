@@ -81,3 +81,14 @@ def test_호모그래피_왕복과_거부():
         zones_store.homography([{"img": [0, 0], "floor": [0, 0]}] * 4)          # 퇴화
     with pytest.raises(zones_store.Invalid):
         zones_store.homography([{"img": [0, 2], "floor": [0, 0]}] + pairs[1:])    # 범위 밖
+
+
+def test_초기화는_로컬을_백업으로_옮긴다(env):
+    """09-11: 편집기 '템플릿으로 초기화'. local 은 삭제되지 않고 .bak 로 남고, 읽기는 템플릿만 본다"""
+    tpl, local = env
+    zones_store.write({"roi": {"polygon": [[0.1, 0.1], [0.9, 0.1], [0.9, 0.9], [0.1, 0.9]], "lambda_edge": [0, 1], "out_dir": 1}}, "t", template=tpl, local=local)
+    assert local.is_file()
+    bak = zones_store.reset(local=local)
+    assert bak and local.with_name(bak).is_file() and not local.is_file()
+    assert zones_store.read(template=tpl, local=local)["doc"]["roi"] is None
+    assert zones_store.reset(local=local) is None                  # 이미 없으면 아무 일 없음

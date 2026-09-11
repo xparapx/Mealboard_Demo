@@ -38,6 +38,19 @@ def put_zones(request: Request, body: dict = Body(...)):
     return {"state": "ok", "doc": doc, "backup": bak, "backups": zones_store.backups()}
 
 
+@router.delete("")
+def delete_zones(request: Request):
+    """템플릿으로 초기화 — zones.local.json 을 .bak 로 옮긴다(삭제 아님). 편집기 '템플릿으로 초기화' 버튼"""
+    user = request.state.user
+    try:
+        bak = zones_store.reset()
+    except OSError as e:
+        audit.log(user, "zones.reset", "zones.local.json", f"실패: {e}"[:200], False, request.client.host)
+        raise HTTPException(500, {"reason": "write", "detail": str(e)[:200]})
+    audit.log(user, "zones.reset", "zones.local.json", f"bak={bak}" if bak else "로컬 없음", True, request.client.host)
+    return {"state": "ok", "backup": bak, **zones_store.read()}
+
+
 @router.post("/homography")
 def post_homography(body: Pairs):
     try:

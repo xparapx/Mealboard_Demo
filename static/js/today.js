@@ -59,24 +59,38 @@ export function renderMeal(m) {
     // state 는 ok 인데 today 만 없는 날 = 주말·공휴일. 받아오지 못한 것과 구별해서 말한다
     menu.innerHTML = `<li class="main">${m.state === "no_meal" ? "이번 주 급식 정보가 없습니다"
       : m.state === "ok" ? "오늘은 급식이 없습니다" : "급식 정보를 아직 받지 못했습니다"}</li>`;
-    ["#allergybox", "#carbonsec", "#microlab"].forEach(s => $(s).hidden = true);
-    $("#allergens").innerHTML = ""; $("#micro").innerHTML = "";
+    ["#allergybox", "#carbonsec", "#microlab", "#awarn"].forEach(s => $(s).hidden = true);
+    $("#allergens").innerHTML = ""; $("#micro").innerHTML = ""; $("#dinnermenu").innerHTML = ""; $("#lunchkcal").textContent = ""; $("#dinnerkcal").textContent = "";
     ["#energy", "#ratio", "#mar"].forEach(s => $(s).textContent = "—");
     ["#energyflag", "#marflag"].forEach(s => $(s).textContent = "");
     return;
   }
-  const dishes = m.today.menu.map(splitAllergy);
-  menu.innerHTML = dishes.map((d, i) => {
+  // 메뉴 한 열 — 대표 메뉴는 굵게, 내 알레르기가 든 메뉴는 멜론 바탕 + 번호 굵게. 번호 나열은 그대로 두되(참고용) 이름 옆 태그가 먼저 눈에 들어온다
+  const listOf = (items) => items.map((d, i) => {
     const hit = d.codes.some(c => MY.has(c));
     const codes = d.codes.map(c => MY.has(c) ? `<b>${c}</b>` : c).join("·");
     return `<li class="${i === 0 ? "main" : ""}${hit ? " hit" : ""}"><span>${esc(d.name)}</span>`
       + (hit ? `<span class="tag">내 알레르기</span>` : "")
       + (codes ? `<span class="codes">${codes}</span>` : "") + "</li>";
   }).join("");
+  const dishes = m.today.menu.map(splitAllergy);
+  menu.innerHTML = listOf(dishes);
+  $("#lunchkcal").textContent = m.today.kcal ? `${Math.round(m.today.kcal)} kcal` : "";
+  // 석식(09-11) — 없는 날은 열을 비우지 않고 '석식 없음' 으로 둔다(2열 리듬 유지)
+  const dn = m.today.dinner, dinner = dn && dn.menu?.length ? dn.menu.map(splitAllergy) : [];
+  $("#dinnermenu").innerHTML = dinner.length ? listOf(dinner) : `<li class="none">석식 없음</li>`;
+  $("#dinnerkcal").textContent = dinner.length && dn.kcal ? `${Math.round(dn.kcal)} kcal` : "";
+  $("#dinnercol").classList.toggle("off", !dinner.length);
 
-  const today = [...new Set(dishes.flatMap(d => d.codes))].sort((a, b) => a - b);
+  // 알레르기 요약 — 중식·석식을 합쳐 오늘 나오는 번호 전체. 내 것을 앞에 두고, 걸리면 위에 한 줄로 먼저 알린다
+  const all = [...dishes, ...dinner];
+  const today = [...new Set(all.flatMap(d => d.codes))].sort((a, b) => (MY.has(b) - MY.has(a)) || a - b);
+  const mine = today.filter(c => MY.has(c));
   $("#allergens").innerHTML = today.map(c =>
     `<span class="${MY.has(c) ? "on" : ""}">${c} ${ALLERGENS[c]}</span>`).join("");
+  const hitNames = all.filter(d => d.codes.some(c => MY.has(c))).map(d => d.name);
+  $("#awarn").hidden = !mine.length;
+  if (mine.length) $("#awarn").innerHTML = `오늘 <b>${mine.map(c => ALLERGENS[c]).join(" · ")}</b> 이(가) 든 메뉴 ${hitNames.length}개: ${esc(hitNames.join(", "))}`;
   $("#allergybox").hidden = false;
   renderPicker();
 

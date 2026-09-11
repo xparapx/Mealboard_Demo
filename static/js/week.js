@@ -12,12 +12,15 @@ export function renderWeek(m) {
   $("#weekgrid").innerHTML = week.map(d => {
     const dd = new Date(+d.date.slice(0, 4), +d.date.slice(4, 6) - 1, +d.date.slice(6, 8));
     const when = d.date === today ? "today" : d.date < today ? "past" : "future";
-    const main = splitAllergy(d.menu[0]).name;
+    // 중식·석식 두 행(09-11 사용자 요청). 석식이 없는 날은 '석식 없음' 으로 자리를 비우지 않는다 — 컬럼 높이가 같아야 표로 읽힌다
+    const row = (label, mm) => !mm || !mm.menu?.length
+      ? `<span class="row off"><i>${label}</i><span class="m">${label} 없음</span></span>`
+      : `<span class="row"><i>${label}</i><span class="m">${esc(splitAllergy(mm.menu[0]).name)}</span>`
+        + `<span class="k">외 ${mm.menu.length - 1}가지` + (mm.kcal ? ` · ${Math.round(mm.kcal)} kcal` : "") + "</span></span>";
     // 램프는 인덱스가 아니라 실제 요일에 건다 — 주가 화요일부터 시작해도 색이 밀리지 않게
     return `<div data-wd="${dd.getDay()}" data-when="${when}">`
       + `<span class="d">${WD[dd.getDay()]}</span><span class="n">${dd.getDate()}</span>`
-      + `<span class="m">${esc(main)}</span>`
-      + `<span class="k">외 ${d.menu.length - 1}가지` + (d.kcal ? `<br>${Math.round(d.kcal)} kcal` : "") + "</span></div>";
+      + row("중식", d) + row("석식", d.dinner) + "</div>";
   }).join("");
   const w = m.week_avg || {};
   $("#weekavg").innerHTML = w.energy_pct == null ? ""

@@ -1,4 +1,4 @@
-"""수집 시간창(09-04 운영 규칙) — 3학년 점심 11:30~12:30 · 1·2학년 점심 12:30~13:30 · 석식 17:30~18:30.
+"""수집 시간창(09-04 운영 규칙, 09-11 시작 앞당김) — 3학년 점심 11:20~12:30 · 1·2학년 점심 12:30~13:30 · 석식 17:00~18:30.
 설정 파일도 시계도 없이 도는 순수 로직(vision/schedule.py)과, 그 위의 /api/status feed 판정을 본다."""
 import datetime as dt
 
@@ -10,7 +10,7 @@ W = parse_windows(DEFAULT_TEXT)
 
 
 def test_기본_문자열은_세_창():
-    assert W == [MealWindow(690, 750, "3학년 점심"), MealWindow(750, 810, "1·2학년 점심"), MealWindow(1050, 1110, "석식")]
+    assert W == [MealWindow(680, 750, "3학년 점심"), MealWindow(750, 810, "1·2학년 점심"), MealWindow(1020, 1110, "석식")]
 
 
 def test_정렬과_라벨_기본값():
@@ -29,7 +29,7 @@ def test_잘못된_창은_예외(bad):
 
 
 def test_지금_열린_창():
-    assert current(W, 690).label == "3학년 점심"
+    assert current(W, 680).label == "3학년 점심" and current(W, 679) is None   # 11:20 부터
     assert current(W, 749).label == "3학년 점심"
     assert current(W, 750).label == "1·2학년 점심"        # 끝은 열린 구간 — 12:30 은 다음 창
     assert current(W, 810) is None
@@ -41,13 +41,13 @@ def test_다음_창():
     assert next_after(W, 9 * 60) == (W[0], 0)              # 아침 → 오늘 3학년 점심
     assert next_after(W, 720) == (W[1], 0)                 # 3학년 점심 중 → 1·2학년 점심(지금 창은 세지 않는다)
     assert next_after(W, 810) == (W[2], 0)                 # 점심 끝 → 석식
-    assert next_after(W, 1050) == (W[0], 1)                # 석식 중 → 내일 3학년 점심
+    assert next_after(W, 1050) == (W[0], 1)                # 석식 중(17:30) → 내일 3학년 점심
     assert next_after(W, 23 * 60) == (W[0], 1)
     assert next_after([], 700) is None
 
 
 def test_describe():
-    assert describe(W[2]) == {"label": "석식", "lo": 1050, "hi": 1110}
+    assert describe(W[2]) == {"label": "석식", "lo": 1020, "hi": 1110}
     assert describe(None) is None
 
 
@@ -69,4 +69,4 @@ def test_status_feed_판정():
     assert feed(lunch, "ok", source="mock")["live"] is False             # 스테이징 mock 은 창 안이어도 더미
     f = feed(night, "ok", source="vision")
     assert f["live"] is False and f["now"] is None
-    assert f["next"]["label"] == "3학년 점심" and f["next"]["days"] == 1 and f["next"]["lo"] == 690
+    assert f["next"]["label"] == "3학년 점심" and f["next"]["days"] == 1 and f["next"]["lo"] == 680

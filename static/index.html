@@ -185,11 +185,16 @@
     </section>
   </section>
 
-  <!-- ④ 오늘급식 — 중식(메뉴·알레르기·영양) + 아래 절 탄소 -->
+  <!-- ④ 오늘급식 — 중식·석식 2열(09-11) + 알레르기 요약 + 영양(중식 기준) + 아래 절 탄소 -->
   <section class="view" id="today" role="tabpanel" aria-label="오늘급식">
     <section class="card" id="mealcard">
-      <div class="eyebrow">오늘 중식</div>
-      <ul class="menu" id="menu"></ul>
+      <div class="eyebrow">오늘 급식</div>
+      <div class="meals">
+        <div class="meal" id="lunchcol"><div class="mlabel">중식 <span id="lunchkcal"></span></div><ul class="menu" id="menu"></ul></div>
+        <div class="meal" id="dinnercol"><div class="mlabel">석식 <span id="dinnerkcal"></span></div><ul class="menu" id="dinnermenu"></ul></div>
+      </div>
+      <!-- 알레르기 요약 — 내 알레르기가 오늘 메뉴에 있으면 멜론 띠로 먼저 말하고, 칩은 내 것을 앞에(09-11) -->
+      <div class="awarn" id="awarn" hidden></div>
       <div class="chips" id="allergens"></div>
       <details id="allergybox" hidden>
         <summary class="note" style="margin-top:8px">내 알레르기 <b id="mysummary" style="color:var(--melon-ink)">없음</b> ·
@@ -202,6 +207,7 @@
         <div><em>02</em><b id="ratio">—</b><span>탄·단·지 비율</span></div>
         <div><em>03</em><b id="mar">—</b><span>미량영양소</span><span class="flag" id="marflag"></span></div>
       </div>
+      <div class="note" style="margin-top:6px">영양 지표는 중식 기준</div>
       <div class="eyebrow" id="microlab" style="margin-top:18px" hidden>영양소별 · 권장섭취량 대비</div>
       <div class="micro" id="micro"></div>
       <div class="carbon" id="carbonsec" hidden>

@@ -86,7 +86,17 @@
 .plan[data-state="no_data"] .empty { display: block; }
 
 /* ④ 메뉴 — 한 줄 리스트. 알레르기 번호가 붙으므로 2열 격자로는 좁다 */
-.menu { list-style: none; margin: 10px 0 0; padding: 0; }
+/* 오늘급식 2열(09-11): 모바일은 세로로 쌓이고 데스크톱(≥900)은 나란히. 열 머리는 '중식 · 1,024 kcal' 처럼 라벨 + kcal */
+.meals { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 10px; }
+.meal .mlabel { font-size: 11.5px; font-weight: 700; letter-spacing: .08em; color: var(--ink3); padding: 6px 8px 0; }
+.meal .mlabel span { font-weight: 600; letter-spacing: 0; color: var(--ink2); margin-left: 6px; }
+.meal.off .mlabel { color: var(--off); }
+.menu li.none { color: var(--ink3); font-size: 13px; }
+.menu li.none::before { border-style: dashed; }
+/* 알레르기 경고 띠 — 내 알레르기가 오늘 메뉴에 있을 때만. 칩 목록보다 먼저, 한 문장으로 */
+.awarn { margin-top: 12px; padding: 9px 12px; border-radius: 12px; background: var(--melon-tint); color: var(--melon-ink); font-size: 12.5px; line-height: 1.45; }
+.awarn b { font-weight: 800; }
+.menu { list-style: none; margin: 6px 0 0; padding: 0; }
 .menu li { display: flex; align-items: center; gap: 9px; padding: 6px 8px; font-size: 14px; color: #4A4740; }
 .menu li::before { content: ""; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--off); flex: none; }
 .menu li.main { font-size: 16px; font-weight: 700; color: var(--ink); letter-spacing: -.01em; }
@@ -155,7 +165,12 @@ details > summary::-webkit-details-marker { display: none; }
 .week .m { font-size: 10.5px; font-weight: 500; color: var(--ink); line-height: 1.35;
            word-break: keep-all; overflow-wrap: anywhere; min-width: 0; max-width: 100%;
            display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.week .k { font-size: 9.5px; color: #4A4740; margin-top: auto; padding-top: 4px; line-height: 1.35; }
+.week .k { font-size: 9.5px; color: #4A4740; padding-top: 2px; line-height: 1.35; }
+/* 중식·석식 두 행(09-11) — 행마다 작은 라벨(중식/석식) + 대표 메뉴 + 나머지 수. 행 사이는 옅은 선으로만 가른다(칩 색은 요일이 정한다) */
+.week .row { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; padding-top: 5px; }
+.week .row + .row { border-top: 1px solid rgba(51,49,45,.12); margin-top: 4px; }
+.week .row i { font-style: normal; font-size: 8.5px; font-weight: 700; letter-spacing: .08em; color: rgba(51,49,45,.55); }
+.week .row.off .m { color: rgba(51,49,45,.42); font-weight: 500; }
 /* 요일 5색 — 월은 브랜드 아쿠아, 화는 에그셸 계열을 그대로 쓰고 나머지 셋을 최대한 벌렸다.
    전체쌍 정상시야 최악 ΔE 10.7 · 본문 대비는 어디서나 7.2:1 이상.
    색맹에서는 갈리지 않는 쌍이 있으므로 칩마다 요일 글자와 날짜를 반드시 함께 둔다 */
@@ -246,6 +261,7 @@ details > summary::-webkit-details-marker { display: none; }
   #topcard { grid-column: 7 / 13; grid-row: 2; }
   /* 오늘급식 · 이슈피드 — 카드 하나, 가운데 */
   #mealcard, #newscard { grid-column: 3 / 11; grid-row: 1; }
+  .meals { grid-template-columns: 1fr 1fr; gap: 22px; }
   .big b { font-size: 120px; } .big i { font-size: 28px; }
   .trend { padding-top: 28px; padding-bottom: 30px; }
   #chart { height: 152px; }

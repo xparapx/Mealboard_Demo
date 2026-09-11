@@ -85,6 +85,20 @@ def write(doc, user, template=None, local=None, now=None):
     return doc, bak
 
 
+def reset(local=None, now=None):
+    """템플릿으로 초기화(09-11 사용자 요청) — local 을 지우지 않고 `.bak-<시각>` 으로 옮긴다(되돌리기 가능, KEEP_BAK 규칙 동일).
+    → 백업 파일명 또는 None(local 이 없었음). 읽는 쪽(vision·API)은 다음 읽기부터 템플릿만 본다"""
+    local = local or LOCAL
+    if not local.is_file():
+        return None
+    now = now or dt.datetime.now()
+    bak = f"{local.name}.bak-{now.strftime('%Y%m%d-%H%M%S')}"
+    _replace(local, local.with_name(bak))
+    for old in backups(local)[KEEP_BAK:]:
+        local.with_name(old).unlink(missing_ok=True)
+    return bak
+
+
 def _pair_ok(p):
     return (isinstance(p, dict) and set(p) == {"img", "floor"}
             and all(isinstance(p[k], list) and len(p[k]) == 2

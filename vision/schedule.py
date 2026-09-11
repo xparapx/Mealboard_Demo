@@ -11,7 +11,7 @@ from collections import namedtuple
 
 MealWindow = namedtuple("MealWindow", "lo hi label")     # [lo, hi) 분, 라벨
 DAY_MIN = 24 * 60
-DEFAULT_TEXT = "11:30-12:30 3학년 점심;12:30-13:30 1·2학년 점심;17:30-18:30 석식"
+DEFAULT_TEXT = "11:20-12:30 3학년 점심;12:30-13:30 1·2학년 점심;17:00-18:30 석식"   # 09-11: 시작 앞당김(중식 11:20·석식 17:00)
 
 
 def _hhmm(text):
