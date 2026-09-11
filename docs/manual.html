@@ -1275,7 +1275,7 @@ systemctl status mealboard-api --no-pager</code></pre>
         &lt;div class=&quot;heatlegend&quot;&gt;&lt;span&gt;짧음&lt;/span&gt;&lt;i&gt;&lt;/i&gt;&lt;span&gt;긺&lt;/span&gt;&lt;em&gt;&lt;/em&gt;&lt;span id=&quot;heatgolden&quot;&gt;3분 이하 · 황금&lt;/span&gt;&lt;/div&gt;
         &lt;div class=&quot;note foot&quot; id=&quot;heatfoot&quot;&gt;&lt;/div&gt;
       &lt;/div&gt;
-      &lt;div class=&quot;empty&quot; id=&quot;heatempty&quot;&gt;집계가 아직 없습니다&lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;heatempty&quot;&gt;일정 기간 데이터 수집 후 반영됩니다&lt;/div&gt;
     &lt;/section&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;goldencard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;황금 구간 · 오늘&lt;/div&gt;
@@ -1284,7 +1284,7 @@ systemctl status mealboard-api --no-pager</code></pre>
         &lt;div class=&quot;chips2&quot; id=&quot;goldenchips&quot;&gt;&lt;/div&gt;
         &lt;div class=&quot;note foot&quot;&gt;ok · 대기 3분 이하 · 배식 속도 0.5명/분 이상이 5분 넘게 이어진 구간&lt;/div&gt;
       &lt;/div&gt;
-      &lt;div class=&quot;empty&quot; id=&quot;goldenempty&quot;&gt;오늘은 아직 황금 구간이 없습니다&lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;goldenempty&quot;&gt;급식 시간 데이터가 쌓이면 반영됩니다&lt;/div&gt;
     &lt;/section&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;forecastcard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot; id=&quot;forecasteyebrow&quot;&gt;예보&lt;/div&gt;
@@ -1293,13 +1293,13 @@ systemctl status mealboard-api --no-pager</code></pre>
         &lt;div class=&quot;chips2&quot; id=&quot;forecastchips&quot;&gt;&lt;/div&gt;
         &lt;div class=&quot;note foot&quot; id=&quot;forecastfoot&quot;&gt;&lt;/div&gt;
       &lt;/div&gt;
-      &lt;div class=&quot;empty&quot; id=&quot;forecastempty&quot;&gt;예보를 만들 집계가 아직 모자랍니다&lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;forecastempty&quot;&gt;일정 기간 데이터 수집 후 반영됩니다&lt;/div&gt;
     &lt;/section&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;bottlecard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;병목 로그 · 오늘&lt;/div&gt;
       &lt;div class=&quot;body&quot;&gt;&lt;ul class=&quot;log&quot; id=&quot;bottlelist&quot;&gt;&lt;/ul&gt;
         &lt;div class=&quot;note foot&quot;&gt;줄이 5명 이상인데 배식이 멈췄거나 평소의 절반 아래로 느려진 구간(2분 이상)&lt;/div&gt;&lt;/div&gt;
-      &lt;div class=&quot;empty&quot; id=&quot;bottleempty&quot;&gt;오늘 병목이 없습니다&lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;bottleempty&quot;&gt;급식 시간 데이터가 쌓이면 반영됩니다&lt;/div&gt;
     &lt;/section&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;qualitycard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;측정 품질 · 오늘&lt;/div&gt;
@@ -1307,7 +1307,7 @@ systemctl status mealboard-api --no-pager</code></pre>
         &lt;div class=&quot;well&quot; id=&quot;qualitywell&quot;&gt;&lt;/div&gt;
         &lt;div class=&quot;note foot&quot; id=&quot;qualityfoot&quot;&gt;&lt;/div&gt;
       &lt;/div&gt;
-      &lt;div class=&quot;empty&quot; id=&quot;qualityempty&quot;&gt;오늘 표본이 아직 없습니다&lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;qualityempty&quot;&gt;급식 시간 데이터가 쌓이면 반영됩니다&lt;/div&gt;
     &lt;/section&gt;
   &lt;/section&gt;
 
@@ -1469,7 +1469,7 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v25&quot;;   // 09-11: 주간식단 요일 칩 분리, 영양 기준 각주
+const CACHE = &quot;mealboard-v26&quot;;   // 09-11: 인사이트 빈 상태 문구(수집 후 반영)
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
@@ -4142,7 +4142,7 @@ def day(date: dt.date | None = Query(None)):
     events, bins = s.pop(&quot;events&quot;), s.pop(&quot;bins&quot;)
     menu = s.pop(&quot;menu&quot;)
     if basis == &quot;live&quot; and not s[&quot;n_samples&quot;]:
-        return _no(&quot;최근 표본이 없다&quot;, basis=&quot;live&quot;, date=date, summary=s, menu=menu, events=events, bins=bins)
+        return _no(&quot;급식 시간 데이터가 쌓이면 반영됩니다&quot;, basis=&quot;live&quot;, date=date, summary=s, menu=menu, events=events, bins=bins)
     return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: basis, &quot;date&quot;: date, &quot;summary&quot;: s, &quot;menu&quot;: menu,
             &quot;golden&quot;: [e for e in events if e[&quot;kind&quot;] == &quot;golden&quot;],
             &quot;bottlenecks&quot;: [e for e in events if e[&quot;kind&quot;] == &quot;bottleneck&quot;], &quot;events&quot;: events, &quot;bins&quot;: bins}
@@ -4239,7 +4239,7 @@ def quality(date: dt.date | None = Query(None)):
            &quot;gaps&quot;: [{&quot;start_ts&quot;: e[&quot;start_ts&quot;], &quot;end_ts&quot;: e[&quot;end_ts&quot;], &quot;minutes&quot;: e[&quot;minutes&quot;]} for e in s[&quot;events&quot;] if e[&quot;kind&quot;] == &quot;stale&quot;],
            &quot;rollup&quot;: rollup}
     if not s[&quot;n_samples&quot;]:
-        out[&quot;reason&quot;] = &quot;최근 표본이 없다&quot;
+        out[&quot;reason&quot;] = &quot;급식 시간 데이터가 쌓이면 반영됩니다&quot;
     return out
 
 
@@ -4926,7 +4926,7 @@ export const why = r =&gt; !r || /reports\.db/.test(r) ? null : /insights\.db/.t
 const DESK_MQ = matchMedia(&quot;(min-width: 900px)&quot;);
 export const desktop = () =&gt; DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = &quot;v25&quot;;                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = &quot;v26&quot;;                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {

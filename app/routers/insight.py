@@ -142,7 +142,7 @@ def day(date: dt.date | None = Query(None)):
     events, bins = s.pop("events"), s.pop("bins")
     menu = s.pop("menu")
     if basis == "live" and not s["n_samples"]:
-        return _no("최근 표본이 없다", basis="live", date=date, summary=s, menu=menu, events=events, bins=bins)
+        return _no("급식 시간 데이터가 쌓이면 반영됩니다", basis="live", date=date, summary=s, menu=menu, events=events, bins=bins)
     return {"state": "ok", "basis": basis, "date": date, "summary": s, "menu": menu,
             "golden": [e for e in events if e["kind"] == "golden"],
             "bottlenecks": [e for e in events if e["kind"] == "bottleneck"], "events": events, "bins": bins}
@@ -239,7 +239,7 @@ def quality(date: dt.date | None = Query(None)):
            "gaps": [{"start_ts": e["start_ts"], "end_ts": e["end_ts"], "minutes": e["minutes"]} for e in s["events"] if e["kind"] == "stale"],
            "rollup": rollup}
     if not s["n_samples"]:
-        out["reason"] = "최근 표본이 없다"
+        out["reason"] = "급식 시간 데이터가 쌓이면 반영됩니다"
     return out
 
 
