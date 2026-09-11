@@ -35,6 +35,8 @@ FEED_SOURCE = _choice("FEED_SOURCE", "vision", ("mock", "vision"))    # 집계 �
 ADMIN_PORT = int(os.getenv("ADMIN_PORT", "8101"))
 ADMIN_USERS = os.getenv("ADMIN_USERS", "")            # Tailscale 로그인, 쉼표 구분 — app/admin/auth.parse_users 가 정리
 ADMIN_LOCAL_KEY = os.getenv("ADMIN_LOCAL_KEY", "")    # SSH 터널(127.0.0.1) 경로용. 생성: openssl rand -hex 16
+CF_ACCESS_TEAM = os.getenv("CF_ACCESS_TEAM", "")      # Cloudflare Zero Trust 팀 도메인(예: mealboard.cloudflareaccess.com) — admin.kjhs-meal.com 경로(09-11). 비면 닫힘
+CF_ACCESS_AUD = os.getenv("CF_ACCESS_AUD", "")        # 그 Access 애플리케이션의 Audience(AUD) 태그. 비면 닫힘
 DEBUG_PORT = int(os.getenv("DEBUG_PORT", "8102"))     # vision 디버그 MJPEG (127.0.0.1 전용, 관리 앱이 중계)
 # 카메라 카운팅 노드 (vision/counter.py, 로드맵 ④). 홈 Pi 에서는 picamera 금지(Plant 카메라와 배타) — webcam:N | file:경로 만
 VIDEO_SOURCE = os.getenv("VIDEO_SOURCE", "picamera")   # picamera | webcam:0 | file:경로

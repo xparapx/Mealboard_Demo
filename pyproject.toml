@@ -7,6 +7,7 @@ dependencies = [
     "fastapi",
     "uvicorn[standard]",
     "python-dotenv",
+    "pyjwt[crypto]>=2.13.0",
 ]
 
 [dependency-groups]

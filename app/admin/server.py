@@ -1,6 +1,8 @@
 """관리 앱 — 별도 프로세스(ADMIN_PORT 8101, 127.0.0.1). 공개 라우터도 그대로 싣는다(관리자는 같은 대시보드 + 관리 화면을 본다).
 밖으로는 `tailscale serve --https=8443 http://127.0.0.1:8101` 로만 — tailnet 안에서만 닿고, Tailscale 이 요청마다 붙이는
 Tailscale-User-Login 헤더를 허용목록과 대조한다. SSH 터널 경로는 로컬 키. Funnel 헤더가 보이면 무조건 거부 (PLAN §4.1, fail-closed).
+09-11 부터 세 번째 경로: Cloudflare Tunnel 의 `admin.kjhs-meal.com` → 127.0.0.1:8101, 앞단은 Cloudflare Access(이메일 일회용 코드).
+Cloudflare 를 거쳐 온 요청(cf-ray 또는 Access JWT 헤더)은 app/admin/access.py 의 JWT 검증만 신원으로 친다 — 그 경로의 Tailscale 헤더·로컬 키는 무시.
 
 실행: uv run uvicorn app.admin.server:app --host 127.0.0.1 --port 8101
 """
@@ -12,10 +14,11 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from ..config import ADMIN_LOCAL_KEY, ADMIN_PORT, ADMIN_USERS, BASE
+from ..config import ADMIN_LOCAL_KEY, ADMIN_PORT, ADMIN_USERS, BASE, CF_ACCESS_AUD, CF_ACCESS_TEAM
 from ..main import REVALIDATE, REVALIDATE_PREFIX
 from ..routers import history, insight, meal, news, positions, status, typical
 from . import audit, sysctl, watchdog
+from .access import HEADER as ACCESS_HEADER, AccessVerifier
 from .auth import COOKIE, identify, parse_users
 from .routers import stream as stream_router
 from .routers import system
@@ -24,6 +27,7 @@ from .stream import StreamState
 
 mimetypes.add_type("text/javascript", ".js")
 USERS = parse_users(ADMIN_USERS)
+ACCESS = AccessVerifier(CF_ACCESS_TEAM, CF_ACCESS_AUD)
 GATED = ("/api/admin/", "/admin-ui/")
 WATCH_EVERY = 60
 
@@ -73,7 +77,10 @@ def create_app():
         gated = path.startswith(GATED)
         ident = None
         if gated or (path == "/" and "key" in request.query_params):
-            ident, why = identify(request.headers, request.cookies, request.query_params, USERS, ADMIN_LOCAL_KEY, request.app.state.lockdown)
+            access = None
+            if "cf-ray" in request.headers or ACCESS_HEADER in request.headers:      # Cloudflare 를 거쳐 왔다 — Access 검증만(JWKS 수신은 스레드로)
+                access = await asyncio.to_thread(ACCESS.check, request.headers.get(ACCESS_HEADER))
+            ident, why = identify(request.headers, request.cookies, request.query_params, USERS, ADMIN_LOCAL_KEY, request.app.state.lockdown, access)
         if gated:
             if ident is None:
                 return JSONResponse({"state": "forbidden", "reason": why}, status_code=403)

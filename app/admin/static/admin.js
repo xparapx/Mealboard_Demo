@@ -146,7 +146,7 @@ async function loadServices() {
   const [w, s] = await Promise.all([api("/whoami"), api("/services")]);
   const locked = w.ok ? w.j.lockdown : w.j?.reason === "lockdown";     // lockdown 이면 whoami 자체가 403 — 그 본문의 reason 으로 안다
   $("#adminlock").hidden = !locked;
-  if (w.ok) $("#adminwho").textContent = `${w.j.user} · ${w.j.via === "tailscale" ? "tailnet" : "SSH 터널"}`;
+  if (w.ok) $("#adminwho").textContent = `${w.j.user} · ${{ tailscale: "tailnet", access: "Cloudflare Access" }[w.j.via] || "SSH 터널"}`;
   else $("#adminwho").textContent = locked ? "잠김" : "—";
   if (locked && ST.mode !== "off") setMode("off", { keepFlag: true });
   if (!s.ok) { $("#adminfoot").textContent = `상태를 읽지 못했습니다 (${s.status})`; return; }

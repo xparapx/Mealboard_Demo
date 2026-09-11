@@ -49,5 +49,21 @@ def test_틀린_키와_빈_키():
     assert identify({}, {}, {}, USERS, KEY) == (None, "bad_key")
 
 
+def test_cloudflare_경로는_access_결과만_본다():
+    # 통과: 검증된 이메일이 목록에 있음
+    ident, why = identify({"cf-ray": "x"}, {}, {}, USERS, KEY, access=("ok", "teacher@example.com"))
+    assert ident == {"user": "teacher@example.com", "via": "access"} and why == "ok"
+    # 위조 Tailscale 헤더·로컬 키가 같이 와도 Access 결과가 없으면 거부 (터널로 들어온 외부 트래픽)
+    for acc in (("no_token", None), ("bad_token", None), ("closed", None)):
+        ident, why = identify({"cf-ray": "x", "Tailscale-User-Login": "teacher@example.com"}, {"mb_admin": KEY}, {"key": KEY}, USERS, KEY, access=acc)
+        assert ident is None and why == acc[0]
+    # 검증됐지만 목록 밖
+    assert identify({}, {}, {}, USERS, KEY, access=("ok", "stranger@example.com")) == (None, "not_allowed")
+    assert identify({}, {}, {}, set(), KEY, access=("ok", "teacher@example.com")) == (None, "closed")
+    # Funnel·lockdown 은 Access 보다 앞선다
+    assert identify({"Tailscale-Funnel-Request": "?1"}, {}, {}, USERS, KEY, access=("ok", "teacher@example.com"))[1] == "funnel"
+    assert identify({}, {}, {}, USERS, KEY, lockdown=True, access=("ok", "teacher@example.com"))[1] == "lockdown"
+
+
 def test_아무것도_없으면_거부():
     assert identify({}, {}, {}, set(), "")[0] is None

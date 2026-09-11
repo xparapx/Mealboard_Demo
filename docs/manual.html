@@ -251,6 +251,7 @@ dependencies = [
     &quot;fastapi&quot;,
     &quot;uvicorn[standard]&quot;,
     &quot;python-dotenv&quot;,
+    &quot;pyjwt[crypto]&gt;=2.13.0&quot;,
 ]
 
 [dependency-groups]
@@ -331,7 +332,11 @@ GUARDIAN_API_KEY=
 
 # 공개 터널 — Cloudflare Tunnel(원격 관리형). Zero Trust → Networks → Tunnels → 터널 만들기 → 토큰. 비어 있으면 mealboard-cloudflared 유닛을 켜지 않는다.
 # 학교 망이 Tailscale 도쿄 릴레이를 막아 Funnel 이 끊긴 뒤(2026-09-03) 정식 공개 경로. 포트 7844 가 열려 있어야 한다(학교 망 확인 완료)
-CF_TUNNEL_TOKEN=</code></pre>
+CF_TUNNEL_TOKEN=
+# 관리 앱 외부 접속(09-11) — 터널 경로 admin.kjhs-meal.com → HTTP 127.0.0.1:8101 앞에 Cloudflare Access(이메일 일회용 코드)를 세운다.
+# TEAM = Zero Trust 팀 도메인(예: mealboard.cloudflareaccess.com), AUD = 그 Access 애플리케이션의 Audience 태그. 둘 중 하나라도 비면 그 경로는 닫힌다
+CF_ACCESS_TEAM=
+CF_ACCESS_AUD=</code></pre>
 </figure>
 <figure class="code">
 <figcaption><span class="path">.gitattributes</span><span class="lang">text</span><button class="copy" type="button">복사</button></figcaption>
@@ -678,6 +683,8 @@ FEED_SOURCE = _choice(&quot;FEED_SOURCE&quot;, &quot;vision&quot;, (&quot;mock&q
 ADMIN_PORT = int(os.getenv(&quot;ADMIN_PORT&quot;, &quot;8101&quot;))
 ADMIN_USERS = os.getenv(&quot;ADMIN_USERS&quot;, &quot;&quot;)            # Tailscale 로그인, 쉼표 구분 — app/admin/auth.parse_users 가 정리
 ADMIN_LOCAL_KEY = os.getenv(&quot;ADMIN_LOCAL_KEY&quot;, &quot;&quot;)    # SSH 터널(127.0.0.1) 경로용. 생성: openssl rand -hex 16
+CF_ACCESS_TEAM = os.getenv(&quot;CF_ACCESS_TEAM&quot;, &quot;&quot;)      # Cloudflare Zero Trust 팀 도메인(예: mealboard.cloudflareaccess.com) — admin.kjhs-meal.com 경로(09-11). 비면 닫힘
+CF_ACCESS_AUD = os.getenv(&quot;CF_ACCESS_AUD&quot;, &quot;&quot;)        # 그 Access 애플리케이션의 Audience(AUD) 태그. 비면 닫힘
 DEBUG_PORT = int(os.getenv(&quot;DEBUG_PORT&quot;, &quot;8102&quot;))     # vision 디버그 MJPEG (127.0.0.1 전용, 관리 앱이 중계)
 # 카메라 카운팅 노드 (vision/counter.py, 로드맵 ④). 홈 Pi 에서는 picamera 금지(Plant 카메라와 배타) — webcam:N | file:경로 만
 VIDEO_SOURCE = os.getenv(&quot;VIDEO_SOURCE&quot;, &quot;picamera&quot;)   # picamera | webcam:0 | file:경로
@@ -1769,6 +1776,81 @@ journalctl -u mealboard-cloudflared -n 20 --no-pager | grep -c &#39;Registered t
 qrencode -o /opt/mealboard/static/icons/qr.png -s 8 &quot;https://kjhs-meal.com&quot;
 # 이 png 를 급식실 입구에 붙인다(화면에서는 /icons/qr.png). 주소가 바뀌면 다시 만든다 — git 미추적이 맞다</code></pre>
 </figure>
+
+<h3>9-5. 관리 앱을 밖에서 — <code>admin.kjhs-meal.com</code> + Cloudflare Access (09-11)</h3>
+<p>관리 앱(8101)은 원래 tailnet 전용(<code>tailscale serve</code> 8443)이었지만, 학교 망이 Tailscale 컨트롤플레인과 DERP 릴레이를 막아 <strong>급식실 밖에서는 열리지 않는 날</strong>이 생겼습니다(09-11 실증). 그래서 같은 Cloudflare 터널에 관리용 경로를 하나 더 두되, 그 앞에 <strong>Cloudflare Access</strong> 를 세웁니다.</p>
+<p><strong>Cloudflare Access 란</strong> — Cloudflare 가 주소 앞에서 먼저 로그인을 요구하는 문지기입니다. 여기서는 "이메일로 온 일회용 코드(One-time PIN)" 로그인만 쓰고, 통과한 사람의 요청에만 Cloudflare 가 서명한 신분증(<code>Cf-Access-Jwt-Assertion</code> 헤더, JWT)을 붙여 Pi 로 넘깁니다. 관리 앱은 그 서명을 Cloudflare 공개키로 검증한 뒤 이메일이 <code>ADMIN_USERS</code> 에 있을 때만 관리자로 봅니다(<code>app/admin/access.py</code>). 서명이 없거나 틀리면 403 이고, <strong>Cloudflare 를 거쳐 온 요청에서는 Tailscale 헤더와 로컬 키를 아예 보지 않습니다</strong> — 터널이 외부 트래픽을 8101 로 넘기는 순간부터 위조 헤더가 실제 위협이 되기 때문입니다.</p>
+<p><strong>대시보드 순서(사람이 한다).</strong></p>
+<ol>
+<li>Zero Trust → <b>Access → Applications → Add an application → Self-hosted</b>. 이름 <code>Mealboard admin</code>, Application domain <code>admin.kjhs-meal.com</code>, Session duration 24h.
+    Policy: 이름 <code>admins</code>, Action <b>Allow</b>, Include → <b>Emails</b> 에 관리자 이메일(<code>ADMIN_USERS</code> 와 같은 주소). Login methods 는 <b>One-time PIN</b> 만 켠다.
+    저장 뒤 애플리케이션 상세의 <b>Application Audience (AUD) Tag</b>(64자 hex)를 복사한다.</li>
+<li>Zero Trust → <b>Settings → Custom Pages</b>(또는 Authentication) 의 <b>Team domain</b>(<code>xxxx.cloudflareaccess.com</code>)을 적어 둔다.</li>
+<li>Zero Trust → <b>Networks → Tunnels → mealboard → 경로 추가(게시된 애플리케이션)</b>: 하위 도메인 <code>admin</code>, 도메인 <code>kjhs-meal.com</code>, 유형 <b>HTTP</b>, URL <code>127.0.0.1:8101</code>. (HTTPS 로 저장하면 502 — STEP 9-3 과 같은 함정)</li>
+<li>Pi <code>.env</code> 에 두 줄을 넣고 관리 앱을 재시작한다. 둘 중 하나라도 비어 있으면 이 경로는 닫힌 채다.</li>
+</ol>
+<figure class="code">
+<figcaption><span class="path">터미널 (Pi, SSH)</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-bash">cd /opt/mealboard &amp;&amp; git pull &amp;&amp; uv sync            # pyjwt[crypto] 가 새 의존성
+printf 'CF_ACCESS_TEAM=%s\nCF_ACCESS_AUD=%s\n' 'xxxx.cloudflareaccess.com' '&lt;AUD 태그 64자&gt;' &gt;&gt; .env    # 값 뒤 주석 금지
+sudo systemctl restart mealboard-admin
+# 검증 ① 신분증 없이 터널 흉내(cf-ray 만) → 403 no_token. ② Access 미설정이면 403 closed
+curl -s -H 'cf-ray: test' -H 'Tailscale-User-Login: me@example.com' http://127.0.0.1:8101/api/admin/whoami   # 위조 헤더가 있어도 거부
+# 검증 ③ 휴대폰 데이터로 https://admin.kjhs-meal.com → Cloudflare 로그인 화면 → 이메일 코드 → 관리 화면, 우상단 '이메일 · Cloudflare Access'</code></pre>
+</figure>
+<figure class="code">
+<figcaption><span class="path">app/admin/access.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
+<pre><code class="lang-python">&quot;&quot;&quot;Cloudflare Access 신원 검증 — `admin.kjhs-meal.com` 경로(09-11 사용자 결정).
+
+Cloudflare 는 Access 로그인(이메일 일회용 코드)을 통과한 요청에만 `Cf-Access-Jwt-Assertion` 헤더(RS256 JWT)를 붙여 터널로 넘긴다.
+여기서는 그 JWT 를 팀 도메인의 공개키(JWKS, https://&lt;team&gt;/cdn-cgi/access/certs)로 서명·aud·iss·만료를 검증하고 `email` 만 돌려준다.
+설정(`.env CF_ACCESS_TEAM`·`CF_ACCESS_AUD`)이 비어 있으면 이 경로는 닫힌다(fail-closed). 검증에 실패한 토큰은 어떤 다른 신원으로도 물러서지 않는다.
+
+Cloudflare 를 거쳐 온 요청은 게이트(server.py)가 `cf-ray` 헤더 또는 이 JWT 헤더로 알아본다 — 그 요청에서는 Tailscale 헤더·로컬 키를 보지 않는다.
+터널이 8101 로 외부 트래픽을 넘기는 순간부터 위조 `Tailscale-User-Login` 이 실제 위협이 되기 때문이다(PLAN §7 loopback 헤더 위조).&quot;&quot;&quot;
+import jwt
+
+HEADER = &quot;cf-access-jwt-assertion&quot;
+JWKS_LIFESPAN = 3600      # 공개키 캐시(초). Cloudflare 는 키를 드물게 돌린다 — kid 가 없으면 PyJWKClient 가 다시 받는다
+
+
+def team_url(team):
+    &quot;&quot;&quot;'mealboard.cloudflareaccess.com' | 'https://mealboard.cloudflareaccess.com/' → 'https://mealboard.cloudflareaccess.com'&quot;&quot;&quot;
+    t = (team or &quot;&quot;).strip().rstrip(&quot;/&quot;)
+    if not t:
+        return &quot;&quot;
+    return t if t.startswith(&quot;https://&quot;) else &quot;https://&quot; + t
+
+
+class AccessVerifier:
+    &quot;&quot;&quot;check(token) → (status, email). status: 'ok' | 'closed'(미설정) | 'no_token' | 'bad_token'. 순수하게 쓰려면 jwks 에 대역을 넣는다&quot;&quot;&quot;
+
+    def __init__(self, team, aud, jwks=None):
+        self.issuer = team_url(team)
+        self.aud = (aud or &quot;&quot;).strip()
+        self.jwks = jwks
+        if self.enabled and self.jwks is None:
+            self.jwks = jwt.PyJWKClient(self.issuer + &quot;/cdn-cgi/access/certs&quot;, cache_keys=True, lifespan=JWKS_LIFESPAN)
+
+    @property
+    def enabled(self):
+        return bool(self.issuer and self.aud)
+
+    def check(self, token):
+        if not self.enabled:
+            return &quot;closed&quot;, None
+        if not token:
+            return &quot;no_token&quot;, None
+        try:
+            key = self.jwks.get_signing_key_from_jwt(token).key
+            claims = jwt.decode(token, key, algorithms=[&quot;RS256&quot;], audience=self.aud, issuer=self.issuer,
+                                options={&quot;require&quot;: [&quot;exp&quot;, &quot;iat&quot;, &quot;aud&quot;, &quot;iss&quot;]})
+        except (jwt.PyJWTError, ValueError, OSError):        # 서명·aud·iss·만료·형식·JWKS 수신 실패 — 전부 같은 거부
+            return &quot;bad_token&quot;, None
+        email = str(claims.get(&quot;email&quot;) or &quot;&quot;).strip().lower()
+        return (&quot;ok&quot;, email) if email else (&quot;bad_token&quot;, None)</code></pre>
+</figure>
+<p>공개 주소 <code>kjhs-meal.com</code> 은 그대로 8100 만 가리킵니다 — 관리 앱을 Access 없이 공개 호스트에 매핑하는 일은 여전히 금지입니다. Tailscale serve 8443 과 SSH 터널 경로는 그대로 남습니다(급식실 LAN 안, 또는 Tailscale 이 붙는 날).</p>
 
 <h3>확인</h3>
 <ul>
@@ -5301,6 +5383,9 @@ curl -s -o /dev/null -w '%{http_code} %header{cache-control}\n' localhost:8100/j
 순서:
   ① `Tailscale-Funnel-Request` 헤더가 있으면 거부 — 공개 Funnel 을 통해 들어온 요청은 누구든 관리자가 아니다
   ② lockdown(워치독이 &quot;관리 포트가 Funnel 에 물렸다&quot;고 판단한 상태)이면 거부
+  ②' Cloudflare 를 거쳐 온 요청(access 인자가 None 이 아님 — 게이트가 cf-ray·Access JWT 헤더로 판별)은 **Access 검증 결과만** 본다:
+     ('ok', email) 이고 email 이 허용목록에 있으면 via=access, 그 밖(미설정·토큰 없음·검증 실패·목록 밖)은 거부. 이 경로에서는 Tailscale 헤더·로컬 키를 보지 않는다 —
+     터널이 8101 로 외부 트래픽을 넘기므로 위조 헤더가 실제 위협(09-11, PLAN §7 loopback 헤더 위조)
   ③ `Tailscale-User-Login` 이 허용목록(ADMIN_USERS, 소문자 비교)에 있으면 via=tailscale. 목록이 비어 있으면 닫힘
   ④ Tailscale 헤더가 없으면 쿠키 `mb_admin` 또는 `?key=` 가 ADMIN_LOCAL_KEY 와 상수시간 일치할 때 via=local (SSH 터널 경로).
      키가 비어 있으면 닫힘. loopback 판정은 하지 않는다 — Serve 도 터널도 모두 127.0.0.1 로 들어온다
@@ -5327,12 +5412,20 @@ def _get(mapping, key):
     return None
 
 
-def identify(headers, cookies, query, users, local_key, lockdown=False):
-    &quot;&quot;&quot;→ (identity | None, reason). identity = {'user': str, 'via': 'tailscale' | 'local'}&quot;&quot;&quot;
+def identify(headers, cookies, query, users, local_key, lockdown=False, access=None):
+    &quot;&quot;&quot;→ (identity | None, reason). identity = {'user': str, 'via': 'tailscale' | 'access' | 'local'}.
+    access: None(Cloudflare 경로가 아님) 또는 app/admin/access.AccessVerifier.check 의 (status, email)&quot;&quot;&quot;
     if _get(headers, &quot;Tailscale-Funnel-Request&quot;) is not None:
         return None, &quot;funnel&quot;
     if lockdown:
         return None, &quot;lockdown&quot;
+    if access is not None:
+        status, email = access
+        if status != &quot;ok&quot;:
+            return None, status                                   # closed | no_token | bad_token
+        if email and email in (users or set()):
+            return {&quot;user&quot;: email, &quot;via&quot;: &quot;access&quot;}, &quot;ok&quot;
+        return None, &quot;not_allowed&quot; if users else &quot;closed&quot;
     login = _get(headers, &quot;Tailscale-User-Login&quot;)
     if login is not None:
         login = login.strip().lower()
@@ -5349,6 +5442,8 @@ def identify(headers, cookies, query, users, local_key, lockdown=False):
 <pre><code class="lang-python">&quot;&quot;&quot;관리 앱 — 별도 프로세스(ADMIN_PORT 8101, 127.0.0.1). 공개 라우터도 그대로 싣는다(관리자는 같은 대시보드 + 관리 화면을 본다).
 밖으로는 `tailscale serve --https=8443 http://127.0.0.1:8101` 로만 — tailnet 안에서만 닿고, Tailscale 이 요청마다 붙이는
 Tailscale-User-Login 헤더를 허용목록과 대조한다. SSH 터널 경로는 로컬 키. Funnel 헤더가 보이면 무조건 거부 (PLAN §4.1, fail-closed).
+09-11 부터 세 번째 경로: Cloudflare Tunnel 의 `admin.kjhs-meal.com` → 127.0.0.1:8101, 앞단은 Cloudflare Access(이메일 일회용 코드).
+Cloudflare 를 거쳐 온 요청(cf-ray 또는 Access JWT 헤더)은 app/admin/access.py 의 JWT 검증만 신원으로 친다 — 그 경로의 Tailscale 헤더·로컬 키는 무시.
 
 실행: uv run uvicorn app.admin.server:app --host 127.0.0.1 --port 8101
 &quot;&quot;&quot;
@@ -5360,10 +5455,11 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from ..config import ADMIN_LOCAL_KEY, ADMIN_PORT, ADMIN_USERS, BASE
+from ..config import ADMIN_LOCAL_KEY, ADMIN_PORT, ADMIN_USERS, BASE, CF_ACCESS_AUD, CF_ACCESS_TEAM
 from ..main import REVALIDATE, REVALIDATE_PREFIX
 from ..routers import history, insight, meal, news, positions, status, typical
 from . import audit, sysctl, watchdog
+from .access import HEADER as ACCESS_HEADER, AccessVerifier
 from .auth import COOKIE, identify, parse_users
 from .routers import stream as stream_router
 from .routers import system
@@ -5372,6 +5468,7 @@ from .stream import StreamState
 
 mimetypes.add_type(&quot;text/javascript&quot;, &quot;.js&quot;)
 USERS = parse_users(ADMIN_USERS)
+ACCESS = AccessVerifier(CF_ACCESS_TEAM, CF_ACCESS_AUD)
 GATED = (&quot;/api/admin/&quot;, &quot;/admin-ui/&quot;)
 WATCH_EVERY = 60
 
@@ -5421,7 +5518,10 @@ def create_app():
         gated = path.startswith(GATED)
         ident = None
         if gated or (path == &quot;/&quot; and &quot;key&quot; in request.query_params):
-            ident, why = identify(request.headers, request.cookies, request.query_params, USERS, ADMIN_LOCAL_KEY, request.app.state.lockdown)
+            access = None
+            if &quot;cf-ray&quot; in request.headers or ACCESS_HEADER in request.headers:      # Cloudflare 를 거쳐 왔다 — Access 검증만(JWKS 수신은 스레드로)
+                access = await asyncio.to_thread(ACCESS.check, request.headers.get(ACCESS_HEADER))
+            ident, why = identify(request.headers, request.cookies, request.query_params, USERS, ADMIN_LOCAL_KEY, request.app.state.lockdown, access)
         if gated:
             if ident is None:
                 return JSONResponse({&quot;state&quot;: &quot;forbidden&quot;, &quot;reason&quot;: why}, status_code=403)
