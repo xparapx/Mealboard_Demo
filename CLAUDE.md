@@ -12,7 +12,9 @@
   `.env CF_TUNNEL_TOKEN`, 09-04 enable·active, 인천 엣지 4연결), 경로(옛 Public Hostname)는 Cloudflare 대시보드 '경로 추가 → 게시된 애플리케이션'에 루트 `kjhs-meal.com` → **HTTP** `127.0.0.1:8100` 하나만(HTTPS 로 저장하면 502; 관리 앱 8101 은 절대 매핑 금지). cloudflared 2026.8.3. 09-04 22:00 공개 주소에서 화면·API·QR 200 확인.
   **토큰은 `read -s` 로 받아도 터미널 제어 문자가 섞인다** — 매뉴얼 STEP 9 의 정리 명령(base64 문자만 남김)으로 넣고, `Provided Tunnel token is not valid` 면 값 뒤 찌꺼기를 의심(형식 검사 명령 수록). 학교 홈페이지 도메인(`cnehs.kr`)은 교육청 소유라 못 쓴다.
 - **PI_HOST는 Tailscale 주소**(.env 참조). 공용 체크아웃은 `/opt/mealboard`. **Pi에서 직접 편집 금지, `git pull`만.**
-  개발은 각자 PC의 클론에서 하고 Claude Code도 PC에서 실행해 SSH로 Pi를 제어한다.
+  **주 작업 PC 는 집 PC(jh-home, 09-11 사용자 결정)** — 로컬 세션 `Mealboard_Demo_jh-Home` 에서 작업·커밋·푸시·Pi 반영을 전부 한다(학교 망은 시간대에 따라 Tailscale·SSH 를 막지만 집 망은 아니다).
+  다른 기기(휴대폰·맥북·학교 PC)는 **Remote Control 로 집 PC 세션을 조종**한다 — 집 PC 는 항상 켜 두고 잠자기 끔. 학교 PC 로컬 세션은 현장 진단용 예비(Pi 키 있음).
+  어느 PC 든 **세션 시작 때 `git pull` 부터**, 다른 PC 에서 고친 것은 즉시 push — 커밋은 한 곳에서만 쌓이게.
 - **같은 Pi에 Plant 프로젝트가 정지 상태로 공존**(`~/plant/`, planthub·plantdash·plantsnap 유닛).
   `~/plant/`와 그 DB에는 어떤 이유로도 접근·수정하지 않는다. 포트 8000·8501·1883은 Plant 소유.
 - 홈 Pi에서는 vision 프레임 소스로 `picamera`를 쓰지 않는다(Plant 카메라 타이머와 배타 자원). `webcam|file`만.
@@ -74,6 +76,8 @@
   5.1.1 로 컴파일된 YOLO hef 와 Qwen2.5 hef 는 5.3.0 에서도 열린다. **운용 모델은 Qwen3-1.7B-Instruct**(`v5.3.0/blob/…`, 2.88 GB, `.env LLM_HEF`, `LLM_CONTEXT_CHARS=4800`):
   스파이크 go(요약·주입 PASS, 6,000자 OK, 3.6 tok/s), 실제 피드 3/3 요약 성공 + Why 까지. 한국어 직접 생성은 여전히 불가(반복 붕괴) → 영어 → DeepL 2단계 유지. Qwen2.5 파일은 예비로 남겨 둠.
   **`apt install hailo-h10-all` 을 다시 실행하지 말 것**(5.1.1 로 되돌아가며 `hailort` 와 충돌).
+- **세션 인계(09-11, 학교 PC → 집 PC 로 넘김)**: 저장소 최신은 `git log -1`. 09-09~11 에 한 것 — ① Pi 재부팅으로 카메라 케이블 재인식(케이블은 전원 끄고 꽂기, Pi 5 는 poweroff 뒤 전원 버튼 필요) ② 교체한 모듈도 커널이 `imx708`(표준판)로 보고 — Wide 는 `imx708_wide`·`imx708_wide.json` 이어야 한다, 화각 실측(1 m 에서 가로 1.3 m=66°, 2.4 m=102°)로 정품 여부 판단 ③ 보드는 Pi 5 16 GB(리비전 `e04171`) ④ Pi 를 급식실로 이전, Wi-Fi 프로필 `kjhs_meal`(WPA2-PSK, 우선순위 20) 등록 — **아직 tailnet 에 안 올라옴**(휴대폰은 같은 AP 에 붙음 → AP·인터넷 정상, Pi 쪽 인증 실패 의심: WPA3 전용이면 `nmcli con modify kjhs_meal wifi-sec.key-mgmt sae`). 현장 노트북으로 `ssh xparapx@rsp.local` 또는 이더넷 직결 뒤 `journalctl -u NetworkManager` 로 사유 확인.
+  **Pi 가 붙으면 할 일(사용자 요청 '실데이터 반영')**: `.env FEED_SOURCE=vision`·`ROLLUP_WINDOW=lunch` → api·vision·admin 재시작 → `insights.db` 는 `.bak-<시각>` 으로 비켜 두고 새 출처로 집계 → 관리 화면 구역 탭에서 보정 4점·ROI·λ선(없으면 λ=0 이라 '배식 시작 대기'만 나온다) → Cloudflare 공개 주소 `https://kjhs-meal.com` 확인(학교 교직원 망에서는 차단됨 — 휴대폰 셀룰러로).
 - **세션 인계(09-04 아침, 학교 PC)**: 저장소·Pi 모두 `fba0fec`. 오늘 아침 끝난 것 — ① 수집 시간창 3개 + 더미데이터 띠(`50b600a`) ② vision 프로토타입 가동, Pi 는 mock → `mealboard-vision`(`d2debda`) ③ 카메라 모드 2304x1296(`204b28f`) ④ 관리 화면 보정 전 null 좌표 가드(`fba0fec`).
   **지금 꽂힌 카메라는 표준판(66°)** — Wide 모듈은 아직 없음(사용자 확인). 광각은 모듈 교체로만 가능. **사용자 작업 방식 갱신**: Pi 반영(pull·restart)도 Claude 가 `ssh mbpi` 로 직접 한다, 코드 조각을 사용자에게 써 달라는 요청은 하지 않는다(설명만).
   **다음**: 관리 화면 구역 탭에서 보정 4점·ROI·λ선(표준판으로 연습, Wide 오면 재보정) → 카메라 앞에서 걸어 λ 통과 확인 → CPU fps 가 모자라면 Hailo hef 백엔드.
