@@ -18,8 +18,9 @@ export function renderWeek(m) {
       : `<span class="row"><i>${label}</i><span class="m">${esc(splitAllergy(mm.menu[0]).name)}</span>`
         + `<span class="k">외 ${mm.menu.length - 1}가지` + (mm.kcal ? ` · ${Math.round(mm.kcal)} kcal` : "") + "</span></span>";
     // 램프는 인덱스가 아니라 실제 요일에 건다 — 주가 화요일부터 시작해도 색이 밀리지 않게
+    // 요일·날짜 머리는 별도 칩(.day)으로 분리(09-11 사용자 요청) — 메뉴 본문과 시각적으로 갈라 표로 읽히게
     return `<div data-wd="${dd.getDay()}" data-when="${when}">`
-      + `<span class="d">${WD[dd.getDay()]}</span><span class="n">${dd.getDate()}</span>`
+      + `<span class="day"><span class="d">${WD[dd.getDay()]}</span><span class="n">${dd.getDate()}</span></span>`
       + row("중식", d) + row("석식", d.dinner) + "</div>";
   }).join("");
   const w = m.week_avg || {};
