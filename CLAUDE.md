@@ -5,6 +5,9 @@
 
 ## 0. 현재 상태 (2026-08) — 세션 시작 시 먼저 읽을 것
 
+> 지난 세션의 상세 경위·작업 이력은 **docs/WORKLOG.md** (09-12 개정: README 는 소개 전용, 여기는 규칙·현재 상태만).
+
+
 - **홈 Pi 5(64bit, Debian 13 Trixie, 시스템 Python 3.13) = 스테이징.** 학교 Pi도 같은 OS·Python이어야 uv.lock이 그대로 맞는다. 카메라 없음 → `mealboard-vision` 미설치, `mealboard-mock`이 대역.
   로드맵 ④는 개발 PC 웹캠·동영상 파일로 진행. ⑤ 중 uv 셋업·systemd·외부 공개는 홈 Pi 완료, calibrate만 학교 Pi 이전 시.
 - **외부 공개 = Cloudflare Tunnel, 공개 주소 `https://kjhs-meal.com`(09-04 저녁)**. 도메인 `kjhs-meal.com` 은 사용자가 Cloudflare Registrar 에서 구매(NS carioca·roman). 학교 망이 Tailscale 도쿄·싱가포르 릴레이와 Funnel 입구를 막아
@@ -76,42 +79,22 @@
   5.1.1 로 컴파일된 YOLO hef 와 Qwen2.5 hef 는 5.3.0 에서도 열린다. **운용 모델은 Qwen3-1.7B-Instruct**(`v5.3.0/blob/…`, 2.88 GB, `.env LLM_HEF`, `LLM_CONTEXT_CHARS=4800`):
   스파이크 go(요약·주입 PASS, 6,000자 OK, 3.6 tok/s), 실제 피드 3/3 요약 성공 + Why 까지. 한국어 직접 생성은 여전히 불가(반복 붕괴) → 영어 → DeepL 2단계 유지. Qwen2.5 파일은 예비로 남겨 둠.
   **`apt install hailo-h10-all` 을 다시 실행하지 말 것**(5.1.1 로 되돌아가며 `hailort` 와 충돌).
-- **세션 인계(09-11 밤, 학교 PC·핫스팟 → 다음은 집 PC)**: 저장소 `3587535`, Pi 동일. 실측 운영 중(FEED_SOURCE=vision, 보정 4점·ROI·λ 저장, 수집 창 11:20/12:30/17:00). 오늘 밤 끝난 것 — 석식 NEIS·주간 2행·오늘 2열·알레르기 띠, 편집기 직관성·템플릿 초기화, 더미 표본 정리(queue.db 165만 행 → 백업 `queue.db.bak-20260911-182139`), 인사이트 빈 상태 문구, **배포 뒤 옛 모듈 잔류 대책 둘**(관리 UI `?v=UI_VERSION`+`no-store`, 학생 화면은 워커 교체 시 자동 재로드 — `core.UI_VERSION` 과 `sw.js CACHE` 는 화면이 바뀔 때 같이 올린다, 지금 v27).
-  **다음**: ① 월요일(9/14) 11:20 첫 실측 점심 — L·λ·평면도 마커 확인, 마커가 밀리면 보정 y(4 m) 조정 ② 14:10 첫 집계 뒤 히트맵 셀 확인 ③ 안정되면 `queue.db.bak-*`(200 MB)·`.env.bak-*` 정리 ④ 석식을 집계 창에 넣을지, 영양 지표를 두 끼 기준으로 할지(영양 교사 판단) ⑤ Wide 카메라 오면 재보정. 학교 PC 에서는 `ssh mbcf` 도 학교 망에서 막힌다 — 핫스팟 또는 집 PC.
+- **배포 잔류 대책(09-11)**: 관리 UI 는 `?v=UI_VERSION`+`no-store`, 학생 화면은 새 서비스워커가 탭을 넘겨받을 때 자동 재로드 — 화면이 바뀌면 `core.UI_VERSION` 과 `sw.js CACHE` 를 같이 올린다(지금 v29).
 - **더미 표본 정리 도구 `jobs/purge_mock.py`(09-11)**: queue.db 에는 출처 열이 없어 '실측 시작 시각' 이전 행을 더미로 본다. 세 겹(빈 조건 거부·자동 `.bak`·되돌리기 명령) + VACUUM. Pi 는 09-11 17:35 이전을 걷어냈다(백업 파일은 data/ 에 남김). 더미가 다시 필요하면 `mealboard-mock` 유닛·`FEED_SOURCE=mock` 으로.
   **영양 지표·영양소별 표기는 중식 한 끼 기준**(`nutrition_std.json per_meal`) — 석식은 메뉴·kcal·알레르기만(각주로 명시). 주간식단 요일·날짜는 별도 칩(`.week .day`).
 - **09-11 저녁 UI 개정(사용자 요청)**: ① NEIS 를 중식(2)+석식(3) 두 번 받아 `week[].dinner{menu,kcal,nutrients}` — 영양 지표·탄소·집계는 중식 기준 그대로 ② 주간식단 요일 칩은 중식/석식 두 행 ③ 오늘급식은 중식·석식 2열(데스크톱 나란히) + 내 알레르기 경고 띠(`#awarn`) + 칩은 내 것 먼저 ④ 관리 편집기: 칩 순서 ① 프레임 잡기 → ② ROI·λ → ③ 보정 4점, λ 변 hover 미리보기, 출구는 변에 **수직** 화살표 + 출구 쪽 반투명 띠 + '출구(배식대)' 라벨, 보정 4점은 청록 파선 + 점마다 m 라벨(캔버스), 찍기는 다음 점으로 자동 진행, 저장 버튼은 'ROI · λ 저장'/'보정 저장' 으로 이름이 바뀜, **템플릿으로 초기화** 버튼(`DELETE /api/admin/zones` → local 을 .bak 로, 스냅도 비움). sw v23.
 - **실데이터 가동(09-11 17:35, 석식 창)**: Pi `.env FEED_SOURCE=vision`·`ROLLUP_WINDOW=lunch`, 보정 4점·ROI·λ 변 저장됨(`zones.local.json`), `/api/status` `source=vision live=true`. **Pi 에서 `uv sync` 는 반드시 `uv sync --extra vision`** — 09-11 16:03 의 맨 `uv sync` 가 pyproject 에 없던 ultralytics·torch·hailort 를 venv 에서 지워 vision 이 죽었다. 이제 `pyproject.toml` `[project.optional-dependencies] vision` 에 선언, `setup_pi.sh` 가 `--extra vision` + `data/models/hailort-*.whl` 을 넣는다. 스테이징 `insights.db` 는 Pi 에 없었다(새 출처로 집계 시작). 이 학교 PC 에도 cloudflared + `ssh mbcf` 별칭을 넣었다(학교 망에서는 `ssh.` SNI 차단이라 핫스팟에서만 통한다).
-- **세션 인계(09-11, 학교 PC → 집 PC 로 넘김)**: 저장소 최신은 `git log -1`. 09-09~11 에 한 것 — ① Pi 재부팅으로 카메라 케이블 재인식(케이블은 전원 끄고 꽂기, Pi 5 는 poweroff 뒤 전원 버튼 필요) ② 교체한 모듈도 커널이 `imx708`(표준판)로 보고 — Wide 는 `imx708_wide`·`imx708_wide.json` 이어야 한다, 화각 실측(1 m 에서 가로 1.3 m=66°, 2.4 m=102°)로 정품 여부 판단 ③ 보드는 Pi 5 16 GB(리비전 `e04171`) ④ Pi 를 급식실로 이전, Wi-Fi 프로필 `kjhs_meal`(WPA2-PSK, 우선순위 20) 등록 — **09-11 오후 현장 진단 결과(맥북): Wi‑Fi 는 정상**(Pi 는 `kjhs_meal` WPA2 에 붙어 `172.31.98.59/23`, 서비스 4개 active, `https://kjhs-meal.com` 200). 안 올라온 이유는 학교 망이 `controlplane.tailscale.com`(443)을 막기 때문(Pi·맥 모두 000) — 절차 ① 두 번째 갈래. 현장에서는 `rsp.local` 이 안 잡히니 `ssh -i ~/.ssh/id_ed25519_mealboard xparapx@172.31.98.59` 로, 관리 앱은 같은 LAN 에서 `https://rsp.taild5f11e.ts.net:8443`(캐시 키 직결) 또는 SSH 터널 `-L 8101:127.0.0.1:8101`. **관리 앱 외부 접속 = `https://admin.kjhs-meal.com`(09-11 저녁 결정, 매뉴얼 9-5)**: 학교 망이 DERP 릴레이도 막아 Tailscale 직결은 NAT 구멍이 살아 있는 동안만 통한다(14:40 됐다가 14:57 끊김) → 급식실 밖에서 관리 앱을 열려면 Cloudflare Access 경로가 정식. **16:15 완료**: Access 앱 `admin`(대상 `admin.kjhs-meal.com`+`ssh.kjhs-meal.com`, 정책 `admins`=이메일 허용목록, 로그인 Cloudflare 계정 + One-time PIN), 팀 도메인 `empty-voice-fb65.cloudflareaccess.com`, 터널 경로 `admin`→HTTP 127.0.0.1:8101 · `ssh`→SSH localhost:22. Pi `.env` 에 `CF_ACCESS_TEAM`·`CF_ACCESS_AUD`(백업 `.env.bak-20260911-1615`), `uv sync`(pyjwt 2.13), admin 재시작. 검증: 위조 `cf-ray`+Tailscale 헤더 → 403 no_token, 토큰 없이 → 302, 토큰으로 whoami → `via: access`. **SSH 는 이제 `ssh mbcf`**(맥 `~/.ssh/config`: `ssh.kjhs-meal.com`, ProxyCommand `cloudflared access ssh`, HostKeyAlias rsp; 첫 사용 때 브라우저 로그인, 토큰 24시간) — 학교 망과 무관. 다른 PC 도 cloudflared 설치 + 같은 항목이면 된다.
-  **오늘 겪은 함정 두 개**: ① 학교 안 어떤 Wi‑Fi(게이트웨이 192.168.1.1)는 `admin.`·`ssh.` 하위 도메인의 TLS ClientHello 를 SNI 로 떨어뜨린다(`kjhs-meal.com` 루트는 통과) → 학교 안에서는 LAN 직결 `rsp.taild5f11e.ts.net:8443`, 밖에서는 Cloudflare. ② 휴대폰 핫스팟(통신사 DNS)은 새 하위 도메인을 NXDOMAIN 으로 30분 부정 캐시한다 → 맥 Wi‑Fi DNS 에 `1.1.1.1` 을 넣고 `sudo killall -HUP mDNSResponder` 로 로컬 캐시를 비운다.
-  **밖에서도 Tailscale 은 통한다(09-11 14:40 실증, 단 NAT 구멍이 살아 있는 동안만)**: 맥을 휴대폰 핫스팟으로 옮긴 뒤 `tailscale ping rsp` 가 학교 공인 IP 로 직결(홀펀칭)됐고 `ssh xparapx@100.103.201.77`(known_hosts 는 `-o HostKeyAlias=rsp`)로 pull·restart 까지 됨 — 이미 키를 교환한 기기끼리는 컨트롤플레인 없이도 붙는다. 못 하는 것은 새 기기 등록·키 갱신·MagicDNS 갱신뿐. 집 PC 도 기존 피어이므로 `ssh mbpi` 가 통할 가능성이 높다(안 되면 IP + HostKeyAlias). 정보부에 컨트롤플레인 해제 요청은 그대로 진행. 프로필 수정 불필요.
-  **현장 Wi-Fi 진단 절차(맥북 세션용, 09-11)** — 맥북을 `kjhs_meal` 에 붙이고(휴대폰은 붙었음 → AP·인터넷 정상) 순서대로:
-  ① `ssh xparapx@rsp.local` 로 붙어 `nmcli -t -f NAME,DEVICE con show --active` · `nmcli -t -f IP4.ADDRESS,IP4.GATEWAY dev show wlan0` · `curl -s -m 5 -o /dev/null -w '%{http_code}' https://controlplane.tailscale.com/`.
-     붙으면 Pi 는 AP 에 있는 것. `kjhs_meal` 활성인데 controlplane 이 000 이면 AP 상위 망이 Tailscale 을 막는 것(정보부에 차단 해제 요청, 그동안 학생 화면은 Cloudflare `kjhs-meal.com` 으로만).
-  ② `rsp.local` 이 안 잡히면 Pi 가 AP 에 못 붙은 것 → 이더넷으로 맥북과 직결(USB-C 어댑터) 뒤 같은 이름으로 접속, `journalctl -u NetworkManager -n 40 --no-pager` 에서 kjhs·auth·secret·fail·wpa 줄로 사유 확인.
-  ③ 사유가 `secrets were required`·`association took too long`·WPA3 면 `sudo nmcli con modify kjhs_meal wifi-sec.key-mgmt sae && sudo nmcli con up kjhs_meal`. 비밀번호 오타면 `sudo nmcli con modify kjhs_meal wifi-sec.psk '<비밀번호>'`(채팅·커밋에 값 남기지 말 것).
-     SSID 가 다르면 `sudo nmcli con modify kjhs_meal 802-11-wireless.ssid '<정확한 SSID>'`. AP 가 5 GHz DFS 채널(52~144)만 쓰면 공유기에서 2.4 GHz 또는 36~48 채널로.
-  ④ 붙은 뒤 `tailscale status --self` 가 Running 이면 다른 PC 에서 `ssh mbpi` 가 통한다. 확인: `rpicam-hello --list-cameras`(imx708) · `systemctl is-active mealboard-api mealboard-vision mealboard-admin mealboard-cloudflared` · `curl -s 127.0.0.1:8100/api/status`.
-  ⑤ 결과(원인·조치)를 README 작업 로그에 한 줄 적고 push. Pi 안의 프로필 변경은 커밋 대상이 아니다.
-  **실데이터 전환 완료(09-11 14:35, 맥북에서 LAN 으로)**: Pi `.env FEED_SOURCE=vision`·`ROLLUP_WINDOW=lunch`(백업 `.env.bak-20260911-1435`), api·vision·admin 재시작, mock 시절 `insights.db` 는 `insights.db.bak-20260911-1435` 로 비켜 둠(rollup 타이머가 새로 만든다). **남은 것: 관리 화면 구역 탭에서 보정 4점·ROI·λ선**(없으면 λ=0 이라 '배식 시작 대기'만 나온다) → Cloudflare 공개 주소 `https://kjhs-meal.com` 확인(학교 교직원 망에서는 차단됨 — 휴대폰 셀룰러로).
-- **세션 인계(09-04 아침, 학교 PC)**: 저장소·Pi 모두 `fba0fec`. 오늘 아침 끝난 것 — ① 수집 시간창 3개 + 더미데이터 띠(`50b600a`) ② vision 프로토타입 가동, Pi 는 mock → `mealboard-vision`(`d2debda`) ③ 카메라 모드 2304x1296(`204b28f`) ④ 관리 화면 보정 전 null 좌표 가드(`fba0fec`).
-  **지금 꽂힌 카메라는 표준판(66°)** — Wide 모듈은 아직 없음(사용자 확인). 광각은 모듈 교체로만 가능. **사용자 작업 방식 갱신**: Pi 반영(pull·restart)도 Claude 가 `ssh mbpi` 로 직접 한다, 코드 조각을 사용자에게 써 달라는 요청은 하지 않는다(설명만).
-  **다음**: 관리 화면 구역 탭에서 보정 4점·ROI·λ선(표준판으로 연습, Wide 오면 재보정) → 카메라 앞에서 걸어 λ 통과 확인 → CPU fps 가 모자라면 Hailo hef 백엔드.
-- **세션 인계(09-04 밤, 이 PC=jh-home)**: 저장소·Pi 모두 최신(`git log -1` 로 확인). 오늘 끝난 것 — 화면 손질(육각 밀집도·plotly 컬러맵·구역 라벨·컬러바 우측 상단), 기본 구역 5개,
-  HailoRT 5.3.0 + Qwen3-1.7B(기사 요약 3/3), 휴대폰 Tailscale 로 관리 화면 접속 확인. **hailo-ollama 설치함(09-04 밤, 사용자 결정)**: `hailo_gen_ai_model_zoo_5.3.0_arm64.deb`(공개 경로 `2026_04/Hailo10/`), 모델 저장소 `~/.local/share/hailo-ollama/models/blob/sha256_<해시>` 에
-  `data/models/Qwen3-1.7B-Instruct.hef` 를 하드링크(해시 동일, 재다운로드 없음). 유닛 `deploy/hailo-ollama.service` 는 **enable 하지 않는다** — 필요할 때 `sudo systemctl start hailo-ollama`, 끝나면 stop
-  (뉴스·리포트 타이머와 HAT 경합). `OLLAMA_HOST=127.0.0.1:8000` 고정(기본 0.0.0.0 은 학교 LAN 에 열린다), 밖에서는 `ssh -L 8000:127.0.0.1:8000 mbpi`. 파이프라인은 여전히 `jobs/llm.py` 직접 호출.
-  **미결 질문(사용자 답 대기)**: ⓑ Plant 규칙 개정 — 사용자는 "포트 8000 은 이제 안 쓴다, Plant 는 GitHub 에 있다" 고 했으나 §0·§2 의 Plant 금지 규칙은 아직 그대로(파일·DB 삭제는 명시 지시 때만).
+- **원격 접속 요약(09-11·09-12)**: 밖 = `ssh mbcf`(Cloudflare Access, cloudflared ProxyCommand, 토큰 24시간 — 다른 PC 도 cloudflared 설치 + 같은 config 항목이면 됨. Windows OpenSSH 는 따옴표 경로 버그 → `C:/PROGRA~2/cloudflared/cloudflared.exe` 슬래시 경로로). 관리 앱 밖 = `https://admin.kjhs-meal.com`(이메일 PIN). 학교 안 같은 LAN = `rsp.taild5f11e.ts.net:8443` 또는 `172.31.98.59`. Tailscale 은 학교 망이 컨트롤플레인·DERP 를 막아 기존 NAT 구멍이 살아 있는 동안만 통한다; 학교 내 다른 Wi‑Fi 는 `admin.`·`ssh.` 하위 도메인 SNI 차단; 핫스팟 통신사 DNS 는 새 하위 도메인 NXDOMAIN 30분 부정 캐시(1.1.1.1 로 우회).
+  **집 PC(jh-home)의 Claude Desktop 은 ProxyCommand 를 실행하지 못해** cloudflared 로컬 터널 `127.0.0.1:2222`(로그인 시 자동 예약 작업, PS 별칭 `mbtunnel` 로 재시작)로 붙는다(09-12). 현장 Wi‑Fi 진단 절차·상세 경위는 docs/WORKLOG.md 09-11 항목.
+- **하드웨어 사실(09-09~11)**: 보드 Pi 5 16 GB(리비전 `e04171`). 카메라 케이블은 전원 끄고 탈착(Pi 5 는 poweroff 뒤 전원 버튼으로 켠다). Wide 는 커널이 `imx708_wide` 로 보고해야 정품 — 화각 실측(1 m 에서 가로 1.3 m=66° / 2.4 m=102°)으로 판별. 지금 급식실 모듈은 표준판(66°).
+- **작업 스타일(09-04 사용자 결정)**: Pi 반영(pull·restart)도 Claude 가 ssh 로 직접 한다 — 코드 조각을 사용자에게 써 달라고 하지 않는다(설명만).
+- **hailo-ollama(09-04 밤)**: 유닛 `deploy/hailo-ollama.service` 는 **enable 하지 않는다** — 필요할 때 start, 끝나면 stop(뉴스·리포트 타이머와 HAT 경합). `OLLAMA_HOST=127.0.0.1:8000` 고정(0.0.0.0 은 학교 LAN 에 열린다). 파이프라인은 여전히 `jobs/llm.py` 직접 호출. 미결: Plant 규칙 개정 ⓑ — §0·§2 금지 규칙은 아직 유효.
 - **로드맵 ④ vision 프로토타입 가동(09-04 아침, `d2debda`)**: `vision/counter.py`(YOLO yolo11n CPU + ByteTrack 사람만, ROI 안 L·λ선 통과 λ·W=L/λ 10초 표본, 메타 소켓, zones mtime 리로드)
   + `source.py`(picamera|webcam:N|file:) + `counting.py`(라인크로싱·5분 이동합, 순수) + `debug_stream.py`(8102 MJPEG, 플래그 503) + `record.py`(mock 과 공용 기록). Pi 는 **mock disable → `mealboard-vision` enable**(업무 공간 카메라 imx708, 약 3fps).
   **추론은 창 안 또는 관리자가 실사·메타를 보는 동안만**(초점·ROI·보정은 급식 시간과 무관해야 한다 — 사용자 결정), 기록은 창 안 실측만 — **창 밖은 기록 없음(09-11, 옛 Simulator 더미 제거)**. **`.env FEED_SOURCE` 는 출처 스위치**: `vision` 일 때만 카메라 노드가 쓰고, `mock` 이면 카메라 노드는 아무것도 쓰지 않는다(더미는 mock 유닛의 몫, Conflicts 로 배타). 급식실 Pi 는 09-11 부터 `vision`·`ROLLUP_WINDOW=lunch`.
   호모그래피(`image_to_floor`)·ROI 는 아직 null → L 은 화면 안 전원, λ 0 → `insufficient_rate`, 구역·타일·positions 는 건너뜀 — **관리 화면 구역 탭에서 4점 보정·ROI·λ선을 찍는 것이 다음 실무**. Hailo hef 백엔드는 미착수(CPU 로 충분하면 보류).
   **화각 주의(09-04)**: 업무 공간 Pi 에 지금 꽂힌 모듈은 **표준판 imx708(66°)** 이다(Wide 는 libcamera 가 `imx708_wide` 로 보고) — Wide 로 바꿔 끼우면 코드 변경 없음. imx708 의 `1536x864` 모드는 중앙 크롭이라 화각이 2/3 로 준다 → `VISION_SIZE=2304x1296`(센서 전체, 2×2 비닝)이 기본.
-- **다음 할 일**: ① 관리 화면에서 보정 4점·ROI·λ선 지정 → 실측 L·λ 확인(카메라 앞에서 걸어 보기) ② Cloudflare 마무리 — 휴대폰 셀룰러·학교 Wi‑Fi 에서 `https://kjhs-meal.com` 확인, Cloudflare SSL/TLS → Always Use HTTPS 켜기(사용자, 대시보드). ③ 아래 ①~③ 잔여.
-  ① 평소 곡선(`/api/typical`)은 mock 이 170분 사이클을 반복해 써서 스테이징에서는 값이 바닥이다. 실측 이후 확인.
-  ② Inside Climate News 는 미국 지역 전력·정치 보도가 많아 "세계적 기후 이슈"와 결이 다른 기사가 섞인다 —
-  며칠 지켜본 뒤 교체 여부 판단(후보: UNEP · Climate Home News). ③ 급식 있는 평일에 데스크톱 12컬럼 보드·모바일 dock 실물 확인.
-  ④ 로드맵 ④ vision 프로토타입.
+- **다음 할 일**: ① 월요일(9/14) 11:20 첫 실측 점심 — L·λ·평면도 마커 확인(마커가 밀리면 보정 y 4 m 조정), 14:10 첫 집계 뒤 히트맵 셀 확인 ② 안정되면 `queue.db.bak-*`(200 MB)·`.env.bak-*` 정리 ③ 석식을 집계 창에 넣을지·영양 지표 두 끼 기준 여부(영양 교사 판단) ④ Wide 카메라 오면 재보정 ⑤ **유출 키 교체(09-12)** — CF 터널 토큰·DeepL 키(사용자, 대시보드) ⑥ Inside Climate News 결이 다른 기사 섞임 — 교체 여부 관찰(후보 UNEP·Climate Home News) ⑦ 급식 있는 평일에 데스크톱 12컬럼 보드·모바일 dock 실물 확인, `/api/typical` 실측 후 확인.
 
 ## 1. 프로젝트 한 줄 정의
 
@@ -143,8 +126,8 @@ NEIS 급식 API의 메뉴·영양 정보와 함께 웹 대시보드(PWA)로 제�
 
 선행 레포 `Arduino_MQTT_MultiNode_Demo`, `Plant_Growth_Monitoring_Demo`의 규약을 따른다:
 - 최상위는 **역할 폴더** + README.md + .gitignore
-- `docs/` = GitHub Pages: `index.html`(프로젝트개요) + `manual.html`(구축 매뉴얼, 모든 코드 `<pre>` 수록 + 복사 버튼, 한국어, 처음 나오는 용어는 그 자리에서 설명)
-- README 말미에 **「작업 로그」** 절 유지 (yyyy-mm 단위, 최신이 위)
+- `docs/` = GitHub Pages: `index.html`(프로젝트개요) + `manual.html`(구축 매뉴얼, 모든 코드 `<pre>` 수록 + 복사 버튼, 한국어, 처음 나오는 용어는 그 자리에서 설명) + `WORKLOG.md`(작업 이력·세션 인계, 최신이 위)
+- 작업 이력·세션 인계는 **`docs/WORKLOG.md`** (yyyy-mm 단위, 최신이 위) — README 는 프로젝트 소개 전용, CLAUDE.md 는 규칙·현재 상태 요약 전용(09-12 개정, 전 저장소 공통 지침)
 - **systemd 유닛 파일은 저장소 `deploy/`에 포함** — Plant에서 Pi에 직접 만들어 새 Pi로 따라오지 못한 교훈. 설치는 `setup_pi.sh`가 한다
 
 ```
@@ -152,7 +135,7 @@ Mealboard_Demo/
 ├── CLAUDE.md                     # 이 파일
 ├── README.md                     # 개요·구조·셋업·작업 로그 (선행 레포 형식)
 ├── setup_pi.sh                   # Pi 최초 설치 + 유닛 갱신 (멱등)
-├── docs/                         # GitHub Pages (index.html + manual.html)
+├── docs/                         # GitHub Pages (index.html + manual.html) + WORKLOG.md(작업 이력)
 ├── app/                          # FastAPI: main.py, config.py, db.py, lunch.py, insight_calc.py, insights_db.py, mealjson.py, routers/{status,history,meal,positions,news,typical,insight}.py
 │   └── admin/                    # 관리 앱(별도 프로세스 8101): server.py, auth.py, guard.py, sysctl.py, watchdog.py, audit.py, health.py, stream.py, zones_store.py, routers/{system,stream,zones}.py, static/{admin.js,zones-editor.js,admin.css}
 ├── vision/                       # counter.py(진입점, 09-04), source.py(picamera|webcam|file), counting.py(라인크로싱·λ), debug_stream.py(8102 MJPEG), record.py(표본 기록), zones.py, waittime.py, meta.py, schedule.py
@@ -222,7 +205,7 @@ Mealboard_Demo/
 - 코드와 매뉴얼 동기화: `<pre>` 수록 코드를 바꾼 커밋은 docs/manual.html도 같은 커밋에서 갱신,
   `check_manual.py`류 대조 도구가 생기면 커밋 전 실행
 - push는 매 작업 세션 종료 시. 사용자가 요청하면 중간에도. **09-12 부터 작업 장소가 Pi 워크트리 자체**이므로 커밋이 곧 배포본 — 서비스 restart 로 반영하고, push 로 GitHub 백업을 유지한다
-- README 「작업 로그」는 의미 있는 변경마다 갱신 (커밋마다는 아님)
+- `docs/WORKLOG.md` 는 의미 있는 변경마다 갱신 (커밋마다는 아님)
 
 ## 7. Claude Code 확장 요소 (필요한 것만)
 
@@ -236,7 +219,7 @@ Mealboard_Demo/
 - **서브에이전트/훅**: 이 규모에서는 불필요. 도입하지 않는다
 - **MCP**: 불필요 (GitHub는 gh/git CLI, Pi는 ssh로 충분)
 
-## 8. 단계별 로드맵 (현재 위치를 커밋 로그와 README 작업 로그로 판단)
+## 8. 단계별 로드맵 (현재 위치를 커밋 로그와 docs/WORKLOG.md 로 판단)
 
 ① app/ + mock_feed + /api/status → /docs에서 검증
 ② static/ 대시보드 (mock 데이터로 완성. 레이아웃은 docs/ 도면의 스펙을 따른다)
