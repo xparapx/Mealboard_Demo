@@ -160,18 +160,18 @@ details > summary::-webkit-details-marker { display: none; }
               align-items: center; gap: 5px; text-align: center; min-width: 0; }
 /* 요일·날짜 칩(09-11): 컬럼 색 위에 흰 알약으로 띄워 메뉴 본문과 분리한다 */
 .week .day { display: inline-flex; align-items: baseline; gap: 5px; padding: 4px 11px; border-radius: 999px; background: rgba(255,252,246,.78); box-shadow: 0 1px 2px rgba(51,49,45,.08); margin-bottom: 2px; }
-.week .d { font-size: 10px; font-weight: 700; color: var(--ink3); letter-spacing: .04em; }
-.week .n { font-size: 15px; font-weight: 700; line-height: 1; color: var(--ink2); }
+.week .d { font-size: 12px; font-weight: 700; color: var(--ink3); letter-spacing: .04em; }
+.week .n { font-size: 17px; font-weight: 700; line-height: 1; color: var(--ink2); }
 /* 긴 이름(친환경토마코펜라이스)이 칩 밖으로 나가지 않게: keep-all 은 유지하되
    달리 방법이 없을 때만 낱말 안에서 끊고, 세 줄에서 말줄임한다 */
-.week .m { font-size: 10.5px; font-weight: 500; color: var(--ink); line-height: 1.35;
+.week .m { font-size: 12.5px; font-weight: 500; color: var(--ink); line-height: 1.35;
            word-break: keep-all; overflow-wrap: anywhere; min-width: 0; max-width: 100%;
            display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.week .k { font-size: 9.5px; color: #4A4740; padding-top: 2px; line-height: 1.35; }
+.week .k { font-size: 11px; color: #4A4740; padding-top: 2px; line-height: 1.35; }
 /* 중식·석식 두 행(09-11) — 행마다 작은 라벨(중식/석식) + 대표 메뉴 + 나머지 수. 행 사이는 옅은 선으로만 가른다(칩 색은 요일이 정한다) */
 .week .row { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; padding-top: 5px; }
 .week .row + .row { border-top: 1px solid rgba(51,49,45,.12); margin-top: 4px; }
-.week .row i { font-style: normal; font-size: 8.5px; font-weight: 700; letter-spacing: .08em; color: rgba(51,49,45,.55); }
+.week .row i { font-style: normal; font-size: 10px; font-weight: 700; letter-spacing: .08em; color: rgba(51,49,45,.55); }
 .week .row.off .m { color: rgba(51,49,45,.42); font-weight: 500; }
 /* 요일 5색 — 월은 브랜드 아쿠아, 화는 에그셸 계열을 그대로 쓰고 나머지 셋을 최대한 벌렸다.
    전체쌍 정상시야 최악 ΔE 10.7 · 본문 대비는 어디서나 7.2:1 이상.
@@ -273,6 +273,14 @@ details > summary::-webkit-details-marker { display: none; }
   #reportcard { grid-column: 1 / 13; grid-row: 2; }
   /* 주간식단 */
   #weekcard { grid-column: 1 / 13; grid-row: 1; }
+  /* 주간식단 폰트(09-12): 1920 보드에서는 컬럼 폭이 넉넉해 한 단계 더 키운다 */
+  .week > div { padding: 14px 10px 15px; gap: 7px; }
+  .week .d { font-size: 14px; }
+  .week .n { font-size: 21px; }
+  .week .m { font-size: 15.5px; }
+  .week .k { font-size: 13px; }
+  .week .row i { font-size: 12px; }
+  #weekavg { font-size: 14px; }
   #nutricard { grid-column: 1 / 7; grid-row: 2; }
   #topcard { grid-column: 7 / 13; grid-row: 2; }
   /* 오늘급식 · 이슈피드 — 카드 하나, 가운데 */

@@ -35,7 +35,7 @@ export const why = r => !r || /reports\.db/.test(r) ? null : /insights\.db/.test
 const DESK_MQ = matchMedia("(min-width: 900px)");
 export const desktop = () => DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = "v28";                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = "v29";                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
@@ -98,10 +98,11 @@ export function renderFeed(f) {
 /* 급식 시간 자동 전환(09-11 사용자 요청): 해시 없이 열면 창 밖에는 이슈피드에서 시작하고, 창이 열리는 순간 대기시간으로 한 번 넘어간다.
    사용자가 탭을 직접 누른 뒤(userNav)에는 개입하지 않는다. 아이콘 순서는 그대로 */
 let userNav = false, wasInWindow = null;
+const mealLive = f => !!(f && f.now && f.meal_day !== false);   // 창 안 ∧ 오늘이 급식 있는 날(meal_day 없는 옛 응답은 참으로)
 function autoSwitch(f) {
-  const inWin = !!(f && f.now);
+  const inWin = mealLive(f);
   if (wasInWindow === null) { wasInWindow = inWin; return; }
-  if (inWin && !wasInWindow && !userNav && active === "news") go("wait", { push: false });
+  if (inWin && !wasInWindow && !userNav && active === "news") go("wait", { push: false, anim: true });
   wasInWindow = inWin;
 }
 async function feedTick() { if (document.hidden) return; try { const f = (await j("/api/status")).feed; renderFeed(f); autoSwitch(f); } catch (e) { console.error("feed", e); } }
@@ -155,13 +156,16 @@ function enter(sec) {
 }
 
 /* 화면으로 간다 — 즉시. 이전 화면은 숨기고(deactivate) 새 화면만 보인다. push=false 는 뒤로가기·해시처럼 이미 일어난 이동 */
-export function go(name, { push = true } = {}) {
+export function go(name, { push = true, anim = false } = {}) {
   if (!ORDER.includes(name)) name = "wait";
   const prev = active;
   if (prev === name) { scrollTo({ top: 0, behavior: REDUCE ? "auto" : "smooth" }); mark(name, push); return; }   // 같은 탭 다시 누르면 맨 위로
   if (prev) { scrollYs[prev] = scrollY; SCREENS[prev].deactivate?.(); view(prev).removeAttribute("data-active"); }
   active = name;
   view(name).setAttribute("data-active", "");
+  // 자동 전환(급식 창이 열릴 때)만의 화면 전체 페이드 — 카드 enter 보다 큰 호흡. 모션 축소면 생략
+  if (anim && !REDUCE) { const v = view(name); v.classList.remove("xfade"); void v.offsetWidth;
+    v.classList.add("xfade"); v.addEventListener("animationend", () => v.classList.remove("xfade"), { once: true }); }
   mark(name, push);
   scrollTo({ top: scrollYs[name] || 0, behavior: "auto" });
   enter(view(name));
@@ -189,10 +193,10 @@ async function boot() {
   let f = null;
   if (!start) {
     try { f = (await Promise.race([j("/api/status"), new Promise((_, rej) => setTimeout(rej, 1500))])).feed; } catch {}
-    start = f && !f.now ? "news" : "wait";
+    start = f && !mealLive(f) ? "news" : "wait";       // 창 밖 또는 급식 없는 날(주말·방학) → 이슈피드에서 시작
   }
   go(start, { push: false });
-  if (f) { renderFeed(f); wasInWindow = !!f.now; }
+  if (f) { renderFeed(f); wasInWindow = mealLive(f); }
   setInterval(tick, 30000);
   feedTick(); setInterval(feedTick, 60000);            // 안내 띠·자동 전환은 화면과 무관하게 60초(status 응답은 200B 남짓)
 }

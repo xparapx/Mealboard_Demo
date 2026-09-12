@@ -39,11 +39,13 @@ def next_with_day(now):
 
 def feed(now, state, source=FEED_SOURCE):
     """'지금 값이 실측인가' — 화면 맨 위 안내 띠가 읽는다(09-04). live 는 셋이 모두 맞을 때만:
-    출처가 vision(카메라 노드) · 지금이 수집 창(3학년 점심·1·2학년 점심·석식) 안 · 표본이 끊기지 않음. now 는 열린 창, next 는 다음 창(며칠 뒤 days).
+    출처가 vision(카메라 노드) · 지금이 수집 창(3학년 점심·1·2학년 점심·석식) 안 · 표본이 끊기지 않음. now 는 열린 창, next 는 다음 창(며칠 뒤 days), meal_day 는 오늘이 급식 있는 날인지(NEIS 캐시 기준 — 시작 화면·자동 전환이 본다).
     창 밖에는 카메라 노드가 아무 행도 쓰지 않으므로(09-11) state 는 120초 뒤 no_data 가 된다 — 화면은 source·now 로 '급식 시간이 아닙니다' 와 '표본 끊김' 을 가른다"""
     w = meal_now(now)
+    ymd = now.strftime("%Y%m%d")
+    meal_day = any(d.get("date") == ymd and d.get("menu") for d in (read_meal().get("week") or []))
     return {"source": source, "live": source == "vision" and w is not None and state != "no_data",
-            "now": describe(w), "next": next_with_day(now)}
+            "now": describe(w), "next": next_with_day(now), "meal_day": meal_day}
 
 
 @router.get("/api/status")

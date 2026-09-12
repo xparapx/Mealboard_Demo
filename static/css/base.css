@@ -51,6 +51,9 @@ a.u { border-bottom: 1px solid rgba(12,109,106,.35); }
 .view > * { width: 100%; max-width: 390px; }
 .enter { animation: enter var(--t-view) var(--ease); }
 @keyframes enter { from { opacity: 0; transform: translateY(6px); } }
+/* 급식 창이 열리는 자동 전환(09-12)만의 화면 전체 페이드 — 카드 enter 보다 길고 크게. 모션 축소면 JS 가 붙이지 않는다 */
+.view.xfade { animation: xfade .6s var(--ease); }
+@keyframes xfade { from { opacity: 0; transform: translateY(16px) scale(.985); } }
 @media (max-width: 899px) {
   body { padding-bottom: calc(var(--dock-h) + env(safe-area-inset-bottom)); }
 }
