@@ -6,6 +6,11 @@ data/*
 !data/news_feeds.json
 !data/zones.json
 .env
+.env.bak-*
+*.bak-*
+*.log
+qr.png
+static/icons/qr.png
 .venv/
 __pycache__/
 *.db

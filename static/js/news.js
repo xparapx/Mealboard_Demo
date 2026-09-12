@@ -23,7 +23,7 @@ function fill(cardId, listId, items) {
 
 /* 낱말이 어느 섹션에서 왔는지 — 각 섹션의 제목·요약에 등장하는지로 색을 정한다(서버 키워드는 합산 빈도) */
 function sideOf(word, sec) {
-  const re = new RegExp(`\b${word.replace(/[.*+?^${}()|[\]\]/g, "\$&")}\b`, "i");
+  const re = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
   const inC = sec.climate.some(x => re.test(x.title + " " + x.summary)), inT = sec.tech.some(x => re.test(x.title + " " + x.summary));
   return inC && inT ? "b" : inT ? "t" : "c";
 }
