@@ -209,7 +209,7 @@ function renderForecast(d) {
   const golden = d.golden_wait ?? 3;
   $("#forecastlead").innerHTML = `${when} 피크 <b>${mm(d.peak.minute_of_day)}</b> 무렵 약 <b>${d.peak.wait_min}분</b>`;
   $("#forecastchips").innerHTML = (d.golden || []).slice(0, 3).map(g => `<span class="ghost">${mm(g.start_min)}–${mm(g.end_min)}<small>${golden}분 이하</small></span>`).join("");
-  const menu = (d.menu || [])[0] ? `주요리 ${esc(d.menu[0])} · ` : "";
+  const menu = (d.menu || [])[0] ? `주요리 ${d.menu[0]} · ` : "";   // textContent 라 esc 불필요 — esc 를 쓰면 & 가 &amp; 로 보인다(09-16 실화면에서 확인)
   $("#forecastfoot").textContent = `${menu}메뉴 보정 ×${d.menu_factor} · 평소 곡선 ${d.basis === "weekday" ? "같은 요일 " + d.weeks + "주" : "최근 7일"}`;
 }
 
