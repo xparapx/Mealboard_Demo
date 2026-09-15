@@ -5,11 +5,12 @@
 import datetime as dt
 
 from vision.schedule import current, describe, next_after, parse_windows   # noqa: F401  (describe 는 라우터가 이 모듈을 거쳐 쓴다)
-from .config import LUNCH_START, LUNCH_END, MEAL_WINDOWS
+from .config import DINNER_END, DINNER_START, LUNCH_START, LUNCH_END, MEAL_WINDOWS
 
 BUCKET_MIN = 5          # 5분 단위로 묶는다. 30초 폴링 노이즈를 지우고 곡선을 읽히게
 DAY_MIN = 24 * 60
 WINDOWS = ("lunch", "all")
+AGG_MEALS = ("lunch", "dinner")     # 집계 끼니(09-16 분리). insights.db 의 meal 열·/api/insight ?meal= 과 같은 값
 
 
 def parse_hhmm(text):
@@ -31,12 +32,32 @@ def lunch_bounds(start=LUNCH_START, end=LUNCH_END):
     return lo, hi
 
 
+def dinner_bounds(start=DINNER_START, end=DINNER_END):
+    """석식 집계 창 [lo, hi). 기본값은 .env 의 DINNER_START~DINNER_END"""
+    lo, hi = parse_hhmm(start), parse_hhmm(end)
+    if lo >= hi:
+        raise ValueError(f"DINNER_START({start}) 는 DINNER_END({end}) 보다 앞서야 한다")
+    return lo, hi
+
+
 def bounds(window):
     """집계 창. lunch = 급식 시간창, all = 하루 전체(스테이징 mock 은 종일 돌기 때문에)"""
     if window == "all":
         return 0, DAY_MIN
     if window == "lunch":
         return lunch_bounds()
+    if window == "dinner":
+        return dinner_bounds()
+    raise ValueError(f"집계 창은 lunch|dinner|all 중 하나: {window!r}")
+
+
+def agg_meals(window):
+    """ROLLUP_WINDOW → 집계할 (meal, lo, hi) 목록(09-16 중식/석식 분리).
+    lunch = 끼니별 두 창(중식 LUNCH_*, 석식 DINNER_*), all = 하루 전체 한 창(스테이징 mock — meal 열에도 'all')"""
+    if window == "all":
+        return [("all", 0, DAY_MIN)]
+    if window == "lunch":
+        return [("lunch", *lunch_bounds()), ("dinner", *dinner_bounds())]
     raise ValueError(f"ROLLUP_WINDOW 는 lunch|all 중 하나: {window!r}")
 
 
@@ -77,6 +98,7 @@ def weekday_of(date):
 
 
 LUNCH_LO, LUNCH_HI = lunch_bounds()     # import 시점 검증. 잘못된 .env 는 여기서 ValueError
+DINNER_LO, DINNER_HI = dinner_bounds()
 
 # 수집 시간창(09-04): 3학년 점심 · 1·2학년 점심 · 석식. LUNCH_START~END 는 집계·관리 가드용 '점심 전체' 창으로 그대로 두고,
 # 이 세 창은 '지금 값이 실측인가'(카메라 노드 수집 on/off, /api/status feed.live, 화면의 더미데이터 띠) 만 정한다

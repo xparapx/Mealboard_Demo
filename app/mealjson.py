@@ -19,24 +19,34 @@ def iso_date(ymd):
     return f"{ymd[:4]}-{ymd[4:6]}-{ymd[6:8]}"
 
 
-def nutrition_rows(meal):
-    """week[] → nutrition_days 한 행씩(dict). 집계가 저장하고, 집계가 없을 때 인사이트 API 가 같은 모양으로 폴백한다"""
+def _row(day, meal_name, d, fetched_at):
+    """중식이면 week[] 항목 자체, 석식이면 그 안의 dinner 절 — 같은 모양(menu·kcal·assess·carbon)이라 한 함수로 만든다"""
+    a = d.get("assess") or {}
+    ratio = a.get("macro_ratio") or {}
+    ok = a.get("macro_ratio_ok")
+    return {"date": day, "meal": meal_name, "kcal": d.get("kcal"), "energy_pct": a.get("energy_pct"),
+            "protein_pct": a.get("protein_pct"), "carb_ratio": ratio.get("carb"), "protein_ratio": ratio.get("protein"),
+            "fat_ratio": ratio.get("fat"), "macro_ok": None if ok is None else int(ok), "mar": a.get("mar"),
+            "kgco2e": (d.get("carbon") or {}).get("kgco2e"), "menu": d.get("menu") or [],
+            "fetched_at": fetched_at}
+
+
+def nutrition_rows(meal, meals=("lunch", "dinner")):
+    """week[] → nutrition_days 한 행씩(dict, meal 열 포함 — 09-16 중식/석식 분리). 석식이 없는 날은 석식 행이 안 나온다.
+    집계가 저장하고, 집계가 없을 때 인사이트 API 가 같은 모양으로 폴백한다"""
     rows = []
     for d in meal.get("week") or []:
-        a = d.get("assess") or {}
-        ratio = a.get("macro_ratio") or {}
-        ok = a.get("macro_ratio_ok")
-        rows.append({"date": iso_date(d["date"]), "kcal": d.get("kcal"), "energy_pct": a.get("energy_pct"),
-                     "protein_pct": a.get("protein_pct"), "carb_ratio": ratio.get("carb"), "protein_ratio": ratio.get("protein"),
-                     "fat_ratio": ratio.get("fat"), "macro_ok": None if ok is None else int(ok), "mar": a.get("mar"),
-                     "kgco2e": (d.get("carbon") or {}).get("kgco2e"), "menu": d.get("menu") or [],
-                     "fetched_at": meal.get("fetched_at")})
+        day = iso_date(d["date"])
+        if "lunch" in meals:
+            rows.append(_row(day, "lunch", d, meal.get("fetched_at")))
+        if "dinner" in meals and d.get("dinner"):
+            rows.append(_row(day, "dinner", d["dinner"], meal.get("fetched_at")))
     return rows
 
 
-def menu_on(meal, date):
-    """그날의 정제된 메뉴명(알레르기 번호 제거). 없으면 []"""
-    for r in nutrition_rows(meal):
+def menu_on(meal, date, meal_name="lunch"):
+    """그날·그 끼니의 정제된 메뉴명(알레르기 번호 제거). 없으면 []"""
+    for r in nutrition_rows(meal, meals=(meal_name,)):
         if r["date"] == date:
             return [m for m in (normalize_menu(x) for x in r["menu"]) if m]
     return []

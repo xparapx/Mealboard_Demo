@@ -25,6 +25,8 @@ def _choice(name, default, allowed):
 API_PORT = int(os.getenv("API_PORT", "8100"))
 LUNCH_START = os.getenv("LUNCH_START", "11:30")     # 형식 검증은 app/lunch.py 가 import 시점에 한다
 LUNCH_END = os.getenv("LUNCH_END", "14:00")
+DINNER_START = os.getenv("DINNER_START", "17:00")   # 석식 집계 창(09-16 중식/석식 분리) — 수집 창 MEAL_WINDOWS 의 석식과 별개 눈금
+DINNER_END = os.getenv("DINNER_END", "18:30")
 # 수집 시간창 세 개(09-04 운영 규칙): 카메라 노드는 이 창 안에서만 세고, 창 밖은 더미 곡선 + 화면 '더미데이터' 띠. 형식·겹침 검증은 vision/schedule.py (app/lunch.py import 시점)
 # 09-11: 시작을 10~30분 앞당긴다(교사 식사 등 시간표 밖 유동) — 중식 11:20, 석식 17:00. 끝은 그대로
 MEAL_WINDOWS = os.getenv("MEAL_WINDOWS", "11:20-12:30 3학년 점심;12:30-13:30 1·2학년 점심;17:00-18:30 석식")

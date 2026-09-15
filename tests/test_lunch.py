@@ -37,9 +37,24 @@ def test_lunch_창은_env_값을_따른다():
     assert lunch_bounds() == (lo, hi) and lo < hi
 
 
+def test_dinner_창은_lunch_와_겹치지_않는다():
+    dlo, dhi = bounds("dinner")
+    llo, lhi = bounds("lunch")
+    assert dlo < dhi and lhi <= dlo             # 석식 집계 창(09-16)은 점심 창 뒤
+
+
 def test_미지의_창_이름은_예외():
     with pytest.raises(ValueError):
-        bounds("dinner")
+        bounds("brunch")
+
+
+def test_agg_meals_는_lunch_모드에서_두_끼니():
+    from app.lunch import agg_meals
+    meals = agg_meals("lunch")
+    assert [m[0] for m in meals] == ["lunch", "dinner"]
+    assert agg_meals("all") == [("all", 0, 1440)]
+    with pytest.raises(ValueError):
+        agg_meals("dinner")
 
 
 def test_자정부터_초_소수까지():

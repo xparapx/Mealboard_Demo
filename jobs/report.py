@@ -60,8 +60,8 @@ def typical_for(icon, date, weeks=4):
     wd = weekday_of(date)
     since = (dt.date.fromisoformat(date) - dt.timedelta(weeks=weeks)).isoformat()
     for basis, sql, args in (
-        ("weekday", "SELECT bin, AVG(avg_wait) w, COUNT(DISTINCT date) d FROM lunch_bins WHERE weekday = ? AND date >= ? AND date < ? AND avg_wait IS NOT NULL GROUP BY bin", (wd, since, date)),
-        ("recent", "SELECT bin, AVG(avg_wait) w, COUNT(DISTINCT date) d FROM lunch_bins WHERE date < ? AND avg_wait IS NOT NULL GROUP BY bin", (date,)),
+        ("weekday", "SELECT bin, AVG(avg_wait) w, COUNT(DISTINCT date) d FROM lunch_bins WHERE meal IN ('lunch','all') AND weekday = ? AND date >= ? AND date < ? AND avg_wait IS NOT NULL GROUP BY bin", (wd, since, date)),
+        ("recent", "SELECT bin, AVG(avg_wait) w, COUNT(DISTINCT date) d FROM lunch_bins WHERE meal IN ('lunch','all') AND date < ? AND avg_wait IS NOT NULL GROUP BY bin", (date,)),
     ):
         rows = icon.execute(sql, args).fetchall()
         if len(rows) >= 6:
@@ -81,10 +81,11 @@ def build_recap(date, icon):
     """그날의 집계 행이 있어야 결산이 있다. 없으면 None"""
     if icon is None:
         return None
-    row = icon.execute("SELECT * FROM lunch_days WHERE date = ?", (date,)).fetchone()
+    # 리포트는 중식 결산 — v2(09-16) 스키마의 meal 열에서 lunch(또는 스테이징의 all)만 본다
+    row = icon.execute("SELECT * FROM lunch_days WHERE date = ? AND meal IN ('lunch','all')", (date,)).fetchone()
     if row is None:
         return None
-    ev = icon.execute("SELECT kind, minutes, value FROM events WHERE date = ? AND kind IN ('golden','bottleneck') ORDER BY start_ts", (date,)).fetchall()
+    ev = icon.execute("SELECT kind, minutes, value FROM events WHERE date = ? AND meal IN ('lunch','all') AND kind IN ('golden','bottleneck') ORDER BY start_ts", (date,)).fetchall()
     menu = clean_menu(json.loads(row["menu_json"]) if row["menu_json"] else [])
     hmv = (row["peak_wait_ts"] or "")[11:16] or None
     return {"kind": "recap", "date": date, "weekday": row["weekday"], "menu": menu, "n_samples": row["n_samples"],

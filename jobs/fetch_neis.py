@@ -110,7 +110,8 @@ def main():
     monday = today - dt.timedelta(days=today.weekday())
     friday = monday + dt.timedelta(days=4)
     rows, code = fetch(monday.strftime("%Y%m%d"), friday.strftime("%Y%m%d"))
-    # 석식(09-11 사용자 요청): 메뉴·kcal·영양소만 붙인다. 영양 지표 3종·탄소·집계·인사이트는 중식 기준 그대로(week[].menu/kcal/assess 는 중식).
+    # 석식(09-11 사용자 요청, 09-16 지표 확장): 메뉴·kcal·영양소에 더해 지표 3종·탄소도 석식에 산출한다 —
+    # 기준치는 중식과 같은 '한 끼 기준'(nutrition_std per_meal, 09-16 사용자 결정). week[].menu/kcal/assess 최상위는 여전히 중식.
     # 석식 조회가 실패해도 중식은 나간다 — 학교가 석식을 안 하는 날(INFO-200)이 정상 경로다
     try:
         dinner_rows, _ = fetch(monday.strftime("%Y%m%d"), friday.strftime("%Y%m%d"), MEAL_DINNER)
@@ -125,11 +126,15 @@ def main():
         kcal = parse_kcal(r.get("CAL_INFO"))
         menu = [m.strip() for m in r.get("DDISH_NM", "").split("<br/>") if m.strip()]
         d = dinner.get(r["MLSV_YMD"])
+        if d is None:
+            dn = None
+        else:
+            d_n = parse_ntr(d.get("NTR_INFO", ""))
+            d_kcal = parse_kcal(d.get("CAL_INFO"))
+            dn = {"menu": [m.strip() for m in d.get("DDISH_NM", "").split("<br/>") if m.strip()],
+                  "kcal": d_kcal, "nutrients": d_n, "assess": assess(d_kcal, d_n), "carbon": carbon(d_kcal)}
         week.append({"date": r["MLSV_YMD"], "menu": menu, "kcal": kcal,
-                     "nutrients": n, "assess": assess(kcal, n), "carbon": carbon(kcal),
-                     "dinner": None if d is None else {
-                         "menu": [m.strip() for m in d.get("DDISH_NM", "").split("<br/>") if m.strip()],
-                         "kcal": parse_kcal(d.get("CAL_INFO")), "nutrients": parse_ntr(d.get("NTR_INFO", ""))}})
+                     "nutrients": n, "assess": assess(kcal, n), "carbon": carbon(kcal), "dinner": dn})
 
     def avg(key):
         vals = [d["assess"][key] for d in week if d["assess"][key] is not None]

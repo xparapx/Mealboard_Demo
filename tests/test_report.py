@@ -41,19 +41,20 @@ def dbs(tmp_path):
     ins = tmp_path / "insights.db"
     con = sqlite3.connect(ins)
     con.executescript("""
-    CREATE TABLE lunch_days (date TEXT PRIMARY KEY, weekday INTEGER, window_lo INTEGER, window_hi INTEGER, source TEXT, n_samples INTEGER, coverage_pct REAL,
+    CREATE TABLE lunch_days (date TEXT, meal TEXT, weekday INTEGER, window_lo INTEGER, window_hi INTEGER, source TEXT, n_samples INTEGER, coverage_pct REAL,
       stale_min REAL, insufficient_min REAL, first_ts TEXT, last_ts TEXT, peak_wait REAL, peak_wait_ts TEXT, peak_queue INTEGER, peak_queue_ts TEXT, avg_wait REAL,
-      served_est INTEGER, typical_rate REAL, rise_rate REAL, golden_min REAL, bottleneck_min REAL, menu_json TEXT, main_dish TEXT, calc_version INTEGER, computed_at TEXT);
-    CREATE TABLE lunch_bins (date TEXT, weekday INTEGER, bin INTEGER, n INTEGER, ok_n INTEGER, insufficient_n INTEGER, avg_queue REAL, max_queue INTEGER, avg_rate REAL, avg_wait REAL, max_wait REAL);
-    CREATE TABLE events (date TEXT, kind TEXT, start_ts TEXT, end_ts TEXT, minutes REAL, value REAL, detail TEXT);
+      served_est INTEGER, typical_rate REAL, rise_rate REAL, golden_min REAL, bottleneck_min REAL, menu_json TEXT, main_dish TEXT, calc_version INTEGER, computed_at TEXT,
+      PRIMARY KEY (date, meal));
+    CREATE TABLE lunch_bins (date TEXT, meal TEXT, weekday INTEGER, bin INTEGER, n INTEGER, ok_n INTEGER, insufficient_n INTEGER, avg_queue REAL, max_queue INTEGER, avg_rate REAL, avg_wait REAL, max_wait REAL);
+    CREATE TABLE events (date TEXT, meal TEXT, kind TEXT, start_ts TEXT, end_ts TEXT, minutes REAL, value REAL, detail TEXT);
     """)
-    con.execute("INSERT INTO lunch_days (date, weekday, n_samples, coverage_pct, peak_wait, peak_wait_ts, peak_queue, avg_wait, served_est, golden_min, bottleneck_min, menu_json) "
-                "VALUES ('2026-09-03', 4, 500, 96.4, 6.0, '2026-09-03T12:20:10', 31, 2.4, 380, 25.0, 0, ?)", (json.dumps(["김치찌개(5.6)", "제육볶음", "밥"]),))
-    con.execute("INSERT INTO events VALUES ('2026-09-03','golden','2026-09-03T12:40:00','2026-09-03T13:05:00',25,2.1,'')")
+    con.execute("INSERT INTO lunch_days (date, meal, weekday, n_samples, coverage_pct, peak_wait, peak_wait_ts, peak_queue, avg_wait, served_est, golden_min, bottleneck_min, menu_json) "
+                "VALUES ('2026-09-03', 'lunch', 4, 500, 96.4, 6.0, '2026-09-03T12:20:10', 31, 2.4, 380, 25.0, 0, ?)", (json.dumps(["김치찌개(5.6)", "제육볶음", "밥"]),))
+    con.execute("INSERT INTO events VALUES ('2026-09-03','lunch','golden','2026-09-03T12:40:00','2026-09-03T13:05:00',25,2.1,'')")
     for wk in range(3):                                        # 같은 목요일 3주치 평소 곡선
         d = f"2026-08-{13 + wk * 7:02d}"
         for i, w in enumerate([1, 2, 5, 9, 7, 4, 2, 1]):
-            con.execute("INSERT INTO lunch_bins VALUES (?,4,?,10,10,0,5,10,12,?,?)", (d, 700 + i * 5, w, w))
+            con.execute("INSERT INTO lunch_bins VALUES (?,'lunch',4,?,10,10,0,5,10,12,?,?)", (d, 700 + i * 5, w, w))
     con.commit(); con.close()
     return ins, tmp_path / "reports.db"
 

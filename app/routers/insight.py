@@ -15,7 +15,7 @@ from fastapi import APIRouter, Query
 from ..config import DB_PATH, FEED_SOURCE, ROLLUP_WINDOW, ZONES_JSON
 from ..insight_calc import GOLDEN_WAIT, day_summary, density, golden_bins, median_or_none
 from ..insights_db import connect_reports_ro, connect_ro, meta
-from ..lunch import BUCKET_MIN, LUNCH_HI, LUNCH_LO, bounds, iso_at, minute_of_day, seconds_of_day, weekday_of
+from ..lunch import BUCKET_MIN, DAY_MIN, DINNER_HI, DINNER_LO, LUNCH_HI, LUNCH_LO, iso_at, minute_of_day, seconds_of_day, weekday_of
 from ..mealjson import menu_on, nutrition_rows, read_meal
 from .typical import MIN_BUCKETS
 from vision.zones import GRID_COLS, GRID_ROWS, load_zones, polygon_area_m2
@@ -25,7 +25,23 @@ LIVE_MIN = 180                 # 오늘 즉석 계산에 쓰는 최근 분
 MIN_DAYS = 2                   # 메뉴 통계가 뜻을 가지려면 이만큼은 나왔어야 한다 (menus 기본값·예보 보정 공통)
 MENU_FACTOR = (0.7, 1.5)       # 예보 보정 클램프
 NO_DB = "insights.db 가 아직 없다 — jobs/rollup.py 가 만든다"
-WINDOW_LO, WINDOW_HI = bounds(ROLLUP_WINDOW)
+
+# 끼니 축(09-16 중식/석식 분리): 모든 엔드포인트가 ?meal=lunch|dinner 를 받는다.
+# ROLLUP_WINDOW=all(스테이징 mock)이면 집계 행의 meal 은 'all' 하나 — 어느 끼니를 물어도 같은 행을 창 전체로 보여 준다
+MEAL_BOUNDS = {"lunch": (LUNCH_LO, LUNCH_HI), "dinner": (DINNER_LO, DINNER_HI)}
+
+
+def MealQ():
+    return Query("lunch", pattern="^(lunch|dinner)$")
+
+
+def _bounds(meal):
+    return (0, DAY_MIN) if ROLLUP_WINDOW == "all" else MEAL_BOUNDS[meal]
+
+
+def _stored(meal):
+    """집계 행의 meal 키 — all 모드에서는 'all' 한 값뿐"""
+    return "all" if ROLLUP_WINDOW == "all" else meal
 
 
 def _no(reason, **extra):
@@ -44,8 +60,9 @@ def _since(weeks):
     return (dt.date.today() - dt.timedelta(weeks=weeks)).isoformat()
 
 
-def _window():
-    return {"lo": WINDOW_LO, "hi": WINDOW_HI, "name": ROLLUP_WINDOW}
+def _window(meal):
+    lo, hi = _bounds(meal)
+    return {"lo": lo, "hi": hi, "name": ROLLUP_WINDOW, "meal": meal}
 
 
 def _rollup_meta():
@@ -60,29 +77,32 @@ def _rollup_meta():
 
 # ---- 하루치: 집계 행 또는 즉석 계산 -------------------------------------------------------------
 
-def _stored_day(date):
-    """insights.db 의 그날 행 + events + bins. 없으면 None"""
+def _stored_day(date, meal):
+    """insights.db 의 그날·그 끼니 행 + events + bins. 없으면 None"""
     con = connect_ro()
     if con is None:
         return None
+    sm = _stored(meal)
     with closing(con):
-        row = con.execute("SELECT * FROM lunch_days WHERE date = ? AND source = ?", (date, FEED_SOURCE)).fetchone()
+        row = con.execute("SELECT * FROM lunch_days WHERE date = ? AND meal = ? AND source = ?", (date, sm, FEED_SOURCE)).fetchone()
         if row is None:
             return None
         summary = dict(row)
         summary["menu"] = json.loads(summary.pop("menu_json") or "[]")
         summary["events"] = [dict(r) for r in con.execute(
-            "SELECT kind, start_ts, end_ts, minutes, value, detail FROM events WHERE date = ? ORDER BY start_ts", (date,))]
+            "SELECT kind, start_ts, end_ts, minutes, value, detail FROM events WHERE date = ? AND meal = ? ORDER BY start_ts", (date, sm))]
         summary["bins"] = [dict(r) for r in con.execute(
-            "SELECT bin, n, ok_n, insufficient_n, avg_queue, max_queue, avg_rate, avg_wait, max_wait FROM lunch_bins WHERE date = ? ORDER BY bin", (date,))]
+            "SELECT bin, n, ok_n, insufficient_n, avg_queue, max_queue, avg_rate, avg_wait, max_wait FROM lunch_bins "
+            "WHERE date = ? AND meal = ? ORDER BY bin", (date, sm))]
         return summary
 
 
-def _live_day(date):
-    """오늘 최근 LIVE_MIN 분(창 안)을 queue.db 에서 한 번 읽어 day_summary — 표본·커버리지가 같은 창을 본다"""
+def _live_day(date, meal):
+    """오늘 최근 LIVE_MIN 분(그 끼니 창 안)을 queue.db 에서 한 번 읽어 day_summary — 표본·커버리지가 같은 창을 본다"""
     now = dt.datetime.now()
     nmin = minute_of_day(now)
-    lo, hi = max(WINDOW_LO, nmin - LIVE_MIN), min(WINDOW_HI, nmin + 1)
+    wlo, whi = _bounds(meal)
+    lo, hi = max(wlo, nmin - LIVE_MIN), min(whi, nmin + 1)
     samples = []
     con = connect_ro(DB_PATH, "samples")
     if con is not None and lo < hi:
@@ -91,40 +111,43 @@ def _live_day(date):
                 "SELECT ts, queue_len, rate_per_min, wait_min, state FROM samples WHERE ts >= ? AND ts < ? ORDER BY ts",
                 (iso_at(date, lo * 60), iso_at(date, hi * 60)))]
     s = day_summary(samples, date, lo, max(lo, hi), seconds_of_day(now))
-    s["menu"] = menu_on(read_meal(), date)
+    s["menu"] = menu_on(read_meal(), date, "lunch" if ROLLUP_WINDOW == "all" else meal)
     return s
 
 
-def _day(date):
-    """(basis, summary) — 오늘이고 창이 아직 열려 있으면 live, 아니면 집계 행, 오늘인데 행이 없으면 live, 그 밖엔 None"""
+def _day(date, meal):
+    """(basis, summary) — 오늘이고 그 끼니 창이 아직 안 끝났으면 live, 아니면 집계 행, 오늘인데 행이 없으면 live, 그 밖엔 None"""
     today = date == _today()
-    if today and minute_of_day(dt.datetime.now()) < WINDOW_HI:
-        return "live", _live_day(date)
-    stored = _stored_day(date)
+    if today and minute_of_day(dt.datetime.now()) < _bounds(meal)[1]:
+        return "live", _live_day(date, meal)
+    stored = _stored_day(date, meal)
     if stored is not None:
         return "rollup", stored
     if today:
-        return "live", _live_day(date)
+        return "live", _live_day(date, meal)
     return None, None
 
 
 # ---- 1. 요일×시각 히트맵 -----------------------------------------------------------------
 
 @router.get("/heatmap")
-def heatmap(weeks: int = Query(4, ge=1, le=12)):
+def heatmap(weeks: int = Query(4, ge=1, le=12), meal: str = MealQ()):
+    sm = _stored(meal)
     con = connect_ro()
     if con is None:
-        return _no(NO_DB, cells=[], window=_window())
+        return _no(NO_DB, cells=[], window=_window(meal), meal=meal)
     with closing(con):
         rows = con.execute(
             "SELECT b.weekday, b.bin, AVG(b.avg_wait) w, AVG(b.avg_queue) q, COUNT(DISTINCT b.date) d "
-            "FROM lunch_bins b JOIN lunch_days l ON l.date = b.date "
-            "WHERE l.source = ? AND b.date >= ? GROUP BY b.weekday, b.bin ORDER BY b.weekday, b.bin", (FEED_SOURCE, _since(weeks))).fetchall()
-        days = con.execute("SELECT COUNT(*) FROM lunch_days WHERE source = ? AND date >= ?", (FEED_SOURCE, _since(weeks))).fetchone()[0]
+            "FROM lunch_bins b JOIN lunch_days l ON l.date = b.date AND l.meal = b.meal "
+            "WHERE l.source = ? AND b.meal = ? AND b.date >= ? GROUP BY b.weekday, b.bin ORDER BY b.weekday, b.bin",
+            (FEED_SOURCE, sm, _since(weeks))).fetchall()
+        days = con.execute("SELECT COUNT(*) FROM lunch_days WHERE source = ? AND meal = ? AND date >= ?",
+                           (FEED_SOURCE, sm, _since(weeks))).fetchone()[0]
     if not rows:
-        return _no("집계된 날이 없다", cells=[], window=_window(), days=0)
-    return {"state": "ok", "basis": "weekday" if days >= 5 else "recent", "weeks": weeks, "days": days,
-            "bucket_min": BUCKET_MIN, "window": _window(), "lunch": {"lo": LUNCH_LO, "hi": LUNCH_HI},   # 화면은 급식 창만 보여 준다
+        return _no("집계된 날이 없다", cells=[], window=_window(meal), meal=meal, days=0)
+    return {"state": "ok", "basis": "weekday" if days >= 5 else "recent", "weeks": weeks, "days": days, "meal": meal,
+            "bucket_min": BUCKET_MIN, "window": _window(meal),
             "golden_wait": GOLDEN_WAIT, "source": FEED_SOURCE,
             "cells": [{"weekday": r["weekday"], "minute_of_day": r["bin"],
                        "wait_min": round(r["w"], 1) if r["w"] is not None else None,
@@ -134,16 +157,16 @@ def heatmap(weeks: int = Query(4, ge=1, le=12)):
 # ---- 2. 하루 -----------------------------------------------------------------------------
 
 @router.get("/day")
-def day(date: dt.date | None = Query(None)):
+def day(date: dt.date | None = Query(None), meal: str = MealQ()):
     date = _iso(date)
-    basis, s = _day(date)
+    basis, s = _day(date, meal)
     if s is None:
-        return _no(NO_DB if connect_ro() is None else "그날의 집계가 없다", date=date)
+        return _no(NO_DB if connect_ro() is None else "그날의 집계가 없다", date=date, meal=meal)
     events, bins = s.pop("events"), s.pop("bins")
     menu = s.pop("menu")
     if basis == "live" and not s["n_samples"]:
-        return _no("급식 시간 데이터가 쌓이면 반영됩니다", basis="live", date=date, summary=s, menu=menu, events=events, bins=bins)
-    return {"state": "ok", "basis": basis, "date": date, "summary": s, "menu": menu,
+        return _no("급식 시간 데이터가 쌓이면 반영됩니다", basis="live", date=date, meal=meal, summary=s, menu=menu, events=events, bins=bins)
+    return {"state": "ok", "basis": basis, "date": date, "meal": meal, "summary": s, "menu": menu,
             "golden": [e for e in events if e["kind"] == "golden"],
             "bottlenecks": [e for e in events if e["kind"] == "bottleneck"], "events": events, "bins": bins}
 
@@ -151,45 +174,47 @@ def day(date: dt.date | None = Query(None)):
 # ---- 3. 메뉴 인기 ---------------------------------------------------------------------------
 
 @router.get("/menus")
-def menus(n: int = Query(5, ge=1, le=20), min_days: int = Query(MIN_DAYS, ge=1, le=30)):
+def menus(n: int = Query(5, ge=1, le=20), min_days: int = Query(MIN_DAYS, ge=1, le=30), meal: str = MealQ()):
+    sm = _stored(meal)
     con = connect_ro()
     if con is None:
-        return _no(NO_DB, items=[])
+        return _no(NO_DB, items=[], meal=meal)
     with closing(con):
         rows = con.execute(
             "SELECT menu, n_days, popularity, avg_rise_rate, avg_peak_wait, last_date FROM menu_stats "
-            "WHERE n_days >= ? AND popularity IS NOT NULL ORDER BY popularity DESC, n_days DESC LIMIT ?", (min_days, n)).fetchall()
+            "WHERE meal = ? AND n_days >= ? AND popularity IS NOT NULL ORDER BY popularity DESC, n_days DESC LIMIT ?",
+            (sm, min_days, n)).fetchall()
         m = meta(con)
-    base = {k: (float(m[k]) if m.get(k) not in (None, "") else None) for k in ("menu_base_rise", "menu_base_wait")}
+    base = {k: (float(v) if (v := m.get(f"{k}_{sm}")) not in (None, "") else None) for k in ("menu_base_rise", "menu_base_wait")}
     if not rows:
-        return _no(f"{min_days}회 이상 나온 메뉴 아직 없음", items=[], baseline=base)
-    return {"state": "ok", "basis": "menu_stats", "min_days": min_days, "baseline": base, "items": [dict(r) for r in rows]}
+        return _no(f"{min_days}회 이상 나온 메뉴 아직 없음", items=[], meal=meal, baseline=base)
+    return {"state": "ok", "basis": "menu_stats", "meal": meal, "min_days": min_days, "baseline": base, "items": [dict(r) for r in rows]}
 
 
 # ---- 4. 예보 ----------------------------------------------------------------------------
 
-def _typical_curve(con, date, weeks):
+def _typical_curve(con, date, weeks, sm):
     """같은 요일 최근 N주 → 모자라면 최근 7일(요일 무관). 예보 대상 날 자신은 뺀다(비교 대상이 자기 자신이 되면 안 된다).
-    (basis, [{minute_of_day, wait}])"""
+    같은 끼니의 집계만 본다. (basis, [{minute_of_day, wait}])"""
     plans = [("weekday", "AND b.weekday = ? AND b.date >= ?", (weekday_of(date), _since(weeks))),
              ("recent", "AND b.date >= ?", ((dt.date.today() - dt.timedelta(days=7)).isoformat(),))]
     for basis, cond, args in plans:
         rows = con.execute(
-            "SELECT b.bin, AVG(b.avg_wait) w FROM lunch_bins b JOIN lunch_days l ON l.date = b.date "
-            f"WHERE l.source = ? AND b.date != ? AND b.avg_wait IS NOT NULL {cond} GROUP BY b.bin ORDER BY b.bin",
-            (FEED_SOURCE, date, *args)).fetchall()
+            "SELECT b.bin, AVG(b.avg_wait) w FROM lunch_bins b JOIN lunch_days l ON l.date = b.date AND l.meal = b.meal "
+            f"WHERE l.source = ? AND b.meal = ? AND b.date != ? AND b.avg_wait IS NOT NULL {cond} GROUP BY b.bin ORDER BY b.bin",
+            (FEED_SOURCE, sm, date, *args)).fetchall()
         if len(rows) >= MIN_BUCKETS:
             return basis, [{"minute_of_day": r["bin"], "wait": round(r["w"], 1)} for r in rows]
     return None, []
 
 
-def _menu_factor(con, dishes):
-    """그날 메뉴의 인기 지수 평균/100 을 0.7~1.5 로 눌러서. MIN_DAYS 미만인 메뉴는 menus 와 같이 무시"""
+def _menu_factor(con, dishes, sm):
+    """그날 메뉴의 인기 지수 평균/100 을 0.7~1.5 로 눌러서. MIN_DAYS 미만인 메뉴는 menus 와 같이 무시 — 같은 끼니의 통계만"""
     if not dishes:
         return 1.0, []
     marks = ",".join("?" * len(dishes))
-    rows = con.execute(f"SELECT menu, popularity, n_days FROM menu_stats WHERE popularity IS NOT NULL AND n_days >= ? AND menu IN ({marks})",
-                       (MIN_DAYS, *dishes)).fetchall()
+    rows = con.execute(f"SELECT menu, popularity, n_days FROM menu_stats WHERE meal = ? AND popularity IS NOT NULL AND n_days >= ? AND menu IN ({marks})",
+                       (sm, MIN_DAYS, *dishes)).fetchall()
     if not rows:
         return 1.0, []
     f = sum(r["popularity"] for r in rows) / len(rows) / 100
@@ -197,25 +222,26 @@ def _menu_factor(con, dishes):
 
 
 @router.get("/forecast")
-def forecast(date: dt.date | None = Query(None), weeks: int = Query(4, ge=1, le=12)):
-    if date is None:                                          # 급식이 끝난 뒤면 내일, 아니면 오늘
+def forecast(date: dt.date | None = Query(None), weeks: int = Query(4, ge=1, le=12), meal: str = MealQ()):
+    sm = _stored(meal)
+    if date is None:                                          # 그 끼니가 끝난 뒤면 내일, 아니면 오늘
         now = dt.datetime.now()
-        date = now.date() if minute_of_day(now) < WINDOW_HI else now.date() + dt.timedelta(days=1)
+        date = now.date() if minute_of_day(now) < _bounds(meal)[1] else now.date() + dt.timedelta(days=1)
     if date.weekday() >= 5:
-        return {"state": "no_meal", "date": date.isoformat(), "reason": "주말에는 급식이 없다", "curve": [], "golden": []}
+        return {"state": "no_meal", "date": date.isoformat(), "meal": meal, "reason": "주말에는 급식이 없다", "curve": [], "golden": []}
     date = date.isoformat()
     con = connect_ro()
     if con is None:
-        return _no(NO_DB, date=date, curve=[], golden=[])
-    dishes = menu_on(read_meal(), date)
+        return _no(NO_DB, date=date, meal=meal, curve=[], golden=[])
+    dishes = menu_on(read_meal(), date, "lunch" if ROLLUP_WINDOW == "all" else meal)
     with closing(con):
-        basis, typical = _typical_curve(con, date, weeks)
-        factor, matched = _menu_factor(con, dishes)
+        basis, typical = _typical_curve(con, date, weeks, sm)
+        factor, matched = _menu_factor(con, dishes, sm)
     if not typical:
-        return _no("평소 곡선을 만들 집계가 아직 모자란다", date=date, curve=[], golden=[], menu=dishes)
+        return _no("평소 곡선을 만들 집계가 아직 모자란다", date=date, meal=meal, curve=[], golden=[], menu=dishes)
     curve = [{"minute_of_day": p["minute_of_day"], "typical_wait": p["wait"], "forecast_wait": round(p["wait"] * factor, 1)} for p in typical]
     peak = max(curve, key=lambda p: p["forecast_wait"])
-    return {"state": "ok", "basis": basis, "date": date, "weeks": weeks, "menu": dishes, "menu_factor": factor, "menu_matched": matched,
+    return {"state": "ok", "basis": basis, "date": date, "meal": meal, "weeks": weeks, "menu": dishes, "menu_factor": factor, "menu_matched": matched,
             "golden_wait": GOLDEN_WAIT,
             "formula": f"forecast = typical({basis}) × menu_factor(인기 지수 평균/100, {MENU_FACTOR[0]}~{MENU_FACTOR[1]} 클램프); "
                        f"golden = forecast ≤ {GOLDEN_WAIT}분",
@@ -226,13 +252,13 @@ def forecast(date: dt.date | None = Query(None), weeks: int = Query(4, ge=1, le=
 # ---- 5. 측정 품질 --------------------------------------------------------------------------
 
 @router.get("/quality")
-def quality(date: dt.date | None = Query(None)):
+def quality(date: dt.date | None = Query(None), meal: str = MealQ()):
     date = _iso(date)
-    basis, s = _day(date)
+    basis, s = _day(date, meal)
     rollup = _rollup_meta()
     if s is None:
-        return _no(NO_DB if rollup["schema_version"] is None else "그날의 집계가 없다", date=date, rollup=rollup)
-    out = {"state": "ok" if s["n_samples"] else "no_data", "basis": basis, "date": date,
+        return _no(NO_DB if rollup["schema_version"] is None else "그날의 집계가 없다", date=date, meal=meal, rollup=rollup)
+    out = {"state": "ok" if s["n_samples"] else "no_data", "basis": basis, "date": date, "meal": meal,
            "window": {"lo": s["window_lo"], "hi": s["window_hi"]},
            "coverage_pct": s["coverage_pct"], "stale_min": s["stale_min"], "insufficient_min": s["insufficient_min"],
            "n_samples": s["n_samples"],
@@ -266,23 +292,24 @@ def _weeks_from(days):
 
 
 @router.get("/nutrition")
-def nutrition(weeks: int = Query(8, ge=1, le=26)):
+def nutrition(weeks: int = Query(8, ge=1, le=26), meal: str = MealQ()):
     con = connect_ro()
     if con is not None:
-        with closing(con):
-            rows = con.execute("SELECT * FROM nutrition_days WHERE date >= ? ORDER BY date", (_since(weeks),)).fetchall()
+        with closing(con):        # nutrition_days 의 meal 은 항상 lunch|dinner (upsert 가 창 모드와 무관하게 둘 다 쌓는다)
+            rows = con.execute("SELECT * FROM nutrition_days WHERE meal = ? AND date >= ? ORDER BY date", (meal, _since(weeks))).fetchall()
         if rows:
-            return {"state": "ok", "basis": "nutrition_days", "weeks": _weeks_from([dict(r) for r in rows])}
-    week = nutrition_rows(read_meal())                        # 집계가 없으면 meal.json 의 이번 주만
+            return {"state": "ok", "basis": "nutrition_days", "meal": meal, "weeks": _weeks_from([dict(r) for r in rows])}
+    week = nutrition_rows(read_meal(), meals=(meal,))         # 집계가 없으면 meal.json 의 이번 주만
     if not week:
-        return _no("영양 이력도 이번 주 식단도 없다", weeks=[])
-    return {"state": "ok", "basis": "meal_json", "weeks": _weeks_from(week)}
+        return _no("영양 이력도 이번 주 식단도 없다", meal=meal, weeks=[])
+    return {"state": "ok", "basis": "meal_json", "meal": meal, "weeks": _weeks_from(week)}
 
 
 # ---- 7. 구역 점유율 --------------------------------------------------------------------------
 
 @router.get("/zones")
-def zones(weeks: int = Query(4, ge=1, le=12), date: dt.date | None = Query(None)):
+def zones(weeks: int = Query(4, ge=1, le=12), date: dt.date | None = Query(None), meal: str = MealQ()):
+    sm = _stored(meal)
     date = date.isoformat() if date else None
     try:
         doc = load_zones(ZONES_JSON)
@@ -295,12 +322,13 @@ def zones(weeks: int = Query(4, ge=1, le=12), date: dt.date | None = Query(None)
         return _no(NO_DB, zones=zlist, bins=[])
     with closing(con):
         if date:
-            rows = con.execute("SELECT z.bin, z.zone, z.avg_n FROM zone_bins z JOIN lunch_days l ON l.date = z.date "
-                               "WHERE z.date = ? AND l.source = ? ORDER BY z.bin", (date, FEED_SOURCE)).fetchall()
+            rows = con.execute("SELECT z.bin, z.zone, z.avg_n FROM zone_bins z JOIN lunch_days l ON l.date = z.date AND l.meal = z.meal "
+                               "WHERE z.date = ? AND z.meal = ? AND l.source = ? ORDER BY z.bin", (date, sm, FEED_SOURCE)).fetchall()
             basis = "day"
         else:
-            rows = con.execute("SELECT z.bin, z.zone, AVG(z.avg_n) avg_n FROM zone_bins z JOIN lunch_days l ON l.date = z.date "
-                               "WHERE z.date >= ? AND l.source = ? GROUP BY z.bin, z.zone ORDER BY z.bin", (_since(weeks), FEED_SOURCE)).fetchall()
+            rows = con.execute("SELECT z.bin, z.zone, AVG(z.avg_n) avg_n FROM zone_bins z JOIN lunch_days l ON l.date = z.date AND l.meal = z.meal "
+                               "WHERE z.date >= ? AND z.meal = ? AND l.source = ? GROUP BY z.bin, z.zone ORDER BY z.bin",
+                               (_since(weeks), sm, FEED_SOURCE)).fetchall()
             basis = "recent"
     if not rows:
         return _no("구역 집계가 아직 없다", basis=basis, zones=zlist, bins=[])
@@ -313,7 +341,7 @@ def zones(weeks: int = Query(4, ge=1, le=12), date: dt.date | None = Query(None)
         bins.append({"minute_of_day": b, "avg_n": occ, "total": round(total, 1),
                      "share_pct": {z: (round(100 * n / total) if total else 0) for z, n in occ.items()}})
     peak = max(bins, key=lambda x: x["total"])
-    return {"state": "ok", "basis": basis, "date": date, "weeks": None if date else weeks, "window": _window(), "zones": zlist, "bins": bins,
+    return {"state": "ok", "basis": basis, "date": date, "weeks": None if date else weeks, "meal": meal, "window": _window(meal), "zones": zlist, "bins": bins,
             "peak": {"minute_of_day": peak["minute_of_day"], "total": peak["total"], "avg_n": peak["avg_n"]}}
 
 
