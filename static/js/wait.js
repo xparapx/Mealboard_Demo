@@ -129,6 +129,8 @@ export function drawChart(rows, typ, st) {
 const MAX_COLS = 18;                         // 히트맵 열 상한 — 2열이라 반으로(중식 150분이면 10분 묶음, 석식 90분이면 5분 그대로)
 const INS = { lunch: {}, dinner: {} };       // {day, quality, heat, forecast} 끼니별 캐시
 const SEL = { golden: "lunch", forecast: "lunch", bottle: "lunch", quality: "lunch" };   // 실제 기본값은 mount() 에서 defaultMeal() 로 — 최상위에서 core 를 부르면 TDZ
+const TOUCHED = {};                          // 사용자가 직접 누른 토글 — 끼니 경계(14시·21시) 자동 전환에서 제외(09-16)
+let lastAuto = null;                         // 마지막으로 적용한 defaultMeal()
 
 function drawHeatGrid(el, d) {
   /* 한 끼니의 격자를 el 에 그린다. 성공 여부를 돌려주고, 카드 상태는 renderHeat 이 두 끼니를 합쳐 정한다 */
@@ -177,10 +179,13 @@ function renderHeat(d, dn) {                  // d = 중식, dn = 석식 (픽스
   if (!setState("heatcard", okL || okD, d?.reason)) return;
   const src = okL ? d : dn ?? INS.dinner.heat;
   const golden = src.golden_wait ?? 3;
-  $("#heatlead").textContent = "셀을 누르면 그 시각의 평소 대기를 읽습니다";
+  heatLeadDefault();
   $("#heatgolden").textContent = `${golden}분 이하 · 황금`;
   const step = +($("#heat").dataset.step || $("#heatdinner").dataset.step || 5);
   $("#heatfoot").textContent = (src.basis === "weekday" ? `같은 요일 최근 ${src.weeks}주` : `최근 ${src.days}일`) + ` · ${step}분 단위 · 어두울수록 오래 기다렸습니다`;
+}
+function heatLeadDefault() {                  // 기본 리드에 현재 끼니를 함께(09-16 사용자 요청) — 셀을 누르면 그 셀 문장으로 덮인다
+  $("#heatlead").innerHTML = `지금은 <b>${MEAL_KO[defaultMeal()]}</b> 시간대 · 셀을 누르면 그 시각의 평소 대기를 읽습니다`;
 }
 function heatClick(e) {                       // 셀 수백 개에 리스너를 달지 않고 두 격자에 한 번씩만 위임
   const b = e.target.closest(".c[data-min]"); if (!b) return;
@@ -238,6 +243,21 @@ function showCard(card) {                    // SEL[card] 끼니의 캐시로 �
   if (d) CARD_RENDER[card](d);
 }
 
+function setSeg(card, m) {                   // 토글 버튼 눌림 상태를 코드에서 맞춘다 (자동 전환용)
+  $(`#${card}seg`).querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.meal === m));
+}
+
+function followMeal() {                      // 끼니 경계를 넘으면(14시 → 석식, 21시 → 다음날 중식) 손대지 않은 토글이 따라온다(09-16 사용자 요청)
+  const dm = defaultMeal();
+  if (dm === lastAuto) return;
+  lastAuto = dm;
+  for (const card of Object.keys(SEL)) {
+    if (TOUCHED[card] || SEL[card] === dm) continue;
+    SEL[card] = dm; setSeg(card, dm); showCard(card);
+  }
+  heatLeadDefault();                         // 히트맵 리드의 '지금은 ○○ 시간대'도 같이
+}
+
 let lastFast = 0;
 async function fastInsights() {              // 오늘 즉석 계산(day·quality) — 5분, 두 끼니를 함께 받아 캐시
   lastFast = Date.now();
@@ -254,14 +274,16 @@ export const screen = {
     $("#heat").addEventListener("click", heatClick);
     $("#heatdinner").addEventListener("click", heatClick);
     $(".heatlegend i").style.background = gradient(SUNSETDARK);
+    lastAuto = defaultMeal();
     for (const card of Object.keys(SEL)) {     // 끼니 토글 — 캐시에서 즉시 다시 그린다. 기본값은 시각(14시 이후 = 석식)
-      SEL[card] = defaultMeal();
-      mealSeg($(`#${card}seg`), SEL[card], m => { SEL[card] = m; showCard(card); });
+      SEL[card] = lastAuto;
+      mealSeg($(`#${card}seg`), SEL[card], m => { SEL[card] = m; TOUCHED[card] = true; showCard(card); });
     }
   },
   every: 30000,
   async poll() {                              // 라이브 30초 + 즉석 인사이트 5분 (같은 tick 에서 시각으로 가른다)
     const live = refresh();
+    followMeal();                             // 30초 tick 에서 끼니 경계도 함께 본다 — 화면이 열려 있어도 토글이 따라온다
     if (Date.now() - lastFast >= 5 * 60000) fastInsights();
     await live;
   },
