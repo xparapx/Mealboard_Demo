@@ -275,6 +275,11 @@ data/*
 !data/news_feeds.json
 !data/zones.json
 .env
+.env.bak-*
+*.bak-*
+*.log
+qr.png
+static/icons/qr.png
 .venv/
 __pycache__/
 *.db
@@ -680,6 +685,8 @@ def _choice(name, default, allowed):
 API_PORT = int(os.getenv(&quot;API_PORT&quot;, &quot;8100&quot;))
 LUNCH_START = os.getenv(&quot;LUNCH_START&quot;, &quot;11:30&quot;)     # 형식 검증은 app/lunch.py 가 import 시점에 한다
 LUNCH_END = os.getenv(&quot;LUNCH_END&quot;, &quot;14:00&quot;)
+DINNER_START = os.getenv(&quot;DINNER_START&quot;, &quot;17:00&quot;)   # 석식 집계 창(09-16 중식/석식 분리) — 수집 창 MEAL_WINDOWS 의 석식과 별개 눈금
+DINNER_END = os.getenv(&quot;DINNER_END&quot;, &quot;18:30&quot;)
 # 수집 시간창 세 개(09-04 운영 규칙): 카메라 노드는 이 창 안에서만 세고, 창 밖은 더미 곡선 + 화면 '더미데이터' 띠. 형식·겹침 검증은 vision/schedule.py (app/lunch.py import 시점)
 # 09-11: 시작을 10~30분 앞당긴다(교사 식사 등 시간표 밖 유동) — 중식 11:20, 석식 17:00. 끝은 그대로
 MEAL_WINDOWS = os.getenv(&quot;MEAL_WINDOWS&quot;, &quot;11:20-12:30 3학년 점심;12:30-13:30 1·2학년 점심;17:00-18:30 석식&quot;)
@@ -792,11 +799,13 @@ def next_with_day(now):
 
 def feed(now, state, source=FEED_SOURCE):
     &quot;&quot;&quot;'지금 값이 실측인가' — 화면 맨 위 안내 띠가 읽는다(09-04). live 는 셋이 모두 맞을 때만:
-    출처가 vision(카메라 노드) · 지금이 수집 창(3학년 점심·1·2학년 점심·석식) 안 · 표본이 끊기지 않음. now 는 열린 창, next 는 다음 창(며칠 뒤 days).
+    출처가 vision(카메라 노드) · 지금이 수집 창(3학년 점심·1·2학년 점심·석식) 안 · 표본이 끊기지 않음. now 는 열린 창, next 는 다음 창(며칠 뒤 days), meal_day 는 오늘이 급식 있는 날인지(NEIS 캐시 기준 — 시작 화면·자동 전환이 본다).
     창 밖에는 카메라 노드가 아무 행도 쓰지 않으므로(09-11) state 는 120초 뒤 no_data 가 된다 — 화면은 source·now 로 '급식 시간이 아닙니다' 와 '표본 끊김' 을 가른다&quot;&quot;&quot;
     w = meal_now(now)
+    ymd = now.strftime(&quot;%Y%m%d&quot;)
+    meal_day = any(d.get(&quot;date&quot;) == ymd and d.get(&quot;menu&quot;) for d in (read_meal().get(&quot;week&quot;) or []))
     return {&quot;source&quot;: source, &quot;live&quot;: source == &quot;vision&quot; and w is not None and state != &quot;no_data&quot;,
-            &quot;now&quot;: describe(w), &quot;next&quot;: next_with_day(now)}
+            &quot;now&quot;: describe(w), &quot;next&quot;: next_with_day(now), &quot;meal_day&quot;: meal_day}
 
 
 @router.get(&quot;/api/status&quot;)
@@ -1292,11 +1301,15 @@ systemctl status mealboard-api --no-pager</code></pre>
       &lt;span&gt;갱신 &lt;span id=&quot;updated&quot;&gt;—&lt;/span&gt; · 30초마다&lt;/span&gt;&lt;span&gt;추정치 · 배식 초반 오차 큼&lt;/span&gt;
     &lt;/div&gt;
     &lt;!-- 대기시간 화면의 인사이트 카드 (PLAN §3.2) — 화면이 열릴 때 1회 + 5분마다. no_data 여도 숨기지 않고 이유를 적는다 --&gt;
+    &lt;!-- 09-16 중식/석식 분리: 히트맵은 두 끼니를 좁혀 2열로, 나머지 카드는 오른쪽 위 끼니 토글(.mealseg) --&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;heatcard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;요일 · 시각별 평소 대기&lt;/div&gt;
       &lt;div class=&quot;body&quot;&gt;
         &lt;div class=&quot;lead&quot; id=&quot;heatlead&quot;&gt;셀을 누르면 그 시각의 평소 대기를 읽습니다&lt;/div&gt;
-        &lt;div class=&quot;heat&quot; id=&quot;heat&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;heat2&quot;&gt;
+          &lt;div&gt;&lt;div class=&quot;sub&quot; id=&quot;heatsub-lunch&quot;&gt;중식&lt;/div&gt;&lt;div class=&quot;heat&quot; id=&quot;heat&quot; data-meal=&quot;lunch&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;div&gt;&lt;div class=&quot;sub&quot; id=&quot;heatsub-dinner&quot;&gt;석식&lt;/div&gt;&lt;div class=&quot;heat&quot; id=&quot;heatdinner&quot; data-meal=&quot;dinner&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;/div&gt;
         &lt;div class=&quot;heatlegend&quot;&gt;&lt;span&gt;짧음&lt;/span&gt;&lt;i&gt;&lt;/i&gt;&lt;span&gt;긺&lt;/span&gt;&lt;em&gt;&lt;/em&gt;&lt;span id=&quot;heatgolden&quot;&gt;3분 이하 · 황금&lt;/span&gt;&lt;/div&gt;
         &lt;div class=&quot;note foot&quot; id=&quot;heatfoot&quot;&gt;&lt;/div&gt;
       &lt;/div&gt;
@@ -1304,6 +1317,7 @@ systemctl status mealboard-api --no-pager</code></pre>
     &lt;/section&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;goldencard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;황금 구간 · 오늘&lt;/div&gt;
+      &lt;div class=&quot;mealseg&quot; id=&quot;goldenseg&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;body&quot;&gt;
         &lt;div class=&quot;lead&quot; id=&quot;goldenlead&quot;&gt;&lt;/div&gt;
         &lt;div class=&quot;chips2&quot; id=&quot;goldenchips&quot;&gt;&lt;/div&gt;
@@ -1313,6 +1327,7 @@ systemctl status mealboard-api --no-pager</code></pre>
     &lt;/section&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;forecastcard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot; id=&quot;forecasteyebrow&quot;&gt;예보&lt;/div&gt;
+      &lt;div class=&quot;mealseg&quot; id=&quot;forecastseg&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;body&quot;&gt;
         &lt;div class=&quot;lead&quot; id=&quot;forecastlead&quot;&gt;&lt;/div&gt;
         &lt;div class=&quot;chips2&quot; id=&quot;forecastchips&quot;&gt;&lt;/div&gt;
@@ -1322,12 +1337,14 @@ systemctl status mealboard-api --no-pager</code></pre>
     &lt;/section&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;bottlecard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;병목 로그 · 오늘&lt;/div&gt;
+      &lt;div class=&quot;mealseg&quot; id=&quot;bottleseg&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;body&quot;&gt;&lt;ul class=&quot;log&quot; id=&quot;bottlelist&quot;&gt;&lt;/ul&gt;
         &lt;div class=&quot;note foot&quot;&gt;줄이 5명 이상인데 배식이 멈췄거나 평소의 절반 아래로 느려진 구간(2분 이상)&lt;/div&gt;&lt;/div&gt;
       &lt;div class=&quot;empty&quot; id=&quot;bottleempty&quot;&gt;급식 시간 데이터가 쌓이면 반영됩니다&lt;/div&gt;
     &lt;/section&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;qualitycard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;측정 품질 · 오늘&lt;/div&gt;
+      &lt;div class=&quot;mealseg&quot; id=&quot;qualityseg&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;body&quot;&gt;
         &lt;div class=&quot;well&quot; id=&quot;qualitywell&quot;&gt;&lt;/div&gt;
         &lt;div class=&quot;note foot&quot; id=&quot;qualityfoot&quot;&gt;&lt;/div&gt;
@@ -1382,6 +1399,7 @@ systemctl status mealboard-api --no-pager</code></pre>
     &lt;!-- 주간식단 화면의 인사이트 카드 — 주간 영양 추이 · 메뉴 빈도 TOP5 --&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;nutricard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;주간 영양 추이&lt;/div&gt;
+      &lt;div class=&quot;mealseg&quot; id=&quot;nutriseg&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;body&quot;&gt;
         &lt;div class=&quot;kpi&quot; id=&quot;nutrikpi&quot;&gt;&lt;/div&gt;
         &lt;svg class=&quot;spark&quot; id=&quot;nutrispark&quot; viewBox=&quot;0 0 320 64&quot; preserveAspectRatio=&quot;none&quot; aria-label=&quot;주별 에너지 충족률&quot;&gt;&lt;/svg&gt;
@@ -1392,6 +1410,7 @@ systemctl status mealboard-api --no-pager</code></pre>
     &lt;/section&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;topcard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;메뉴 빈도 TOP 5&lt;/div&gt;
+      &lt;div class=&quot;mealseg&quot; id=&quot;topseg&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;body&quot;&gt;
         &lt;div class=&quot;lead&quot; id=&quot;toplead&quot;&gt;&lt;/div&gt;
         &lt;ol class=&quot;rank&quot; id=&quot;toplist&quot;&gt;&lt;/ol&gt;
@@ -1407,7 +1426,8 @@ systemctl status mealboard-api --no-pager</code></pre>
       &lt;div class=&quot;eyebrow&quot;&gt;오늘 급식&lt;/div&gt;
       &lt;div class=&quot;meals&quot;&gt;
         &lt;div class=&quot;meal&quot; id=&quot;lunchcol&quot;&gt;&lt;div class=&quot;mlabel&quot;&gt;중식 &lt;span id=&quot;lunchkcal&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;ul class=&quot;menu&quot; id=&quot;menu&quot;&gt;&lt;/ul&gt;&lt;/div&gt;
-        &lt;div class=&quot;meal&quot; id=&quot;dinnercol&quot;&gt;&lt;div class=&quot;mlabel&quot;&gt;석식 &lt;span id=&quot;dinnerkcal&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;ul class=&quot;menu&quot; id=&quot;dinnermenu&quot;&gt;&lt;/ul&gt;&lt;/div&gt;
+        &lt;div class=&quot;meal&quot; id=&quot;dinnercol&quot;&gt;&lt;div class=&quot;mlabel&quot;&gt;석식 &lt;span id=&quot;dinnerkcal&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;ul class=&quot;menu&quot; id=&quot;dinnermenu&quot;&gt;&lt;/ul&gt;
+          &lt;div class=&quot;mstats&quot; id=&quot;dinnerstats&quot; hidden&gt;&lt;/div&gt;&lt;/div&gt;
       &lt;/div&gt;
       &lt;!-- 알레르기 요약 — 내 알레르기가 오늘 메뉴에 있으면 멜론 띠로 먼저 말하고, 칩은 내 것을 앞에(09-11) --&gt;
       &lt;div class=&quot;awarn&quot; id=&quot;awarn&quot; hidden&gt;&lt;/div&gt;
@@ -1423,11 +1443,11 @@ systemctl status mealboard-api --no-pager</code></pre>
         &lt;div&gt;&lt;em&gt;02&lt;/em&gt;&lt;b id=&quot;ratio&quot;&gt;—&lt;/b&gt;&lt;span&gt;탄·단·지 비율&lt;/span&gt;&lt;/div&gt;
         &lt;div&gt;&lt;em&gt;03&lt;/em&gt;&lt;b id=&quot;mar&quot;&gt;—&lt;/b&gt;&lt;span&gt;미량영양소&lt;/span&gt;&lt;span class=&quot;flag&quot; id=&quot;marflag&quot;&gt;&lt;/span&gt;&lt;/div&gt;
       &lt;/div&gt;
-      &lt;div class=&quot;note&quot; style=&quot;margin-top:6px&quot;&gt;영양 지표·영양소별 표기는 &lt;b&gt;중식 한 끼&lt;/b&gt; 기준(한 끼 권장량 대비) · 석식은 메뉴·kcal·알레르기만&lt;/div&gt;
+      &lt;div class=&quot;note&quot; style=&quot;margin-top:6px&quot;&gt;위 지표 3칸·영양소별 표기는 &lt;b&gt;중식&lt;/b&gt;, 석식 지표는 석식 열 아래 — 모두 &lt;b&gt;한 끼 권장량&lt;/b&gt; 대비(09-16)&lt;/div&gt;
       &lt;div class=&quot;eyebrow&quot; id=&quot;microlab&quot; style=&quot;margin-top:18px&quot; hidden&gt;영양소별 · 권장섭취량 대비&lt;/div&gt;
       &lt;div class=&quot;micro&quot; id=&quot;micro&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;carbon&quot; id=&quot;carbonsec&quot; hidden&gt;
-        &lt;div class=&quot;eyebrow&quot;&gt;오늘 급식을 다 남기면&lt;/div&gt;
+        &lt;div class=&quot;eyebrow&quot; id=&quot;carboneyebrow&quot;&gt;오늘 급식을 다 남기면&lt;/div&gt;
         &lt;div class=&quot;co2&quot;&gt;&lt;b id=&quot;co2&quot;&gt;—&lt;/b&gt;&lt;span id=&quot;co2unit&quot;&gt;kg CO₂e&lt;/span&gt;&lt;/div&gt;
         &lt;div class=&quot;cmp&quot;&gt;
           &lt;div&gt;&lt;b id=&quot;vsworld&quot;&gt;—&lt;/b&gt;&lt;span&gt;세계 1인 하루 평균 배출 대비&lt;/span&gt;&lt;/div&gt;
@@ -1503,7 +1523,7 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v28&quot;;   // 09-11: 이슈피드 두 섹션+키워드 구름, 급식 시간 자동 전환, 다음 급식 날짜
+const CACHE = &quot;mealboard-v30&quot;;   // 09-16: 중식/석식 분리 — 히트맵 2열·인사이트 끼니 토글·석식 지표·탄소 합산
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
@@ -1725,7 +1745,8 @@ def main():
     monday = today - dt.timedelta(days=today.weekday())
     friday = monday + dt.timedelta(days=4)
     rows, code = fetch(monday.strftime(&quot;%Y%m%d&quot;), friday.strftime(&quot;%Y%m%d&quot;))
-    # 석식(09-11 사용자 요청): 메뉴·kcal·영양소만 붙인다. 영양 지표 3종·탄소·집계·인사이트는 중식 기준 그대로(week[].menu/kcal/assess 는 중식).
+    # 석식(09-11 사용자 요청, 09-16 지표 확장): 메뉴·kcal·영양소에 더해 지표 3종·탄소도 석식에 산출한다 —
+    # 기준치는 중식과 같은 '한 끼 기준'(nutrition_std per_meal, 09-16 사용자 결정). week[].menu/kcal/assess 최상위는 여전히 중식.
     # 석식 조회가 실패해도 중식은 나간다 — 학교가 석식을 안 하는 날(INFO-200)이 정상 경로다
     try:
         dinner_rows, _ = fetch(monday.strftime(&quot;%Y%m%d&quot;), friday.strftime(&quot;%Y%m%d&quot;), MEAL_DINNER)
@@ -1740,11 +1761,15 @@ def main():
         kcal = parse_kcal(r.get(&quot;CAL_INFO&quot;))
         menu = [m.strip() for m in r.get(&quot;DDISH_NM&quot;, &quot;&quot;).split(&quot;&lt;br/&gt;&quot;) if m.strip()]
         d = dinner.get(r[&quot;MLSV_YMD&quot;])
+        if d is None:
+            dn = None
+        else:
+            d_n = parse_ntr(d.get(&quot;NTR_INFO&quot;, &quot;&quot;))
+            d_kcal = parse_kcal(d.get(&quot;CAL_INFO&quot;))
+            dn = {&quot;menu&quot;: [m.strip() for m in d.get(&quot;DDISH_NM&quot;, &quot;&quot;).split(&quot;&lt;br/&gt;&quot;) if m.strip()],
+                  &quot;kcal&quot;: d_kcal, &quot;nutrients&quot;: d_n, &quot;assess&quot;: assess(d_kcal, d_n), &quot;carbon&quot;: carbon(d_kcal)}
         week.append({&quot;date&quot;: r[&quot;MLSV_YMD&quot;], &quot;menu&quot;: menu, &quot;kcal&quot;: kcal,
-                     &quot;nutrients&quot;: n, &quot;assess&quot;: assess(kcal, n), &quot;carbon&quot;: carbon(kcal),
-                     &quot;dinner&quot;: None if d is None else {
-                         &quot;menu&quot;: [m.strip() for m in d.get(&quot;DDISH_NM&quot;, &quot;&quot;).split(&quot;&lt;br/&gt;&quot;) if m.strip()],
-                         &quot;kcal&quot;: parse_kcal(d.get(&quot;CAL_INFO&quot;)), &quot;nutrients&quot;: parse_ntr(d.get(&quot;NTR_INFO&quot;, &quot;&quot;))}})
+                     &quot;nutrients&quot;: n, &quot;assess&quot;: assess(kcal, n), &quot;carbon&quot;: carbon(kcal), &quot;dinner&quot;: dn})
 
     def avg(key):
         vals = [d[&quot;assess&quot;][key] for d in week if d[&quot;assess&quot;][key] is not None]
@@ -2898,11 +2923,12 @@ uv run python check_manual.py                           # 불일치 0개
 import datetime as dt
 
 from vision.schedule import current, describe, next_after, parse_windows   # noqa: F401  (describe 는 라우터가 이 모듈을 거쳐 쓴다)
-from .config import LUNCH_START, LUNCH_END, MEAL_WINDOWS
+from .config import DINNER_END, DINNER_START, LUNCH_START, LUNCH_END, MEAL_WINDOWS
 
 BUCKET_MIN = 5          # 5분 단위로 묶는다. 30초 폴링 노이즈를 지우고 곡선을 읽히게
 DAY_MIN = 24 * 60
 WINDOWS = (&quot;lunch&quot;, &quot;all&quot;)
+AGG_MEALS = (&quot;lunch&quot;, &quot;dinner&quot;)     # 집계 끼니(09-16 분리). insights.db 의 meal 열·/api/insight ?meal= 과 같은 값
 
 
 def parse_hhmm(text):
@@ -2924,12 +2950,32 @@ def lunch_bounds(start=LUNCH_START, end=LUNCH_END):
     return lo, hi
 
 
+def dinner_bounds(start=DINNER_START, end=DINNER_END):
+    &quot;&quot;&quot;석식 집계 창 [lo, hi). 기본값은 .env 의 DINNER_START~DINNER_END&quot;&quot;&quot;
+    lo, hi = parse_hhmm(start), parse_hhmm(end)
+    if lo &gt;= hi:
+        raise ValueError(f&quot;DINNER_START({start}) 는 DINNER_END({end}) 보다 앞서야 한다&quot;)
+    return lo, hi
+
+
 def bounds(window):
     &quot;&quot;&quot;집계 창. lunch = 급식 시간창, all = 하루 전체(스테이징 mock 은 종일 돌기 때문에)&quot;&quot;&quot;
     if window == &quot;all&quot;:
         return 0, DAY_MIN
     if window == &quot;lunch&quot;:
         return lunch_bounds()
+    if window == &quot;dinner&quot;:
+        return dinner_bounds()
+    raise ValueError(f&quot;집계 창은 lunch|dinner|all 중 하나: {window!r}&quot;)
+
+
+def agg_meals(window):
+    &quot;&quot;&quot;ROLLUP_WINDOW → 집계할 (meal, lo, hi) 목록(09-16 중식/석식 분리).
+    lunch = 끼니별 두 창(중식 LUNCH_*, 석식 DINNER_*), all = 하루 전체 한 창(스테이징 mock — meal 열에도 'all')&quot;&quot;&quot;
+    if window == &quot;all&quot;:
+        return [(&quot;all&quot;, 0, DAY_MIN)]
+    if window == &quot;lunch&quot;:
+        return [(&quot;lunch&quot;, *lunch_bounds()), (&quot;dinner&quot;, *dinner_bounds())]
     raise ValueError(f&quot;ROLLUP_WINDOW 는 lunch|all 중 하나: {window!r}&quot;)
 
 
@@ -2970,6 +3016,7 @@ def weekday_of(date):
 
 
 LUNCH_LO, LUNCH_HI = lunch_bounds()     # import 시점 검증. 잘못된 .env 는 여기서 ValueError
+DINNER_LO, DINNER_HI = dinner_bounds()
 
 # 수집 시간창(09-04): 3학년 점심 · 1·2학년 점심 · 석식. LUNCH_START~END 는 집계·관리 가드용 '점심 전체' 창으로 그대로 두고,
 # 이 세 창은 '지금 값이 실측인가'(카메라 노드 수집 on/off, /api/status feed.live, 화면의 더미데이터 띠) 만 정한다
@@ -3797,8 +3844,10 @@ def density(cell_sums, ticks, cols, rows):
 쓰기: lunch_days · lunch_bins · zone_bins · events · menu_days 는 날짜 단위 DELETE→INSERT 를 한 트랜잭션으로,
       menu_stats 는 매 실행 전체 재생성, meta 에 창·출처·인기 기준값, runs 에 실행 기록.
       개별 좌표·궤적은 어디에도 없다 — 구역별 인원수만 (CLAUDE.md §2).
-불변식: insights.db 하나는 한 창(window)·한 출처(source)로만 채운다. 처음 쓸 때 meta 에 적고, 다른 설정으로 부르면 거부한다 —
+불변식: insights.db 하나는 한 창 모드(window)·한 출처(source)로만 채운다. 처음 쓸 때 meta 에 적고, 다른 설정으로 부르면 거부한다 —
       mock 표본이 실측 히트맵에 섞이거나 새벽 구간이 평소 곡선에 들어가지 않게. 설정을 바꾸려면 파일을 .bak-&lt;시각&gt; 으로 이름 바꾸고 새로 시작(PLAN §2.5).
+끼니(09-16 중식/석식 분리): window=lunch 면 하루를 중식(LUNCH_*)·석식(DINNER_*) 두 창으로 각각 집계해 meal 열(lunch|dinner)로 나눠 담는다.
+      window=all(스테이징 mock)은 하루 전체 한 행(meal='all'). 표 이름 lunch_* 는 역사적 이름 — 지금은 끼니 공용이다.
 동시 실행: 잠금 파일을 두지 않는다. 날짜 단위 트랜잭션은 SQLite 가 직렬화하고 결과가 같으므로 타이머와 손 실행이 겹쳐도 해가 없다.
 
 실행:  uv run python -m jobs.rollup                  # 오늘·어제 (--days 2)
@@ -3816,46 +3865,47 @@ import sys
 from app.config import DB_PATH, FEED_SOURCE, INSIGHTS_DB_PATH, ROLLUP_WINDOW
 from app.insight_calc import CALC_VERSION, bin_zones, day_summary, median_or_none, normalize_menu, popularity
 from app.insights_db import connect_ro, meta
-from app.lunch import WINDOWS, bounds, seconds_of_day, weekday_of
+from app.lunch import WINDOWS, agg_meals, seconds_of_day, weekday_of
 from app.mealjson import nutrition_rows, read_meal
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2                 # v2(09-16): 끼니(meal) 열 — lunch|dinner|all. v1 파일은 백업 후 --all 재집계
 SOURCES = (&quot;mock&quot;, &quot;vision&quot;)
 
 SCHEMA = &quot;&quot;&quot;
-CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);            -- window·window_lo·window_hi·source·menu_base_*
+CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);            -- window·source·menu_base_*_&lt;meal&gt;
 CREATE TABLE IF NOT EXISTS lunch_days (
-  date TEXT PRIMARY KEY, weekday INTEGER NOT NULL,          -- weekday: SQLite strftime('%w') 규칙, 0=일요일
+  date TEXT, meal TEXT, weekday INTEGER NOT NULL,           -- weekday: SQLite strftime('%w') 규칙, 0=일요일. meal: lunch|dinner|all
   window_lo INTEGER, window_hi INTEGER, source TEXT,        -- 창(자정부터 분), source: mock | vision
   n_samples INTEGER, coverage_pct REAL, stale_min REAL, insufficient_min REAL, first_ts TEXT, last_ts TEXT,
   peak_wait REAL, peak_wait_ts TEXT, peak_queue INTEGER, peak_queue_ts TEXT, avg_wait REAL,
   served_est INTEGER, typical_rate REAL, rise_rate REAL, golden_min REAL, bottleneck_min REAL,
-  menu_json TEXT, main_dish TEXT, calc_version INTEGER, computed_at TEXT
+  menu_json TEXT, main_dish TEXT, calc_version INTEGER, computed_at TEXT,
+  PRIMARY KEY (date, meal)
 );
 CREATE TABLE IF NOT EXISTS lunch_bins (
-  date TEXT, weekday INTEGER, bin INTEGER, n INTEGER, ok_n INTEGER, insufficient_n INTEGER,
-  avg_queue REAL, max_queue INTEGER, avg_rate REAL, avg_wait REAL, max_wait REAL, PRIMARY KEY (date, bin)
+  date TEXT, meal TEXT, weekday INTEGER, bin INTEGER, n INTEGER, ok_n INTEGER, insufficient_n INTEGER,
+  avg_queue REAL, max_queue INTEGER, avg_rate REAL, avg_wait REAL, max_wait REAL, PRIMARY KEY (date, meal, bin)
 );
-CREATE INDEX IF NOT EXISTS idx_lunch_bins_weekday ON lunch_bins (weekday, bin);
+CREATE INDEX IF NOT EXISTS idx_lunch_bins_weekday ON lunch_bins (meal, weekday, bin);
 CREATE TABLE IF NOT EXISTS zone_bins (
-  date TEXT, bin INTEGER, zone TEXT, n INTEGER, avg_n REAL, max_n INTEGER, PRIMARY KEY (date, bin, zone)
+  date TEXT, meal TEXT, bin INTEGER, zone TEXT, n INTEGER, avg_n REAL, max_n INTEGER, PRIMARY KEY (date, meal, bin, zone)
 );
 CREATE TABLE IF NOT EXISTS events (
-  date TEXT, kind TEXT, start_ts TEXT, end_ts TEXT, minutes REAL, value REAL, detail TEXT,   -- kind: golden|bottleneck|stale|insufficient
-  PRIMARY KEY (date, kind, start_ts)
+  date TEXT, meal TEXT, kind TEXT, start_ts TEXT, end_ts TEXT, minutes REAL, value REAL, detail TEXT,   -- kind: golden|bottleneck|stale|insufficient
+  PRIMARY KEY (date, meal, kind, start_ts)
 );
 CREATE TABLE IF NOT EXISTS menu_days (
-  date TEXT, menu TEXT, position INTEGER, peak_wait REAL, rise_rate REAL, peak_queue INTEGER, served_est INTEGER,
-  PRIMARY KEY (date, menu)
+  date TEXT, meal TEXT, menu TEXT, position INTEGER, peak_wait REAL, rise_rate REAL, peak_queue INTEGER, served_est INTEGER,
+  PRIMARY KEY (date, meal, menu)
 );
 CREATE TABLE IF NOT EXISTS menu_stats (
-  menu TEXT PRIMARY KEY, n_days INTEGER, avg_peak_wait REAL, avg_rise_rate REAL, avg_peak_queue REAL,
-  popularity INTEGER, first_date TEXT, last_date TEXT
+  meal TEXT, menu TEXT, n_days INTEGER, avg_peak_wait REAL, avg_rise_rate REAL, avg_peak_queue REAL,
+  popularity INTEGER, first_date TEXT, last_date TEXT, PRIMARY KEY (meal, menu)
 );
 CREATE TABLE IF NOT EXISTS nutrition_days (
-  date TEXT PRIMARY KEY, kcal REAL, energy_pct INTEGER, protein_pct INTEGER,
+  date TEXT, meal TEXT, kcal REAL, energy_pct INTEGER, protein_pct INTEGER,
   carb_ratio INTEGER, protein_ratio INTEGER, fat_ratio INTEGER, macro_ok INTEGER, mar INTEGER, kgco2e REAL,
-  menu_json TEXT, fetched_at TEXT
+  menu_json TEXT, fetched_at TEXT, PRIMARY KEY (date, meal)
 );
 CREATE TABLE IF NOT EXISTS runs (
   id INTEGER PRIMARY KEY AUTOINCREMENT, started_at TEXT, finished_at TEXT, args TEXT, dates TEXT,
@@ -3890,16 +3940,17 @@ def migrate(con):
         con.execute(f&quot;PRAGMA user_version = {SCHEMA_VERSION}&quot;)
         con.commit()
     elif v != SCHEMA_VERSION:
-        raise SystemExit(f&quot;insights.db 스키마 판 {v} 는 이 코드({SCHEMA_VERSION})와 맞지 않는다&quot;)
+        raise SystemExit(f&quot;insights.db 스키마 판 {v} 는 이 코드({SCHEMA_VERSION})와 맞지 않는다 — &quot;
+                         f&quot;파일을 .bak-&lt;시각&gt; 으로 이름 바꾸고 --all 로 재집계한다(v2: meal 열, 09-16)&quot;)
 
 
 def set_meta(con, **kv):
     con.executemany(&quot;INSERT OR REPLACE INTO meta VALUES (?, ?)&quot;, [(k, None if v is None else str(v)) for k, v in kv.items()])
 
 
-def check_meta(con, window, lo, hi, source):
-    &quot;&quot;&quot;한 파일 = 한 창·한 출처. 처음이면 적고, 다르면 거부한다&quot;&quot;&quot;
-    want = {&quot;window&quot;: window, &quot;window_lo&quot;: str(lo), &quot;window_hi&quot;: str(hi), &quot;source&quot;: source}
+def check_meta(con, window, source):
+    &quot;&quot;&quot;한 파일 = 한 창 모드·한 출처. 처음이면 적고, 다르면 거부한다 (끼니별 lo/hi 는 각 행의 window_lo/hi 에)&quot;&quot;&quot;
+    want = {&quot;window&quot;: window, &quot;source&quot;: source}
     have = {k: v for k, v in meta(con).items() if k in want}
     if have and have != want:
         raise SystemExit(f&quot;insights.db 는 {have} 로 만들어졌다 — 지금 설정 {want} 과 다르다. &quot;
@@ -3911,57 +3962,64 @@ def check_meta(con, window, lo, hi, source):
 def upsert_nutrition(con, meal):
     &quot;&quot;&quot;meal.json 의 week[] 를 nutrition_days 에 쌓는다 — 캐시는 이번 주뿐이지만 여기엔 이력이 남는다&quot;&quot;&quot;
     rows = nutrition_rows(meal)
-    con.executemany(&quot;INSERT OR REPLACE INTO nutrition_days VALUES (?,?,?,?,?,?,?,?,?,?,?,?)&quot;,
-                    [(r[&quot;date&quot;], r[&quot;kcal&quot;], r[&quot;energy_pct&quot;], r[&quot;protein_pct&quot;], r[&quot;carb_ratio&quot;], r[&quot;protein_ratio&quot;], r[&quot;fat_ratio&quot;],
+    con.executemany(&quot;INSERT OR REPLACE INTO nutrition_days VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)&quot;,
+                    [(r[&quot;date&quot;], r[&quot;meal&quot;], r[&quot;kcal&quot;], r[&quot;energy_pct&quot;], r[&quot;protein_pct&quot;], r[&quot;carb_ratio&quot;], r[&quot;protein_ratio&quot;], r[&quot;fat_ratio&quot;],
                       r[&quot;macro_ok&quot;], r[&quot;mar&quot;], r[&quot;kgco2e&quot;], json.dumps(r[&quot;menu&quot;], ensure_ascii=False), r[&quot;fetched_at&quot;]) for r in rows])
     return len(rows)
 
 
-def menu_for(con, date):
-    row = con.execute(&quot;SELECT menu_json FROM nutrition_days WHERE date = ?&quot;, (date,)).fetchone()
+def menu_for(con, date, meal_name):
+    &quot;&quot;&quot;그날·그 끼니의 메뉴. meal='all'(스테이징) 은 중식 메뉴를 쓴다&quot;&quot;&quot;
+    row = con.execute(&quot;SELECT menu_json FROM nutrition_days WHERE date = ? AND meal = ?&quot;,
+                      (date, &quot;lunch&quot; if meal_name == &quot;all&quot; else meal_name)).fetchone()
     return json.loads(row[0]) if row else []
 
 
-def write_day(con, s, zone_rows, menu, source):
-    &quot;&quot;&quot;하루치 행을 지우고 다시 쓴다 — 한 트랜잭션. 같은 날을 두 번 돌려도 행 수가 변하지 않는다&quot;&quot;&quot;
+def write_day(con, s, zone_rows, menu, source, meal_name):
+    &quot;&quot;&quot;그날·그 끼니의 행을 지우고 다시 쓴다 — 한 트랜잭션. 같은 날을 두 번 돌려도 행 수가 변하지 않는다&quot;&quot;&quot;
     date, weekday = s[&quot;date&quot;], weekday_of(s[&quot;date&quot;])
     dishes = [m for m in (normalize_menu(x) for x in menu) if m]
     for t in (&quot;lunch_days&quot;, &quot;lunch_bins&quot;, &quot;zone_bins&quot;, &quot;events&quot;, &quot;menu_days&quot;):
-        con.execute(f&quot;DELETE FROM {t} WHERE date = ?&quot;, (date,))
-    con.execute(&quot;INSERT INTO lunch_days VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)&quot;,
-                (date, weekday, s[&quot;window_lo&quot;], s[&quot;window_hi&quot;], source, s[&quot;n_samples&quot;], s[&quot;coverage_pct&quot;], s[&quot;stale_min&quot;],
+        con.execute(f&quot;DELETE FROM {t} WHERE date = ? AND meal = ?&quot;, (date, meal_name))
+    con.execute(&quot;INSERT INTO lunch_days VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)&quot;,
+                (date, meal_name, weekday, s[&quot;window_lo&quot;], s[&quot;window_hi&quot;], source, s[&quot;n_samples&quot;], s[&quot;coverage_pct&quot;], s[&quot;stale_min&quot;],
                  s[&quot;insufficient_min&quot;], s[&quot;first_ts&quot;], s[&quot;last_ts&quot;], s[&quot;peak_wait&quot;], s[&quot;peak_wait_ts&quot;], s[&quot;peak_queue&quot;],
                  s[&quot;peak_queue_ts&quot;], s[&quot;avg_wait&quot;], s[&quot;served_est&quot;], s[&quot;typical_rate&quot;], s[&quot;rise_rate&quot;], s[&quot;golden_min&quot;],
                  s[&quot;bottleneck_min&quot;], json.dumps(dishes, ensure_ascii=False), dishes[0] if dishes else None,
                  CALC_VERSION, dt.datetime.now().isoformat(timespec=&quot;seconds&quot;)))
-    con.executemany(&quot;INSERT INTO lunch_bins VALUES (?,?,?,?,?,?,?,?,?,?,?)&quot;,
-                    [(date, weekday, b[&quot;bin&quot;], b[&quot;n&quot;], b[&quot;ok_n&quot;], b[&quot;insufficient_n&quot;], b[&quot;avg_queue&quot;], b[&quot;max_queue&quot;],
+    con.executemany(&quot;INSERT INTO lunch_bins VALUES (?,?,?,?,?,?,?,?,?,?,?,?)&quot;,
+                    [(date, meal_name, weekday, b[&quot;bin&quot;], b[&quot;n&quot;], b[&quot;ok_n&quot;], b[&quot;insufficient_n&quot;], b[&quot;avg_queue&quot;], b[&quot;max_queue&quot;],
                       b[&quot;avg_rate&quot;], b[&quot;avg_wait&quot;], b[&quot;max_wait&quot;]) for b in s[&quot;bins&quot;]])
-    con.executemany(&quot;INSERT INTO zone_bins VALUES (?,?,?,?,?,?)&quot;,
-                    [(date, z[&quot;bin&quot;], z[&quot;zone&quot;], z[&quot;n&quot;], z[&quot;avg_n&quot;], z[&quot;max_n&quot;])
+    con.executemany(&quot;INSERT INTO zone_bins VALUES (?,?,?,?,?,?,?)&quot;,
+                    [(date, meal_name, z[&quot;bin&quot;], z[&quot;zone&quot;], z[&quot;n&quot;], z[&quot;avg_n&quot;], z[&quot;max_n&quot;])
                      for z in bin_zones(zone_rows, s[&quot;window_lo&quot;], s[&quot;window_hi&quot;])])
-    con.executemany(&quot;INSERT OR REPLACE INTO events VALUES (?,?,?,?,?,?,?)&quot;,
-                    [(date, e[&quot;kind&quot;], e[&quot;start_ts&quot;], e[&quot;end_ts&quot;], e[&quot;minutes&quot;], e[&quot;value&quot;], e[&quot;detail&quot;]) for e in s[&quot;events&quot;]])
-    con.executemany(&quot;INSERT INTO menu_days VALUES (?,?,?,?,?,?,?)&quot;,
-                    [(date, m, i, s[&quot;peak_wait&quot;], s[&quot;rise_rate&quot;], s[&quot;peak_queue&quot;], s[&quot;served_est&quot;]) for i, m in enumerate(dishes)])
+    con.executemany(&quot;INSERT OR REPLACE INTO events VALUES (?,?,?,?,?,?,?,?)&quot;,
+                    [(date, meal_name, e[&quot;kind&quot;], e[&quot;start_ts&quot;], e[&quot;end_ts&quot;], e[&quot;minutes&quot;], e[&quot;value&quot;], e[&quot;detail&quot;]) for e in s[&quot;events&quot;]])
+    con.executemany(&quot;INSERT INTO menu_days VALUES (?,?,?,?,?,?,?,?)&quot;,
+                    [(date, meal_name, m, i, s[&quot;peak_wait&quot;], s[&quot;rise_rate&quot;], s[&quot;peak_queue&quot;], s[&quot;served_est&quot;]) for i, m in enumerate(dishes)])
     con.commit()
 
 
 def rebuild_menu_stats(con):
-    &quot;&quot;&quot;menu_days 전체에서 메뉴별 평균과 인기 지수를 다시 만든다. 기준(base)은 메뉴별 평균의 중앙값 — meta 에 적어 API 가 같은 값을 보여 준다&quot;&quot;&quot;
-    rows = con.execute(
-        &quot;SELECT menu, COUNT(*) n, AVG(peak_wait) w, AVG(rise_rate) r, AVG(peak_queue) q, MIN(date) f, MAX(date) l &quot;
-        &quot;FROM menu_days WHERE peak_wait IS NOT NULL GROUP BY menu&quot;).fetchall()
-    base_w = median_or_none([r[2] for r in rows])
-    base_r = median_or_none([r[3] for r in rows])
+    &quot;&quot;&quot;menu_days 전체에서 (끼니, 메뉴)별 평균과 인기 지수를 다시 만든다. 기준(base)은 같은 끼니 안 메뉴별 평균의 중앙값 —
+    끼니마다 meta menu_base_*_&lt;meal&gt; 에 적어 API 가 같은 값을 보여 준다 (중식 인기와 석식 인기가 섞이지 않게)&quot;&quot;&quot;
+    all_rows = con.execute(
+        &quot;SELECT meal, menu, COUNT(*) n, AVG(peak_wait) w, AVG(rise_rate) r, AVG(peak_queue) q, MIN(date) f, MAX(date) l &quot;
+        &quot;FROM menu_days WHERE peak_wait IS NOT NULL GROUP BY meal, menu&quot;).fetchall()
     con.execute(&quot;DELETE FROM menu_stats&quot;)
-    con.executemany(&quot;INSERT INTO menu_stats VALUES (?,?,?,?,?,?,?,?)&quot;,
-                    [(m, n, round(w, 1) if w is not None else None, round(r, 2) if r is not None else None,
-                      round(q, 1) if q is not None else None, popularity(r, w, base_r, base_w), f, l)
-                     for m, n, w, r, q, f, l in rows])
-    set_meta(con, menu_base_rise=base_r, menu_base_wait=base_w)
+    total = 0
+    for meal_name in sorted({r[0] for r in all_rows}):
+        rows = [r for r in all_rows if r[0] == meal_name]
+        base_w = median_or_none([r[3] for r in rows])
+        base_r = median_or_none([r[4] for r in rows])
+        con.executemany(&quot;INSERT INTO menu_stats VALUES (?,?,?,?,?,?,?,?,?)&quot;,
+                        [(meal_name, m, n, round(w, 1) if w is not None else None, round(r, 2) if r is not None else None,
+                          round(q, 1) if q is not None else None, popularity(r, w, base_r, base_w), f, l)
+                         for _, m, n, w, r, q, f, l in rows])
+        set_meta(con, **{f&quot;menu_base_rise_{meal_name}&quot;: base_r, f&quot;menu_base_wait_{meal_name}&quot;: base_w})
+        total += len(rows)
     con.commit()
-    return len(rows)
+    return total
 
 
 def backup(path):
@@ -3985,11 +4043,11 @@ def pick_dates(a, qcon):
     return [(today - dt.timedelta(days=i)).isoformat() for i in reversed(range(a.days))]
 
 
-def report(s, zones):
+def report(s, zones, meal_name):
     ev = {}
     for e in s[&quot;events&quot;]:
         ev[e[&quot;kind&quot;]] = ev.get(e[&quot;kind&quot;], 0) + 1
-    print(f&quot;{s['date']}  표본 {s['n_samples']}  커버리지 {s['coverage_pct']}%  최대 대기 {s['peak_wait']}분@{(s['peak_wait_ts'] or '')[11:16]}  &quot;
+    print(f&quot;{s['date']} [{meal_name}]  표본 {s['n_samples']}  커버리지 {s['coverage_pct']}%  최대 대기 {s['peak_wait']}분@{(s['peak_wait_ts'] or '')[11:16]}  &quot;
           f&quot;처리 {s['served_est']}명  황금 {s['golden_min']}분  병목 {s['bottleneck_min']}분  구역행 {len(zones)}  이벤트 {ev}&quot;)
 
 
@@ -4011,15 +4069,16 @@ def main():
     if not dates:
         print(&quot;집계할 날짜가 없다 (--all 인데 samples 가 비어 있다). 아무것도 하지 않는다&quot;)
         return 0
-    lo, hi = bounds(a.window)
+    meals = agg_meals(a.window)                  # [(meal, lo, hi)] — lunch 모드면 중식·석식 두 창(09-16)
     today = dt.date.today().isoformat()
     now_sec = seconds_of_day(dt.datetime.now())
 
     if a.dry_run:
-        print(f&quot;[dry-run] window={a.window} {lo}~{hi}분 source={a.source} 날짜 {len(dates)}개 - 파일을 만들거나 바꾸지 않는다&quot;)
+        print(f&quot;[dry-run] window={a.window} {[(m, f'{lo}~{hi}분') for m, lo, hi in meals]} source={a.source} 날짜 {len(dates)}개 - 파일을 만들거나 바꾸지 않는다&quot;)
         for date in dates:
             samples, zones = read_day(qcon, date)
-            report(day_summary(samples, date, lo, hi, now_sec if date == today else None), zones)
+            for meal_name, lo, hi in meals:
+                report(day_summary(samples, date, lo, hi, now_sec if date == today else None), zones, meal_name)
         return 0
 
     if a.all and INSIGHTS_DB_PATH.exists():
@@ -4031,7 +4090,7 @@ def main():
     try:
         con.execute(&quot;PRAGMA journal_mode=WAL&quot;)
         migrate(con)
-        check_meta(con, a.window, lo, hi, a.source)
+        check_meta(con, a.window, a.source)
         con.execute(&quot;INSERT INTO runs (started_at, args, dates) VALUES (?,?,?)&quot;,
                     (dt.datetime.now().isoformat(timespec=&quot;seconds&quot;), &quot; &quot;.join(sys.argv[1:]), &quot;,&quot;.join(dates)))
         run_id = con.execute(&quot;SELECT last_insert_rowid()&quot;).fetchone()[0]
@@ -4043,9 +4102,12 @@ def main():
             if not samples:
                 print(f&quot;{date}  표본 없음 - 건너뜀&quot;)
                 continue
-            s = day_summary(samples, date, lo, hi, now_sec if date == today else None)
-            write_day(con, s, zones, menu_for(con, date), a.source)
-            report(s, zones)
+            for meal_name, lo, hi in meals:
+                s = day_summary(samples, date, lo, hi, now_sec if date == today else None)
+                if not s[&quot;n_samples&quot;]:                       # 그 끼니 창에 표본이 하나도 없으면 행을 만들지 않는다 (석식 없는 날 등)
+                    continue
+                write_day(con, s, zones, menu_for(con, date, meal_name), a.source, meal_name)
+                report(s, zones, meal_name)
             n_days += 1
         print(f&quot;menu_stats {rebuild_menu_stats(con)}개 메뉴&quot;)
     except Exception as e:                       # 실패도 runs 에 남긴다
@@ -4156,7 +4218,7 @@ from fastapi import APIRouter, Query
 from ..config import DB_PATH, FEED_SOURCE, ROLLUP_WINDOW, ZONES_JSON
 from ..insight_calc import GOLDEN_WAIT, day_summary, density, golden_bins, median_or_none
 from ..insights_db import connect_reports_ro, connect_ro, meta
-from ..lunch import BUCKET_MIN, LUNCH_HI, LUNCH_LO, bounds, iso_at, minute_of_day, seconds_of_day, weekday_of
+from ..lunch import BUCKET_MIN, DAY_MIN, DINNER_HI, DINNER_LO, LUNCH_HI, LUNCH_LO, iso_at, minute_of_day, seconds_of_day, weekday_of
 from ..mealjson import menu_on, nutrition_rows, read_meal
 from .typical import MIN_BUCKETS
 from vision.zones import GRID_COLS, GRID_ROWS, load_zones, polygon_area_m2
@@ -4166,7 +4228,23 @@ LIVE_MIN = 180                 # 오늘 즉석 계산에 쓰는 최근 분
 MIN_DAYS = 2                   # 메뉴 통계가 뜻을 가지려면 이만큼은 나왔어야 한다 (menus 기본값·예보 보정 공통)
 MENU_FACTOR = (0.7, 1.5)       # 예보 보정 클램프
 NO_DB = &quot;insights.db 가 아직 없다 — jobs/rollup.py 가 만든다&quot;
-WINDOW_LO, WINDOW_HI = bounds(ROLLUP_WINDOW)
+
+# 끼니 축(09-16 중식/석식 분리): 모든 엔드포인트가 ?meal=lunch|dinner 를 받는다.
+# ROLLUP_WINDOW=all(스테이징 mock)이면 집계 행의 meal 은 'all' 하나 — 어느 끼니를 물어도 같은 행을 창 전체로 보여 준다
+MEAL_BOUNDS = {&quot;lunch&quot;: (LUNCH_LO, LUNCH_HI), &quot;dinner&quot;: (DINNER_LO, DINNER_HI)}
+
+
+def MealQ():
+    return Query(&quot;lunch&quot;, pattern=&quot;^(lunch|dinner)$&quot;)
+
+
+def _bounds(meal):
+    return (0, DAY_MIN) if ROLLUP_WINDOW == &quot;all&quot; else MEAL_BOUNDS[meal]
+
+
+def _stored(meal):
+    &quot;&quot;&quot;집계 행의 meal 키 — all 모드에서는 'all' 한 값뿐&quot;&quot;&quot;
+    return &quot;all&quot; if ROLLUP_WINDOW == &quot;all&quot; else meal
 
 
 def _no(reason, **extra):
@@ -4185,8 +4263,9 @@ def _since(weeks):
     return (dt.date.today() - dt.timedelta(weeks=weeks)).isoformat()
 
 
-def _window():
-    return {&quot;lo&quot;: WINDOW_LO, &quot;hi&quot;: WINDOW_HI, &quot;name&quot;: ROLLUP_WINDOW}
+def _window(meal):
+    lo, hi = _bounds(meal)
+    return {&quot;lo&quot;: lo, &quot;hi&quot;: hi, &quot;name&quot;: ROLLUP_WINDOW, &quot;meal&quot;: meal}
 
 
 def _rollup_meta():
@@ -4201,29 +4280,32 @@ def _rollup_meta():
 
 # ---- 하루치: 집계 행 또는 즉석 계산 -------------------------------------------------------------
 
-def _stored_day(date):
-    &quot;&quot;&quot;insights.db 의 그날 행 + events + bins. 없으면 None&quot;&quot;&quot;
+def _stored_day(date, meal):
+    &quot;&quot;&quot;insights.db 의 그날·그 끼니 행 + events + bins. 없으면 None&quot;&quot;&quot;
     con = connect_ro()
     if con is None:
         return None
+    sm = _stored(meal)
     with closing(con):
-        row = con.execute(&quot;SELECT * FROM lunch_days WHERE date = ? AND source = ?&quot;, (date, FEED_SOURCE)).fetchone()
+        row = con.execute(&quot;SELECT * FROM lunch_days WHERE date = ? AND meal = ? AND source = ?&quot;, (date, sm, FEED_SOURCE)).fetchone()
         if row is None:
             return None
         summary = dict(row)
         summary[&quot;menu&quot;] = json.loads(summary.pop(&quot;menu_json&quot;) or &quot;[]&quot;)
         summary[&quot;events&quot;] = [dict(r) for r in con.execute(
-            &quot;SELECT kind, start_ts, end_ts, minutes, value, detail FROM events WHERE date = ? ORDER BY start_ts&quot;, (date,))]
+            &quot;SELECT kind, start_ts, end_ts, minutes, value, detail FROM events WHERE date = ? AND meal = ? ORDER BY start_ts&quot;, (date, sm))]
         summary[&quot;bins&quot;] = [dict(r) for r in con.execute(
-            &quot;SELECT bin, n, ok_n, insufficient_n, avg_queue, max_queue, avg_rate, avg_wait, max_wait FROM lunch_bins WHERE date = ? ORDER BY bin&quot;, (date,))]
+            &quot;SELECT bin, n, ok_n, insufficient_n, avg_queue, max_queue, avg_rate, avg_wait, max_wait FROM lunch_bins &quot;
+            &quot;WHERE date = ? AND meal = ? ORDER BY bin&quot;, (date, sm))]
         return summary
 
 
-def _live_day(date):
-    &quot;&quot;&quot;오늘 최근 LIVE_MIN 분(창 안)을 queue.db 에서 한 번 읽어 day_summary — 표본·커버리지가 같은 창을 본다&quot;&quot;&quot;
+def _live_day(date, meal):
+    &quot;&quot;&quot;오늘 최근 LIVE_MIN 분(그 끼니 창 안)을 queue.db 에서 한 번 읽어 day_summary — 표본·커버리지가 같은 창을 본다&quot;&quot;&quot;
     now = dt.datetime.now()
     nmin = minute_of_day(now)
-    lo, hi = max(WINDOW_LO, nmin - LIVE_MIN), min(WINDOW_HI, nmin + 1)
+    wlo, whi = _bounds(meal)
+    lo, hi = max(wlo, nmin - LIVE_MIN), min(whi, nmin + 1)
     samples = []
     con = connect_ro(DB_PATH, &quot;samples&quot;)
     if con is not None and lo &lt; hi:
@@ -4232,40 +4314,43 @@ def _live_day(date):
                 &quot;SELECT ts, queue_len, rate_per_min, wait_min, state FROM samples WHERE ts &gt;= ? AND ts &lt; ? ORDER BY ts&quot;,
                 (iso_at(date, lo * 60), iso_at(date, hi * 60)))]
     s = day_summary(samples, date, lo, max(lo, hi), seconds_of_day(now))
-    s[&quot;menu&quot;] = menu_on(read_meal(), date)
+    s[&quot;menu&quot;] = menu_on(read_meal(), date, &quot;lunch&quot; if ROLLUP_WINDOW == &quot;all&quot; else meal)
     return s
 
 
-def _day(date):
-    &quot;&quot;&quot;(basis, summary) — 오늘이고 창이 아직 열려 있으면 live, 아니면 집계 행, 오늘인데 행이 없으면 live, 그 밖엔 None&quot;&quot;&quot;
+def _day(date, meal):
+    &quot;&quot;&quot;(basis, summary) — 오늘이고 그 끼니 창이 아직 안 끝났으면 live, 아니면 집계 행, 오늘인데 행이 없으면 live, 그 밖엔 None&quot;&quot;&quot;
     today = date == _today()
-    if today and minute_of_day(dt.datetime.now()) &lt; WINDOW_HI:
-        return &quot;live&quot;, _live_day(date)
-    stored = _stored_day(date)
+    if today and minute_of_day(dt.datetime.now()) &lt; _bounds(meal)[1]:
+        return &quot;live&quot;, _live_day(date, meal)
+    stored = _stored_day(date, meal)
     if stored is not None:
         return &quot;rollup&quot;, stored
     if today:
-        return &quot;live&quot;, _live_day(date)
+        return &quot;live&quot;, _live_day(date, meal)
     return None, None
 
 
 # ---- 1. 요일×시각 히트맵 -----------------------------------------------------------------
 
 @router.get(&quot;/heatmap&quot;)
-def heatmap(weeks: int = Query(4, ge=1, le=12)):
+def heatmap(weeks: int = Query(4, ge=1, le=12), meal: str = MealQ()):
+    sm = _stored(meal)
     con = connect_ro()
     if con is None:
-        return _no(NO_DB, cells=[], window=_window())
+        return _no(NO_DB, cells=[], window=_window(meal), meal=meal)
     with closing(con):
         rows = con.execute(
             &quot;SELECT b.weekday, b.bin, AVG(b.avg_wait) w, AVG(b.avg_queue) q, COUNT(DISTINCT b.date) d &quot;
-            &quot;FROM lunch_bins b JOIN lunch_days l ON l.date = b.date &quot;
-            &quot;WHERE l.source = ? AND b.date &gt;= ? GROUP BY b.weekday, b.bin ORDER BY b.weekday, b.bin&quot;, (FEED_SOURCE, _since(weeks))).fetchall()
-        days = con.execute(&quot;SELECT COUNT(*) FROM lunch_days WHERE source = ? AND date &gt;= ?&quot;, (FEED_SOURCE, _since(weeks))).fetchone()[0]
+            &quot;FROM lunch_bins b JOIN lunch_days l ON l.date = b.date AND l.meal = b.meal &quot;
+            &quot;WHERE l.source = ? AND b.meal = ? AND b.date &gt;= ? GROUP BY b.weekday, b.bin ORDER BY b.weekday, b.bin&quot;,
+            (FEED_SOURCE, sm, _since(weeks))).fetchall()
+        days = con.execute(&quot;SELECT COUNT(*) FROM lunch_days WHERE source = ? AND meal = ? AND date &gt;= ?&quot;,
+                           (FEED_SOURCE, sm, _since(weeks))).fetchone()[0]
     if not rows:
-        return _no(&quot;집계된 날이 없다&quot;, cells=[], window=_window(), days=0)
-    return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: &quot;weekday&quot; if days &gt;= 5 else &quot;recent&quot;, &quot;weeks&quot;: weeks, &quot;days&quot;: days,
-            &quot;bucket_min&quot;: BUCKET_MIN, &quot;window&quot;: _window(), &quot;lunch&quot;: {&quot;lo&quot;: LUNCH_LO, &quot;hi&quot;: LUNCH_HI},   # 화면은 급식 창만 보여 준다
+        return _no(&quot;집계된 날이 없다&quot;, cells=[], window=_window(meal), meal=meal, days=0)
+    return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: &quot;weekday&quot; if days &gt;= 5 else &quot;recent&quot;, &quot;weeks&quot;: weeks, &quot;days&quot;: days, &quot;meal&quot;: meal,
+            &quot;bucket_min&quot;: BUCKET_MIN, &quot;window&quot;: _window(meal),
             &quot;golden_wait&quot;: GOLDEN_WAIT, &quot;source&quot;: FEED_SOURCE,
             &quot;cells&quot;: [{&quot;weekday&quot;: r[&quot;weekday&quot;], &quot;minute_of_day&quot;: r[&quot;bin&quot;],
                        &quot;wait_min&quot;: round(r[&quot;w&quot;], 1) if r[&quot;w&quot;] is not None else None,
@@ -4275,16 +4360,16 @@ def heatmap(weeks: int = Query(4, ge=1, le=12)):
 # ---- 2. 하루 -----------------------------------------------------------------------------
 
 @router.get(&quot;/day&quot;)
-def day(date: dt.date | None = Query(None)):
+def day(date: dt.date | None = Query(None), meal: str = MealQ()):
     date = _iso(date)
-    basis, s = _day(date)
+    basis, s = _day(date, meal)
     if s is None:
-        return _no(NO_DB if connect_ro() is None else &quot;그날의 집계가 없다&quot;, date=date)
+        return _no(NO_DB if connect_ro() is None else &quot;그날의 집계가 없다&quot;, date=date, meal=meal)
     events, bins = s.pop(&quot;events&quot;), s.pop(&quot;bins&quot;)
     menu = s.pop(&quot;menu&quot;)
     if basis == &quot;live&quot; and not s[&quot;n_samples&quot;]:
-        return _no(&quot;급식 시간 데이터가 쌓이면 반영됩니다&quot;, basis=&quot;live&quot;, date=date, summary=s, menu=menu, events=events, bins=bins)
-    return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: basis, &quot;date&quot;: date, &quot;summary&quot;: s, &quot;menu&quot;: menu,
+        return _no(&quot;급식 시간 데이터가 쌓이면 반영됩니다&quot;, basis=&quot;live&quot;, date=date, meal=meal, summary=s, menu=menu, events=events, bins=bins)
+    return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: basis, &quot;date&quot;: date, &quot;meal&quot;: meal, &quot;summary&quot;: s, &quot;menu&quot;: menu,
             &quot;golden&quot;: [e for e in events if e[&quot;kind&quot;] == &quot;golden&quot;],
             &quot;bottlenecks&quot;: [e for e in events if e[&quot;kind&quot;] == &quot;bottleneck&quot;], &quot;events&quot;: events, &quot;bins&quot;: bins}
 
@@ -4292,45 +4377,47 @@ def day(date: dt.date | None = Query(None)):
 # ---- 3. 메뉴 인기 ---------------------------------------------------------------------------
 
 @router.get(&quot;/menus&quot;)
-def menus(n: int = Query(5, ge=1, le=20), min_days: int = Query(MIN_DAYS, ge=1, le=30)):
+def menus(n: int = Query(5, ge=1, le=20), min_days: int = Query(MIN_DAYS, ge=1, le=30), meal: str = MealQ()):
+    sm = _stored(meal)
     con = connect_ro()
     if con is None:
-        return _no(NO_DB, items=[])
+        return _no(NO_DB, items=[], meal=meal)
     with closing(con):
         rows = con.execute(
             &quot;SELECT menu, n_days, popularity, avg_rise_rate, avg_peak_wait, last_date FROM menu_stats &quot;
-            &quot;WHERE n_days &gt;= ? AND popularity IS NOT NULL ORDER BY popularity DESC, n_days DESC LIMIT ?&quot;, (min_days, n)).fetchall()
+            &quot;WHERE meal = ? AND n_days &gt;= ? AND popularity IS NOT NULL ORDER BY popularity DESC, n_days DESC LIMIT ?&quot;,
+            (sm, min_days, n)).fetchall()
         m = meta(con)
-    base = {k: (float(m[k]) if m.get(k) not in (None, &quot;&quot;) else None) for k in (&quot;menu_base_rise&quot;, &quot;menu_base_wait&quot;)}
+    base = {k: (float(v) if (v := m.get(f&quot;{k}_{sm}&quot;)) not in (None, &quot;&quot;) else None) for k in (&quot;menu_base_rise&quot;, &quot;menu_base_wait&quot;)}
     if not rows:
-        return _no(f&quot;{min_days}회 이상 나온 메뉴 아직 없음&quot;, items=[], baseline=base)
-    return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: &quot;menu_stats&quot;, &quot;min_days&quot;: min_days, &quot;baseline&quot;: base, &quot;items&quot;: [dict(r) for r in rows]}
+        return _no(f&quot;{min_days}회 이상 나온 메뉴 아직 없음&quot;, items=[], meal=meal, baseline=base)
+    return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: &quot;menu_stats&quot;, &quot;meal&quot;: meal, &quot;min_days&quot;: min_days, &quot;baseline&quot;: base, &quot;items&quot;: [dict(r) for r in rows]}
 
 
 # ---- 4. 예보 ----------------------------------------------------------------------------
 
-def _typical_curve(con, date, weeks):
+def _typical_curve(con, date, weeks, sm):
     &quot;&quot;&quot;같은 요일 최근 N주 → 모자라면 최근 7일(요일 무관). 예보 대상 날 자신은 뺀다(비교 대상이 자기 자신이 되면 안 된다).
-    (basis, [{minute_of_day, wait}])&quot;&quot;&quot;
+    같은 끼니의 집계만 본다. (basis, [{minute_of_day, wait}])&quot;&quot;&quot;
     plans = [(&quot;weekday&quot;, &quot;AND b.weekday = ? AND b.date &gt;= ?&quot;, (weekday_of(date), _since(weeks))),
              (&quot;recent&quot;, &quot;AND b.date &gt;= ?&quot;, ((dt.date.today() - dt.timedelta(days=7)).isoformat(),))]
     for basis, cond, args in plans:
         rows = con.execute(
-            &quot;SELECT b.bin, AVG(b.avg_wait) w FROM lunch_bins b JOIN lunch_days l ON l.date = b.date &quot;
-            f&quot;WHERE l.source = ? AND b.date != ? AND b.avg_wait IS NOT NULL {cond} GROUP BY b.bin ORDER BY b.bin&quot;,
-            (FEED_SOURCE, date, *args)).fetchall()
+            &quot;SELECT b.bin, AVG(b.avg_wait) w FROM lunch_bins b JOIN lunch_days l ON l.date = b.date AND l.meal = b.meal &quot;
+            f&quot;WHERE l.source = ? AND b.meal = ? AND b.date != ? AND b.avg_wait IS NOT NULL {cond} GROUP BY b.bin ORDER BY b.bin&quot;,
+            (FEED_SOURCE, sm, date, *args)).fetchall()
         if len(rows) &gt;= MIN_BUCKETS:
             return basis, [{&quot;minute_of_day&quot;: r[&quot;bin&quot;], &quot;wait&quot;: round(r[&quot;w&quot;], 1)} for r in rows]
     return None, []
 
 
-def _menu_factor(con, dishes):
-    &quot;&quot;&quot;그날 메뉴의 인기 지수 평균/100 을 0.7~1.5 로 눌러서. MIN_DAYS 미만인 메뉴는 menus 와 같이 무시&quot;&quot;&quot;
+def _menu_factor(con, dishes, sm):
+    &quot;&quot;&quot;그날 메뉴의 인기 지수 평균/100 을 0.7~1.5 로 눌러서. MIN_DAYS 미만인 메뉴는 menus 와 같이 무시 — 같은 끼니의 통계만&quot;&quot;&quot;
     if not dishes:
         return 1.0, []
     marks = &quot;,&quot;.join(&quot;?&quot; * len(dishes))
-    rows = con.execute(f&quot;SELECT menu, popularity, n_days FROM menu_stats WHERE popularity IS NOT NULL AND n_days &gt;= ? AND menu IN ({marks})&quot;,
-                       (MIN_DAYS, *dishes)).fetchall()
+    rows = con.execute(f&quot;SELECT menu, popularity, n_days FROM menu_stats WHERE meal = ? AND popularity IS NOT NULL AND n_days &gt;= ? AND menu IN ({marks})&quot;,
+                       (sm, MIN_DAYS, *dishes)).fetchall()
     if not rows:
         return 1.0, []
     f = sum(r[&quot;popularity&quot;] for r in rows) / len(rows) / 100
@@ -4338,25 +4425,26 @@ def _menu_factor(con, dishes):
 
 
 @router.get(&quot;/forecast&quot;)
-def forecast(date: dt.date | None = Query(None), weeks: int = Query(4, ge=1, le=12)):
-    if date is None:                                          # 급식이 끝난 뒤면 내일, 아니면 오늘
+def forecast(date: dt.date | None = Query(None), weeks: int = Query(4, ge=1, le=12), meal: str = MealQ()):
+    sm = _stored(meal)
+    if date is None:                                          # 그 끼니가 끝난 뒤면 내일, 아니면 오늘
         now = dt.datetime.now()
-        date = now.date() if minute_of_day(now) &lt; WINDOW_HI else now.date() + dt.timedelta(days=1)
+        date = now.date() if minute_of_day(now) &lt; _bounds(meal)[1] else now.date() + dt.timedelta(days=1)
     if date.weekday() &gt;= 5:
-        return {&quot;state&quot;: &quot;no_meal&quot;, &quot;date&quot;: date.isoformat(), &quot;reason&quot;: &quot;주말에는 급식이 없다&quot;, &quot;curve&quot;: [], &quot;golden&quot;: []}
+        return {&quot;state&quot;: &quot;no_meal&quot;, &quot;date&quot;: date.isoformat(), &quot;meal&quot;: meal, &quot;reason&quot;: &quot;주말에는 급식이 없다&quot;, &quot;curve&quot;: [], &quot;golden&quot;: []}
     date = date.isoformat()
     con = connect_ro()
     if con is None:
-        return _no(NO_DB, date=date, curve=[], golden=[])
-    dishes = menu_on(read_meal(), date)
+        return _no(NO_DB, date=date, meal=meal, curve=[], golden=[])
+    dishes = menu_on(read_meal(), date, &quot;lunch&quot; if ROLLUP_WINDOW == &quot;all&quot; else meal)
     with closing(con):
-        basis, typical = _typical_curve(con, date, weeks)
-        factor, matched = _menu_factor(con, dishes)
+        basis, typical = _typical_curve(con, date, weeks, sm)
+        factor, matched = _menu_factor(con, dishes, sm)
     if not typical:
-        return _no(&quot;평소 곡선을 만들 집계가 아직 모자란다&quot;, date=date, curve=[], golden=[], menu=dishes)
+        return _no(&quot;평소 곡선을 만들 집계가 아직 모자란다&quot;, date=date, meal=meal, curve=[], golden=[], menu=dishes)
     curve = [{&quot;minute_of_day&quot;: p[&quot;minute_of_day&quot;], &quot;typical_wait&quot;: p[&quot;wait&quot;], &quot;forecast_wait&quot;: round(p[&quot;wait&quot;] * factor, 1)} for p in typical]
     peak = max(curve, key=lambda p: p[&quot;forecast_wait&quot;])
-    return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: basis, &quot;date&quot;: date, &quot;weeks&quot;: weeks, &quot;menu&quot;: dishes, &quot;menu_factor&quot;: factor, &quot;menu_matched&quot;: matched,
+    return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: basis, &quot;date&quot;: date, &quot;meal&quot;: meal, &quot;weeks&quot;: weeks, &quot;menu&quot;: dishes, &quot;menu_factor&quot;: factor, &quot;menu_matched&quot;: matched,
             &quot;golden_wait&quot;: GOLDEN_WAIT,
             &quot;formula&quot;: f&quot;forecast = typical({basis}) × menu_factor(인기 지수 평균/100, {MENU_FACTOR[0]}~{MENU_FACTOR[1]} 클램프); &quot;
                        f&quot;golden = forecast ≤ {GOLDEN_WAIT}분&quot;,
@@ -4367,13 +4455,13 @@ def forecast(date: dt.date | None = Query(None), weeks: int = Query(4, ge=1, le=
 # ---- 5. 측정 품질 --------------------------------------------------------------------------
 
 @router.get(&quot;/quality&quot;)
-def quality(date: dt.date | None = Query(None)):
+def quality(date: dt.date | None = Query(None), meal: str = MealQ()):
     date = _iso(date)
-    basis, s = _day(date)
+    basis, s = _day(date, meal)
     rollup = _rollup_meta()
     if s is None:
-        return _no(NO_DB if rollup[&quot;schema_version&quot;] is None else &quot;그날의 집계가 없다&quot;, date=date, rollup=rollup)
-    out = {&quot;state&quot;: &quot;ok&quot; if s[&quot;n_samples&quot;] else &quot;no_data&quot;, &quot;basis&quot;: basis, &quot;date&quot;: date,
+        return _no(NO_DB if rollup[&quot;schema_version&quot;] is None else &quot;그날의 집계가 없다&quot;, date=date, meal=meal, rollup=rollup)
+    out = {&quot;state&quot;: &quot;ok&quot; if s[&quot;n_samples&quot;] else &quot;no_data&quot;, &quot;basis&quot;: basis, &quot;date&quot;: date, &quot;meal&quot;: meal,
            &quot;window&quot;: {&quot;lo&quot;: s[&quot;window_lo&quot;], &quot;hi&quot;: s[&quot;window_hi&quot;]},
            &quot;coverage_pct&quot;: s[&quot;coverage_pct&quot;], &quot;stale_min&quot;: s[&quot;stale_min&quot;], &quot;insufficient_min&quot;: s[&quot;insufficient_min&quot;],
            &quot;n_samples&quot;: s[&quot;n_samples&quot;],
@@ -4407,23 +4495,24 @@ def _weeks_from(days):
 
 
 @router.get(&quot;/nutrition&quot;)
-def nutrition(weeks: int = Query(8, ge=1, le=26)):
+def nutrition(weeks: int = Query(8, ge=1, le=26), meal: str = MealQ()):
     con = connect_ro()
     if con is not None:
-        with closing(con):
-            rows = con.execute(&quot;SELECT * FROM nutrition_days WHERE date &gt;= ? ORDER BY date&quot;, (_since(weeks),)).fetchall()
+        with closing(con):        # nutrition_days 의 meal 은 항상 lunch|dinner (upsert 가 창 모드와 무관하게 둘 다 쌓는다)
+            rows = con.execute(&quot;SELECT * FROM nutrition_days WHERE meal = ? AND date &gt;= ? ORDER BY date&quot;, (meal, _since(weeks))).fetchall()
         if rows:
-            return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: &quot;nutrition_days&quot;, &quot;weeks&quot;: _weeks_from([dict(r) for r in rows])}
-    week = nutrition_rows(read_meal())                        # 집계가 없으면 meal.json 의 이번 주만
+            return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: &quot;nutrition_days&quot;, &quot;meal&quot;: meal, &quot;weeks&quot;: _weeks_from([dict(r) for r in rows])}
+    week = nutrition_rows(read_meal(), meals=(meal,))         # 집계가 없으면 meal.json 의 이번 주만
     if not week:
-        return _no(&quot;영양 이력도 이번 주 식단도 없다&quot;, weeks=[])
-    return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: &quot;meal_json&quot;, &quot;weeks&quot;: _weeks_from(week)}
+        return _no(&quot;영양 이력도 이번 주 식단도 없다&quot;, meal=meal, weeks=[])
+    return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: &quot;meal_json&quot;, &quot;meal&quot;: meal, &quot;weeks&quot;: _weeks_from(week)}
 
 
 # ---- 7. 구역 점유율 --------------------------------------------------------------------------
 
 @router.get(&quot;/zones&quot;)
-def zones(weeks: int = Query(4, ge=1, le=12), date: dt.date | None = Query(None)):
+def zones(weeks: int = Query(4, ge=1, le=12), date: dt.date | None = Query(None), meal: str = MealQ()):
+    sm = _stored(meal)
     date = date.isoformat() if date else None
     try:
         doc = load_zones(ZONES_JSON)
@@ -4436,12 +4525,13 @@ def zones(weeks: int = Query(4, ge=1, le=12), date: dt.date | None = Query(None)
         return _no(NO_DB, zones=zlist, bins=[])
     with closing(con):
         if date:
-            rows = con.execute(&quot;SELECT z.bin, z.zone, z.avg_n FROM zone_bins z JOIN lunch_days l ON l.date = z.date &quot;
-                               &quot;WHERE z.date = ? AND l.source = ? ORDER BY z.bin&quot;, (date, FEED_SOURCE)).fetchall()
+            rows = con.execute(&quot;SELECT z.bin, z.zone, z.avg_n FROM zone_bins z JOIN lunch_days l ON l.date = z.date AND l.meal = z.meal &quot;
+                               &quot;WHERE z.date = ? AND z.meal = ? AND l.source = ? ORDER BY z.bin&quot;, (date, sm, FEED_SOURCE)).fetchall()
             basis = &quot;day&quot;
         else:
-            rows = con.execute(&quot;SELECT z.bin, z.zone, AVG(z.avg_n) avg_n FROM zone_bins z JOIN lunch_days l ON l.date = z.date &quot;
-                               &quot;WHERE z.date &gt;= ? AND l.source = ? GROUP BY z.bin, z.zone ORDER BY z.bin&quot;, (_since(weeks), FEED_SOURCE)).fetchall()
+            rows = con.execute(&quot;SELECT z.bin, z.zone, AVG(z.avg_n) avg_n FROM zone_bins z JOIN lunch_days l ON l.date = z.date AND l.meal = z.meal &quot;
+                               &quot;WHERE z.date &gt;= ? AND z.meal = ? AND l.source = ? GROUP BY z.bin, z.zone ORDER BY z.bin&quot;,
+                               (_since(weeks), sm, FEED_SOURCE)).fetchall()
             basis = &quot;recent&quot;
     if not rows:
         return _no(&quot;구역 집계가 아직 없다&quot;, basis=basis, zones=zlist, bins=[])
@@ -4454,7 +4544,7 @@ def zones(weeks: int = Query(4, ge=1, le=12), date: dt.date | None = Query(None)
         bins.append({&quot;minute_of_day&quot;: b, &quot;avg_n&quot;: occ, &quot;total&quot;: round(total, 1),
                      &quot;share_pct&quot;: {z: (round(100 * n / total) if total else 0) for z, n in occ.items()}})
     peak = max(bins, key=lambda x: x[&quot;total&quot;])
-    return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: basis, &quot;date&quot;: date, &quot;weeks&quot;: None if date else weeks, &quot;window&quot;: _window(), &quot;zones&quot;: zlist, &quot;bins&quot;: bins,
+    return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: basis, &quot;date&quot;: date, &quot;weeks&quot;: None if date else weeks, &quot;meal&quot;: meal, &quot;window&quot;: _window(meal), &quot;zones&quot;: zlist, &quot;bins&quot;: bins,
             &quot;peak&quot;: {&quot;minute_of_day&quot;: peak[&quot;minute_of_day&quot;], &quot;total&quot;: peak[&quot;total&quot;], &quot;avg_n&quot;: peak[&quot;avg_n&quot;]}}
 
 
@@ -4528,24 +4618,34 @@ def iso_date(ymd):
     return f&quot;{ymd[:4]}-{ymd[4:6]}-{ymd[6:8]}&quot;
 
 
-def nutrition_rows(meal):
-    &quot;&quot;&quot;week[] → nutrition_days 한 행씩(dict). 집계가 저장하고, 집계가 없을 때 인사이트 API 가 같은 모양으로 폴백한다&quot;&quot;&quot;
+def _row(day, meal_name, d, fetched_at):
+    &quot;&quot;&quot;중식이면 week[] 항목 자체, 석식이면 그 안의 dinner 절 — 같은 모양(menu·kcal·assess·carbon)이라 한 함수로 만든다&quot;&quot;&quot;
+    a = d.get(&quot;assess&quot;) or {}
+    ratio = a.get(&quot;macro_ratio&quot;) or {}
+    ok = a.get(&quot;macro_ratio_ok&quot;)
+    return {&quot;date&quot;: day, &quot;meal&quot;: meal_name, &quot;kcal&quot;: d.get(&quot;kcal&quot;), &quot;energy_pct&quot;: a.get(&quot;energy_pct&quot;),
+            &quot;protein_pct&quot;: a.get(&quot;protein_pct&quot;), &quot;carb_ratio&quot;: ratio.get(&quot;carb&quot;), &quot;protein_ratio&quot;: ratio.get(&quot;protein&quot;),
+            &quot;fat_ratio&quot;: ratio.get(&quot;fat&quot;), &quot;macro_ok&quot;: None if ok is None else int(ok), &quot;mar&quot;: a.get(&quot;mar&quot;),
+            &quot;kgco2e&quot;: (d.get(&quot;carbon&quot;) or {}).get(&quot;kgco2e&quot;), &quot;menu&quot;: d.get(&quot;menu&quot;) or [],
+            &quot;fetched_at&quot;: fetched_at}
+
+
+def nutrition_rows(meal, meals=(&quot;lunch&quot;, &quot;dinner&quot;)):
+    &quot;&quot;&quot;week[] → nutrition_days 한 행씩(dict, meal 열 포함 — 09-16 중식/석식 분리). 석식이 없는 날은 석식 행이 안 나온다.
+    집계가 저장하고, 집계가 없을 때 인사이트 API 가 같은 모양으로 폴백한다&quot;&quot;&quot;
     rows = []
     for d in meal.get(&quot;week&quot;) or []:
-        a = d.get(&quot;assess&quot;) or {}
-        ratio = a.get(&quot;macro_ratio&quot;) or {}
-        ok = a.get(&quot;macro_ratio_ok&quot;)
-        rows.append({&quot;date&quot;: iso_date(d[&quot;date&quot;]), &quot;kcal&quot;: d.get(&quot;kcal&quot;), &quot;energy_pct&quot;: a.get(&quot;energy_pct&quot;),
-                     &quot;protein_pct&quot;: a.get(&quot;protein_pct&quot;), &quot;carb_ratio&quot;: ratio.get(&quot;carb&quot;), &quot;protein_ratio&quot;: ratio.get(&quot;protein&quot;),
-                     &quot;fat_ratio&quot;: ratio.get(&quot;fat&quot;), &quot;macro_ok&quot;: None if ok is None else int(ok), &quot;mar&quot;: a.get(&quot;mar&quot;),
-                     &quot;kgco2e&quot;: (d.get(&quot;carbon&quot;) or {}).get(&quot;kgco2e&quot;), &quot;menu&quot;: d.get(&quot;menu&quot;) or [],
-                     &quot;fetched_at&quot;: meal.get(&quot;fetched_at&quot;)})
+        day = iso_date(d[&quot;date&quot;])
+        if &quot;lunch&quot; in meals:
+            rows.append(_row(day, &quot;lunch&quot;, d, meal.get(&quot;fetched_at&quot;)))
+        if &quot;dinner&quot; in meals and d.get(&quot;dinner&quot;):
+            rows.append(_row(day, &quot;dinner&quot;, d[&quot;dinner&quot;], meal.get(&quot;fetched_at&quot;)))
     return rows
 
 
-def menu_on(meal, date):
-    &quot;&quot;&quot;그날의 정제된 메뉴명(알레르기 번호 제거). 없으면 []&quot;&quot;&quot;
-    for r in nutrition_rows(meal):
+def menu_on(meal, date, meal_name=&quot;lunch&quot;):
+    &quot;&quot;&quot;그날·그 끼니의 정제된 메뉴명(알레르기 번호 제거). 없으면 []&quot;&quot;&quot;
+    for r in nutrition_rows(meal, meals=(meal_name,)):
         if r[&quot;date&quot;] == date:
             return [m for m in (normalize_menu(x) for x in r[&quot;menu&quot;]) if m]
     return []</code></pre>
@@ -4594,9 +4694,24 @@ def test_lunch_창은_env_값을_따른다():
     assert lunch_bounds() == (lo, hi) and lo &lt; hi
 
 
+def test_dinner_창은_lunch_와_겹치지_않는다():
+    dlo, dhi = bounds(&quot;dinner&quot;)
+    llo, lhi = bounds(&quot;lunch&quot;)
+    assert dlo &lt; dhi and lhi &lt;= dlo             # 석식 집계 창(09-16)은 점심 창 뒤
+
+
 def test_미지의_창_이름은_예외():
     with pytest.raises(ValueError):
-        bounds(&quot;dinner&quot;)
+        bounds(&quot;brunch&quot;)
+
+
+def test_agg_meals_는_lunch_모드에서_두_끼니():
+    from app.lunch import agg_meals
+    meals = agg_meals(&quot;lunch&quot;)
+    assert [m[0] for m in meals] == [&quot;lunch&quot;, &quot;dinner&quot;]
+    assert agg_meals(&quot;all&quot;) == [(&quot;all&quot;, 0, 1440)]
+    with pytest.raises(ValueError):
+        agg_meals(&quot;dinner&quot;)
 
 
 def test_자정부터_초_소수까지():
@@ -4966,7 +5081,10 @@ from app.mealjson import iso_date, menu_on, nutrition_rows
 MEAL = {&quot;fetched_at&quot;: &quot;2026-08-24T05:40:00&quot;, &quot;week&quot;: [
     {&quot;date&quot;: &quot;20260824&quot;, &quot;menu&quot;: [&quot;현미밥&quot;, &quot;김치찌개 (1.5.6.10.13)&quot;, &quot;*우유 (2)&quot;], &quot;kcal&quot;: 1094.1,
      &quot;assess&quot;: {&quot;energy_pct&quot;: 122, &quot;protein_pct&quot;: 192, &quot;macro_ratio&quot;: {&quot;carb&quot;: 55, &quot;protein&quot;: 15, &quot;fat&quot;: 29},
-                &quot;macro_ratio_ok&quot;: True, &quot;mar&quot;: 97}, &quot;carbon&quot;: {&quot;kgco2e&quot;: 1.52}},
+                &quot;macro_ratio_ok&quot;: True, &quot;mar&quot;: 97}, &quot;carbon&quot;: {&quot;kgco2e&quot;: 1.52},
+     &quot;dinner&quot;: {&quot;menu&quot;: [&quot;잡곡밥&quot;, &quot;된장국 (5.6)&quot;], &quot;kcal&quot;: 802.0,
+                &quot;assess&quot;: {&quot;energy_pct&quot;: 89, &quot;macro_ratio&quot;: {&quot;carb&quot;: 60, &quot;protein&quot;: 14, &quot;fat&quot;: 26}, &quot;macro_ratio_ok&quot;: True, &quot;mar&quot;: 88},
+                &quot;carbon&quot;: {&quot;kgco2e&quot;: 1.11}}},
     {&quot;date&quot;: &quot;20260825&quot;, &quot;menu&quot;: [], &quot;kcal&quot;: None, &quot;assess&quot;: {}, &quot;carbon&quot;: {}},
 ]}
 
@@ -4977,15 +5095,22 @@ def test_날짜_형식():
 
 def test_영양_행은_집계_테이블_모양():
     rows = nutrition_rows(MEAL)
-    assert [r[&quot;date&quot;] for r in rows] == [&quot;2026-08-24&quot;, &quot;2026-08-25&quot;]
+    assert [(r[&quot;date&quot;], r[&quot;meal&quot;]) for r in rows] == [(&quot;2026-08-24&quot;, &quot;lunch&quot;), (&quot;2026-08-24&quot;, &quot;dinner&quot;), (&quot;2026-08-25&quot;, &quot;lunch&quot;)]
     r = rows[0]
     assert (r[&quot;kcal&quot;], r[&quot;energy_pct&quot;], r[&quot;carb_ratio&quot;], r[&quot;macro_ok&quot;], r[&quot;mar&quot;], r[&quot;kgco2e&quot;]) == (1094.1, 122, 55, 1, 97, 1.52)
     assert r[&quot;fetched_at&quot;] == &quot;2026-08-24T05:40:00&quot; and r[&quot;menu&quot;][1] == &quot;김치찌개 (1.5.6.10.13)&quot;
-    assert rows[1][&quot;macro_ok&quot;] is None and rows[1][&quot;kgco2e&quot;] is None
+    assert rows[2][&quot;macro_ok&quot;] is None and rows[2][&quot;kgco2e&quot;] is None
+
+
+def test_석식_행은_dinner_절에서_나온다():
+    d = nutrition_rows(MEAL, meals=(&quot;dinner&quot;,))
+    assert [(r[&quot;date&quot;], r[&quot;meal&quot;]) for r in d] == [(&quot;2026-08-24&quot;, &quot;dinner&quot;)]     # 석식 없는 날은 행이 안 나온다
+    assert (d[0][&quot;kcal&quot;], d[0][&quot;energy_pct&quot;], d[0][&quot;mar&quot;], d[0][&quot;kgco2e&quot;]) == (802.0, 89, 88, 1.11)
 
 
 def test_그날_메뉴는_정제된_이름():
     assert menu_on(MEAL, &quot;2026-08-24&quot;) == [&quot;현미밥&quot;, &quot;김치찌개&quot;, &quot;우유&quot;]
+    assert menu_on(MEAL, &quot;2026-08-24&quot;, &quot;dinner&quot;) == [&quot;잡곡밥&quot;, &quot;된장국&quot;]
     assert menu_on(MEAL, &quot;2026-08-26&quot;) == []
     assert menu_on({}, &quot;2026-08-24&quot;) == []</code></pre>
 </figure>
@@ -5061,13 +5186,25 @@ export const hhmm = d =&gt; String(d.getHours()).padStart(2, &quot;0&quot;) + &q
 export const mm = m =&gt; `${String(Math.floor(m / 60)).padStart(2, &quot;0&quot;)}:${String(m % 60).padStart(2, &quot;0&quot;)}`;   // 자정부터 분 → &quot;HH:MM&quot;
 export const hm = ts =&gt; ts ? ts.slice(11, 16) : &quot;&quot;;                                                           // ISO 문자열 → &quot;HH:MM&quot;
 export const WD = &quot;일월화수목금토&quot;;
+/* 끼니 토글(09-16 중식/석식 분리) — 인사이트 카드 오른쪽 위 세그먼트. 데이터는 카드 쪽이 캐시하고 여기서는 선택만 다룬다 */
+export const MEAL_KO = { lunch: &quot;중식&quot;, dinner: &quot;석식&quot; };
+export const defaultMeal = () =&gt; { const h = new Date().getHours(); return h &gt;= 14 &amp;&amp; h &lt; 21 ? &quot;dinner&quot; : &quot;lunch&quot;; };   // 14시 이후엔 다음 끼니
+export function mealSeg(el, initial, onPick) {
+  el.innerHTML = [&quot;lunch&quot;, &quot;dinner&quot;].map(m =&gt;
+    `&lt;button type=&quot;button&quot; data-meal=&quot;${m}&quot; aria-pressed=&quot;${m === initial}&quot;&gt;${MEAL_KO[m]}&lt;/button&gt;`).join(&quot;&quot;);
+  el.addEventListener(&quot;click&quot;, e =&gt; {
+    const b = e.target.closest(&quot;button[data-meal]&quot;); if (!b || b.getAttribute(&quot;aria-pressed&quot;) === &quot;true&quot;) return;
+    el.querySelectorAll(&quot;button&quot;).forEach(x =&gt; x.setAttribute(&quot;aria-pressed&quot;, x === b));
+    onPick(b.dataset.meal);
+  });
+}
 export const REDUCE = matchMedia(&quot;(prefers-reduced-motion: reduce)&quot;).matches;   // 전환·부드러운 스크롤·점멸을 생략
 /* 인사이트 카드의 빈 상태 문구 — API 의 reason 은 개발자용(파일 이름)일 수 있다. 학생에게는 뜻만 남긴다. null 이면 카드의 기본 문구를 둔다 */
 export const why = r =&gt; !r || /reports\.db/.test(r) ? null : /insights\.db/.test(r) ? &quot;일정 기간 데이터 수집 후 반영됩니다&quot; : r;
 const DESK_MQ = matchMedia(&quot;(min-width: 900px)&quot;);
 export const desktop = () =&gt; DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = &quot;v28&quot;;                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = &quot;v30&quot;;                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
@@ -5130,10 +5267,11 @@ export function renderFeed(f) {
 /* 급식 시간 자동 전환(09-11 사용자 요청): 해시 없이 열면 창 밖에는 이슈피드에서 시작하고, 창이 열리는 순간 대기시간으로 한 번 넘어간다.
    사용자가 탭을 직접 누른 뒤(userNav)에는 개입하지 않는다. 아이콘 순서는 그대로 */
 let userNav = false, wasInWindow = null;
+const mealLive = f =&gt; !!(f &amp;&amp; f.now &amp;&amp; f.meal_day !== false);   // 창 안 ∧ 오늘이 급식 있는 날(meal_day 없는 옛 응답은 참으로)
 function autoSwitch(f) {
-  const inWin = !!(f &amp;&amp; f.now);
+  const inWin = mealLive(f);
   if (wasInWindow === null) { wasInWindow = inWin; return; }
-  if (inWin &amp;&amp; !wasInWindow &amp;&amp; !userNav &amp;&amp; active === &quot;news&quot;) go(&quot;wait&quot;, { push: false });
+  if (inWin &amp;&amp; !wasInWindow &amp;&amp; !userNav &amp;&amp; active === &quot;news&quot;) go(&quot;wait&quot;, { push: false, anim: true });
   wasInWindow = inWin;
 }
 async function feedTick() { if (document.hidden) return; try { const f = (await j(&quot;/api/status&quot;)).feed; renderFeed(f); autoSwitch(f); } catch (e) { console.error(&quot;feed&quot;, e); } }
@@ -5187,13 +5325,16 @@ function enter(sec) {
 }
 
 /* 화면으로 간다 — 즉시. 이전 화면은 숨기고(deactivate) 새 화면만 보인다. push=false 는 뒤로가기·해시처럼 이미 일어난 이동 */
-export function go(name, { push = true } = {}) {
+export function go(name, { push = true, anim = false } = {}) {
   if (!ORDER.includes(name)) name = &quot;wait&quot;;
   const prev = active;
   if (prev === name) { scrollTo({ top: 0, behavior: REDUCE ? &quot;auto&quot; : &quot;smooth&quot; }); mark(name, push); return; }   // 같은 탭 다시 누르면 맨 위로
   if (prev) { scrollYs[prev] = scrollY; SCREENS[prev].deactivate?.(); view(prev).removeAttribute(&quot;data-active&quot;); }
   active = name;
   view(name).setAttribute(&quot;data-active&quot;, &quot;&quot;);
+  // 자동 전환(급식 창이 열릴 때)만의 화면 전체 페이드 — 카드 enter 보다 큰 호흡. 모션 축소면 생략
+  if (anim &amp;&amp; !REDUCE) { const v = view(name); v.classList.remove(&quot;xfade&quot;); void v.offsetWidth;
+    v.classList.add(&quot;xfade&quot;); v.addEventListener(&quot;animationend&quot;, () =&gt; v.classList.remove(&quot;xfade&quot;), { once: true }); }
   mark(name, push);
   scrollTo({ top: scrollYs[name] || 0, behavior: &quot;auto&quot; });
   enter(view(name));
@@ -5221,10 +5362,10 @@ async function boot() {
   let f = null;
   if (!start) {
     try { f = (await Promise.race([j(&quot;/api/status&quot;), new Promise((_, rej) =&gt; setTimeout(rej, 1500))])).feed; } catch {}
-    start = f &amp;&amp; !f.now ? &quot;news&quot; : &quot;wait&quot;;
+    start = f &amp;&amp; !mealLive(f) ? &quot;news&quot; : &quot;wait&quot;;       // 창 밖 또는 급식 없는 날(주말·방학) → 이슈피드에서 시작
   }
   go(start, { push: false });
-  if (f) { renderFeed(f); wasInWindow = !!f.now; }
+  if (f) { renderFeed(f); wasInWindow = mealLive(f); }
   setInterval(tick, 30000);
   feedTick(); setInterval(feedTick, 60000);            // 안내 띠·자동 전환은 화면과 무관하게 60초(status 응답은 200B 남짓)
 }
@@ -6701,8 +6842,8 @@ def typical_for(icon, date, weeks=4):
     wd = weekday_of(date)
     since = (dt.date.fromisoformat(date) - dt.timedelta(weeks=weeks)).isoformat()
     for basis, sql, args in (
-        (&quot;weekday&quot;, &quot;SELECT bin, AVG(avg_wait) w, COUNT(DISTINCT date) d FROM lunch_bins WHERE weekday = ? AND date &gt;= ? AND date &lt; ? AND avg_wait IS NOT NULL GROUP BY bin&quot;, (wd, since, date)),
-        (&quot;recent&quot;, &quot;SELECT bin, AVG(avg_wait) w, COUNT(DISTINCT date) d FROM lunch_bins WHERE date &lt; ? AND avg_wait IS NOT NULL GROUP BY bin&quot;, (date,)),
+        (&quot;weekday&quot;, &quot;SELECT bin, AVG(avg_wait) w, COUNT(DISTINCT date) d FROM lunch_bins WHERE meal IN ('lunch','all') AND weekday = ? AND date &gt;= ? AND date &lt; ? AND avg_wait IS NOT NULL GROUP BY bin&quot;, (wd, since, date)),
+        (&quot;recent&quot;, &quot;SELECT bin, AVG(avg_wait) w, COUNT(DISTINCT date) d FROM lunch_bins WHERE meal IN ('lunch','all') AND date &lt; ? AND avg_wait IS NOT NULL GROUP BY bin&quot;, (date,)),
     ):
         rows = icon.execute(sql, args).fetchall()
         if len(rows) &gt;= 6:
@@ -6722,10 +6863,11 @@ def build_recap(date, icon):
     &quot;&quot;&quot;그날의 집계 행이 있어야 결산이 있다. 없으면 None&quot;&quot;&quot;
     if icon is None:
         return None
-    row = icon.execute(&quot;SELECT * FROM lunch_days WHERE date = ?&quot;, (date,)).fetchone()
+    # 리포트는 중식 결산 — v2(09-16) 스키마의 meal 열에서 lunch(또는 스테이징의 all)만 본다
+    row = icon.execute(&quot;SELECT * FROM lunch_days WHERE date = ? AND meal IN ('lunch','all')&quot;, (date,)).fetchone()
     if row is None:
         return None
-    ev = icon.execute(&quot;SELECT kind, minutes, value FROM events WHERE date = ? AND kind IN ('golden','bottleneck') ORDER BY start_ts&quot;, (date,)).fetchall()
+    ev = icon.execute(&quot;SELECT kind, minutes, value FROM events WHERE date = ? AND meal IN ('lunch','all') AND kind IN ('golden','bottleneck') ORDER BY start_ts&quot;, (date,)).fetchall()
     menu = clean_menu(json.loads(row[&quot;menu_json&quot;]) if row[&quot;menu_json&quot;] else [])
     hmv = (row[&quot;peak_wait_ts&quot;] or &quot;&quot;)[11:16] or None
     return {&quot;kind&quot;: &quot;recap&quot;, &quot;date&quot;: date, &quot;weekday&quot;: row[&quot;weekday&quot;], &quot;menu&quot;: menu, &quot;n_samples&quot;: row[&quot;n_samples&quot;],

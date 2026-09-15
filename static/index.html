@@ -76,11 +76,15 @@
       <span>갱신 <span id="updated">—</span> · 30초마다</span><span>추정치 · 배식 초반 오차 큼</span>
     </div>
     <!-- 대기시간 화면의 인사이트 카드 (PLAN §3.2) — 화면이 열릴 때 1회 + 5분마다. no_data 여도 숨기지 않고 이유를 적는다 -->
+    <!-- 09-16 중식/석식 분리: 히트맵은 두 끼니를 좁혀 2열로, 나머지 카드는 오른쪽 위 끼니 토글(.mealseg) -->
     <section class="card insight" id="heatcard" data-state="no_data">
       <div class="eyebrow">요일 · 시각별 평소 대기</div>
       <div class="body">
         <div class="lead" id="heatlead">셀을 누르면 그 시각의 평소 대기를 읽습니다</div>
-        <div class="heat" id="heat"></div>
+        <div class="heat2">
+          <div><div class="sub" id="heatsub-lunch">중식</div><div class="heat" id="heat" data-meal="lunch"></div></div>
+          <div><div class="sub" id="heatsub-dinner">석식</div><div class="heat" id="heatdinner" data-meal="dinner"></div></div>
+        </div>
         <div class="heatlegend"><span>짧음</span><i></i><span>긺</span><em></em><span id="heatgolden">3분 이하 · 황금</span></div>
         <div class="note foot" id="heatfoot"></div>
       </div>
@@ -88,6 +92,7 @@
     </section>
     <section class="card insight" id="goldencard" data-state="no_data">
       <div class="eyebrow">황금 구간 · 오늘</div>
+      <div class="mealseg" id="goldenseg"></div>
       <div class="body">
         <div class="lead" id="goldenlead"></div>
         <div class="chips2" id="goldenchips"></div>
@@ -97,6 +102,7 @@
     </section>
     <section class="card insight" id="forecastcard" data-state="no_data">
       <div class="eyebrow" id="forecasteyebrow">예보</div>
+      <div class="mealseg" id="forecastseg"></div>
       <div class="body">
         <div class="lead" id="forecastlead"></div>
         <div class="chips2" id="forecastchips"></div>
@@ -106,12 +112,14 @@
     </section>
     <section class="card insight" id="bottlecard" data-state="no_data">
       <div class="eyebrow">병목 로그 · 오늘</div>
+      <div class="mealseg" id="bottleseg"></div>
       <div class="body"><ul class="log" id="bottlelist"></ul>
         <div class="note foot">줄이 5명 이상인데 배식이 멈췄거나 평소의 절반 아래로 느려진 구간(2분 이상)</div></div>
       <div class="empty" id="bottleempty">급식 시간 데이터가 쌓이면 반영됩니다</div>
     </section>
     <section class="card insight" id="qualitycard" data-state="no_data">
       <div class="eyebrow">측정 품질 · 오늘</div>
+      <div class="mealseg" id="qualityseg"></div>
       <div class="body">
         <div class="well" id="qualitywell"></div>
         <div class="note foot" id="qualityfoot"></div>
@@ -166,6 +174,7 @@
     <!-- 주간식단 화면의 인사이트 카드 — 주간 영양 추이 · 메뉴 빈도 TOP5 -->
     <section class="card insight" id="nutricard" data-state="no_data">
       <div class="eyebrow">주간 영양 추이</div>
+      <div class="mealseg" id="nutriseg"></div>
       <div class="body">
         <div class="kpi" id="nutrikpi"></div>
         <svg class="spark" id="nutrispark" viewBox="0 0 320 64" preserveAspectRatio="none" aria-label="주별 에너지 충족률"></svg>
@@ -176,6 +185,7 @@
     </section>
     <section class="card insight" id="topcard" data-state="no_data">
       <div class="eyebrow">메뉴 빈도 TOP 5</div>
+      <div class="mealseg" id="topseg"></div>
       <div class="body">
         <div class="lead" id="toplead"></div>
         <ol class="rank" id="toplist"></ol>
@@ -191,7 +201,8 @@
       <div class="eyebrow">오늘 급식</div>
       <div class="meals">
         <div class="meal" id="lunchcol"><div class="mlabel">중식 <span id="lunchkcal"></span></div><ul class="menu" id="menu"></ul></div>
-        <div class="meal" id="dinnercol"><div class="mlabel">석식 <span id="dinnerkcal"></span></div><ul class="menu" id="dinnermenu"></ul></div>
+        <div class="meal" id="dinnercol"><div class="mlabel">석식 <span id="dinnerkcal"></span></div><ul class="menu" id="dinnermenu"></ul>
+          <div class="mstats" id="dinnerstats" hidden></div></div>
       </div>
       <!-- 알레르기 요약 — 내 알레르기가 오늘 메뉴에 있으면 멜론 띠로 먼저 말하고, 칩은 내 것을 앞에(09-11) -->
       <div class="awarn" id="awarn" hidden></div>
@@ -207,11 +218,11 @@
         <div><em>02</em><b id="ratio">—</b><span>탄·단·지 비율</span></div>
         <div><em>03</em><b id="mar">—</b><span>미량영양소</span><span class="flag" id="marflag"></span></div>
       </div>
-      <div class="note" style="margin-top:6px">영양 지표·영양소별 표기는 <b>중식 한 끼</b> 기준(한 끼 권장량 대비) · 석식은 메뉴·kcal·알레르기만</div>
+      <div class="note" style="margin-top:6px">위 지표 3칸·영양소별 표기는 <b>중식</b>, 석식 지표는 석식 열 아래 — 모두 <b>한 끼 권장량</b> 대비(09-16)</div>
       <div class="eyebrow" id="microlab" style="margin-top:18px" hidden>영양소별 · 권장섭취량 대비</div>
       <div class="micro" id="micro"></div>
       <div class="carbon" id="carbonsec" hidden>
-        <div class="eyebrow">오늘 급식을 다 남기면</div>
+        <div class="eyebrow" id="carboneyebrow">오늘 급식을 다 남기면</div>
         <div class="co2"><b id="co2">—</b><span id="co2unit">kg CO₂e</span></div>
         <div class="cmp">
           <div><b id="vsworld">—</b><span>세계 1인 하루 평균 배출 대비</span></div>

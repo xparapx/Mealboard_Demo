@@ -89,3 +89,18 @@
 
 /* 데스크톱 자리는 screens.css 끝의 미디어 쿼리 한 곳에서 정한다(09-03) — 이 파일이 뒤에 읽히므로 여기서 다시 정하면 그것이 이긴다 */
 
+
+/* ---- 중식/석식 분리 (09-16) ---- */
+.card.insight { position: relative; }
+.card.insight .eyebrow { padding-right: 104px; }   /* 오른쪽 위 끼니 토글 자리 */
+.mealseg { position: absolute; top: 14px; right: 16px; display: flex; gap: 0; border-radius: 999px; background: var(--well); padding: 2px; }
+.mealseg button { border: 0; background: none; padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 700;
+                  color: var(--ink3); cursor: pointer; }
+.mealseg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(51,49,45,.16); }
+.heat2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
+.heat2 > div[hidden] { display: none; }
+.heat2.solo { grid-template-columns: 1fr; }
+.heat2 .sub { font-size: 11px; font-weight: 700; color: var(--ink3); margin-top: 10px; }
+.heat2 .heat { grid-template-columns: 18px 1fr; }
+.heat2 .heat .c { height: 18px; }
+@media (max-width: 520px) { .heat2 { gap: 4px 10px; } .heat2 .heat { grid-template-columns: 16px 1fr; } }

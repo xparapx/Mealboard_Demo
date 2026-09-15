@@ -29,13 +29,25 @@ export const hhmm = d => String(d.getHours()).padStart(2, "0") + ":" + String(d.
 export const mm = m => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;   // 자정부터 분 → "HH:MM"
 export const hm = ts => ts ? ts.slice(11, 16) : "";                                                           // ISO 문자열 → "HH:MM"
 export const WD = "일월화수목금토";
+/* 끼니 토글(09-16 중식/석식 분리) — 인사이트 카드 오른쪽 위 세그먼트. 데이터는 카드 쪽이 캐시하고 여기서는 선택만 다룬다 */
+export const MEAL_KO = { lunch: "중식", dinner: "석식" };
+export const defaultMeal = () => { const h = new Date().getHours(); return h >= 14 && h < 21 ? "dinner" : "lunch"; };   // 14시 이후엔 다음 끼니
+export function mealSeg(el, initial, onPick) {
+  el.innerHTML = ["lunch", "dinner"].map(m =>
+    `<button type="button" data-meal="${m}" aria-pressed="${m === initial}">${MEAL_KO[m]}</button>`).join("");
+  el.addEventListener("click", e => {
+    const b = e.target.closest("button[data-meal]"); if (!b || b.getAttribute("aria-pressed") === "true") return;
+    el.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+    onPick(b.dataset.meal);
+  });
+}
 export const REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches;   // 전환·부드러운 스크롤·점멸을 생략
 /* 인사이트 카드의 빈 상태 문구 — API 의 reason 은 개발자용(파일 이름)일 수 있다. 학생에게는 뜻만 남긴다. null 이면 카드의 기본 문구를 둔다 */
 export const why = r => !r || /reports\.db/.test(r) ? null : /insights\.db/.test(r) ? "일정 기간 데이터 수집 후 반영됩니다" : r;
 const DESK_MQ = matchMedia("(min-width: 900px)");
 export const desktop = () => DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = "v29";                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = "v30";                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {

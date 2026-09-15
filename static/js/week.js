@@ -1,6 +1,6 @@
 /* 주간식단 화면 — 이번 주 식단(요일 컬럼). meal.json 이 이미 월~금을 통째로 담고 있다. 오늘급식과 같은 응답을 쓴다(loadMeal 이 한 번 받아 둘 다 그린다).
    아래 인사이트 카드: 주간 영양 추이(kpi 3타일 + 스파크라인) · 메뉴 빈도 TOP5(순위 목록). 집계에서 오므로 30분마다 */
-import { $, jSoft, esc, WD, setState } from "./core.js";
+import { $, jSoft, esc, WD, setState, MEAL_KO, mealSeg } from "./core.js";
 import { splitAllergy, loadMeal } from "./today.js";
 
 export function renderWeek(m) {
@@ -52,7 +52,8 @@ function renderNutrition(d) {
     + `<path d="${path}" fill="none" stroke="#129793" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
     + vals.map((v, i) => `<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="${i === vals.length - 1 ? 4 : 2.5}" fill="#129793" stroke="#FFFCF6" stroke-width="1.5"/>`).join("");
   $("#nutriaxis").innerHTML = `<span>${md(weeks[0].week)} 주</span><span>100% 기준</span><span>${md(last.week)} 주</span>`;
-  $("#nutrifoot").textContent = (d.basis === "nutrition_days" ? `최근 ${weeks.length}주 이력` : "이번 주 식단 캐시(집계 전)") + " · 값은 주별 평균";
+  $("#nutrifoot").textContent = (MEAL_KO[d.meal] ? MEAL_KO[d.meal] + " · " : "")
+    + (d.basis === "nutrition_days" ? `최근 ${weeks.length}주 이력` : "이번 주 식단 캐시(집계 전)") + " · 값은 주별 평균 · 한 끼 권장량 대비";
 }
 
 function renderTop(d) {
@@ -62,17 +63,31 @@ function renderTop(d) {
   $("#toplead").innerHTML = `<b>${esc(items[0].menu)}</b> 날에 줄이 가장 빨리 늘었습니다`;
   $("#toplist").innerHTML = items.map((x, i) =>
     `<li style="--p:${Math.round(100 * (x.popularity || 0) / top)}%"><i>${i + 1}</i><span>${esc(x.menu)}</span><small>${x.n_days}일</small><b>${x.popularity}</b></li>`).join("");
-  $("#topfoot").textContent = `인기 지수 = 줄이 느는 속도와 최대 대기의 평균 대비(100 = 보통) · ${d.min_days}회 이상 나온 메뉴만`;
+  $("#topfoot").textContent = (MEAL_KO[d.meal] ? MEAL_KO[d.meal] + " · " : "")
+    + `인기 지수 = 줄이 느는 속도와 최대 대기의 평균 대비(100 = 보통) · ${d.min_days}회 이상 나온 메뉴만`;
 }
 
+/* 09-16 중식/석식 분리 — 두 끼니 응답을 함께 받아 캐시하고 토글은 재요청 없이 즉시 */
 const RENDER = { nutricard: renderNutrition, topcard: renderTop };
+const INS = { lunch: {}, dinner: {} };
+const SEL = { nutri: "lunch", top: "lunch" };
+const CARD_RENDER = { nutri: renderNutrition, top: renderTop };
+const CARD_KEY = { nutri: "nutrition", top: "menus" };
+const showCard = card => { const d = INS[SEL[card]][CARD_KEY[card]]; if (d) CARD_RENDER[card](d); };
 
 export const screen = {
+  mount() {
+    for (const card of Object.keys(SEL))
+      mealSeg($(`#${card}seg`), SEL[card], m => { SEL[card] = m; showCard(card); });
+  },
   every: 300000,
   poll: loadMeal,                                      // 식단은 5분마다 다시 받는다(05:40 캐시가 바뀐 뒤 화면에 머물러도 따라온다)
   async slow() {
-    const [n, t] = await Promise.all([jSoft("/api/insight/nutrition?weeks=8"), jSoft("/api/insight/menus?n=5")]);
-    renderNutrition(n); renderTop(t);
+    const [nl, nd, tl, td] = await Promise.all([
+      jSoft("/api/insight/nutrition?weeks=8&meal=lunch"), jSoft("/api/insight/nutrition?weeks=8&meal=dinner"),
+      jSoft("/api/insight/menus?n=5&meal=lunch"), jSoft("/api/insight/menus?n=5&meal=dinner")]);
+    INS.lunch.nutrition = nl; INS.dinner.nutrition = nd; INS.lunch.menus = tl; INS.dinner.menus = td;
+    showCard("nutri"); showCard("top");
   },
   render(cardId, data) { RENDER[cardId]?.(data); },
 };

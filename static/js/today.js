@@ -61,6 +61,7 @@ export function renderMeal(m) {
       : m.state === "ok" ? "오늘은 급식이 없습니다" : "급식 정보를 아직 받지 못했습니다"}</li>`;
     ["#allergybox", "#carbonsec", "#microlab", "#awarn"].forEach(s => $(s).hidden = true);
     $("#allergens").innerHTML = ""; $("#micro").innerHTML = ""; $("#dinnermenu").innerHTML = ""; $("#lunchkcal").textContent = ""; $("#dinnerkcal").textContent = "";
+    $("#dinnerstats").hidden = true;
     ["#energy", "#ratio", "#mar"].forEach(s => $(s).textContent = "—");
     ["#energyflag", "#marflag"].forEach(s => $(s).textContent = "");
     return;
@@ -81,6 +82,14 @@ export function renderMeal(m) {
   $("#dinnermenu").innerHTML = dinner.length ? listOf(dinner) : `<li class="none">석식 없음</li>`;
   $("#dinnerkcal").textContent = dinner.length && dn.kcal ? `${Math.round(dn.kcal)} kcal` : "";
   $("#dinnercol").classList.toggle("off", !dinner.length);
+  // 석식 지표(09-16) — 중식과 같은 '한 끼 권장량' 기준(fetch_neis 가 석식 assess 를 산출). 옛 캐시(assess 없음)면 조용히 생략
+  const da = dinner.length ? dn.assess : null;
+  $("#dinnerstats").hidden = !da || da.energy_pct == null;
+  if (da && da.energy_pct != null) {
+    const short = (da.micro || []).filter(x => x.band === "부족").length;
+    $("#dinnerstats").innerHTML = `에너지 <b>${da.energy_pct}%</b> · 비율 <b>${da.macro_ratio_ok ? "적정" : "범위 밖"}</b>`
+      + (da.mar == null ? "" : ` · 미량 <b>${da.mar}%</b>`) + (short ? ` · <em>부족 ${short}</em>` : "");
+  }
 
   // 알레르기 요약 — 중식·석식을 합쳐 오늘 나오는 번호 전체. 내 것을 앞에 두고, 걸리면 위에 한 줄로 먼저 알린다
   const all = [...dishes, ...dinner];
@@ -114,17 +123,22 @@ export function renderMeal(m) {
   renderCarbon(m);
 }
 
-/* ⑧ 잔반 탄소 — 계수는 /api/meal 의 carbon_std(= data/carbon_std.json) */
+/* ⑧ 잔반 탄소 — 계수는 /api/meal 의 carbon_std(= data/carbon_std.json).
+   09-16: 석식 탄소(fetch_neis 산출)가 있으면 중식+석식을 합쳐 보여 준다 — 비교값(하루 평균 대비)은 선형이라 그대로 더한다 */
 function renderCarbon(m) {
   const c = m.today && m.today.carbon, cs = m.carbon_std || {};
   $("#carbonsec").hidden = !c;
   if (!c) return;
-  $("#co2").textContent = c.kgco2e.toFixed(1);
-  $("#co2unit").textContent = `kg CO₂e · 1인분 약 ${c.portion_g} g 기준`;
-  $("#vsworld").textContent = c.pct_world + "%";
-  $("#vskorea").textContent = c.pct_korea + "%";
-  $("#carbonnote").textContent = `1인분 무게 = kcal ÷ 에너지밀도 환산(NEIS 는 g 미제공) · 배출계수: ${cs.ef_source}`
-    + ` · 1인 평균: ${cs.capita_source} · 승용차 환산 ${c.car_km} km`;
+  const dc = (m.today.dinner && m.today.dinner.carbon) || null;
+  const sum = k => +(c[k] + (dc ? dc[k] : 0));
+  $("#carboneyebrow").textContent = dc ? "오늘 급식(중식+석식)을 다 남기면" : "오늘 급식을 다 남기면";
+  $("#co2").textContent = sum("kgco2e").toFixed(1);
+  $("#co2unit").textContent = `kg CO₂e · 1인분 약 ${sum("portion_g")} g 기준` + (dc ? `(중식 ${c.portion_g} + 석식 ${dc.portion_g})` : "");
+  $("#vsworld").textContent = sum("pct_world") + "%";
+  $("#vskorea").textContent = sum("pct_korea") + "%";
+  $("#carbonnote").textContent = (dc ? `중식 ${c.kgco2e.toFixed(1)} + 석식 ${dc.kgco2e.toFixed(1)} kg CO₂e · ` : "")
+    + `1인분 무게 = kcal ÷ 에너지밀도 환산(NEIS 는 g 미제공) · 배출계수: ${cs.ef_source}`
+    + ` · 1인 평균: ${cs.capita_source} · 승용차 환산 ${sum("car_km").toFixed(1)} km`;
 }
 
 export const screen = { every: 300000, poll: loadMeal };

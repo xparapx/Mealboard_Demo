@@ -1,6 +1,6 @@
 /* 대기시간 화면 — 히어로(지금 줄을 서면) + 추이(최근 30분, 평소 곡선 겹침). 30초 폴링(status·history). 평소 곡선(/api/typical)은 어제까지의
    자료라 5분마다면 충분하다. 그 아래 인사이트 카드 다섯 장 — 황금·병목·품질은 5분(오늘 즉석 계산), 히트맵·예보는 30분(집계) (PLAN §3.5) */
-import { $, j, jSoft, S, esc, fit, hhmm, mm, hm, WD, minuteOfDay, canvasAuto, setState, renderFeed } from "./core.js";
+import { $, j, jSoft, S, esc, fit, hhmm, mm, hm, WD, minuteOfDay, canvasAuto, setState, renderFeed, MEAL_KO, defaultMeal, mealSeg } from "./core.js";
 import { SUNSETDARK, gradient, ramp } from "./colors.js";
 
 const BUSY_MIN = 12, EASY_MIN = 5;   // 판정 임계값 (학교마다 다를 수 있음)
@@ -124,13 +124,17 @@ export function drawChart(rows, typ, st) {
 }
 
 /* ---------------- 인사이트 카드 ----------------
-   render(cardId, data) 는 DOM 만 만진다 — 픽스처 JSON 으로 그대로 검사할 수 있다 (MB.screens.wait.render("heatcard", json)) */
-const MAX_COLS = 36;                         // 히트맵 열 상한 — 창이 넓으면 구간을 묶는다(급식 창 150분이면 5분 그대로)
+   render(cardId, data) 는 DOM 만 만진다 — 픽스처 JSON 으로 그대로 검사할 수 있다 (MB.screens.wait.render("heatcard", json)).
+   09-16 중식/석식 분리: 히트맵은 두 끼니 2열, 나머지 카드는 끼니 토글. 두 끼니 응답을 함께 받아 INS 에 캐시 — 토글은 재요청 없이 즉시 */
+const MAX_COLS = 18;                         // 히트맵 열 상한 — 2열이라 반으로(중식 150분이면 10분 묶음, 석식 90분이면 5분 그대로)
+const INS = { lunch: {}, dinner: {} };       // {day, quality, heat, forecast} 끼니별 캐시
+const SEL = { golden: "lunch", forecast: "lunch", bottle: "lunch", quality: "lunch" };   // 실제 기본값은 mount() 에서 defaultMeal() 로 — 최상위에서 core 를 부르면 TDZ
 
-function renderHeat(d) {
-  if (!setState("heatcard", d.state === "ok" && d.cells && d.cells.length, d.reason)) return;
+function drawHeatGrid(el, d) {
+  /* 한 끼니의 격자를 el 에 그린다. 성공 여부를 돌려주고, 카드 상태는 renderHeat 이 두 끼니를 합쳐 정한다 */
+  if (!d || d.state !== "ok" || !d.cells?.length) { el.innerHTML = ""; return false; }
   const golden = d.golden_wait ?? 3;                    // 문턱은 서버(insight_calc.GOLDEN_WAIT)가 준다
-  const win = d.lunch || d.window || {};                // 보여 주는 창은 급식 시간 — 집계 창이 하루 전체(스테이징)여도
+  const win = d.window || {};
   const lo = win.lo ?? Math.min(...d.cells.map(c => c.minute_of_day));
   const hi = win.hi ?? Math.max(...d.cells.map(c => c.minute_of_day)) + 5;
   const step = Math.max(5, Math.ceil((hi - lo) / 5 / MAX_COLS) * 5);   // 5분 구간을 step 분으로 묶는다
@@ -143,8 +147,9 @@ function renderHeat(d) {
     const g = grid.get(k) || { sum: 0, n: 0, days: 0 };
     g.sum += c.wait_min; g.n += 1; g.days = Math.max(g.days, c.n_days || 0); grid.set(k, g);
   });
-  if (!grid.size) { setState("heatcard", false, "급식 시간의 집계가 아직 없습니다"); return; }
+  if (!grid.size) { el.innerHTML = ""; return false; }
   const max = Math.max(1, ...[...grid.values()].map(g => g.sum / g.n));
+  const label = MEAL_KO[el.dataset.meal] || "";
   let html = "";
   for (const wd of [1, 2, 3, 4, 5]) {
     html += `<div class="wd" data-wd="${wd}"${wd === todayWd ? " data-today" : ""}>${WD[wd]}</div><div class="row">`;
@@ -153,25 +158,37 @@ function renderHeat(d) {
       if (!g) { html += `<button class="c" type="button" data-none disabled aria-label="자료 없음"></button>`; continue; }
       const w = g.sum / g.n, t = Math.min(1, w / max);
       html += `<button class="c" type="button" style="--t:${t.toFixed(3)};background:${ramp(SUNSETDARK, t)}" data-wd="${wd}" data-min="${lo + col * step}" data-w="${w.toFixed(1)}" data-days="${g.days}"`
-        + (w <= golden ? " data-golden" : "") + ` aria-label="${WD[wd]} ${mm(lo + col * step)} 평소 ${w.toFixed(1)}분"></button>`;
+        + (w <= golden ? " data-golden" : "") + ` aria-label="${label} ${WD[wd]} ${mm(lo + col * step)} 평소 ${w.toFixed(1)}분"></button>`;
     }
     html += "</div>";
   }
   html += `<div class="axis"><span>${mm(lo)}</span><b>${mm(Math.round((lo + hi) / 2 / 5) * 5)}</b><span>${mm(hi)}</span></div>`;
-  const heat = $("#heat");
-  heat.innerHTML = html;
-  heat.dataset.step = step;
+  el.innerHTML = html;
+  el.dataset.step = step;
+  return true;
+}
+
+function renderHeat(d, dn) {                  // d = 중식, dn = 석식 (픽스처 검사는 render("heatcard", json) 이 중식만 넣어도 된다)
+  const okL = drawHeatGrid($("#heat"), d);
+  const okD = drawHeatGrid($("#heatdinner"), dn ?? INS.dinner.heat);
+  $("#heat").parentElement.hidden = !okL && okD;        // 한쪽만 있으면 그쪽만 넓게 (.solo, :has 없이)
+  $("#heatdinner").parentElement.hidden = !okD;
+  $(".heat2").classList.toggle("solo", !(okL && okD));
+  if (!setState("heatcard", okL || okD, d?.reason)) return;
+  const src = okL ? d : dn ?? INS.dinner.heat;
+  const golden = src.golden_wait ?? 3;
   $("#heatlead").textContent = "셀을 누르면 그 시각의 평소 대기를 읽습니다";
   $("#heatgolden").textContent = `${golden}분 이하 · 황금`;
-  $("#heatfoot").textContent = (d.basis === "weekday" ? `같은 요일 최근 ${d.weeks}주` : `최근 ${d.days}일`) + ` · ${step}분 단위 · 어두울수록 오래 기다렸습니다`;
+  const step = +($("#heat").dataset.step || $("#heatdinner").dataset.step || 5);
+  $("#heatfoot").textContent = (src.basis === "weekday" ? `같은 요일 최근 ${src.weeks}주` : `최근 ${src.days}일`) + ` · ${step}분 단위 · 어두울수록 오래 기다렸습니다`;
 }
-function heatClick(e) {                       // 셀 180개에 리스너를 달지 않고 한 번만 위임
+function heatClick(e) {                       // 셀 수백 개에 리스너를 달지 않고 두 격자에 한 번씩만 위임
   const b = e.target.closest(".c[data-min]"); if (!b) return;
-  const heat = $("#heat"), step = +heat.dataset.step || 5;
-  heat.querySelectorAll('[aria-pressed="true"]').forEach(x => x.removeAttribute("aria-pressed"));
+  const heat = b.closest(".heat"), step = +heat.dataset.step || 5;
+  $("#heatcard").querySelectorAll('[aria-pressed="true"]').forEach(x => x.removeAttribute("aria-pressed"));
   b.setAttribute("aria-pressed", "true");
-  const wd = +b.dataset.wd, m = +b.dataset.min;
-  $("#heatlead").innerHTML = `${WD[wd]}요일 <b>${mm(m)}~${mm(m + step)}</b> 평소 대기 <b>${b.dataset.w}분</b> <small style="color:var(--ink3)">· ${b.dataset.days}일 평균</small>`;
+  const wd = +b.dataset.wd, m = +b.dataset.min, label = MEAL_KO[heat.dataset.meal] || "";
+  $("#heatlead").innerHTML = `${label} ${WD[wd]}요일 <b>${mm(m)}~${mm(m + step)}</b> 평소 대기 <b>${b.dataset.w}분</b> <small style="color:var(--ink3)">· ${b.dataset.days}일 평균</small>`;
 }
 
 function renderGolden(d) {
@@ -186,7 +203,7 @@ function renderForecast(d) {
   const day = d.date ? new Date(d.date + "T12:00:00") : null;
   const when = day ? `${day.getMonth() + 1}/${day.getDate()} ${WD[day.getDay()]}요일` : "";
   const todayIso = new Date().toLocaleDateString("sv-SE");   // 로컬 날짜 YYYY-MM-DD
-  $("#forecasteyebrow").textContent = d.date && d.date === todayIso ? "오늘 예보" : "내일 예보";
+  $("#forecasteyebrow").textContent = (MEAL_KO[d.meal] ? MEAL_KO[d.meal] + " " : "") + (d.date && d.date === todayIso ? "오늘 예보" : "내일 예보");
   if (d.state === "no_meal") { setState("forecastcard", false, `${when} 급식이 없습니다`); return; }
   if (!setState("forecastcard", d.state === "ok" && d.curve && d.curve.length, d.reason)) return;
   const golden = d.golden_wait ?? 3;
@@ -213,18 +230,34 @@ function renderQuality(d) {
 }
 
 const RENDER = { heatcard: renderHeat, goldencard: renderGolden, forecastcard: renderForecast, bottlecard: renderBottle, qualitycard: renderQuality };
+const CARD_RENDER = { golden: renderGolden, forecast: renderForecast, bottle: renderBottle, quality: renderQuality };
+const CARD_KEY = { golden: "day", forecast: "forecast", bottle: "day", quality: "quality" };
+
+function showCard(card) {                    // SEL[card] 끼니의 캐시로 다시 그린다 (토글·수신 공용)
+  const d = INS[SEL[card]][CARD_KEY[card]];
+  if (d) CARD_RENDER[card](d);
+}
+
 let lastFast = 0;
-async function fastInsights() {              // 오늘 즉석 계산(day·quality) — 5분
+async function fastInsights() {              // 오늘 즉석 계산(day·quality) — 5분, 두 끼니를 함께 받아 캐시
   lastFast = Date.now();
-  const [day, q] = await Promise.all([jSoft("/api/insight/day"), jSoft("/api/insight/quality")]);
-  renderGolden(day); renderBottle(day); renderQuality(q);
+  const [dl, dd, ql, qd] = await Promise.all([
+    jSoft("/api/insight/day?meal=lunch"), jSoft("/api/insight/day?meal=dinner"),
+    jSoft("/api/insight/quality?meal=lunch"), jSoft("/api/insight/quality?meal=dinner")]);
+  INS.lunch.day = dl; INS.dinner.day = dd; INS.lunch.quality = ql; INS.dinner.quality = qd;
+  showCard("golden"); showCard("bottle"); showCard("quality");
 }
 
 export const screen = {
   mount() {                                    // 모듈 최상위에서 core 의 도구를 쓰면 순환 import 의 TDZ 에 걸린다 — 부팅 때 core 가 부른다
     canvasAuto($("#chart"), () => S.last && drawChart(S.last.rows, S.last.typ, S.last.st));
     $("#heat").addEventListener("click", heatClick);
+    $("#heatdinner").addEventListener("click", heatClick);
     $(".heatlegend i").style.background = gradient(SUNSETDARK);
+    for (const card of Object.keys(SEL)) {     // 끼니 토글 — 캐시에서 즉시 다시 그린다. 기본값은 시각(14시 이후 = 석식)
+      SEL[card] = defaultMeal();
+      mealSeg($(`#${card}seg`), SEL[card], m => { SEL[card] = m; showCard(card); });
+    }
   },
   every: 30000,
   async poll() {                              // 라이브 30초 + 즉석 인사이트 5분 (같은 tick 에서 시각으로 가른다)
@@ -232,9 +265,12 @@ export const screen = {
     if (Date.now() - lastFast >= 5 * 60000) fastInsights();
     await live;
   },
-  async slow() {                              // 집계에서 오는 카드 — core 가 30분마다
-    const [heat, fc] = await Promise.all([jSoft("/api/insight/heatmap?weeks=4"), jSoft("/api/insight/forecast")]);
-    renderHeat(heat); renderForecast(fc);
+  async slow() {                              // 집계에서 오는 카드 — core 가 30분마다, 두 끼니를 함께
+    const [hl, hd, fl, fd] = await Promise.all([
+      jSoft("/api/insight/heatmap?weeks=4&meal=lunch"), jSoft("/api/insight/heatmap?weeks=4&meal=dinner"),
+      jSoft("/api/insight/forecast?meal=lunch"), jSoft("/api/insight/forecast?meal=dinner")]);
+    INS.lunch.heat = hl; INS.dinner.heat = hd; INS.lunch.forecast = fl; INS.dinner.forecast = fd;
+    renderHeat(hl, hd); showCard("forecast");
   },
   fail() { S.last = null; renderStatus({ state: "no_data" }); showTrend(false); },   // 서버에 닿지 못하면 '정보 없음' — 옛 곡선도 남기지 않는다
   render(cardId, data) { RENDER[cardId]?.(data); },

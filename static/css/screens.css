@@ -245,6 +245,11 @@ details > summary::-webkit-details-marker { display: none; }
 
 /* 데스크톱 — 화면마다 12컬럼 그리드(1920×1080 기준, 09-03 개정). 왼쪽 5컬럼은 라이브 카드(대기시간·평면도)가 두 행을 차지하고
    오른쪽 7컬럼에 인사이트 카드가 두 열로 놓인다. 카드가 하나뿐인 화면(오늘급식·이슈피드)은 가운데 8컬럼 */
+/* 석식 지표 한 줄 (09-16) — 석식 열 아래, 중식 kpi 3칸과 같은 '한 끼 권장량' 기준 */
+.mstats { margin-top: 10px; font-size: 12px; color: var(--ink3); line-height: 1.6; }
+.mstats b { color: var(--ink2); }
+.mstats em { font-style: normal; color: var(--melon-ink); font-weight: 700; }
+
 @media (min-width: 900px) {
   :root { --px: 26px; --py: 24px; }
   /* 대기시간 */
