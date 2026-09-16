@@ -30,7 +30,9 @@ def write_sample(con, ts, s, zones):
     samples·zone_samples·cell_samples 를 한 트랜잭션으로(반쪽 표본이 남지 않게). 구역별 인원수를 돌려준다"""
     pts = s.get("pts")
     counts = count_by_zone(pts, zones) if pts is not None else {}
-    con.execute("INSERT OR REPLACE INTO samples VALUES (?,?,?,?,?)", (ts, s["queue"], s["rate"], s["wait"], s["state"]))
+    # raw·measured·k(09-16 자동 보정 B안)는 vision 만 채운다 — mock 은 넘기지 않으면 NULL
+    con.execute("INSERT OR REPLACE INTO samples VALUES (?,?,?,?,?,?,?,?)",
+                (ts, s["queue"], s["rate"], s["wait"], s["state"], s.get("raw"), s.get("measured"), s.get("k")))
     if pts is not None:
         con.executemany("INSERT OR REPLACE INTO zone_samples VALUES (?,?,?)", [(ts, z, n) for z, n in counts.items()])
         con.executemany("INSERT OR REPLACE INTO cell_samples VALUES (?,?,?)", [(ts, c, n) for c, n in count_by_cell(pts).items()])

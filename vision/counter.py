@@ -23,7 +23,7 @@ from app.config import (DEBUG_FLAG, DEBUG_PORT, FEED_SOURCE, RATE_WINDOW_SEC, VI
                         YOLO_WEIGHTS, ZONES_JSON)
 from app.db import connect
 from app.lunch import meal_now
-from vision.counting import LineCounter, RateWindow, foot_of_bbox
+from vision.counting import DwellTracker, LineCounter, RateWindow, foot_of_bbox
 from vision.debug_stream import DebugStream, annotate
 from vision.meta import MetaSender
 from vision.record import write_positions, write_sample
@@ -121,6 +121,8 @@ def main():
     sender = MetaSender()
     con = connect()
     rate = RateWindow(RATE_WINDOW_SEC)
+    dwell = DwellTracker()                                        # 자동 실측·보정(09-16 B안) — ROI 진입→λ선 통과 체류시간
+    last_raw = None                                               # 직전 표본의 원시 예측(분) — 진입자의 '진입 시점 예측' 으로 기억
     win, last_sample, last_pos, frame_id, infer_ms = None, 0.0, 0.0, 0, 0.0
     meta_alive = 0.0                                              # 마지막으로 메타 구독자가 있었던 시각(단조)
     period = 1 / VISION_FPS
@@ -135,6 +137,8 @@ def main():
         if cur != win:                                            # 창이 열리거나 닫힘
             win = cur
             rate.reset()
+            dwell.reset()                                         # 창이 바뀌면 실측·보정도 처음부터
+            last_raw = None
             if zones.counter:
                 zones.counter.reset()
             print("--- " + (f"수집 창 열림: {win.label} - {'실측 기록' if real else '기록 없음(FEED_SOURCE=mock)'}" if win else "수집 창 닫힘 - 기록 없음, 추론은 관리자가 볼 때만") + " ---")
@@ -170,10 +174,13 @@ def main():
             fl = zones.floor(u, v)
             if fl:
                 pts.append({"x": fl[0], "y": fl[1]})
+            if tid >= 0:
+                dwell.observe(tid, in_roi, t0, last_raw)          # ROI 에 처음 보인 순간 = 줄 진입(그때의 예측을 함께 기억)
             if zones.counter and tid >= 0:
                 c = zones.counter.update(tid, (fx, fy))
                 if c > 0:
                     served += 1; crossings.append({"id": tid, "dir": "out", "ts": ts})
+                    dwell.crossed(tid, t0)                        # 배식대 통과 — 실제 대기시간 실측 이벤트
                 elif c < 0:
                     crossings.append({"id": tid, "dir": "in", "ts": ts})
             tracks.append({"id": tid, "bbox_norm": [round(box[0] / img_w, 3), round(box[1] / img_h, 3), round(box[2] / img_w, 3), round(box[3] / img_h, 3)],
@@ -182,10 +189,14 @@ def main():
                            "xyxy": box, "foot": (fx, fy)})
         if zones.counter:
             zones.counter.forget(ids)
+            dwell.forget(ids)
         rate.add(t0, served)
         lam = rate.per_min(t0)
         queue = sum(1 for t in tracks if t["in_roi"])
-        wait, state = estimate_wait(queue, lam)
+        raw, state = estimate_wait(queue, lam)
+        ds = dwell.stats(t0)                                      # {n, measured_min, k} — 이동 창 요약(개인 값은 저장 안 함)
+        last_raw = raw
+        wait = round(raw * ds["k"], 1) if raw is not None and ds["k"] else raw   # 자동 보정: 원시 × K(실측/예측 중앙값, 0.5~3.0)
         zone_counts = {}
         for t in tracks:
             if t["zone"]:
@@ -211,6 +222,7 @@ def main():
             last_sample = t0
             if should_record(win, FEED_SOURCE):                   # 실측 — 숫자(과 바닥 좌표의 순간 상태)만
                 write_sample(con, ts, {"queue": queue, "rate": round(lam, 2), "wait": wait, "state": state,
+                                       "raw": raw, "measured": ds["measured_min"], "k": ds["k"],
                                        "pts": pts if zones.h_img2floor else None}, zones.zones)
                 print(f"[{win.label}] 대기 {queue:3d}명  처리 {lam:5.1f}/분  예상 {wait}분  {state}  추론 {infer_ms:.0f}ms  트랙 {len(tracks)}")
             else:                                                 # 창 밖(또는 mock 출처) — 기록 없음, 관리자만 실사를 본다

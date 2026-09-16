@@ -733,9 +733,12 @@ SCHEMA = &quot;&quot;&quot;
 CREATE TABLE IF NOT EXISTS samples (
   ts           TEXT PRIMARY KEY,   -- ISO 8601 로컬시각
   queue_len    INTEGER,            -- L : 대기 인원
-  rate_per_min REAL,               -- λ : 배식대 통과율 (5분 이동평균, 명/분)
-  wait_min     REAL,               -- W = L / λ  (산출 불가면 NULL)
-  state        TEXT NOT NULL       -- ok | no_data | insufficient_rate
+  rate_per_min REAL,               -- λ : 배식대 통과율 (RATE_WINDOW_SEC 이동합, 명/분)
+  wait_min     REAL,               -- 공표 대기 = 원시 W × 보정 K (보정 전이면 원시 그대로. 산출 불가면 NULL)
+  state        TEXT NOT NULL,      -- ok | no_data | insufficient_rate
+  wait_raw_min     REAL,           -- 원시 W = L / λ (09-16 자동 보정 B안 — 수동 실측 대조용으로 원시도 남긴다)
+  measured_wait_min REAL,          -- 자동 실측: ROI 진입→λ선 통과 체류시간의 이동 창 중앙값(분). 개인 값은 저장하지 않는다
+  calib        REAL                -- 보정계수 K = median(실측/진입 시점 예측), 0.5~3.0. 실측이 모자라면 NULL
 );
 CREATE TABLE IF NOT EXISTS zone_samples (
   ts   TEXT    NOT NULL,           -- samples.ts 와 같은 시각
@@ -756,6 +759,12 @@ def connect():
     con = sqlite3.connect(DB_PATH, timeout=5)
     con.execute(&quot;PRAGMA journal_mode=WAL&quot;)   # 읽기와 쓰기가 서로 막지 않게
     con.executescript(SCHEMA)                # 없으면 만들고, 있으면 그대로
+    # 09-16 자동 보정 B안: 기존 파일에 새 열을 더한다(추가만 — DELETE/UPDATE 없음). 옛 행은 NULL
+    have = {r[1] for r in con.execute(&quot;PRAGMA table_info(samples)&quot;)}
+    for col in (&quot;wait_raw_min REAL&quot;, &quot;measured_wait_min REAL&quot;, &quot;calib REAL&quot;):
+        if col.split()[0] not in have:
+            con.execute(f&quot;ALTER TABLE samples ADD COLUMN {col}&quot;)
+    con.commit()
     con.row_factory = sqlite3.Row
     return con</code></pre>
 </figure>
@@ -814,12 +823,27 @@ def feed(now, state, source=FEED_SOURCE):
             &quot;now&quot;: describe(w), &quot;next&quot;: next_with_day(now), &quot;meal_day&quot;: meal_day}
 
 
+def wait_range(con, now, win):
+    &quot;&quot;&quot;지금 열린 수집 창 안 '공표 대기(wait_min)'의 오늘 최소~최대(09-16 사용자 결정) — 화면 판정(여유·보통·혼잡)이
+    고정 임계값 대신 이 범위 안 상대 위치를 쓴다. 창 밖이거나 표본이 모자라면 None(화면은 고정 기준으로 폴백)&quot;&quot;&quot;
+    if win is None:
+        return None
+    day = now.strftime(&quot;%Y-%m-%d&quot;)
+    lo_ts = f&quot;{day}T{win.lo // 60:02d}:{win.lo % 60:02d}&quot;
+    row = con.execute(&quot;SELECT MIN(wait_min) lo, MAX(wait_min) hi, COUNT(wait_min) n FROM samples &quot;
+                      &quot;WHERE ts &gt;= ? AND wait_min IS NOT NULL AND state = 'ok'&quot;, (lo_ts,)).fetchone()
+    if not row or row[&quot;n&quot;] &lt; 30 or row[&quot;lo&quot;] is None:           # 30표본(약 5분)은 쌓여야 범위가 뜻을 가진다
+        return None
+    return {&quot;lo&quot;: round(row[&quot;lo&quot;], 1), &quot;hi&quot;: round(row[&quot;hi&quot;], 1), &quot;n&quot;: row[&quot;n&quot;]}
+
+
 @router.get(&quot;/api/status&quot;)
 def status():
+    now = dt.datetime.now()
     con = connect()
     row = con.execute(&quot;SELECT * FROM samples ORDER BY ts DESC LIMIT 1&quot;).fetchone()
+    rng = wait_range(con, now, meal_now(now))
     con.close()
-    now = dt.datetime.now()
     if row is None:
         return {&quot;state&quot;: &quot;no_data&quot;, &quot;updated_at&quot;: None,
                 &quot;queue_len&quot;: None, &quot;rate_per_min&quot;: None, &quot;wait_min&quot;: None, &quot;feed&quot;: feed(now, &quot;no_data&quot;)}
@@ -827,7 +851,9 @@ def status():
     state = &quot;no_data&quot; if age &gt; STALE_SEC else row[&quot;state&quot;]
     return {&quot;state&quot;: state, &quot;updated_at&quot;: row[&quot;ts&quot;], &quot;stale&quot;: age &gt; STALE_SEC,
             &quot;queue_len&quot;: row[&quot;queue_len&quot;], &quot;rate_per_min&quot;: row[&quot;rate_per_min&quot;],
-            &quot;wait_min&quot;: row[&quot;wait_min&quot;], &quot;feed&quot;: feed(now, state)}</code></pre>
+            &quot;wait_min&quot;: row[&quot;wait_min&quot;],
+            &quot;wait_raw_min&quot;: row[&quot;wait_raw_min&quot;], &quot;measured_wait_min&quot;: row[&quot;measured_wait_min&quot;], &quot;calib&quot;: row[&quot;calib&quot;],
+            &quot;wait_range&quot;: rng, &quot;feed&quot;: feed(now, state)}</code></pre>
 </figure>
 <p><code>STALE_SEC</code>: 2분 넘게 새 행이 없으면 마지막 값을 보여주는 대신 "데이터 없음"으로 바꿉니다. 카메라가 죽었는데 화면엔 "3분"이 계속 떠 있는 상황을 막는 장치입니다.</p>
 <figure class="code">
@@ -1304,7 +1330,7 @@ systemctl status mealboard-api --no-pager</code></pre>
     &lt;/div&gt;
     &lt;/section&gt;
     &lt;div class=&quot;meta&quot;&gt;
-      &lt;span&gt;갱신 &lt;span id=&quot;updated&quot;&gt;—&lt;/span&gt; · 30초마다&lt;/span&gt;&lt;span&gt;추정치 · 배식 초반 오차 큼&lt;/span&gt;
+      &lt;span&gt;갱신 &lt;span id=&quot;updated&quot;&gt;—&lt;/span&gt; · 30초마다&lt;/span&gt;&lt;span id=&quot;metanote&quot;&gt;추정치 · 배식 초반 오차 큼&lt;/span&gt;
     &lt;/div&gt;
     &lt;!-- 대기시간 화면의 인사이트 카드 (PLAN §3.2) — 화면이 열릴 때 1회 + 5분마다. no_data 여도 숨기지 않고 이유를 적는다 --&gt;
     &lt;!-- 09-16 중식/석식 분리: 히트맵은 두 끼니를 좁혀 2열로, 나머지 카드는 오른쪽 위 끼니 토글(.mealseg) --&gt;
@@ -1529,7 +1555,7 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v33&quot;;   // 09-16: 히어로 대기시간 초 단위 표기
+const CACHE = &quot;mealboard-v34&quot;;   // 09-16: 자동 실측 보정(B안) — 판정은 오늘 창 실측 범위 기준, 각주에 보정계수
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
@@ -5210,7 +5236,7 @@ export const why = r =&gt; !r || /reports\.db/.test(r) ? null : /insights\.db/.t
 const DESK_MQ = matchMedia(&quot;(min-width: 900px)&quot;);
 export const desktop = () =&gt; DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = &quot;v33&quot;;                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = &quot;v34&quot;;                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {

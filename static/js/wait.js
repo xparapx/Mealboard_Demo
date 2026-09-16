@@ -3,19 +3,30 @@
 import { $, j, jSoft, S, esc, fit, hhmm, mm, hm, WD, minuteOfDay, canvasAuto, setState, renderFeed, MEAL_KO, defaultMeal, mealSeg } from "./core.js";
 import { SUNSETDARK, gradient, ramp } from "./colors.js";
 
-const BUSY_MIN = 12, EASY_MIN = 5;   // 판정 임계값 (학교마다 다를 수 있음)
+const BUSY_MIN = 12, EASY_MIN = 5;   // 고정 임계값 — 실측 범위(wait_range)가 없을 때의 폴백
+/* 09-16 사용자 결정: 여유·보통·혼잡은 그 급식 창의 오늘 실측 범위(최소~최대) 안 상대 위치로 —
+   하위 1/3 여유 · 상위 1/3 혼잡. 범위가 아직 없거나 폭이 2분 미만이면 고정 임계값으로 폴백 */
+function relPos(st) {
+  const r = st.wait_range;
+  if (!r || st.wait_min == null || r.hi - r.lo < 2) return null;
+  return Math.min(1, Math.max(0, (st.wait_min - r.lo) / (r.hi - r.lo)));
+}
 const CHART_MIN = 30;                 // 추이 카드의 시간창(분) — 카드 제목·축 라벨과 함께 바꾼다
 const TYPICAL_EVERY = 5 * 60000;
 
 function level(st) {
   if (st.state === "no_data") return "off";
   if (st.state === "insufficient_rate") return "wait";
+  const p = relPos(st);
+  if (p != null) return p >= 2 / 3 ? "busy" : "ok";
   return st.wait_min > BUSY_MIN ? "busy" : "ok";
 }
 function verdict(st) {
   const closed = st.feed && st.feed.source === "vision" && !st.feed.now;   // 창 밖에는 카메라 표본이 없다(09-11) — '정보 없음' 이 아니라 '급식 시간 아님'
+  const p = relPos(st);
+  const easy = p != null ? p <= 1 / 3 : st.wait_min <= EASY_MIN;
   return { off: closed ? "급식 시간이 아닙니다" : "정보 없음", wait: "배식 시작 대기", busy: "혼잡 · 잠시 후 추천",
-           ok: st.wait_min <= EASY_MIN ? "여유 · 바로 가세요" : "보통" }[level(st)];
+           ok: easy ? "여유 · 바로 가세요" : "보통" }[level(st)];
 }
 
 /* ---------------- 대기 상태 ---------------- */
@@ -43,6 +54,9 @@ function renderStatus(st) {
   $("#state").textContent = verdict(st);
   $("#hero").dataset.level = $("#waitcard").dataset.level = level(st);   // 상자(그림자·점선)도 같은 상태를 입는다 — :has() 없이
   $("#updated").textContent = st.updated_at ? new Date(st.updated_at).toLocaleTimeString("ko-KR") : "—";
+  // 자동 실측·보정(09-16 B안) — 계수·오늘 창 범위가 있으면 각주에 드러낸다(수동 실측 대조용)
+  $("#metanote").textContent = (st.calib ? `실측 보정 ×${st.calib} · ` : "")
+    + (st.wait_range ? `오늘 ${st.wait_range.lo}~${st.wait_range.hi}분 범위 기준 · ` : "") + "추정치";
   // ③ 도착 시각 — 지금 줄을 서면 몇 시에 배식대에 닿는가. 데이터가 끊긴(no_data) 옛 값으로는 계산하지 않는다
   const ok = st.state !== "no_data" && st.wait_min != null;
   $("#arrive").hidden = !ok;

@@ -51,6 +51,65 @@ class LineCounter:
         self.side.clear()
 
 
+class DwellTracker:
+    """트랙별 '실제 대기시간' 실측(09-16 사용자 결정, 자동 보정 B안) — ROI 진입 시각과 그 순간의 예측 대기를 기억했다가
+    λ선 통과 순간 (체류시간, 진입 시점 예측) 이벤트를 남긴다. 이벤트는 이동 창 안 요약(중앙값·보정계수)으로만 쓰이고
+    개인 단위로는 어디에도 저장되지 않는다(§2 원칙 — DB 에는 창 요약 숫자만).
+
+    보정계수 K = median(실제 체류 ÷ 진입 시점 예측), CLAMP 안으로 누른다. 화면 대기 = Little 원시값 × K.
+    한계(기록): 가림으로 트랙 ID 가 끊기면 체류가 짧게 측정된다 — MIN_DWELL_SEC 미만은 버리고 중앙값으로 완충."""
+
+    MIN_DWELL_SEC = 20.0        # 이보다 짧은 체류는 트랙 재부여·선 근처 출생으로 본다(실측에서 제외)
+    MIN_EVENTS = 5              # 이만큼 모여야 K 를 낸다 — 그 전에는 보정하지 않는다(K=None)
+    MIN_PRED_MIN = 0.5          # 진입 예측이 이보다 작으면 비율이 폭주한다 — 그 이벤트는 체류 실측에만 쓴다
+    CLAMP = (0.5, 3.0)
+
+    def __init__(self, window_sec=900):
+        self.window = float(window_sec)
+        self.entries = {}           # tid → (진입 t, 진입 시점 예측 분 또는 None)
+        self.events = deque()       # (통과 t, 체류 초, 비율 또는 None)
+
+    def observe(self, tid, in_roi, t, predicted_min):
+        """프레임마다 부른다 — ROI 안에서 처음 보인 트랙의 진입을 기억한다(깜빡임으로 잠깐 나가도 리셋하지 않는다)"""
+        if in_roi and tid not in self.entries:
+            self.entries[tid] = (t, predicted_min)
+
+    def crossed(self, tid, t):
+        """λ선 통과(출구 방향) — 체류 이벤트를 남기고 체류 초를 돌려준다. 진입 기록이 없거나 너무 짧으면 None"""
+        ent = self.entries.pop(tid, None)
+        if ent is None:
+            return None
+        dwell = t - ent[0]
+        if dwell < self.MIN_DWELL_SEC:
+            return None
+        pred = ent[1]
+        ratio = (dwell / 60) / pred if pred is not None and pred >= self.MIN_PRED_MIN else None
+        self.events.append((t, dwell, ratio))
+        return dwell
+
+    def forget(self, alive):
+        alive = set(alive)
+        for tid in [t for t in self.entries if t not in alive]:
+            del self.entries[tid]
+
+    def stats(self, t):
+        """이동 창 요약 → {n, measured_min, k}. measured_min = 체류 중앙값(분), k = 비율 중앙값(클램프) 또는 None"""
+        while self.events and self.events[0][0] < t - self.window:
+            self.events.popleft()
+        dwells = sorted(e[1] for e in self.events)
+        ratios = sorted(e[2] for e in self.events if e[2] is not None)
+        med = (lambda v: v[len(v) // 2] if len(v) % 2 else (v[len(v) // 2 - 1] + v[len(v) // 2]) / 2)
+        measured = round(med(dwells) / 60, 1) if dwells else None
+        k = None
+        if len(ratios) >= self.MIN_EVENTS:
+            k = round(min(max(med(ratios), self.CLAMP[0]), self.CLAMP[1]), 2)
+        return {"n": len(dwells), "measured_min": measured, "k": k}
+
+    def reset(self):
+        self.entries.clear()
+        self.events.clear()
+
+
 class RateWindow:
     """통과 이벤트의 이동합 → 명/분. 창 길이는 호출자가 준다(운영은 .env RATE_WINDOW_SEC, 기본 2분 — 09-16 사용자 결정). 시각은 단조 초"""
 

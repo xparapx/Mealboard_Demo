@@ -48,12 +48,27 @@ def feed(now, state, source=FEED_SOURCE):
             "now": describe(w), "next": next_with_day(now), "meal_day": meal_day}
 
 
+def wait_range(con, now, win):
+    """지금 열린 수집 창 안 '공표 대기(wait_min)'의 오늘 최소~최대(09-16 사용자 결정) — 화면 판정(여유·보통·혼잡)이
+    고정 임계값 대신 이 범위 안 상대 위치를 쓴다. 창 밖이거나 표본이 모자라면 None(화면은 고정 기준으로 폴백)"""
+    if win is None:
+        return None
+    day = now.strftime("%Y-%m-%d")
+    lo_ts = f"{day}T{win.lo // 60:02d}:{win.lo % 60:02d}"
+    row = con.execute("SELECT MIN(wait_min) lo, MAX(wait_min) hi, COUNT(wait_min) n FROM samples "
+                      "WHERE ts >= ? AND wait_min IS NOT NULL AND state = 'ok'", (lo_ts,)).fetchone()
+    if not row or row["n"] < 30 or row["lo"] is None:           # 30표본(약 5분)은 쌓여야 범위가 뜻을 가진다
+        return None
+    return {"lo": round(row["lo"], 1), "hi": round(row["hi"], 1), "n": row["n"]}
+
+
 @router.get("/api/status")
 def status():
+    now = dt.datetime.now()
     con = connect()
     row = con.execute("SELECT * FROM samples ORDER BY ts DESC LIMIT 1").fetchone()
+    rng = wait_range(con, now, meal_now(now))
     con.close()
-    now = dt.datetime.now()
     if row is None:
         return {"state": "no_data", "updated_at": None,
                 "queue_len": None, "rate_per_min": None, "wait_min": None, "feed": feed(now, "no_data")}
@@ -61,4 +76,6 @@ def status():
     state = "no_data" if age > STALE_SEC else row["state"]
     return {"state": state, "updated_at": row["ts"], "stale": age > STALE_SEC,
             "queue_len": row["queue_len"], "rate_per_min": row["rate_per_min"],
-            "wait_min": row["wait_min"], "feed": feed(now, state)}
+            "wait_min": row["wait_min"],
+            "wait_raw_min": row["wait_raw_min"], "measured_wait_min": row["measured_wait_min"], "calib": row["calib"],
+            "wait_range": rng, "feed": feed(now, state)}
