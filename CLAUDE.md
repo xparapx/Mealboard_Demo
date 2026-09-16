@@ -20,7 +20,7 @@
   `~/plant/`와 그 DB에는 어떤 이유로도 접근·수정하지 않는다. 포트 8000·8501·1883은 Plant 소유.
 - 홈 Pi에서는 vision 프레임 소스로 `picamera`를 쓰지 않는다(Plant 카메라 타이머와 배타 자원). `webcam|file`만.
 - **카메라는 Camera Module 3 Wide(가로 102°)로 확정(09-04)** — 배식대 오른쪽 끝 구석에서 급식실 폭 15.55 m 전체를 담으려면 약 90° 가 필요해 표준판(66°)·아이폰 전면(약 70°)은 우측이 잘린다. 가장자리 왜곡은 관리 앱의 4점 호모그래피가 흡수. vision(로드맵 ④)은 Wide 기준으로.
-- **수집 시간창(09-04 운영 규칙, 09-11 시작 앞당김)**: 3학년 점심 **11:20**~12:30 · 1·2학년 점심 12:30~13:30 · 석식 **17:00**~18:30(시간표보다 10~30분 이른 교사 식사 등 유동 흡수, 사용자 결정) — `.env MEAL_WINDOWS`('HH:MM-HH:MM 라벨;…'), 파싱·검증은 `vision/schedule.py`(순수), 바인딩은 `app/lunch.py MEALS·meal_now·meal_next`(import 시점 검증).
+- **수집 시간창(09-04 운영 규칙, 09-11 시작 앞당김, 09-16 끝 실측 조정)**: 3학년 점심 **11:20**~12:30 · 1·2학년 점심 12:30~**13:40** · 석식 **17:00**~**18:10**(시작은 교사 식사 등 유동 흡수, 끝은 실측 — 사용자 결정. 집계 창도 LUNCH_END 13:40·DINNER_END 18:10) — `.env MEAL_WINDOWS`('HH:MM-HH:MM 라벨;…'), 파싱·검증은 `vision/schedule.py`(순수), 바인딩은 `app/lunch.py MEALS·meal_now·meal_next`(import 시점 검증).
   **카메라 노드는 이 창 안에서만 세고 기록한다. 창 밖에는 아무 행도 쓰지 않는다**(09-11 사용자 결정 — 옛 `Simulator` 더미 곡선 제거, 판정은 `vision/schedule.should_record`). 표본이 끊기면 `/api/status` 는 120초 뒤 `no_data`, `feed.live=false`(live = 출처 vision ∧ 창 안 ∧ 표본 이어짐) → 화면 맨 위 `#feedbar` 가 "지금은 급식 시간이 아닙니다 · 다음 창" 안내를, 히어로는 '급식 시간이 아닙니다' 를 띄운다(모든 화면). '더미데이터' 문구는 스테이징 mock 출처일 때만.
   `LUNCH_START~END`(집계·관리 가드용 점심 전체 창)는 별개로 둔다. 창은 시각만 본다(요일 무관).
 - **중식/석식 분리(09-16 사용자 결정)**: insights.db 스키마 v2 — 전 표에 `meal` 열(lunch|dinner|all), rollup 은 `ROLLUP_WINDOW=lunch` 면 중식(`LUNCH_*`)·석식(`DINNER_*`, `.env`, 기본 17:00~18:30) 두 창을 각각 집계(all 모드는 한 행). meta 불변식은 '한 파일 = 한 창 모드·한 출처'로 완화, menu_stats·인기 기준값은 끼니별. **v1 파일은 백업 후 `--all` 재집계**.

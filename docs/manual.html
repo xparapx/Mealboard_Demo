@@ -297,12 +297,12 @@ NEIS_SCHOOL_CODE=8140036
 # 8000 은 Plant 프로젝트 setup_camera.py 가 쓰므로 피한다
 API_PORT=8100
 LUNCH_START=11:30
-LUNCH_END=14:00
-# 석식 집계 창(09-16 중식/석식 분리) — ROLLUP_WINDOW=lunch 면 rollup 이 중식·석식 두 창을 각각 집계한다
+LUNCH_END=13:40
+# 석식 집계 창(09-16 중식/석식 분리) — ROLLUP_WINDOW=lunch 면 rollup 이 중식·석식 두 창을 각각 집계한다. 끝 시각은 09-16 사용자 실측(중식 13:40·석식 18:10)
 DINNER_START=17:00
-DINNER_END=18:30
+DINNER_END=18:10
 # 수집 시간창(09-04 운영 규칙) — 카메라 노드는 이 창 안에서만 세고, 창 밖은 더미 곡선 + 화면 '더미데이터' 띠. 'HH:MM-HH:MM 라벨' 을 ; 로 나열. 겹치면 시작 거부
-MEAL_WINDOWS=11:20-12:30 3학년 점심;12:30-13:30 1·2학년 점심;17:00-18:30 석식
+MEAL_WINDOWS=11:20-12:30 3학년 점심;12:30-13:40 1·2학년 점심;17:00-18:10 석식
 # 이슈 링크 한국어 번역 (jobs/fetch_news.py). 없으면 원문 영어 그대로 나간다
 # DeepL API Free 키는 끝이 :fx 다 — 그걸 보고 무료/유료 엔드포인트를 고른다
 DEEPL_API_KEY=
@@ -328,6 +328,8 @@ VISION_SIZE=2304x1296
 VISION_FPS=5
 VISION_IMGSZ=640
 VISION_CONF=0.35
+# λ(처리율) 이동합 창(초). 기본 120 — 2분(09-16). 급식 초반 요동이 크면 300 으로
+RATE_WINDOW_SEC=120
 # ultralytics 가중치 (사람 클래스만 쓴다). Pi: data/models/yolo11n.pt
 YOLO_WEIGHTS=data/models/yolo11n.pt
 # 메타데이터 소켓 디렉터리. Pi 는 systemd RuntimeDirectory(/run/mealboard), 개발 PC 는 data/run
@@ -687,12 +689,12 @@ def _choice(name, default, allowed):
 
 API_PORT = int(os.getenv(&quot;API_PORT&quot;, &quot;8100&quot;))
 LUNCH_START = os.getenv(&quot;LUNCH_START&quot;, &quot;11:30&quot;)     # 형식 검증은 app/lunch.py 가 import 시점에 한다
-LUNCH_END = os.getenv(&quot;LUNCH_END&quot;, &quot;14:00&quot;)
+LUNCH_END = os.getenv(&quot;LUNCH_END&quot;, &quot;13:40&quot;)         # 09-16 사용자 실측: 중식은 13:40 까지
 DINNER_START = os.getenv(&quot;DINNER_START&quot;, &quot;17:00&quot;)   # 석식 집계 창(09-16 중식/석식 분리) — 수집 창 MEAL_WINDOWS 의 석식과 별개 눈금
-DINNER_END = os.getenv(&quot;DINNER_END&quot;, &quot;18:30&quot;)
+DINNER_END = os.getenv(&quot;DINNER_END&quot;, &quot;18:10&quot;)       # 09-16 사용자 실측: 석식은 18:10 까지
 # 수집 시간창 세 개(09-04 운영 규칙): 카메라 노드는 이 창 안에서만 세고, 창 밖은 더미 곡선 + 화면 '더미데이터' 띠. 형식·겹침 검증은 vision/schedule.py (app/lunch.py import 시점)
-# 09-11: 시작을 10~30분 앞당긴다(교사 식사 등 시간표 밖 유동) — 중식 11:20, 석식 17:00. 끝은 그대로
-MEAL_WINDOWS = os.getenv(&quot;MEAL_WINDOWS&quot;, &quot;11:20-12:30 3학년 점심;12:30-13:30 1·2학년 점심;17:00-18:30 석식&quot;)
+# 09-11: 시작을 10~30분 앞당긴다(교사 식사 등 시간표 밖 유동) — 중식 11:20, 석식 17:00. 09-16: 끝을 실측으로 조정 — 중식 13:40, 석식 18:10
+MEAL_WINDOWS = os.getenv(&quot;MEAL_WINDOWS&quot;, &quot;11:20-12:30 3학년 점심;12:30-13:40 1·2학년 점심;17:00-18:10 석식&quot;)
 STALE_SEC = 120                             # 이 시간 넘게 새 행·새 파일이 없으면 '데이터 없음' (status·positions·집계 커버리지 공통)
 ROLLUP_WINDOW = _choice(&quot;ROLLUP_WINDOW&quot;, &quot;lunch&quot;, (&quot;lunch&quot;, &quot;all&quot;))   # 집계 창 (스테이징 mock 은 종일 돌므로 all)
 FEED_SOURCE = _choice(&quot;FEED_SOURCE&quot;, &quot;vision&quot;, (&quot;mock&quot;, &quot;vision&quot;))    # 집계 행의 출처 표기
@@ -711,6 +713,7 @@ VISION_FPS = float(os.getenv(&quot;VISION_FPS&quot;, &quot;5&quot;))        # �
 VISION_IMGSZ = int(os.getenv(&quot;VISION_IMGSZ&quot;, &quot;640&quot;))
 VISION_CONF = float(os.getenv(&quot;VISION_CONF&quot;, &quot;0.35&quot;))
 YOLO_WEIGHTS = os.getenv(&quot;YOLO_WEIGHTS&quot;, str(DATA / &quot;models&quot; / &quot;yolo11n.pt&quot;))   # ultralytics 가중치. Hailo hef 백엔드는 다음 단계
+RATE_WINDOW_SEC = int(os.getenv(&quot;RATE_WINDOW_SEC&quot;, &quot;120&quot;))   # λ 이동합 창(초). 09-16 사용자 결정 5분→2분 — 배식 속도 변화가 W 에 더 빨리 반영. 최소 눈금 0.5명/분 = insufficient_rate 문턱과 일치
 RUN_DIR = Path(os.getenv(&quot;RUN_DIR&quot;, str(DATA / &quot;run&quot;)))   # 메타데이터 소켓 디렉터리 (Pi: /run/mealboard)
 META_UDP_PORT = 8103                                  # AF_UNIX 가 없는 개발 PC(Windows)의 메타데이터 폴백 — UDP 127.0.0.1 (Pi 에서는 쓰지 않는다)
 DEBUG_FLAG = Path(&quot;/tmp/debug_on&quot;) if os.name != &quot;nt&quot; else RUN_DIR / &quot;debug_on&quot;   # MJPEG 켜짐 계약 파일 (vision 과 공유, PrivateTmp 금지)
@@ -730,7 +733,7 @@ SCHEMA = &quot;&quot;&quot;
 CREATE TABLE IF NOT EXISTS samples (
   ts           TEXT PRIMARY KEY,   -- ISO 8601 로컬시각
   queue_len    INTEGER,            -- L : 대기 인원
-  rate_per_min REAL,               -- λ : 배식대 통과율 (이동평균 .env RATE_WINDOW_SEC, 기본 2분, 명/분)
+  rate_per_min REAL,               -- λ : 배식대 통과율 (5분 이동평균, 명/분)
   wait_min     REAL,               -- W = L / λ  (산출 불가면 NULL)
   state        TEXT NOT NULL       -- ok | no_data | insufficient_rate
 );
@@ -1526,7 +1529,7 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v31&quot;;   // 09-16: 히트맵 리드에 현재 끼니, 끼니 경계에서 토글 자동 전환
+const CACHE = &quot;mealboard-v33&quot;;   // 09-16: 히어로 대기시간 초 단위 표기
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
@@ -5207,7 +5210,7 @@ export const why = r =&gt; !r || /reports\.db/.test(r) ? null : /insights\.db/.t
 const DESK_MQ = matchMedia(&quot;(min-width: 900px)&quot;);
 export const desktop = () =&gt; DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = &quot;v31&quot;;                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = &quot;v33&quot;;                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
@@ -5304,7 +5307,7 @@ async function poll(name, force) {
   catch (e) { console.error(name, e); s.fail?.(e); }   // 서버에 닿지 못하면 옛 값을 '지금'처럼 두지 않는다 — 화면이 정한다
 }
 
-function tick() {                                      // 30초마다 활성 화면만. 화면의 every 에 못 미치면 건너뛴다
+function tick() {                                      // 5초마다 활성 화면만(09-16 — 실시간뷰 5초 폴링). 화면의 every 에 못 미치면 건너뛴다
   if (document.hidden || !active) return;
   poll(active, false);
 }
@@ -5398,9 +5401,9 @@ try {
 <figure class="code">
 <figcaption><span class="path">static/js/room.js</span><span class="lang">js</span><button class="copy" type="button">복사</button></figcaption>
 <pre><code class="lang-js">/* 실시간뷰 화면 — 탑뷰 평면도 + 익명 위치 마커. 영상 아님 · 순간 상태만 · 이력 없음 (CLAUDE.md §2)
-   두 겹 캔버스: #plan 에 정적 평면도(floor.js)는 상자 크기가 바뀔 때만(canvasAuto), 그 위 #marks 에 마커만 30초마다.
+   두 겹 캔버스: #plan 에 정적 평면도(floor.js)는 상자 크기가 바뀔 때만(canvasAuto), 그 위 #marks 에 마커만 5초마다(09-16).
    점멸은 #marks 의 CSS opacity 애니메이션(1.4초, 0.55~1)이며 이 화면이 활성일 때만 돈다(.plan.live).
-   /api/positions 는 이 화면이 보일 때만 30초마다 — 다른 화면에서는 요청이 나가지 않는다.
+   /api/positions 는 이 화면이 보일 때만 5초마다 — 다른 화면에서는 요청이 나가지 않는다.
    아래 카드: 최근 10분 밀집도(육각 타일별 인원수 합계 — 같은 평면도 위에 flare 히트맵, 5초마다) · 오늘 리포트(로컬 LLM 글, 30분마다) */
 import { $, j, jSoft, S, esc, fit, hm, canvasAuto, setState } from &quot;./core.js&quot;;
 import { SUNSETDARK, gradient } from &quot;./colors.js&quot;;
@@ -5447,7 +5450,7 @@ function drawZoneCard() {
   const Gz = geom(W, H);
   drawFloor(g, Gz);
   drawZoneLabels(g, Gz, ZONES);
-  drawHeat(g, Gz, d.cells, d.grid.cols, d.grid.rows);   // 타일이 어두울수록(Sunsetdark) 최근 30분에 사람이 많았던 자리 — 마커 없음
+  drawHeat(g, Gz, d.cells, d.grid.cols, d.grid.rows);   // 타일이 어두울수록(Sunsetdark) 최근 10분에 사람이 많았던 자리 — 마커 없음
 }
 
 /* 최근 10분 밀집도(09-03 사용자 결정: 당일 즉석 히트맵. 09-16 사용자 결정: 30분→10분). 5초마다 poll 로 */
