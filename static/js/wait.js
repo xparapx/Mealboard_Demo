@@ -21,9 +21,17 @@ function verdict(st) {
 /* ---------------- 대기 상태 ---------------- */
 let lastWait = null;
 function renderStatus(st) {
-  const shown = st.wait_min == null ? "—" : String(st.wait_min);
+  // 히어로는 초 단위(09-16 사용자 요청 — '0.6분' 은 감이 안 온다): 1분 미만 "N초", 그 이상 "M분 S초". 배식 속도는 명/분 그대로
+  let num = "—", unit = "분";
+  if (st.wait_min != null) {
+    const s = Math.round(st.wait_min * 60);
+    if (s < 60) { num = String(s); unit = "초"; }
+    else { num = String(Math.floor(s / 60)); unit = s % 60 ? `분 ${s % 60}초` : "분"; }
+  }
+  const shown = num + unit;
   if (shown !== lastWait) {                          // 값이 실제로 바뀔 때만 0.25s 스케일 펄스
-    $("#wait-min").textContent = shown;
+    $("#wait-min").textContent = num;
+    $("#wait-unit").textContent = unit;
     if (lastWait !== null) {
       const b = $("#bigbox"); b.classList.remove("pulse"); void b.offsetWidth; b.classList.add("pulse");
       b.addEventListener("animationend", () => b.classList.remove("pulse"), { once: true });
