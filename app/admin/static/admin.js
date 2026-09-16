@@ -19,8 +19,9 @@ const mmss = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 const CROSS_MAX = 50;
 
 async function api(path, body, method = "POST") {
-  // body 없이 method 만 준 경우(DELETE 등)도 보낸다 — 편집기 '템플릿으로 초기화'(09-11)
-  const r = await fetch("/api/admin" + path, body === undefined ? (method === "POST" ? { cache: "no-store" } : { method, cache: "no-store" })
+  // body 없이 method 만 준 경우(DELETE 등)도 보낸다 — 편집기 '템플릿으로 초기화'(09-11).
+  // 게이트가 변경 요청은 JSON Content-Type 만 통과시키므로(server.py 415 json_only) 본문 없는 DELETE 에도 헤더를 붙인다(09-16)
+  const r = await fetch("/api/admin" + path, body === undefined ? (method === "POST" ? { cache: "no-store" } : { method, cache: "no-store", headers: { "Content-Type": "application/json" } })
     : { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   let j = null; try { j = await r.json(); } catch {}
   return { ok: r.ok, status: r.status, j };
