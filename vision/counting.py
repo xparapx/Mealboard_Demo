@@ -52,7 +52,7 @@ class LineCounter:
 
 
 class RateWindow:
-    """통과 이벤트의 이동합 → 명/분. 기본 5분 창(CLAUDE.md §2 λ = 5분 이동평균). 시각은 단조 초"""
+    """통과 이벤트의 이동합 → 명/분. 창 길이는 호출자가 준다(운영은 .env RATE_WINDOW_SEC, 기본 2분 — 09-16 사용자 결정). 시각은 단조 초"""
 
     def __init__(self, window_sec=300):
         self.window = float(window_sec)

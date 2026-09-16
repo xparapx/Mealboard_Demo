@@ -135,11 +135,11 @@
       <span class="count" id="posn">—</span>
       <div class="stage"><canvas id="plan"></canvas><canvas id="marks"></canvas></div>
       <div class="empty">표시할 위치 없음</div>
-      <div class="note" style="margin-top:10px">영상이 아닙니다 · 익명 위치만 30초마다 표시 · 이력을 저장하지 않습니다</div>
+      <div class="note" style="margin-top:10px">영상이 아닙니다 · 익명 위치만 5초마다 표시 · 이력을 저장하지 않습니다</div>
     </section>
-    <!-- 실시간뷰 화면의 카드 — 최근 30분 밀집도(육각 타일별 인원수 합계, 좌표 없음; 데스크톱은 글이 평면도 오른쪽 여백에) · 오늘 리포트(로컬 LLM, 맨 아래) -->
+    <!-- 실시간뷰 화면의 카드 — 최근 10분 밀집도(육각 타일별 인원수 합계, 좌표 없음; 데스크톱은 글이 평면도 오른쪽 여백에) · 오늘 리포트(로컬 LLM, 맨 아래) -->
     <section class="card insight" id="zonecard" data-state="no_data">
-      <div class="eyebrow">최근 30분 밀집도</div>
+      <div class="eyebrow">최근 10분 밀집도</div>
       <div class="body">
         <div class="zonewrap">
           <div class="stage zonestage"><canvas id="zoneplan"></canvas>
@@ -151,7 +151,7 @@
           </div>
         </div>
       </div>
-      <div class="empty" id="zoneempty">최근 30분 표본 없음</div>
+      <div class="empty" id="zoneempty">최근 10분 표본 없음</div>
     </section>
     <section class="card insight" id="reportcard" data-state="no_data">
       <div class="eyebrow">오늘 리포트</div>

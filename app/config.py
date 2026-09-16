@@ -48,6 +48,7 @@ VISION_FPS = float(os.getenv("VISION_FPS", "5"))        # 추론 목표 fps (Pi 
 VISION_IMGSZ = int(os.getenv("VISION_IMGSZ", "640"))
 VISION_CONF = float(os.getenv("VISION_CONF", "0.35"))
 YOLO_WEIGHTS = os.getenv("YOLO_WEIGHTS", str(DATA / "models" / "yolo11n.pt"))   # ultralytics 가중치. Hailo hef 백엔드는 다음 단계
+RATE_WINDOW_SEC = int(os.getenv("RATE_WINDOW_SEC", "120"))   # λ 이동합 창(초). 09-16 사용자 결정 5분→2분 — 배식 속도 변화가 W 에 더 빨리 반영. 최소 눈금 0.5명/분 = insufficient_rate 문턱과 일치
 RUN_DIR = Path(os.getenv("RUN_DIR", str(DATA / "run")))   # 메타데이터 소켓 디렉터리 (Pi: /run/mealboard)
 META_UDP_PORT = 8103                                  # AF_UNIX 가 없는 개발 PC(Windows)의 메타데이터 폴백 — UDP 127.0.0.1 (Pi 에서는 쓰지 않는다)
 DEBUG_FLAG = Path("/tmp/debug_on") if os.name != "nt" else RUN_DIR / "debug_on"   # MJPEG 켜짐 계약 파일 (vision 과 공유, PrivateTmp 금지)

@@ -47,7 +47,7 @@ export const why = r => !r || /reports\.db/.test(r) ? null : /insights\.db/.test
 const DESK_MQ = matchMedia("(min-width: 900px)");
 export const desktop = () => DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = "v31";                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = "v32";                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
@@ -144,7 +144,7 @@ async function poll(name, force) {
   catch (e) { console.error(name, e); s.fail?.(e); }   // 서버에 닿지 못하면 옛 값을 '지금'처럼 두지 않는다 — 화면이 정한다
 }
 
-function tick() {                                      // 30초마다 활성 화면만. 화면의 every 에 못 미치면 건너뛴다
+function tick() {                                      // 5초마다 활성 화면만(09-16 — 실시간뷰 5초 폴링). 화면의 every 에 못 미치면 건너뛴다
   if (document.hidden || !active) return;
   poll(active, false);
 }
@@ -209,7 +209,7 @@ async function boot() {
   }
   go(start, { push: false });
   if (f) { renderFeed(f); wasInWindow = mealLive(f); }
-  setInterval(tick, 30000);
+  setInterval(tick, 5000);                             // 화면별 every(기본 30초)가 가르므로 잦은 tick 자체는 요청을 늘리지 않는다
   feedTick(); setInterval(feedTick, 60000);            // 안내 띠·자동 전환은 화면과 무관하게 60초(status 응답은 200B 남짓)
 }
 boot();

@@ -19,20 +19,21 @@ import datetime as dt
 import os
 import time
 
-from app.config import (DEBUG_FLAG, DEBUG_PORT, FEED_SOURCE, VIDEO_SOURCE, VISION_CONF, VISION_FPS, VISION_IMGSZ, VISION_SIZE, YOLO_WEIGHTS,
-                        ZONES_JSON)
+from app.config import (DEBUG_FLAG, DEBUG_PORT, FEED_SOURCE, RATE_WINDOW_SEC, VIDEO_SOURCE, VISION_CONF, VISION_FPS, VISION_IMGSZ, VISION_SIZE,
+                        YOLO_WEIGHTS, ZONES_JSON)
 from app.db import connect
 from app.lunch import meal_now
 from vision.counting import LineCounter, RateWindow, foot_of_bbox
 from vision.debug_stream import DebugStream, annotate
 from vision.meta import MetaSender
-from vision.record import write_sample
+from vision.record import write_positions, write_sample
 from vision.schedule import should_record
 from vision.source import open_source, parse_size
 from vision.waittime import estimate_wait
 from vision.zones import LOCAL_NAME, load_zones, point_in_polygon, project, zone_of
 
 SAMPLE_SEC = 10         # 표본 주기 (mock 의 TICK 과 같다)
+POS_SEC = 5             # positions.json 갱신 주기 (09-16: 평면도 마커를 화면 5초 폴링에 맞춰 — DB 표본보다 잦아도 파일 하나 덮어쓰기뿐)
 RELOAD_SEC = 2          # zones 파일 mtime 확인 주기
 IDLE_FPS = 1            # 창 밖 + 보는 사람 없음: 카메라만 살려 두는 속도
 PERSON = 0              # COCO class
@@ -119,8 +120,8 @@ def main():
     stream = DebugStream(DEBUG_PORT, DEBUG_FLAG).start()
     sender = MetaSender()
     con = connect()
-    rate = RateWindow()
-    win, last_sample, frame_id, infer_ms = None, 0.0, 0, 0.0
+    rate = RateWindow(RATE_WINDOW_SEC)
+    win, last_sample, last_pos, frame_id, infer_ms = None, 0.0, 0.0, 0, 0.0
     meta_alive = 0.0                                              # 마지막으로 메타 구독자가 있었던 시각(단조)
     period = 1 / VISION_FPS
     real = FEED_SOURCE == "vision"                                # False 면 이 노드는 아무것도 쓰지 않는다(더미는 mock 유닛의 몫)
@@ -203,6 +204,9 @@ def main():
             if jpeg:
                 stream.publish(jpeg)
 
+        if t0 - last_pos >= POS_SEC and zones.h_img2floor and should_record(win, FEED_SOURCE):
+            last_pos = t0                                         # DB 표본(10초)과 별개로 마커 파일만 5초마다 — write_sample 도 쓰지만 겹쳐도 덮어쓰기뿐
+            write_positions(ts, queue, pts)
         if t0 - last_sample >= SAMPLE_SEC:
             last_sample = t0
             if should_record(win, FEED_SOURCE):                   # 실측 — 숫자(과 바닥 좌표의 순간 상태)만
