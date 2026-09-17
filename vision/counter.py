@@ -19,8 +19,8 @@ import datetime as dt
 import os
 import time
 
-from app.config import (DEBUG_FLAG, DEBUG_PORT, FEED_SOURCE, RATE_WINDOW_SEC, VIDEO_SOURCE, VISION_CONF, VISION_FPS, VISION_IMGSZ, VISION_SIZE,
-                        YOLO_WEIGHTS, ZONES_JSON)
+from app.config import (DEBUG_FLAG, DEBUG_PORT, DWELL_BIAS, FEED_SOURCE, RATE_WINDOW_SEC, VIDEO_SOURCE, VISION_CONF, VISION_FPS, VISION_IMGSZ,
+                        VISION_SIZE, YOLO_WEIGHTS, ZONES_JSON)
 from app.db import connect
 from app.lunch import meal_now
 from vision.counting import DwellTracker, LineCounter, MedianWindow, RateWindow, foot_of_bbox
@@ -121,7 +121,7 @@ def main():
     sender = MetaSender()
     con = connect()
     rate = RateWindow(RATE_WINDOW_SEC)
-    dwell = DwellTracker()                                        # 자동 실측·보정(09-16 B안) — ROI 진입→λ선 통과 체류시간
+    dwell = DwellTracker(bias=DWELL_BIAS)                         # 자동 실측·보정(09-16 B안) — ROI 진입→λ선 통과 체류시간
     qmed = MedianWindow(25)                                       # L 평활(09-17): 검출이 한두 프레임 끊겨도 0 으로 꺼지지 않게
     wmed = MedianWindow(90)                                       # 공표 대기 평활(09-17): 깜빡임 대신 추세만 — 원시값은 raw 로 그대로 남는다
     last_raw = None                                               # 직전 표본의 원시 예측(분) — 진입자의 '진입 시점 예측' 으로 기억

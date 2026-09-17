@@ -120,3 +120,17 @@ def test_중앙값_짝수개는_가운데_평균():
     assert m.median(3.0) == 5.0
     m.reset()
     assert m.median(3.0) is None
+
+
+def test_체류_편향_배율은_실측과_비율_모두에_걸린다():
+    from vision.counting import DwellTracker
+    d = DwellTracker(bias=1.4)
+    for i in range(5):                             # 날것 체류 60초·진입 예측 1분
+        d.observe(i, True, 100.0 + i, 1.0)
+        d.crossed(i, 160.0 + i)
+    s = d.stats(170.0)
+    assert s["measured_min"] == 1.4                # 60초 × 1.4 = 84초
+    assert s["k"] == 1.4                           # 비율도 보정된 체류로
+    d2 = DwellTracker(bias=1.4)
+    d2.observe(9, True, 0.0, 1.0)
+    assert d2.crossed(9, 19.0) is None             # 20초 문턱은 날것 기준 — 배율로 통과 못 한다

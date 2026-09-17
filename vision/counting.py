@@ -64,10 +64,11 @@ class DwellTracker:
     MIN_PRED_MIN = 0.5          # 진입 예측이 이보다 작으면 비율이 폭주한다 — 그 이벤트는 체류 실측에만 쓴다
     CLAMP = (0.5, 3.0)
 
-    def __init__(self, window_sec=900):
+    def __init__(self, window_sec=900, bias=1.0):
         self.window = float(window_sec)
-        self.entries = {}           # tid → (진입 t, 진입 시점 예측 분 또는 None)
-        self.events = deque()       # (통과 t, 체류 초, 비율 또는 None)
+        self.bias = float(bias)     # 체류 과소 편향 보정(09-17, .env DWELL_BIAS): 트랙 끊김으로 실측이 짧게 재진다 —
+        self.entries = {}           # 수동 실측 대조(12:44 실제 1.3분 vs 자동 0.9분 ≈ ×1.4)로 정한 배율, 실측이 쌓이면 조정
+        self.events = deque()       # (통과 t, 보정된 체류 초, 비율 또는 None)
 
     def observe(self, tid, in_roi, t, predicted_min):
         """프레임마다 부른다 — ROI 안에서 처음 보인 트랙의 진입을 기억한다(깜빡임으로 잠깐 나가도 리셋하지 않는다)"""
@@ -80,8 +81,9 @@ class DwellTracker:
         if ent is None:
             return None
         dwell = t - ent[0]
-        if dwell < self.MIN_DWELL_SEC:
+        if dwell < self.MIN_DWELL_SEC:              # 필터는 날것 기준 — 편향 배율로 문턱이 흔들리지 않게
             return None
+        dwell *= self.bias
         pred = ent[1]
         ratio = (dwell / 60) / pred if pred is not None and pred >= self.MIN_PRED_MIN else None
         self.events.append((t, dwell, ratio))
