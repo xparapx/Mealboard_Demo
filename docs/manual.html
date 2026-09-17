@@ -329,7 +329,7 @@ VISION_FPS=5
 VISION_IMGSZ=640
 VISION_CONF=0.35
 # λ(처리율) 이동합 창(초). 기본 120 — 2분(09-16). 급식 초반 요동이 크면 300 으로
-RATE_WINDOW_SEC=120
+RATE_WINDOW_SEC=180
 # ultralytics 가중치 (사람 클래스만 쓴다). Pi: data/models/yolo11n.pt
 YOLO_WEIGHTS=data/models/yolo11n.pt
 # 메타데이터 소켓 디렉터리. Pi 는 systemd RuntimeDirectory(/run/mealboard), 개발 PC 는 data/run
@@ -713,7 +713,7 @@ VISION_FPS = float(os.getenv(&quot;VISION_FPS&quot;, &quot;5&quot;))        # �
 VISION_IMGSZ = int(os.getenv(&quot;VISION_IMGSZ&quot;, &quot;640&quot;))
 VISION_CONF = float(os.getenv(&quot;VISION_CONF&quot;, &quot;0.35&quot;))
 YOLO_WEIGHTS = os.getenv(&quot;YOLO_WEIGHTS&quot;, str(DATA / &quot;models&quot; / &quot;yolo11n.pt&quot;))   # ultralytics 가중치. Hailo hef 백엔드는 다음 단계
-RATE_WINDOW_SEC = int(os.getenv(&quot;RATE_WINDOW_SEC&quot;, &quot;120&quot;))   # λ 이동합 창(초). 09-16 사용자 결정 5분→2분 — 배식 속도 변화가 W 에 더 빨리 반영. 최소 눈금 0.5명/분 = insufficient_rate 문턱과 일치
+RATE_WINDOW_SEC = int(os.getenv(&quot;RATE_WINDOW_SEC&quot;, &quot;180&quot;))   # λ 이동합 창(초). 09-17 사용자 결정 2분→3분 — 2분 창은 통과 1명 = 0.5명/분 계단이라 λ 가 작을 때 W 가 널뛰었다(눈금 1/3명/분로 완화)
 RUN_DIR = Path(os.getenv(&quot;RUN_DIR&quot;, str(DATA / &quot;run&quot;)))   # 메타데이터 소켓 디렉터리 (Pi: /run/mealboard)
 META_UDP_PORT = 8103                                  # AF_UNIX 가 없는 개발 PC(Windows)의 메타데이터 폴백 — UDP 127.0.0.1 (Pi 에서는 쓰지 않는다)
 DEBUG_FLAG = Path(&quot;/tmp/debug_on&quot;) if os.name != &quot;nt&quot; else RUN_DIR / &quot;debug_on&quot;   # MJPEG 켜짐 계약 파일 (vision 과 공유, PrivateTmp 금지)
@@ -1555,7 +1555,7 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v34&quot;;   // 09-16: 자동 실측 보정(B안) — 판정은 오늘 창 실측 범위 기준, 각주에 보정계수
+const CACHE = &quot;mealboard-v35&quot;;   // 09-17: 표본 평활(L 25초·대기 90초 중앙값)·λ 3분·여유는 절대 1분 이하
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
@@ -5236,7 +5236,7 @@ export const why = r =&gt; !r || /reports\.db/.test(r) ? null : /insights\.db/.t
 const DESK_MQ = matchMedia(&quot;(min-width: 900px)&quot;);
 export const desktop = () =&gt; DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = &quot;v34&quot;;                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = &quot;v35&quot;;                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {

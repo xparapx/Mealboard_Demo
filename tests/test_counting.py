@@ -101,3 +101,22 @@ def test_dwell_이동_창_밖_이벤트는_빠진다():
     d.crossed(1, 60.0)
     assert d.stats(60.0)["n"] == 1
     assert d.stats(200.0)["n"] == 0
+
+
+def test_중앙값_창은_None을_거르고_만료시킨다():
+    from vision.counting import MedianWindow
+    m = MedianWindow(window_sec=25)
+    for i, v in enumerate([3, 0, 3, None, 4]):     # 검출 깜빡임(0)·결측(None)이 섞여도
+        m.add(float(i), v)
+    assert m.median(4.0) == 3                       # 중앙값은 추세(3)를 지킨다
+    assert m.median(100.0) is None                  # 창을 지나면 비워진다
+
+
+def test_중앙값_짝수개는_가운데_평균():
+    from vision.counting import MedianWindow
+    m = MedianWindow(window_sec=90)
+    for i, v in enumerate([2.0, 4.0, 6.0, 8.0]):
+        m.add(float(i), v)
+    assert m.median(3.0) == 5.0
+    m.reset()
+    assert m.median(3.0) is None

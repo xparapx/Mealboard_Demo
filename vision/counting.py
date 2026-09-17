@@ -110,6 +110,31 @@ class DwellTracker:
         self.events.clear()
 
 
+class MedianWindow:
+    """시간 창 안 값들의 중앙값 — 표본 평활(09-17 사용자 결정: 검출 깜빡임이 화면 숫자에 1:1 로 전달되던 것을 완화).
+    L 은 짧은 창(약 25초)으로 한두 프레임 끊겨도 0 으로 꺼지지 않게, 공표 대기는 90초 창으로 추세만 남긴다. None 은 넣지 않는다"""
+
+    def __init__(self, window_sec):
+        self.window = float(window_sec)
+        self.items = deque()            # (t, v)
+
+    def add(self, t, v):
+        if v is not None:
+            self.items.append((t, v))
+
+    def median(self, t):
+        while self.items and self.items[0][0] < t - self.window:
+            self.items.popleft()
+        v = sorted(x for _, x in self.items)
+        if not v:
+            return None
+        n = len(v)
+        return v[n // 2] if n % 2 else (v[n // 2 - 1] + v[n // 2]) / 2
+
+    def reset(self):
+        self.items.clear()
+
+
 class RateWindow:
     """통과 이벤트의 이동합 → 명/분. 창 길이는 호출자가 준다(운영은 .env RATE_WINDOW_SEC, 기본 2분 — 09-16 사용자 결정). 시각은 단조 초"""
 

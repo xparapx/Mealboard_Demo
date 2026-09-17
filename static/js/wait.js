@@ -3,9 +3,9 @@
 import { $, j, jSoft, S, esc, fit, hhmm, mm, hm, WD, minuteOfDay, canvasAuto, setState, renderFeed, MEAL_KO, defaultMeal, mealSeg } from "./core.js";
 import { SUNSETDARK, gradient, ramp } from "./colors.js";
 
-const BUSY_MIN = 12, EASY_MIN = 5;   // 고정 임계값 — 실측 범위(wait_range)가 없을 때의 폴백
-/* 09-16 사용자 결정: 여유·보통·혼잡은 그 급식 창의 오늘 실측 범위(최소~최대) 안 상대 위치로 —
-   하위 1/3 여유 · 상위 1/3 혼잡. 범위가 아직 없거나 폭이 2분 미만이면 고정 임계값으로 폴백 */
+const BUSY_MIN = 12, EASY_MIN = 1;   // 혼잡 폴백 · 여유 절대 상한(분)
+/* 09-16 사용자 결정: 혼잡은 그 급식 창의 오늘 실측 범위(최소~최대) 안 상대 위치(상위 1/3)로, 범위가 없거나 폭 2분 미만이면 고정 12분 폴백.
+   09-17 사용자 결정: '여유' 는 상대 위치와 무관하게 절대 기준 — 학교 급식에서 1분 넘으면 여유가 아니다 */
 function relPos(st) {
   const r = st.wait_range;
   if (!r || st.wait_min == null || r.hi - r.lo < 2) return null;
@@ -23,8 +23,7 @@ function level(st) {
 }
 function verdict(st) {
   const closed = st.feed && st.feed.source === "vision" && !st.feed.now;   // 창 밖에는 카메라 표본이 없다(09-11) — '정보 없음' 이 아니라 '급식 시간 아님'
-  const p = relPos(st);
-  const easy = p != null ? p <= 1 / 3 : st.wait_min <= EASY_MIN;
+  const easy = st.wait_min != null && st.wait_min <= EASY_MIN;             // 여유 = 절대 1분 이하(09-17)
   return { off: closed ? "급식 시간이 아닙니다" : "정보 없음", wait: "배식 시작 대기", busy: "혼잡 · 잠시 후 추천",
            ok: easy ? "여유 · 바로 가세요" : "보통" }[level(st)];
 }

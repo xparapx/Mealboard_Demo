@@ -23,7 +23,7 @@ from app.config import (DEBUG_FLAG, DEBUG_PORT, FEED_SOURCE, RATE_WINDOW_SEC, VI
                         YOLO_WEIGHTS, ZONES_JSON)
 from app.db import connect
 from app.lunch import meal_now
-from vision.counting import DwellTracker, LineCounter, RateWindow, foot_of_bbox
+from vision.counting import DwellTracker, LineCounter, MedianWindow, RateWindow, foot_of_bbox
 from vision.debug_stream import DebugStream, annotate
 from vision.meta import MetaSender
 from vision.record import write_positions, write_sample
@@ -122,6 +122,8 @@ def main():
     con = connect()
     rate = RateWindow(RATE_WINDOW_SEC)
     dwell = DwellTracker()                                        # 자동 실측·보정(09-16 B안) — ROI 진입→λ선 통과 체류시간
+    qmed = MedianWindow(25)                                       # L 평활(09-17): 검출이 한두 프레임 끊겨도 0 으로 꺼지지 않게
+    wmed = MedianWindow(90)                                       # 공표 대기 평활(09-17): 깜빡임 대신 추세만 — 원시값은 raw 로 그대로 남는다
     last_raw = None                                               # 직전 표본의 원시 예측(분) — 진입자의 '진입 시점 예측' 으로 기억
     win, last_sample, last_pos, frame_id, infer_ms = None, 0.0, 0.0, 0, 0.0
     meta_alive = 0.0                                              # 마지막으로 메타 구독자가 있었던 시각(단조)
@@ -138,6 +140,8 @@ def main():
             win = cur
             rate.reset()
             dwell.reset()                                         # 창이 바뀌면 실측·보정도 처음부터
+            qmed.reset()
+            wmed.reset()
             last_raw = None
             if zones.counter:
                 zones.counter.reset()
@@ -192,11 +196,18 @@ def main():
             dwell.forget(ids)
         rate.add(t0, served)
         lam = rate.per_min(t0)
-        queue = sum(1 for t in tracks if t["in_roi"])
+        inst = sum(1 for t in tracks if t["in_roi"])              # 이 프레임의 순간 L — 평활 재료로만
+        qmed.add(t0, inst)
+        qm = qmed.median(t0)
+        queue = int(round(qm)) if qm is not None else inst        # 공표 L = 25초 중앙값(09-17 평활)
         raw, state = estimate_wait(queue, lam)
         ds = dwell.stats(t0)                                      # {n, measured_min, k} — 이동 창 요약(개인 값은 저장 안 함)
         last_raw = raw
-        wait = round(raw * ds["k"], 1) if raw is not None and ds["k"] else raw   # 자동 보정: 원시 × K(실측/예측 중앙값, 0.5~3.0)
+        wnow = round(raw * ds["k"], 1) if raw is not None and ds["k"] else raw   # 자동 보정: 원시 × K(실측/예측 중앙값, 0.5~3.0)
+        if state == "ok":
+            wmed.add(t0, wnow)
+        wm = wmed.median(t0) if state == "ok" else None
+        wait = round(wm, 1) if wm is not None else wnow           # 공표 대기 = 90초 중앙값(09-17 평활) — 원시는 raw 열에 그대로
         zone_counts = {}
         for t in tracks:
             if t["zone"]:
