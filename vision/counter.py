@@ -208,6 +208,10 @@ def main():
             wmed.add(t0, wnow)
         wm = wmed.median(t0) if state == "ok" else None
         wait = round(wm, 1) if wm is not None else wnow           # 공표 대기 = 90초 중앙값(09-17 평활) — 원시는 raw 열에 그대로
+        # 하한(09-17 사용자 결정, 수동 실측 12:44 대조에서 확정): 검출 깜빡임으로 L 이 빠져 원시가 0 으로 꺼지는 순간에도
+        # 줄에 사람이 보이면(L≥1) 최근 15분 실측 체류 중앙값 밑으로는 공표하지 않는다 — 0×K 는 K 로 못 살린다
+        if queue >= 1 and wait is not None and ds["measured_min"] is not None and ds["measured_min"] > wait:
+            wait = ds["measured_min"]
         zone_counts = {}
         for t in tracks:
             if t["zone"]:
