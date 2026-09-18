@@ -19,8 +19,8 @@ import datetime as dt
 import os
 import time
 
-from app.config import (DEBUG_FLAG, DEBUG_PORT, DWELL_BIAS, FEED_SOURCE, RATE_WINDOW_SEC, VIDEO_SOURCE, VISION_CONF, VISION_FPS, VISION_IMGSZ,
-                        VISION_SIZE, YOLO_WEIGHTS, ZONES_JSON)
+from app.config import (DEBUG_FLAG, DEBUG_PORT, DWELL_BIAS, FEED_SOURCE, QUEUE_SOURCE, RATE_WINDOW_SEC, VIDEO_SOURCE, VISION_CONF, VISION_FPS,
+                        VISION_IMGSZ, VISION_SIZE, YOLO_WEIGHTS, ZONES_JSON)
 from app.db import connect
 from app.lunch import meal_now
 from vision.counting import DwellTracker, LineCounter, MedianWindow, RateWindow, foot_of_bbox
@@ -196,7 +196,9 @@ def main():
             dwell.forget(ids)
         rate.add(t0, served)
         lam = rate.per_min(t0)
-        inst = sum(1 for t in tracks if t["in_roi"])              # 이 프레임의 순간 L — 평활 재료로만
+        # 순간 L(09-18 사용자 결정): 기본은 화면 안 트랙 전체 — ROI 가 실제 줄보다 좁으면 '사람은 많은데 1명' 이 된다.
+        # 카메라가 배식대 구석이라 화면 대부분이 줄·이동 인원이라는 전제(자리에 앉은 인원이 많이 잡히면 QUEUE_SOURCE=roi 로 되돌린다)
+        inst = len(tracks) if QUEUE_SOURCE == "tracks" else sum(1 for t in tracks if t["in_roi"])
         qmed.add(t0, inst)
         qm = qmed.median(t0)
         queue = int(round(qm)) if qm is not None else inst        # 공표 L = 25초 중앙값(09-17 평활)

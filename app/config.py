@@ -50,6 +50,8 @@ VISION_CONF = float(os.getenv("VISION_CONF", "0.35"))
 YOLO_WEIGHTS = os.getenv("YOLO_WEIGHTS", str(DATA / "models" / "yolo11n.pt"))   # ultralytics 가중치. Hailo hef 백엔드는 다음 단계
 DWELL_BIAS = float(os.getenv("DWELL_BIAS", "1.0"))           # 체류 실측 과소 편향 보정 배율(09-17). 트랙 끊김으로 짧게 재진다 — 수동 실측 대조로 조정(오늘 Pi 는 1.4)
 RATE_WINDOW_SEC = int(os.getenv("RATE_WINDOW_SEC", "180"))   # λ 이동합 창(초). 09-17 사용자 결정 2분→3분 — 2분 창은 통과 1명 = 0.5명/분 계단이라 λ 가 작을 때 W 가 널뛰었다(눈금 1/3명/분로 완화)
+QUEUE_SOURCE = os.getenv("QUEUE_SOURCE", "tracks")           # 공표 대기 인원의 재료(09-18 사용자 결정): tracks=화면 안 트랙 전체 | roi=ROI 안만.
+                                                             # ROI 가 실제 줄보다 좁으면 L 이 새서 '사람은 많은데 1명' 이 된다 — 기본은 tracks(같은 25초 중앙값 평활)
 RUN_DIR = Path(os.getenv("RUN_DIR", str(DATA / "run")))   # 메타데이터 소켓 디렉터리 (Pi: /run/mealboard)
 META_UDP_PORT = 8103                                  # AF_UNIX 가 없는 개발 PC(Windows)의 메타데이터 폴백 — UDP 127.0.0.1 (Pi 에서는 쓰지 않는다)
 DEBUG_FLAG = Path("/tmp/debug_on") if os.name != "nt" else RUN_DIR / "debug_on"   # MJPEG 켜짐 계약 파일 (vision 과 공유, PrivateTmp 금지)
