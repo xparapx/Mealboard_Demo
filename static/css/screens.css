@@ -4,7 +4,11 @@
    추이 절은 언제나 카드색 — 곡선(틸)이 밝은 바탕에서 읽히도록. 추이가 없으면(표본 <2) 절만 숨고 카드는 히어로만 남는다 */
 .waitcard { border-radius: 26px; box-shadow: var(--e2); overflow: hidden; background: var(--surface); }
 .hero { position: relative; background: var(--ink); padding: 34px 22px 30px; }
-.trend { padding: 22px var(--px) 24px; }
+.trend { padding: 22px var(--px) 24px; position: relative; }   /* 툴팁(#charttip)의 기준 상자 */
+#charttip { position: absolute; background: var(--ink); color: #FFFCF6;   /* 좌표는 wait.js 가 직접(클램프 포함) */
+  font-size: 11px; line-height: 1; padding: 6px 9px; border-radius: 8px; white-space: nowrap;
+  pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,.18); z-index: 5; }
+#charttip small { opacity: .75; font-size: 10px; }
 .trend .eyebrow { color: var(--ink3); }
 .hero .eyebrow { color: rgba(255,253,246,.52); }
 .dot { position: absolute; right: 22px; top: 24px; width: 10px; height: 10px; border-radius: 50%;

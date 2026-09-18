@@ -22,6 +22,10 @@
 .heat .c[data-none] { background: var(--well); cursor: default; }
 .heat .c[data-golden] { box-shadow: inset 0 0 0 1.5px var(--ink); }
 .heat .c[aria-pressed="true"] { outline: 2px solid var(--melon); outline-offset: 1px; }
+/* '지금' 타일 — 오늘 요일·현재 시각 셀이 급식 창 동안 서서히 점멸(09-18). 마커 이동은 wait.js markHeatNow 가 30초마다 */
+.heat .c[data-now] { animation: heatnow 2.2s ease-in-out infinite; outline: 1.5px dashed var(--melon); outline-offset: 1px; }
+@keyframes heatnow { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .heat .c[data-now] { animation: none; } }
 .heat .axis { grid-column: 2; display: flex; justify-content: space-between; font-size: 10px; color: var(--ink3); }
 .heat .axis b { font-weight: 700; color: var(--ink2); }
 .heatlegend { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 10.5px; color: var(--ink3); }
@@ -97,10 +101,4 @@
 .mealseg button { border: 0; background: none; padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 700;
                   color: var(--ink3); cursor: pointer; }
 .mealseg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(51,49,45,.16); }
-.heat2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
-.heat2 > div[hidden] { display: none; }
-.heat2.solo { grid-template-columns: 1fr; }
-.heat2 .sub { font-size: 11px; font-weight: 700; color: var(--ink3); margin-top: 10px; }
-.heat2 .heat { grid-template-columns: 18px 1fr; }
-.heat2 .heat .c { height: 18px; }
-@media (max-width: 520px) { .heat2 { gap: 4px 10px; } .heat2 .heat { grid-template-columns: 16px 1fr; } }
+/* 히트맵 2열(.heat2)은 09-18 끼니 토글 개편으로 폐기 — 단일 .heat + #heatseg */
