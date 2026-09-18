@@ -130,28 +130,53 @@ def _day(date, meal):
 
 # ---- 1. 요일×시각 히트맵 -----------------------------------------------------------------
 
+def _today_cells(meal):
+    """오늘 그 끼니 창을 queue.db 에서 BUCKET_MIN 빈으로 즉석 집계 — 히트맵 '오늘 행'(실황, 09-18 사용자 결정).
+    오늘 요일 행은 지난주 같은 요일의 평균이 아니라 오늘 지나간 시간만 채운다(아직 안 온 시간대는 빈칸)"""
+    date = _today()
+    wd = weekday_of(date)
+    if not 1 <= wd <= 5:                                      # 화면은 월~금 행뿐
+        return wd, []
+    wlo, whi = _bounds(meal)
+    con = connect_ro(DB_PATH, "samples")
+    if con is None:
+        return wd, []
+    with closing(con):
+        rows = con.execute(
+            "SELECT (CAST(strftime('%H', ts) AS INTEGER) * 60 + CAST(strftime('%M', ts) AS INTEGER)) / ? * ? bin, "
+            "AVG(wait_min) w, AVG(queue_len) q FROM samples WHERE ts >= ? AND ts < ? GROUP BY bin ORDER BY bin",
+            (BUCKET_MIN, BUCKET_MIN, iso_at(date, wlo * 60), iso_at(date, whi * 60))).fetchall()
+    return wd, [{"weekday": wd, "minute_of_day": r["bin"],
+                 "wait_min": round(r["w"], 1) if r["w"] is not None else None,
+                 "queue": round(r["q"], 1) if r["q"] is not None else None, "n_days": 1} for r in rows]
+
+
 @router.get("/heatmap")
 def heatmap(weeks: int = Query(4, ge=1, le=12), meal: str = MealQ()):
     sm = _stored(meal)
+    today_wd, live = _today_cells(meal)
     con = connect_ro()
     if con is None:
+        if live:
+            return {"state": "ok", "basis": "recent", "weeks": weeks, "days": 1, "meal": meal, "bucket_min": BUCKET_MIN,
+                    "window": _window(meal), "golden_wait": GOLDEN_WAIT, "source": FEED_SOURCE, "live_today": True, "cells": live}
         return _no(NO_DB, cells=[], window=_window(meal), meal=meal)
     with closing(con):
-        rows = con.execute(
+        rows = con.execute(                                   # 오늘 요일 행은 집계에서 뺀다 — 그 행은 live 가 채운다(09-18)
             "SELECT b.weekday, b.bin, AVG(b.avg_wait) w, AVG(b.avg_queue) q, COUNT(DISTINCT b.date) d "
             "FROM lunch_bins b JOIN lunch_days l ON l.date = b.date AND l.meal = b.meal "
-            "WHERE l.source = ? AND b.meal = ? AND b.date >= ? GROUP BY b.weekday, b.bin ORDER BY b.weekday, b.bin",
-            (FEED_SOURCE, sm, _since(weeks))).fetchall()
+            "WHERE l.source = ? AND b.meal = ? AND b.date >= ? AND b.weekday != ? GROUP BY b.weekday, b.bin ORDER BY b.weekday, b.bin",
+            (FEED_SOURCE, sm, _since(weeks), today_wd)).fetchall()
         days = con.execute("SELECT COUNT(*) FROM lunch_days WHERE source = ? AND meal = ? AND date >= ?",
                            (FEED_SOURCE, sm, _since(weeks))).fetchone()[0]
-    if not rows:
+    cells = [{"weekday": r["weekday"], "minute_of_day": r["bin"],
+              "wait_min": round(r["w"], 1) if r["w"] is not None else None,
+              "queue": round(r["q"], 1) if r["q"] is not None else None, "n_days": r["d"]} for r in rows] + live
+    if not cells:
         return _no("집계된 날이 없다", cells=[], window=_window(meal), meal=meal, days=0)
     return {"state": "ok", "basis": "weekday" if days >= 5 else "recent", "weeks": weeks, "days": days, "meal": meal,
             "bucket_min": BUCKET_MIN, "window": _window(meal),
-            "golden_wait": GOLDEN_WAIT, "source": FEED_SOURCE,
-            "cells": [{"weekday": r["weekday"], "minute_of_day": r["bin"],
-                       "wait_min": round(r["w"], 1) if r["w"] is not None else None,
-                       "queue": round(r["q"], 1) if r["q"] is not None else None, "n_days": r["d"]} for r in rows]}
+            "golden_wait": GOLDEN_WAIT, "source": FEED_SOURCE, "live_today": bool(live), "cells": cells}
 
 
 # ---- 2. 하루 -----------------------------------------------------------------------------

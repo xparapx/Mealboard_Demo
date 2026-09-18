@@ -1556,7 +1556,7 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v37&quot;;   // 09-18: 히트맵 '지금' 타일 점멸 + 추이 막대 툴팁
+const CACHE = &quot;mealboard-v38&quot;;   // 09-18: 히트맵 오늘 행 실황(5분) + 리드 문구 정리
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
@@ -4366,28 +4366,53 @@ def _day(date, meal):
 
 # ---- 1. 요일×시각 히트맵 -----------------------------------------------------------------
 
+def _today_cells(meal):
+    &quot;&quot;&quot;오늘 그 끼니 창을 queue.db 에서 BUCKET_MIN 빈으로 즉석 집계 — 히트맵 '오늘 행'(실황, 09-18 사용자 결정).
+    오늘 요일 행은 지난주 같은 요일의 평균이 아니라 오늘 지나간 시간만 채운다(아직 안 온 시간대는 빈칸)&quot;&quot;&quot;
+    date = _today()
+    wd = weekday_of(date)
+    if not 1 &lt;= wd &lt;= 5:                                      # 화면은 월~금 행뿐
+        return wd, []
+    wlo, whi = _bounds(meal)
+    con = connect_ro(DB_PATH, &quot;samples&quot;)
+    if con is None:
+        return wd, []
+    with closing(con):
+        rows = con.execute(
+            &quot;SELECT (CAST(strftime('%H', ts) AS INTEGER) * 60 + CAST(strftime('%M', ts) AS INTEGER)) / ? * ? bin, &quot;
+            &quot;AVG(wait_min) w, AVG(queue_len) q FROM samples WHERE ts &gt;= ? AND ts &lt; ? GROUP BY bin ORDER BY bin&quot;,
+            (BUCKET_MIN, BUCKET_MIN, iso_at(date, wlo * 60), iso_at(date, whi * 60))).fetchall()
+    return wd, [{&quot;weekday&quot;: wd, &quot;minute_of_day&quot;: r[&quot;bin&quot;],
+                 &quot;wait_min&quot;: round(r[&quot;w&quot;], 1) if r[&quot;w&quot;] is not None else None,
+                 &quot;queue&quot;: round(r[&quot;q&quot;], 1) if r[&quot;q&quot;] is not None else None, &quot;n_days&quot;: 1} for r in rows]
+
+
 @router.get(&quot;/heatmap&quot;)
 def heatmap(weeks: int = Query(4, ge=1, le=12), meal: str = MealQ()):
     sm = _stored(meal)
+    today_wd, live = _today_cells(meal)
     con = connect_ro()
     if con is None:
+        if live:
+            return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: &quot;recent&quot;, &quot;weeks&quot;: weeks, &quot;days&quot;: 1, &quot;meal&quot;: meal, &quot;bucket_min&quot;: BUCKET_MIN,
+                    &quot;window&quot;: _window(meal), &quot;golden_wait&quot;: GOLDEN_WAIT, &quot;source&quot;: FEED_SOURCE, &quot;live_today&quot;: True, &quot;cells&quot;: live}
         return _no(NO_DB, cells=[], window=_window(meal), meal=meal)
     with closing(con):
-        rows = con.execute(
+        rows = con.execute(                                   # 오늘 요일 행은 집계에서 뺀다 — 그 행은 live 가 채운다(09-18)
             &quot;SELECT b.weekday, b.bin, AVG(b.avg_wait) w, AVG(b.avg_queue) q, COUNT(DISTINCT b.date) d &quot;
             &quot;FROM lunch_bins b JOIN lunch_days l ON l.date = b.date AND l.meal = b.meal &quot;
-            &quot;WHERE l.source = ? AND b.meal = ? AND b.date &gt;= ? GROUP BY b.weekday, b.bin ORDER BY b.weekday, b.bin&quot;,
-            (FEED_SOURCE, sm, _since(weeks))).fetchall()
+            &quot;WHERE l.source = ? AND b.meal = ? AND b.date &gt;= ? AND b.weekday != ? GROUP BY b.weekday, b.bin ORDER BY b.weekday, b.bin&quot;,
+            (FEED_SOURCE, sm, _since(weeks), today_wd)).fetchall()
         days = con.execute(&quot;SELECT COUNT(*) FROM lunch_days WHERE source = ? AND meal = ? AND date &gt;= ?&quot;,
                            (FEED_SOURCE, sm, _since(weeks))).fetchone()[0]
-    if not rows:
+    cells = [{&quot;weekday&quot;: r[&quot;weekday&quot;], &quot;minute_of_day&quot;: r[&quot;bin&quot;],
+              &quot;wait_min&quot;: round(r[&quot;w&quot;], 1) if r[&quot;w&quot;] is not None else None,
+              &quot;queue&quot;: round(r[&quot;q&quot;], 1) if r[&quot;q&quot;] is not None else None, &quot;n_days&quot;: r[&quot;d&quot;]} for r in rows] + live
+    if not cells:
         return _no(&quot;집계된 날이 없다&quot;, cells=[], window=_window(meal), meal=meal, days=0)
     return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: &quot;weekday&quot; if days &gt;= 5 else &quot;recent&quot;, &quot;weeks&quot;: weeks, &quot;days&quot;: days, &quot;meal&quot;: meal,
             &quot;bucket_min&quot;: BUCKET_MIN, &quot;window&quot;: _window(meal),
-            &quot;golden_wait&quot;: GOLDEN_WAIT, &quot;source&quot;: FEED_SOURCE,
-            &quot;cells&quot;: [{&quot;weekday&quot;: r[&quot;weekday&quot;], &quot;minute_of_day&quot;: r[&quot;bin&quot;],
-                       &quot;wait_min&quot;: round(r[&quot;w&quot;], 1) if r[&quot;w&quot;] is not None else None,
-                       &quot;queue&quot;: round(r[&quot;q&quot;], 1) if r[&quot;q&quot;] is not None else None, &quot;n_days&quot;: r[&quot;d&quot;]} for r in rows]}
+            &quot;golden_wait&quot;: GOLDEN_WAIT, &quot;source&quot;: FEED_SOURCE, &quot;live_today&quot;: bool(live), &quot;cells&quot;: cells}
 
 
 # ---- 2. 하루 -----------------------------------------------------------------------------
@@ -5237,7 +5262,7 @@ export const why = r =&gt; !r || /reports\.db/.test(r) ? null : /insights\.db/.t
 const DESK_MQ = matchMedia(&quot;(min-width: 900px)&quot;);
 export const desktop = () =&gt; DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = &quot;v37&quot;;                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = &quot;v38&quot;;                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {

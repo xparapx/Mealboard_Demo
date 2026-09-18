@@ -233,11 +233,12 @@ function renderHeat(d) {                      // 현재 끼니 하나만 그린�
   heatLeadDefault();
   $("#heatgolden").textContent = `${golden}분 이하 · 황금`;
   const step = +el.dataset.step || 5;
-  $("#heatfoot").textContent = (d.basis === "weekday" ? `같은 요일 최근 ${d.weeks}주` : `최근 ${d.days}일`) + ` · ${step}분 단위 · 어두울수록 오래 기다렸습니다`;
+  $("#heatfoot").textContent = (d.live_today ? "오늘 행은 실시간 · 다른 요일은 " : "")
+    + (d.basis === "weekday" ? `같은 요일 최근 ${d.weeks}주` : `최근 ${d.days}일`) + ` · ${step}분 단위 · 어두울수록 오래 기다렸습니다`;
   markHeatNow();
 }
-function heatLeadDefault() {                  // 기본 리드에 현재 끼니를 함께(09-16 사용자 요청) — 셀을 누르면 그 셀 문장으로 덮인다
-  $("#heatlead").innerHTML = `지금은 <b>${MEAL_KO[defaultMeal()]}</b> 시간대 · 셀을 누르면 그 시각의 평소 대기를 읽습니다`;
+function heatLeadDefault() {                  // 기본 리드(09-18: '지금은 ○○ 시간대' 문구 제거 — 끼니는 자동 표시라 군더더기) — 셀을 누르면 그 셀 문장으로 덮인다
+  $("#heatlead").textContent = "셀을 누르면 그 시각의 평소 대기를 읽습니다";
 }
 function heatClick(e) {                       // 셀 수백 개에 리스너를 달지 않고 두 격자에 한 번씩만 위임
   const b = e.target.closest(".c[data-min]"); if (!b) return;
@@ -304,13 +305,15 @@ function followMeal() {                      // 끼니 경계를 넘으면(14시
 }
 
 let lastFast = 0;
-async function fastInsights() {              // 오늘 즉석 계산(day·quality) — 5분, 두 끼니를 함께 받아 캐시
-  lastFast = Date.now();
-  const [dl, dd, ql, qd] = await Promise.all([
+async function fastInsights() {              // 오늘 즉석 계산(day·quality·히트맵) — 5분, 두 끼니를 함께 받아 캐시.
+  lastFast = Date.now();                     // 히트맵은 09-18 부터 '오늘 행 실황' 이라 30분 slow 에서 이리로 — 급식 중에 타일이 차오른다
+  const [dl, dd, ql, qd, hl, hd] = await Promise.all([
     jSoft("/api/insight/day?meal=lunch"), jSoft("/api/insight/day?meal=dinner"),
-    jSoft("/api/insight/quality?meal=lunch"), jSoft("/api/insight/quality?meal=dinner")]);
+    jSoft("/api/insight/quality?meal=lunch"), jSoft("/api/insight/quality?meal=dinner"),
+    jSoft("/api/insight/heatmap?weeks=4&meal=lunch"), jSoft("/api/insight/heatmap?weeks=4&meal=dinner")]);
   INS.lunch.day = dl; INS.dinner.day = dd; INS.lunch.quality = ql; INS.dinner.quality = qd;
-  showCard("golden"); showCard("bottle"); showCard("quality");
+  INS.lunch.heat = hl; INS.dinner.heat = hd;
+  showCard("golden"); showCard("bottle"); showCard("quality"); showCard("heat");
 }
 
 export const screen = {
@@ -331,12 +334,11 @@ export const screen = {
     if (Date.now() - lastFast >= 5 * 60000) fastInsights();
     await live;
   },
-  async slow() {                              // 집계에서 오는 카드 — core 가 30분마다, 두 끼니를 함께
-    const [hl, hd, fl, fd] = await Promise.all([
-      jSoft("/api/insight/heatmap?weeks=4&meal=lunch"), jSoft("/api/insight/heatmap?weeks=4&meal=dinner"),
+  async slow() {                              // 집계에서 오는 카드 — core 가 30분마다, 두 끼니를 함께 (히트맵은 09-18 부터 fastInsights 5분)
+    const [fl, fd] = await Promise.all([
       jSoft("/api/insight/forecast?meal=lunch"), jSoft("/api/insight/forecast?meal=dinner")]);
-    INS.lunch.heat = hl; INS.dinner.heat = hd; INS.lunch.forecast = fl; INS.dinner.forecast = fd;
-    showCard("heat"); showCard("forecast");
+    INS.lunch.forecast = fl; INS.dinner.forecast = fd;
+    showCard("forecast");
   },
   fail() { S.last = null; renderStatus({ state: "no_data" }); showTrend(false); },   // 서버에 닿지 못하면 '정보 없음' — 옛 곡선도 남기지 않는다
   render(cardId, data) { RENDER[cardId]?.(data); },
