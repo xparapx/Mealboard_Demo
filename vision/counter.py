@@ -175,6 +175,14 @@ def main():
             fx, fy = foot_of_bbox(*box)
             u, v = fx / img_w, fy / img_h
             in_roi = zones.in_roi(u, v)
+            # 발 잘림 보정(09-21 수동 실측 3차로 확정): 카메라 가까이 서면 bbox 가 프레임 하단에 잘려 발끝이 화면 맨 아래(v≈1)로 잡히는데,
+            # ROI 아래변(=λ선)은 부호 변화를 위해 경계에서 띄워야 하므로 이 인원이 전부 ROI 밖으로 샌다(줄 3~4명인데 L 0~1).
+            # 잘린 트랙은 발끝을 λ선 바로 안쪽으로 투영해 멤버십만 다시 판정한다 — λ 통과 판정은 원래 좌표 그대로.
+            if not in_roi and zones.counter and fy >= img_h - 3:
+                (ax, ay), (bx, by) = zones.counter.a, zones.counter.b
+                if min(ax, bx) - zones.buffer <= fx <= max(ax, bx) + zones.buffer:
+                    ly = ay + (by - ay) * ((fx - ax) / (bx - ax)) if bx != ax else ay
+                    in_roi = zones.in_roi(u, max(0.0, (ly - 2) / img_h))
             fl = zones.floor(u, v)
             if fl:
                 pts.append({"x": fl[0], "y": fl[1]})
