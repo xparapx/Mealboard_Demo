@@ -46,6 +46,26 @@ function proj(h, u, v) {
 }
 
 /* ---------------- 선택 대상 ---------------- */
+function lamLine(roi) {
+  /* λ 측정선의 정규화 끝점 — vision/zones.lambda_line 과 같은 계산(어긋나면 편집기 그림과 실제 판정이 어긋난다) */
+  const P = roi.polygon, [i, j] = roi.lambda_edge;
+  let a = P[i].slice(), b = P[j].slice();
+  const inset = roi.lambda_inset || 0, scale = roi.lambda_scale || 1;
+  if (inset) {
+    const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1;
+    let nx = -dy / L, ny = dx / L;
+    const cx = P.reduce((s, p) => s + p[0], 0) / P.length, cy = P.reduce((s, p) => s + p[1], 0) / P.length;
+    const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+    if ((cx - mx) * nx + (cy - my) * ny < 0) { nx = -nx; ny = -ny; }
+    a = [a[0] + nx * inset, a[1] + ny * inset]; b = [b[0] + nx * inset, b[1] + ny * inset];
+  }
+  if (scale !== 1) {
+    const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+    a = [mx + (a[0] - mx) * scale, my + (a[1] - my) * scale]; b = [mx + (b[0] - mx) * scale, my + (b[1] - my) * scale];
+  }
+  return [a, b];
+}
+
 function target() {
   if (!Z.doc || !Z.sel) return null;
   if (Z.sel.kind === "zone") return Z.doc.zones[Z.sel.i] || null;
@@ -96,7 +116,14 @@ function draw() {
         const ha = S[Z.hover], hb = S[(Z.hover + 1) % S.length];
         g.save(); g.strokeStyle = PAPER; g.lineWidth = 7; g.globalAlpha = .9; g.setLineDash([10, 6]); g.beginPath(); g.moveTo(...ha); g.lineTo(...hb); g.stroke(); g.restore();
       }
-      const [i, j] = roi.lambda_edge, a = S[i], b = S[j];
+      // λ 측정선(09-21): 지정 변에서 안쪽으로 평행 이동(lambda_inset)·길이 조절(lambda_scale) — vision/zones.lambda_line 과 같은 기하.
+      // 지정 변 자체는 가는 흰 파선으로 남겨 '어느 변에 묶였는지' 보이게 한다
+      const [na, nb] = lamLine(roi), a = M.toS(...na), b = M.toS(...nb);
+      if (roi.lambda_inset) {
+        const ea = S[roi.lambda_edge[0]], eb = S[roi.lambda_edge[1]];
+        g.save(); g.strokeStyle = PAPER; g.globalAlpha = .4; g.lineWidth = 1.5; g.setLineDash([4, 5]);
+        g.beginPath(); g.moveTo(...ea); g.lineTo(...eb); g.stroke(); g.restore();
+      }
       const band = (Z.doc.buffer_px ?? 20) * w / (D.lastFrame?.()?.img_w || IMG_W);
       const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1;
       const nx = -dy / L * roi.out_dir, ny = dx / L * roi.out_dir;                 // out_dir=1: i→j 의 왼쪽이 출구(단위 법선)
@@ -159,7 +186,12 @@ function onDown(e) {
   if (Z.place === "lambda" && Z.doc.roi && Z.mode === "image") {
     const P = Z.doc.roi.polygon; let best = null;
     P.forEach((p, i) => { const q = P[(i + 1) % P.length], a = M.toS(...p), b = M.toS(...q), d = segDist(sx, sy, ...a, ...b); if (d < 20 && (!best || d < best.d)) best = { i, d }; });
-    if (best) { Z.doc.roi.lambda_edge = [best.i, (best.i + 1) % P.length]; Z.place = null; Z.hover = null; dirty(); fields(); D.toast("λ 변을 정했습니다 — 화살표가 배식대 쪽이 아니면 '출구 방향 뒤집기'"); }
+    if (best) {
+      Z.doc.roi.lambda_edge = [best.i, (best.i + 1) % P.length];
+      Z.doc.roi.lambda_inset ??= 0.04;                            // 09-21: 측정선은 변에서 안쪽으로 자동 생성(사용자 설계) — 경계에 붙은 변도 안전
+      Z.doc.roi.lambda_scale ??= 1;
+      Z.place = null; Z.hover = null; dirty(); fields(); D.toast("λ 변을 정했습니다 — 측정선은 안쪽에 생깁니다. 화살표가 배식대 쪽이 아니면 '출구 방향 뒤집기'");
+    }
     draw(); return;
   }
   if (Z.place?.calib != null && Z.mode === "image") {
@@ -304,7 +336,9 @@ function fields() {
     el.innerHTML = `<div class="zrow"><button type="button" class="pill small ghost" data-zv="add">꼭짓점 추가</button><button type="button" class="pill small ghost" data-zv="del">꼭짓점 삭제</button>
       <button type="button" class="pill small ghost" data-zlambda="1" aria-pressed="${Z.place === "lambda"}">λ 변 선택</button><button type="button" class="pill small ghost" data-zflip="1">출구 방향 뒤집기</button>
       <button type="button" class="pill small danger" data-zdel="roi">ROI 삭제</button></div>
-      <div class="note">ROI = 줄 서는 바닥 · λ 변 = 배식대와 맞닿은 변(학생이 넘어가면 배식 1명) · 화살표와 빗금 띠가 배식대 쪽을 가리켜야 합니다 · 완충 ${Z.doc.buffer_px ?? 20}px · 꼭짓점 ${t.polygon.length}</div>`;
+      <div class="zrow"><label>측정선 안쪽 이동 <input type="range" id="zlinset" min="0" max="0.15" step="0.005" value="${t.lambda_inset ?? 0}"><span class="note" id="zlinsetv">${Math.round((t.lambda_inset ?? 0) * 100)}%</span></label>
+      <label>측정선 길이 <input type="range" id="zlscale" min="0.3" max="1" step="0.05" value="${t.lambda_scale ?? 1}"><span class="note" id="zlscalev">${Math.round((t.lambda_scale ?? 1) * 100)}%</span></label></div>
+      <div class="note">ROI = 줄 서는 바닥(화면 바닥까지 붙여도 됩니다) · λ 변 = 배식대와 맞닿은 변 — 실제 측정선은 그 변에서 안쪽으로 평행 생성(화면 경계 위 선은 통과를 못 잰다, 09-21) · 화살표와 빗금 띠가 배식대 쪽 · 완충 ${Z.doc.buffer_px ?? 20}px · 꼭짓점 ${t.polygon.length}</div>`;
   else if (Z.sel?.kind === "calib") {
     const P = presets(), done = Z.calib.filter(p => p?.img).length;
     el.innerHTML = `<div class="note">바닥의 네 지점을 찍고(ROI 꼭짓점을 그대로 써도 됩니다) 각 지점의 실제 위치를 m 로 적습니다 — x 는 창가 통로 벽에서, y 는 배식구 벽에서 잰 거리. 캔버스의 점을 누르면 그 행이 열립니다</div>`
@@ -405,6 +439,8 @@ export function mount(deps) {
     if (t.id === "zid" && z) { z.id = t.value.trim(); dirty(); chips(); }
     else if (t.id === "zname" && z) { z.name = t.value; dirty(); chips(); }
     else if (t.dataset.zm) { const [k, i] = t.dataset.zm.split(":").map(Number); Z.calib[k].m[i] = Number(t.value) || 0; draw(); }   // 캔버스 라벨이 곧바로 따라온다
+    else if (t.id === "zlinset" && Z.doc.roi) { Z.doc.roi.lambda_inset = Number(t.value); $("#zlinsetv").textContent = Math.round(t.value * 100) + "%"; dirty(); draw(); }
+    else if (t.id === "zlscale" && Z.doc.roi) { Z.doc.roi.lambda_scale = Number(t.value); $("#zlscalev").textContent = Math.round(t.value * 100) + "%"; dirty(); draw(); }
   });
   $("#zfields").addEventListener("change", e => {
     const t = e.target; if (!t.dataset.zpre || t.value === "") return;

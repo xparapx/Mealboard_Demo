@@ -22,6 +22,7 @@ KEYS = {"version", "updated_at", "updated_by", "note", "floor", "camera",
         "calib_points", "image_to_floor", "buffer_px", "roi", "zones"}
 ZONE_KEYS = {"id", "name", "polygon"}
 ROI_KEYS = {"polygon", "lambda_edge", "out_dir"}
+ROI_OPT_KEYS = {"lambda_inset", "lambda_scale"}   # 09-21: λ 측정선을 지정 변에서 안쪽으로 평행 이동·길이 조절(사용자 설계)
 
 
 # ---- 읽기 -----------------------------------------------------------------------
@@ -126,9 +127,14 @@ def validate_zones(doc):
 
     roi = doc.get("roi")
     if roi is not None:
-        if not (isinstance(roi, dict) and set(roi) == ROI_KEYS):
-            e.append("roi 는 polygon·lambda_edge·out_dir 세 키")
+        if not (isinstance(roi, dict) and ROI_KEYS <= set(roi) and set(roi) <= ROI_KEYS | ROI_OPT_KEYS):
+            e.append("roi 는 polygon·lambda_edge·out_dir (+선택 lambda_inset·lambda_scale)")
         else:
+            li, ls = roi.get("lambda_inset"), roi.get("lambda_scale")
+            if li is not None and not (_num(li) and 0 <= li <= 0.2):
+                e.append("roi.lambda_inset 는 0~0.2 (정규화 — 변에서 안쪽으로 평행 이동)")
+            if ls is not None and not (_num(ls) and 0.2 <= ls <= 1):
+                e.append("roi.lambda_scale 는 0.2~1 (중점 기준 길이 배율)")
             pe = _polygon_errors(roi["polygon"])
             e += [f"roi.polygon: {m}" for m in pe]
             n = len(roi["polygon"]) if not pe else 0
@@ -223,6 +229,33 @@ def point_in_polygon(x, y, poly):
 
 def _xy(p):
     return (p["x"], p["y"]) if isinstance(p, dict) else (p[0], p[1])
+
+
+def lambda_line(roi):
+    """λ 측정선의 정규화 끝점 (a, b) — 09-21 사용자 설계: lambda_edge 로 지정한 변을 폴리곤 안쪽으로 lambda_inset 만큼
+    평행 이동하고 lambda_scale 로 중점 기준 길이를 줄인다. 둘 다 없으면 변 그대로(기존 동작).
+    ROI 아래변을 화면 경계(y=1)에 붙여도 측정선은 안쪽이라 발끝의 부호 변화가 산다(경계 위 선은 통과가 불가능 — 09-21 λ 정지 사고).
+    out_dir 의 좌/우 의미는 i→j 방향 기준이라 평행 이동에 불변이다."""
+    poly = roi["polygon"]
+    i, j = roi["lambda_edge"]
+    (ax, ay), (bx, by) = poly[i], poly[j]
+    inset = roi.get("lambda_inset") or 0
+    scale = roi.get("lambda_scale") or 1
+    if inset:
+        dx, dy = bx - ax, by - ay
+        ln = math.hypot(dx, dy) or 1.0
+        nx, ny = -dy / ln, dx / ln                               # 변에 수직인 단위벡터 — 무게중심 쪽으로 향하게 뒤집는다
+        cx = sum(p[0] for p in poly) / len(poly)
+        cy = sum(p[1] for p in poly) / len(poly)
+        mx, my = (ax + bx) / 2, (ay + by) / 2
+        if (cx - mx) * nx + (cy - my) * ny < 0:
+            nx, ny = -nx, -ny
+        ax, ay, bx, by = ax + nx * inset, ay + ny * inset, bx + nx * inset, by + ny * inset
+    if scale != 1:
+        mx, my = (ax + bx) / 2, (ay + by) / 2
+        ax, ay = mx + (ax - mx) * scale, my + (ay - my) * scale
+        bx, by = mx + (bx - mx) * scale, my + (by - my) * scale
+    return (ax, ay), (bx, by)
 
 
 def zone_of(x, y, zones):

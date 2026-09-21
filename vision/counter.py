@@ -30,7 +30,7 @@ from vision.record import write_positions, write_sample
 from vision.schedule import should_record
 from vision.source import open_source, parse_size
 from vision.waittime import estimate_wait
-from vision.zones import LOCAL_NAME, load_zones, point_in_polygon, project, zone_of
+from vision.zones import LOCAL_NAME, lambda_line, load_zones, point_in_polygon, project, zone_of
 
 SAMPLE_SEC = 10         # 표본 주기 (mock 의 TICK 과 같다)
 POS_SEC = 5             # positions.json 갱신 주기 (09-16: 평면도 마커를 화면 5초 폴링에 맞춰 — DB 표본보다 잦아도 파일 하나 덮어쓰기뿐)
@@ -79,9 +79,8 @@ class Zones:
         self.roi = roi
         self.counter = None
         if roi:
-            i, j = roi["lambda_edge"]
-            a, b = self.px(roi["polygon"][i]), self.px(roi["polygon"][j])
-            self.counter = LineCounter(a, b, roi["out_dir"], self.buffer)
+            la, lb = lambda_line(roi)                             # 09-21: 지정 변에서 안쪽으로 평행 이동한 측정선(inset·scale 없으면 변 그대로)
+            self.counter = LineCounter(self.px(la), self.px(lb), roi["out_dir"], self.buffer)
         print(f"구역 정의 읽음  zones={[z['id'] for z in self.zones]}  roi={'있음' if roi else '없음'}  "
               f"호모그래피={'있음' if self.h_img2floor else '없음(바닥 좌표·구역·positions 건너뜀)'}")
         return True

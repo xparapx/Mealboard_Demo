@@ -1556,7 +1556,7 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v38&quot;;   // 09-18: 히트맵 오늘 행 실황(5분) + 리드 문구 정리
+const CACHE = &quot;mealboard-v39&quot;;   // 09-21: λ 측정선 안쪽 평행 생성(lambda_inset·scale) — 편집기·vision
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
@@ -3247,6 +3247,7 @@ KEYS = {&quot;version&quot;, &quot;updated_at&quot;, &quot;updated_by&quot;, &qu
         &quot;calib_points&quot;, &quot;image_to_floor&quot;, &quot;buffer_px&quot;, &quot;roi&quot;, &quot;zones&quot;}
 ZONE_KEYS = {&quot;id&quot;, &quot;name&quot;, &quot;polygon&quot;}
 ROI_KEYS = {&quot;polygon&quot;, &quot;lambda_edge&quot;, &quot;out_dir&quot;}
+ROI_OPT_KEYS = {&quot;lambda_inset&quot;, &quot;lambda_scale&quot;}   # 09-21: λ 측정선을 지정 변에서 안쪽으로 평행 이동·길이 조절(사용자 설계)
 
 
 # ---- 읽기 -----------------------------------------------------------------------
@@ -3351,9 +3352,14 @@ def validate_zones(doc):
 
     roi = doc.get(&quot;roi&quot;)
     if roi is not None:
-        if not (isinstance(roi, dict) and set(roi) == ROI_KEYS):
-            e.append(&quot;roi 는 polygon·lambda_edge·out_dir 세 키&quot;)
+        if not (isinstance(roi, dict) and ROI_KEYS &lt;= set(roi) and set(roi) &lt;= ROI_KEYS | ROI_OPT_KEYS):
+            e.append(&quot;roi 는 polygon·lambda_edge·out_dir (+선택 lambda_inset·lambda_scale)&quot;)
         else:
+            li, ls = roi.get(&quot;lambda_inset&quot;), roi.get(&quot;lambda_scale&quot;)
+            if li is not None and not (_num(li) and 0 &lt;= li &lt;= 0.2):
+                e.append(&quot;roi.lambda_inset 는 0~0.2 (정규화 — 변에서 안쪽으로 평행 이동)&quot;)
+            if ls is not None and not (_num(ls) and 0.2 &lt;= ls &lt;= 1):
+                e.append(&quot;roi.lambda_scale 는 0.2~1 (중점 기준 길이 배율)&quot;)
             pe = _polygon_errors(roi[&quot;polygon&quot;])
             e += [f&quot;roi.polygon: {m}&quot; for m in pe]
             n = len(roi[&quot;polygon&quot;]) if not pe else 0
@@ -3448,6 +3454,33 @@ def point_in_polygon(x, y, poly):
 
 def _xy(p):
     return (p[&quot;x&quot;], p[&quot;y&quot;]) if isinstance(p, dict) else (p[0], p[1])
+
+
+def lambda_line(roi):
+    &quot;&quot;&quot;λ 측정선의 정규화 끝점 (a, b) — 09-21 사용자 설계: lambda_edge 로 지정한 변을 폴리곤 안쪽으로 lambda_inset 만큼
+    평행 이동하고 lambda_scale 로 중점 기준 길이를 줄인다. 둘 다 없으면 변 그대로(기존 동작).
+    ROI 아래변을 화면 경계(y=1)에 붙여도 측정선은 안쪽이라 발끝의 부호 변화가 산다(경계 위 선은 통과가 불가능 — 09-21 λ 정지 사고).
+    out_dir 의 좌/우 의미는 i→j 방향 기준이라 평행 이동에 불변이다.&quot;&quot;&quot;
+    poly = roi[&quot;polygon&quot;]
+    i, j = roi[&quot;lambda_edge&quot;]
+    (ax, ay), (bx, by) = poly[i], poly[j]
+    inset = roi.get(&quot;lambda_inset&quot;) or 0
+    scale = roi.get(&quot;lambda_scale&quot;) or 1
+    if inset:
+        dx, dy = bx - ax, by - ay
+        ln = math.hypot(dx, dy) or 1.0
+        nx, ny = -dy / ln, dx / ln                               # 변에 수직인 단위벡터 — 무게중심 쪽으로 향하게 뒤집는다
+        cx = sum(p[0] for p in poly) / len(poly)
+        cy = sum(p[1] for p in poly) / len(poly)
+        mx, my = (ax + bx) / 2, (ay + by) / 2
+        if (cx - mx) * nx + (cy - my) * ny &lt; 0:
+            nx, ny = -nx, -ny
+        ax, ay, bx, by = ax + nx * inset, ay + ny * inset, bx + nx * inset, by + ny * inset
+    if scale != 1:
+        mx, my = (ax + bx) / 2, (ay + by) / 2
+        ax, ay = mx + (ax - mx) * scale, my + (ay - my) * scale
+        bx, by = mx + (bx - mx) * scale, my + (by - my) * scale
+    return (ax, ay), (bx, by)
 
 
 def zone_of(x, y, zones):
@@ -4811,7 +4844,7 @@ from pathlib import Path
 import pytest
 
 from vision.zones import (count_by_zone, homography_from_4, invert, is_simple, load_zones, point_in_polygon,
-                          polygon_area_m2, project, validate_zones, zone_of)
+                          lambda_line, polygon_area_m2, project, validate_zones, zone_of)
 
 TEMPLATE = Path(__file__).resolve().parents[1] / &quot;data&quot; / &quot;zones.json&quot;
 SQUARE = [[0, 0], [1, 0], [1, 1], [0, 1]]
@@ -4951,7 +4984,38 @@ def test_육각_타일_번호와_셀별_인원수():
     cx, cy = hex_center(GRID_COLS + 1)                                                   # 행 1 열 1 의 중심은 행 0 열 1 보다 반 칸 오른쪽
     assert abs(cx - (hex_center(1)[0] + 0.5 / GRID_COLS)) &lt; 1e-9 and cy &gt; hex_center(1)[1]
     c = count_by_cell([{&quot;x&quot;: 0.03, &quot;y&quot;: 0.02}, {&quot;x&quot;: 0.05, &quot;y&quot;: 0.03}, (0.9, 0.9)])   # 타일이 작아져 첫 두 점은 같은 타일 안에서 골랐다
-    assert c == {0: 2, cell_of(0.9, 0.9): 1} and sum(c.values()) == 3</code></pre>
+    assert c == {0: 2, cell_of(0.9, 0.9): 1} and sum(c.values()) == 3
+
+
+# ---- λ 측정선 파생 (09-21: 지정 변에서 안쪽으로 평행 이동·길이 조절) ----------------------
+
+def _roi(**extra):
+    return {&quot;polygon&quot;: SQUARE, &quot;lambda_edge&quot;: [2, 3], &quot;out_dir&quot;: 1, **extra}   # 아래변 y=1 (화면 경계에 붙은 상황)
+
+
+def test_람다선_기본은_변_그대로():
+    a, b = lambda_line(_roi())
+    assert a == (1, 1) and b == (0, 1)
+
+
+def test_람다선_inset_은_폴리곤_안쪽으로():
+    (ax, ay), (bx, by) = lambda_line(_roi(lambda_inset=0.05))
+    assert ay == pytest.approx(0.95) and by == pytest.approx(0.95)   # y=1 변에서 위(안쪽)로
+    assert ax == pytest.approx(1) and bx == pytest.approx(0)
+
+
+def test_람다선_scale_은_중점_기준으로_줄인다():
+    (ax, _), (bx, _) = lambda_line(_roi(lambda_scale=0.5))
+    assert ax == pytest.approx(0.75) and bx == pytest.approx(0.25)
+
+
+def test_검증_선택_키_범위(doc):
+    doc[&quot;roi&quot;] = _roi(lambda_inset=0.04, lambda_scale=0.8)
+    assert validate_zones(doc) == []
+    doc[&quot;roi&quot;] = _roi(lambda_inset=0.5)
+    assert any(&quot;lambda_inset&quot; in m for m in validate_zones(doc))
+    doc[&quot;roi&quot;] = _roi(lambda_scale=0.1)
+    assert any(&quot;lambda_scale&quot; in m for m in validate_zones(doc))</code></pre>
 </figure>
 <figure class="code">
 <figcaption><span class="path">tests/test_insight_calc.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
@@ -5262,7 +5326,7 @@ export const why = r =&gt; !r || /reports\.db/.test(r) ? null : /insights\.db/.t
 const DESK_MQ = matchMedia(&quot;(min-width: 900px)&quot;);
 export const desktop = () =&gt; DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = &quot;v38&quot;;                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = &quot;v39&quot;;                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {

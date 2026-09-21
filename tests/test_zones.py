@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from vision.zones import (count_by_zone, homography_from_4, invert, is_simple, load_zones, point_in_polygon,
-                          polygon_area_m2, project, validate_zones, zone_of)
+                          lambda_line, polygon_area_m2, project, validate_zones, zone_of)
 
 TEMPLATE = Path(__file__).resolve().parents[1] / "data" / "zones.json"
 SQUARE = [[0, 0], [1, 0], [1, 1], [0, 1]]
@@ -148,3 +148,34 @@ def test_육각_타일_번호와_셀별_인원수():
     assert abs(cx - (hex_center(1)[0] + 0.5 / GRID_COLS)) < 1e-9 and cy > hex_center(1)[1]
     c = count_by_cell([{"x": 0.03, "y": 0.02}, {"x": 0.05, "y": 0.03}, (0.9, 0.9)])   # 타일이 작아져 첫 두 점은 같은 타일 안에서 골랐다
     assert c == {0: 2, cell_of(0.9, 0.9): 1} and sum(c.values()) == 3
+
+
+# ---- λ 측정선 파생 (09-21: 지정 변에서 안쪽으로 평행 이동·길이 조절) ----------------------
+
+def _roi(**extra):
+    return {"polygon": SQUARE, "lambda_edge": [2, 3], "out_dir": 1, **extra}   # 아래변 y=1 (화면 경계에 붙은 상황)
+
+
+def test_람다선_기본은_변_그대로():
+    a, b = lambda_line(_roi())
+    assert a == (1, 1) and b == (0, 1)
+
+
+def test_람다선_inset_은_폴리곤_안쪽으로():
+    (ax, ay), (bx, by) = lambda_line(_roi(lambda_inset=0.05))
+    assert ay == pytest.approx(0.95) and by == pytest.approx(0.95)   # y=1 변에서 위(안쪽)로
+    assert ax == pytest.approx(1) and bx == pytest.approx(0)
+
+
+def test_람다선_scale_은_중점_기준으로_줄인다():
+    (ax, _), (bx, _) = lambda_line(_roi(lambda_scale=0.5))
+    assert ax == pytest.approx(0.75) and bx == pytest.approx(0.25)
+
+
+def test_검증_선택_키_범위(doc):
+    doc["roi"] = _roi(lambda_inset=0.04, lambda_scale=0.8)
+    assert validate_zones(doc) == []
+    doc["roi"] = _roi(lambda_inset=0.5)
+    assert any("lambda_inset" in m for m in validate_zones(doc))
+    doc["roi"] = _roi(lambda_scale=0.1)
+    assert any("lambda_scale" in m for m in validate_zones(doc))
