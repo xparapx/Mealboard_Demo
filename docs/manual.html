@@ -1344,6 +1344,7 @@ systemctl status mealboard-api --no-pager</code></pre>
     &lt;!-- 09-16 중식/석식 분리: 히트맵은 두 끼니를 좁혀 2열로, 나머지 카드는 오른쪽 위 끼니 토글(.mealseg) --&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;heatcard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;요일 · 시각별 평소 대기&lt;/div&gt;
+      &lt;div class=&quot;mealseg&quot; id=&quot;heatseg&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;body&quot;&gt;
         &lt;div class=&quot;lead&quot; id=&quot;heatlead&quot;&gt;셀을 누르면 그 시각의 평소 대기를 읽습니다&lt;/div&gt;
         &lt;div class=&quot;heat&quot; id=&quot;heat&quot; data-meal=&quot;lunch&quot;&gt;&lt;/div&gt;
@@ -1354,6 +1355,7 @@ systemctl status mealboard-api --no-pager</code></pre>
     &lt;/section&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;goldencard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;황금 구간 · 오늘&lt;/div&gt;
+      &lt;div class=&quot;mealseg&quot; id=&quot;goldenseg&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;body&quot;&gt;
         &lt;div class=&quot;lead&quot; id=&quot;goldenlead&quot;&gt;&lt;/div&gt;
         &lt;div class=&quot;chips2&quot; id=&quot;goldenchips&quot;&gt;&lt;/div&gt;
@@ -1363,6 +1365,7 @@ systemctl status mealboard-api --no-pager</code></pre>
     &lt;/section&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;forecastcard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot; id=&quot;forecasteyebrow&quot;&gt;예보&lt;/div&gt;
+      &lt;div class=&quot;mealseg&quot; id=&quot;forecastseg&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;body&quot;&gt;
         &lt;div class=&quot;lead&quot; id=&quot;forecastlead&quot;&gt;&lt;/div&gt;
         &lt;div class=&quot;chips2&quot; id=&quot;forecastchips&quot;&gt;&lt;/div&gt;
@@ -1372,12 +1375,14 @@ systemctl status mealboard-api --no-pager</code></pre>
     &lt;/section&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;bottlecard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;병목 로그 · 오늘&lt;/div&gt;
+      &lt;div class=&quot;mealseg&quot; id=&quot;bottleseg&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;body&quot;&gt;&lt;ul class=&quot;log&quot; id=&quot;bottlelist&quot;&gt;&lt;/ul&gt;
         &lt;div class=&quot;note foot&quot;&gt;줄이 5명 이상인데 배식이 멈췄거나 평소의 절반 아래로 느려진 구간(2분 이상)&lt;/div&gt;&lt;/div&gt;
       &lt;div class=&quot;empty&quot; id=&quot;bottleempty&quot;&gt;급식 시간 데이터가 쌓이면 반영됩니다&lt;/div&gt;
     &lt;/section&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;qualitycard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;측정 품질 · 오늘&lt;/div&gt;
+      &lt;div class=&quot;mealseg&quot; id=&quot;qualityseg&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;body&quot;&gt;
         &lt;div class=&quot;well&quot; id=&quot;qualitywell&quot;&gt;&lt;/div&gt;
         &lt;div class=&quot;note foot&quot; id=&quot;qualityfoot&quot;&gt;&lt;/div&gt;
@@ -1556,7 +1561,7 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v39&quot;;   // 09-21: λ 측정선 안쪽 평행 생성(lambda_inset·scale) — 편집기·vision
+const CACHE = &quot;mealboard-v40&quot;;   // 09-21: 대기 화면 끼니 토글 복귀(자동 전환 유지)
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
@@ -5326,7 +5331,7 @@ export const why = r =&gt; !r || /reports\.db/.test(r) ? null : /insights\.db/.t
 const DESK_MQ = matchMedia(&quot;(min-width: 900px)&quot;);
 export const desktop = () =&gt; DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = &quot;v39&quot;;                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = &quot;v40&quot;;                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {

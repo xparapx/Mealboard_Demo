@@ -1,6 +1,6 @@
 /* 대기시간 화면 — 히어로(지금 줄을 서면) + 추이(최근 30분, 평소 곡선 겹침). 30초 폴링(status·history). 평소 곡선(/api/typical)은 어제까지의
    자료라 5분마다면 충분하다. 그 아래 인사이트 카드 다섯 장 — 황금·병목·품질은 5분(오늘 즉석 계산), 히트맵·예보는 30분(집계) (PLAN §3.5) */
-import { $, j, jSoft, S, esc, fit, hhmm, mm, hm, WD, minuteOfDay, canvasAuto, setState, renderFeed, MEAL_KO, defaultMeal } from "./core.js";
+import { $, j, jSoft, S, esc, fit, hhmm, mm, hm, WD, minuteOfDay, canvasAuto, setState, renderFeed, MEAL_KO, defaultMeal, mealSeg } from "./core.js";
 import { SUNSETDARK, gradient, ramp } from "./colors.js";
 
 const BUSY_MIN = 12, EASY_MIN = 0.5; // 혼잡 폴백 · 여유 절대 상한(분)
@@ -171,9 +171,11 @@ export function drawChart(rows, typ, st) {
    09-16 중식/석식 분리: 히트맵은 두 끼니 2열, 나머지 카드는 끼니 토글. 두 끼니 응답을 함께 받아 INS 에 캐시 — 토글은 재요청 없이 즉시 */
 const MAX_COLS = 18;                         // 히트맵 열 상한 — 2열이라 반으로(중식 150분이면 10분 묶음, 석식 90분이면 5분 그대로)
 const INS = { lunch: {}, dinner: {} };       // {day, quality, heat, forecast} 끼니별 캐시
-/* 09-18 사용자 결정: 대기시간 화면은 토글 없이 현재 끼니(defaultMeal: 14시 전 중식·후 석식)만 자동으로 보여준다.
-   끼니 토글(.mealseg)은 주간식단 쪽 카드(영양추이·TOP5)에만 남는다. 두 끼니를 함께 받아 캐시하는 구조는 유지(경계 전환에 재요청 없음) */
-let curMeal = "lunch";                       // 실제 초기값은 mount() 에서 defaultMeal() 로 — 최상위에서 core 를 부르면 TDZ
+/* 09-21 사용자 결정(09-18 '토글 없음' 번복): 낮에 석식 데이터를 확인할 길이 없어 끼니 토글 복귀.
+   기본값·자동 전환은 그대로 — 끼니 경계(14시·21시)에서 손대지 않은 토글만 따라온다(TOUCHED). 두 끼니 캐시라 전환에 재요청 없음 */
+const SEL = { heat: "lunch", golden: "lunch", forecast: "lunch", bottle: "lunch", quality: "lunch" };   // 실제 기본값은 mount() 의 defaultMeal() — 최상위 core 호출은 TDZ
+const TOUCHED = {};
+let lastAuto = null;
 
 function drawHeatGrid(el, d) {
   /* 한 끼니의 격자를 el 에 그린다. 성공 여부를 돌려주고, 카드 상태는 renderHeat 이 두 끼니를 합쳐 정한다 */
@@ -224,9 +226,9 @@ function markHeatNow() {
   if (b) b.setAttribute("data-now", "");
 }
 
-function renderHeat(d) {                      // 현재 끼니 하나만 그린다(09-18 개편, 2열·토글 폐기) — 픽스처 render("heatcard", json) 그대로
+function renderHeat(d) {                      // SEL.heat 끼니 하나만 그린다(단일 격자 + 토글, 09-21) — 픽스처 render("heatcard", json) 그대로
   const el = $("#heat");
-  el.dataset.meal = d?.meal || curMeal;
+  el.dataset.meal = d?.meal || SEL.heat;
   const ok = drawHeatGrid(el, d);
   if (!setState("heatcard", ok, d?.reason)) return;
   const golden = d.golden_wait ?? 3;
@@ -291,17 +293,23 @@ const RENDER = { heatcard: renderHeat, goldencard: renderGolden, forecastcard: r
 const CARD_RENDER = { heat: renderHeat, golden: renderGolden, forecast: renderForecast, bottle: renderBottle, quality: renderQuality };
 const CARD_KEY = { heat: "heat", golden: "day", forecast: "forecast", bottle: "day", quality: "quality" };
 
-function showCard(card) {                    // 현재 끼니 캐시로 다시 그린다 (경계 전환·수신 공용)
-  const d = INS[curMeal][CARD_KEY[card]];
+function showCard(card) {                    // SEL[card] 끼니의 캐시로 다시 그린다 (토글·수신 공용)
+  const d = INS[SEL[card]][CARD_KEY[card]];
   if (d) CARD_RENDER[card](d);
 }
 
-function followMeal() {                      // 끼니 경계를 넘으면(14시 → 석식, 21시 → 다음날 중식) 화면 전체가 그 끼니로 따라온다(09-18 개편)
+function setSeg(card, m) {                   // 토글 버튼 눌림 상태를 코드에서 맞춘다 (자동 전환용)
+  $(`#${card}seg`).querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.meal === m));
+}
+
+function followMeal() {                      // 끼니 경계를 넘으면(14시 → 석식, 21시 → 다음날 중식) 손대지 않은 토글이 따라온다(09-16, 09-21 복귀)
   const dm = defaultMeal();
-  if (dm === curMeal) return;
-  curMeal = dm;
-  Object.keys(CARD_RENDER).forEach(showCard);
-  heatLeadDefault();                         // 히트맵 리드의 '지금은 ○○ 시간대'도 같이
+  if (dm === lastAuto) return;
+  lastAuto = dm;
+  for (const card of Object.keys(SEL)) {
+    if (TOUCHED[card] || SEL[card] === dm) continue;
+    SEL[card] = dm; setSeg(card, dm); showCard(card);
+  }
 }
 
 let lastFast = 0;
@@ -324,7 +332,11 @@ export const screen = {
     $("#chart").addEventListener("pointerleave", hideTip);
     $("#heat").addEventListener("click", heatClick);
     $(".heatlegend i").style.background = gradient(SUNSETDARK);
-    curMeal = defaultMeal();                   // 토글 없음(09-18) — 현재 끼니 자동 추종만
+    lastAuto = defaultMeal();
+    for (const card of Object.keys(SEL)) {     // 끼니 토글(09-21 복귀) — 캐시에서 즉시 다시 그린다. 기본값은 시각(14시 이후 = 석식)
+      SEL[card] = lastAuto;
+      mealSeg($(`#${card}seg`), SEL[card], m => { SEL[card] = m; TOUCHED[card] = true; showCard(card); });
+    }
   },
   every: 30000,
   async poll() {                              // 라이브 30초 + 즉석 인사이트 5분 (같은 tick 에서 시각으로 가른다)
