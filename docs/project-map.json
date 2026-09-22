@@ -1,5 +1,9 @@
 {
  "title": "Mealboard 프로젝트 지도",
+ "embeds": [
+  { "id": "arch", "label": "아키텍처 뷰 (archify)", "file": "project-map-arch.html", "into": "ov" },
+  { "id": "flow", "label": "파이프라인 뷰 (archify)", "file": "project-map-flow.html", "into": "map" }
+ ],
  "subtitle": "급식실 대기시간·영양 대시보드 — 카메라 λ·L → Little's law → PWA · 지속 갱신(기준 2026-09-22, PLAN-2026-09 구조)",
  "overview": {
   "intro": "왼쪽에서 오른쪽으로 데이터가 흐릅니다. 모든 것은 Pi 한 대 안에서 돕니다. 축(행)마다 쓰는 파일과 시각이 다르고, 서로는 파일로만 만납니다.",
@@ -52,7 +56,7 @@
    {
     "label": "공개",
     "items": [
-     "Tailscale Funnel|443 → 8100",
+     "Cloudflare Tunnel|kjhs-meal.com → 8100",
      "학생·교사|QR → PWA"
     ]
    }

@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Mealboard 설계 맵",
+    "output": "project-map-arch.html",
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "live-path", "label": "실시간 경로", "focus": ["cam", "qdb", "api", "cf", "usr"], "note": "카메라가 10초마다 숫자만 남기고, 학생은 QR → Cloudflare Tunnel 로 30초 폴링합니다." },
+      { "id": "batch-path", "label": "배치·외부 API", "focus": ["neis", "rss", "batch", "idb", "api"], "note": "NEIS·뉴스·집계·리포트는 systemd 타이머가 급식 시간 밖에서 돌립니다." },
+      { "id": "admin-path", "label": "관리(tailnet)", "focus": ["admin", "cam"], "note": "구역 보정은 zones.local.json 파일로만 카메라 노드에 닿고, 프레임 메타는 구독 중일 때만 소켓으로 흐릅니다." }
+    ]
+  },
+  "components": [
+    { "id": "cam", "type": "backend", "label": "CAM", "sublabel": "YOLO11n+ByteTrack", "pos": [40, 110], "size": [130, 60] },
+    { "id": "qdb", "type": "database", "label": "QDB", "sublabel": "queue.db SQLite", "pos": [250, 110], "size": [130, 60] },
+    { "id": "api", "type": "backend", "label": "API", "sublabel": "FastAPI :8100", "pos": [460, 110], "size": [130, 60] },
+    { "id": "cf", "type": "cloud", "label": "CF", "sublabel": "Cloudflare Tunnel", "pos": [670, 110], "size": [130, 60] },
+    { "id": "usr", "type": "external", "label": "USR", "sublabel": "students / QR PWA", "pos": [880, 110], "size": [130, 60] },
+    { "id": "neis", "type": "external", "label": "NEIS", "sublabel": "school meal API", "pos": [40, 480], "size": [130, 60] },
+    { "id": "rss", "type": "external", "label": "RSS", "sublabel": "news feeds", "pos": [40, 620], "size": [130, 60] },
+    { "id": "batch", "type": "backend", "label": "BATCH", "sublabel": "systemd timers", "pos": [250, 545], "size": [130, 60] },
+    { "id": "idb", "type": "database", "label": "IDB", "sublabel": "insights.db +3", "pos": [460, 545], "size": [130, 60] },
+    { "id": "admin", "type": "security", "label": "ADMIN", "sublabel": "admin app :8101", "pos": [40, 300], "size": [130, 60] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Raspberry Pi 5 (school)", "wraps": ["cam", "qdb", "api", "batch", "idb", "admin"] },
+    { "kind": "security-group", "label": "tailnet / CF Access", "wraps": ["admin"] }
+  ],
+  "connections": [
+    { "id": "cam-samples", "from": "cam", "to": "qdb", "label": "10s samples", "variant": "emphasis" },
+    { "id": "api-live-read", "from": "qdb", "to": "api", "label": "SELECT", "variant": "emphasis" },
+    { "id": "api-public", "from": "api", "to": "cf", "label": "HTTP :8100", "variant": "emphasis" },
+    { "id": "usr-https", "from": "cf", "to": "usr", "label": "HTTPS poll", "variant": "emphasis" },
+    { "id": "rollup-read", "from": "qdb", "to": "batch", "label": "14:10 rollup", "fromSide": "bottom", "toSide": "top", "labelDy": 24 },
+    { "id": "neis-fetch", "from": "neis", "to": "batch", "label": "05:40 fetch" },
+    { "id": "rss-fetch", "from": "rss", "to": "batch", "label": "06:10 fetch", "variant": "dashed" },
+    { "id": "batch-write", "from": "batch", "to": "idb", "label": "aggregate" },
+    { "id": "insight-read", "from": "idb", "to": "api", "label": "read-only", "fromSide": "top", "toSide": "bottom" },
+    { "id": "zones-file", "from": "admin", "to": "cam", "label": "zones.local.json", "variant": "dashed", "labelAt": [187, 252] },
+    { "id": "meta-sock", "from": "cam", "to": "admin", "label": "meta.sock live", "variant": "security", "labelAt": [187, 212] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "실시간 경로", "items": ["카메라는 프레임을 저장하지 않고 숫자(L·λ·W)만 queue.db 에 남깁니다", "공개 주소 kjhs-meal.com 은 8100 하나만 통과합니다"] },
+    { "dot": "emerald", "title": "배치와 파일 규율", "items": ["DB 파일마다 writer 는 하나 — queue.db=카메라, insights.db=rollup, reports.db=report, admin.db=관리 앱", "집계·리포트·LLM 은 급식 시간 밖의 타이머에서만 돕니다"] },
+    { "dot": "rose", "title": "관리 경계", "items": ["관리 앱은 tailnet 8443 과 Cloudflare Access 뒤에서만 열립니다", "실사 MJPEG·메타는 구독 중에만 중계, 디스크에 남기지 않습니다"] }
+  ]
+}

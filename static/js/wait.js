@@ -24,7 +24,8 @@ function level(st) {
 function verdict(st) {
   const closed = st.feed && st.feed.source === "vision" && !st.feed.now;   // 창 밖에는 카메라 표본이 없다(09-11) — '정보 없음' 이 아니라 '급식 시간 아님'
   const easy = st.wait_min != null && st.wait_min <= EASY_MIN;             // 여유 = 절대 30초 이하(09-17)
-  return { off: closed ? "급식 시간이 아닙니다" : "정보 없음", wait: "배식 시작 대기", busy: "혼잡 · 잠시 후 추천",
+  // "배식 시작 대기" → "측정 준비 중"(09-22): 급식 중 λ 미달(통과 표본 부족)일 때 배식이 안 시작된 걸로 오해하게 했다
+  return { off: closed ? "급식 시간이 아닙니다" : "정보 없음", wait: "측정 준비 중", busy: "혼잡 · 잠시 후 추천",
            ok: easy ? "여유 · 바로 가세요" : "보통" }[level(st)];
 }
 

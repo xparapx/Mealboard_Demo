@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Mealboard 데이터 파이프라인",
+    "output": "project-map-flow.html",
+    "quality_profile": "showcase",
+    "viewBox": [1080, 640],
+    "views": [
+      { "id": "hot-path", "label": "실시간 경로", "focus": ["cam", "qdb", "api", "pwa"], "note": "10초 표본 → 30초 폴링. 급식 창 밖에는 아무 행도 쓰지 않습니다." },
+      { "id": "daily-batch", "label": "하루 배치", "focus": ["qdb", "idb", "api"], "note": "14:10 rollup 이 끼니(meal)별로 insights.db 를 채우고, 히트맵 오늘 행은 queue.db 즉석 계산입니다." },
+      { "id": "external", "label": "외부 급식·뉴스", "focus": ["neis", "meal", "rss", "news", "api"], "note": "새벽 타이머가 캐시 파일을 만들고, 프론트는 캐시만 읽습니다 — NEIS 직접 호출 금지." }
+    ]
+  },
+  "stages": [
+    { "label": "측정·수집" },
+    { "label": "원본 저장" },
+    { "label": "집계" },
+    { "label": "제공" },
+    { "label": "화면" }
+  ],
+  "nodes": [
+    { "id": "idb", "type": "database", "label": "IDB", "sublabel": "insights.db", "stage": 2, "row": 0 },
+    { "id": "cam", "type": "backend", "label": "CAM", "sublabel": "vision counter", "stage": 0, "row": 1 },
+    { "id": "qdb", "type": "database", "label": "QDB", "sublabel": "queue.db", "stage": 1, "row": 1 },
+    { "id": "api", "type": "backend", "label": "API", "sublabel": "FastAPI :8100", "stage": 3, "row": 1 },
+    { "id": "pwa", "type": "frontend", "label": "PWA", "sublabel": "5 screens", "stage": 4, "row": 1 },
+    { "id": "neis", "type": "external", "label": "NEIS", "sublabel": "meal API", "stage": 0, "row": 2 },
+    { "id": "meal", "type": "database", "label": "MEAL", "sublabel": "meal.json", "stage": 1, "row": 2 },
+    { "id": "rss", "type": "external", "label": "RSS", "sublabel": "news + DeepL", "stage": 0, "row": 3 },
+    { "id": "news", "type": "database", "label": "NEWS", "sublabel": "news.json", "stage": 1, "row": 3 }
+  ],
+  "flows": [
+    { "id": "cam-samples", "from": "cam", "to": "qdb", "label": "10초 표본", "classification": "숫자만", "variant": "emphasis" },
+    { "id": "neis-cache", "from": "neis", "to": "meal", "label": "05:40 캐시", "classification": "주간 식단" },
+    { "id": "rss-digest", "from": "rss", "to": "news", "label": "06:10 digest", "classification": "요약+번역", "variant": "dashed" },
+    { "id": "rollup-agg", "from": "qdb", "to": "idb", "label": "rollup 14:10", "classification": "끼니별 집계" },
+    { "id": "live-select", "from": "qdb", "to": "api", "label": "라이브 SELECT", "classification": "30초", "variant": "emphasis", "route": "straight", "labelAt": [445, 292] },
+    { "id": "meal-read", "from": "meal", "to": "api", "label": "/api/meal", "classification": "캐시만", "labelAt": [470, 388] },
+    { "id": "news-read", "from": "news", "to": "api", "label": "/api/news", "classification": "캐시만", "variant": "dashed", "labelAt": [470, 517] },
+    { "id": "insight-read", "from": "idb", "to": "api", "label": "/api/insight/*", "classification": "read-only" },
+    { "id": "poll", "from": "api", "to": "pwa", "label": "30초 폴링", "classification": "JSON", "variant": "emphasis" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "핵심 경로", "items": ["측정 → 저장 → 집계 → 제공 → 화면이 전부 Pi 한 대 안에서 파일로만 만납니다", "히트맵 '오늘 행'은 집계를 기다리지 않고 queue.db 즉석 계산(5분 갱신)입니다"] },
+    { "dot": "cyan", "title": "쓰기 규율", "items": ["파일당 writer 하나 — 화살표의 쓰기 방향이 곧 소유권입니다", "공개 API 는 모든 DB 를 SELECT 만 합니다"] },
+    { "dot": "rose", "title": "개인정보", "items": ["프레임·개별 좌표는 어떤 파일에도 남지 않습니다", "뉴스 본문은 메모리에서만 쓰고 요약과 출처 링크만 저장합니다"] }
+  ]
+}
