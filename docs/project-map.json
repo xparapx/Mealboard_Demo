@@ -1,0 +1,1205 @@
+{
+ "title": "Mealboard 프로젝트 지도",
+ "subtitle": "급식실 대기시간·영양 대시보드 — 카메라 λ·L → Little's law → PWA · 지속 갱신(기준 2026-09-22, PLAN-2026-09 구조)",
+ "overview": {
+  "intro": "왼쪽에서 오른쪽으로 데이터가 흐릅니다. 모든 것은 Pi 한 대 안에서 돕니다. 축(행)마다 쓰는 파일과 시각이 다르고, 서로는 파일로만 만납니다.",
+  "lanes": [
+   {
+    "label": "개발 흐름",
+    "items": [
+     "개발 PC|코드 작성 · git push",
+     "GitHub|저장소 원본",
+     "Pi 5 (학교)|git pull · systemd"
+    ]
+   },
+   {
+    "label": "실시간 축",
+    "items": [
+     "카메라 / mock|사람 수 세기",
+     "queue.db|숫자만 저장",
+     "FastAPI :8100|/api/status·positions",
+     "브라우저|30초 폴링"
+    ]
+   },
+   {
+    "label": "집계 축 (배치)",
+    "items": [
+     "rollup 14:10|하루 집계",
+     "insights.db|8 테이블",
+     "report 14:20|로컬 LLM 리포트",
+     "reports.db|headline·body",
+     "/api/insight/*|진입 시 1회"
+    ]
+   },
+   {
+    "label": "급식·뉴스 축",
+    "items": [
+     "NEIS API|fetch_neis 새벽",
+     "meal.json|주간 식단",
+     "RSS·Guardian|fetch_news 06:10",
+     "news.json|메타+digest"
+    ]
+   },
+   {
+    "label": "관리 축 (tailnet)",
+    "items": [
+     "관리 앱 :8101|Serve 8443",
+     "admin.db|감사 로그",
+     "zones.local.json|구역 편집",
+     "meta.sock|프레임 메타 · 저장 없음"
+    ]
+   },
+   {
+    "label": "공개",
+    "items": [
+     "Tailscale Funnel|443 → 8100",
+     "학생·교사|QR → PWA"
+    ]
+   }
+  ]
+ },
+ "columns": [
+  {
+   "id": "timer",
+   "label": "실행 주체 (systemd · Tailscale)"
+  },
+  {
+   "id": "job",
+   "label": "스크립트 / 프로세스"
+  },
+  {
+   "id": "lib",
+   "label": "공용 모듈 (import 만 됨)"
+  },
+  {
+   "id": "data",
+   "label": "데이터 파일"
+  },
+  {
+   "id": "api",
+   "label": "FastAPI 서버"
+  },
+  {
+   "id": "web",
+   "label": "브라우저"
+  }
+ ],
+ "nodes": {
+  "t_api": {
+   "c": "timer",
+   "n": "mealboard-api.service",
+   "s": "상시 · 8100",
+   "d": "공개 FastAPI 를 부팅 시 자동 실행하고 죽으면 재시작한다. Funnel 이 이 포트를 인터넷에 낸다.",
+   "row": 0
+  },
+  "t_mock": {
+   "c": "timer",
+   "n": "mealboard-mock / vision",
+   "s": "상시 · 카메라(대역)",
+   "d": "홈 Pi 는 mock, 학교 Pi 는 vision. 둘을 동시에 켜지 않는다 — queue.db 쓰기 주체는 하나.",
+   "row": 1
+  },
+  "t_neis": {
+   "c": "timer",
+   "n": "mealboard-neis.timer",
+   "s": "매일 새벽",
+   "d": "fetch_neis.py 를 하루 한 번 oneshot 으로 돌린다.",
+   "row": 2
+  },
+  "t_news": {
+   "c": "timer",
+   "n": "mealboard-news.timer",
+   "s": "매일 06:10",
+   "d": "fetch_news.py 를 하루 한 번. 05:45 report 뒤라 Hailo 충돌이 없다.",
+   "row": 3
+  },
+  "t_report": {
+   "c": "timer",
+   "n": "mealboard-report.timer",
+   "s": "05:45 · 14:20",
+   "d": "아침 preview, 오후 recap 두 번. recap 은 rollup(14:10) 뒤.",
+   "row": 4
+  },
+  "t_rollup": {
+   "c": "timer",
+   "n": "mealboard-rollup.timer",
+   "s": "매일 14:10",
+   "d": "점심이 끝난 뒤 최근 2일을 집계. Persistent=true 라 꺼져 있던 날도 보충 실행.",
+   "row": 5
+  },
+  "t_admin": {
+   "c": "timer",
+   "n": "mealboard-admin.service",
+   "s": "상시 · 8101",
+   "d": "관리 앱. 127.0.0.1 에만 바인드하고 tailscale serve 8443 이 tailnet 안에서만 연결한다.",
+   "row": 6
+  },
+  "t_serve": {
+   "c": "timer",
+   "n": "tailscale funnel / serve",
+   "s": "443→8100 · 8443→8101",
+   "d": "Funnel = 인터넷 공개, Serve = tailnet 전용. reset 명령은 절대 금지(Funnel 까지 지워짐).",
+   "row": 7
+  },
+  "main": {
+   "c": "job",
+   "n": "app/main.py (uvicorn)",
+   "s": "라우터 include + static",
+   "d": "공개 서버의 조립 지점. 라우터들을 include 하고 마지막에 static 을 mount 한다(/api/* 가 먼저 잡히도록).",
+   "row": 0
+  },
+  "mock": {
+   "c": "job",
+   "n": "jobs/mock_feed.py",
+   "s": "vision/counter.py 대역",
+   "d": "점심 인파 곡선을 흉내내 samples·zone_samples 를 쓴다. --scenario stall/gap 으로 병목·결측 상태를 재현.",
+   "row": 1
+  },
+  "neis": {
+   "c": "job",
+   "n": "jobs/fetch_neis.py",
+   "s": "NEIS → 영양 지표",
+   "d": "NEIS 급식 API 를 호출해 주간 식단·영양 지표·탄소 추정을 meal.json 에 저장.",
+   "row": 2
+  },
+  "news": {
+   "c": "job",
+   "n": "jobs/fetch_news.py",
+   "s": "RSS 3건 → 본문 → 요약",
+   "d": "기후 RSS 에서 3건 선정 → 본문 확보 → 로컬 LLM 한국어 요약(digest). 실패 시 DeepL 도입부 번역. 본문은 저장하지 않는다.",
+   "row": 3
+  },
+  "report": {
+   "c": "job",
+   "n": "jobs/report.py",
+   "s": "preview/recap 리포트",
+   "d": "숫자·메뉴명만 LLM 에 넣어 헤드라인·본문을 만들고 스키마 검증 후 reports.db 에 저장. 실패 시 규칙 템플릿.",
+   "row": 4
+  },
+  "rollup": {
+   "c": "job",
+   "n": "jobs/rollup.py",
+   "s": "하루 단위 집계",
+   "d": "insights.db 의 유일한 writer. queue.db 표본을 5분 bin 으로 집계하고 황금 구간·병목·메뉴 인기도를 계산. 하루 단위 DELETE→INSERT 한 트랜잭션.",
+   "row": 5
+  },
+  "admin": {
+   "c": "job",
+   "n": "app/admin (관리 앱)",
+   "s": "auth·audit·stream·zones",
+   "d": "tailnet 전용 두 번째 FastAPI. 신원 허용목록(fail-closed), 서비스 재시작, 메타 SSE, MJPEG opt-in, 구역 편집, 감사 로그.",
+   "row": 6
+  },
+  "checkllm": {
+   "c": "job",
+   "n": "check_llm.py",
+   "s": "스파이크 · 수동 1회",
+   "d": "Hailo-10H 에서 로컬 LLM 이 실제로 되는지 30분 검증. tok/s·품질·YOLO 공존·컨텍스트 상한을 재고 go/no-go.",
+   "row": 8
+  },
+  "config": {
+   "c": "lib",
+   "n": "app/config.py",
+   "s": ".env · 경로 · 상수",
+   "d": ".env 와 파일 경로, 포트, 상수를 읽는 유일한 곳. 다른 모듈은 여기서 가져다 쓴다(하드코딩 금지).",
+   "row": 0
+  },
+  "db": {
+   "c": "lib",
+   "n": "app/db.py",
+   "s": "queue.db connect",
+   "d": "queue.db 연결과 스키마. WAL 모드로 읽기·쓰기가 서로 막지 않게 한다.",
+   "row": 1
+  },
+  "lunch": {
+   "c": "lib",
+   "n": "app/lunch.py",
+   "s": "시간창 · bin",
+   "d": "점심 시간창 파싱과 5분 bin 계산. 순수 함수라 sqlite 없이 테스트.",
+   "row": 2
+  },
+  "zones": {
+   "c": "lib",
+   "n": "vision/zones.py",
+   "s": "구역 판정 · 호모그래피",
+   "d": "zones.json 로드(+local overlay)·검증, 점의 구역 판정, 4점 호모그래피. vision·mock·rollup·관리 앱이 공용.",
+   "row": 3
+  },
+  "calc": {
+   "c": "lib",
+   "n": "app/insight_calc.py",
+   "s": "순수 계산 (황금·병목…)",
+   "d": "커버리지·황금 구간·병목·인기도 판정 규칙. rollup 이 저장용으로, insight 라우터가 오늘(live) 즉석 계산용으로 같은 함수를 쓴다.",
+   "row": 4
+  },
+  "insdb": {
+   "c": "lib",
+   "n": "app/insights_db.py",
+   "s": "connect_ro()",
+   "d": "insights.db·reports.db 를 읽기 전용(mode=ro)으로 연다. 파일이 없으면 만들지 않고 None.",
+   "row": 5
+  },
+  "newsbody": {
+   "c": "lib",
+   "n": "jobs/newsbody.py",
+   "s": "본문 확보 3전략",
+   "d": "기사 본문을 RSS content:encoded → Guardian API → HTML 단락 순으로 시도. 메모리에서만 쓴다.",
+   "row": 6
+  },
+  "trans": {
+   "c": "lib",
+   "n": "jobs/translators.py",
+   "s": "DeepL / local",
+   "d": "헤드라인 번역 엔진 선택(TRANSLATOR=deepl|local|none).",
+   "row": 7
+  },
+  "llm": {
+   "c": "lib",
+   "n": "jobs/llm.py",
+   "s": "LocalLLM · valid_korean",
+   "d": "Hailo GenAI 래퍼와 출력 검증기(한글 비율, 길이비, 숫자 부분집합 규칙). report·news·check_llm 이 공용.",
+   "row": 8
+  },
+  "queue": {
+   "c": "data",
+   "n": "data/queue.db",
+   "s": "samples · zone_samples",
+   "d": "실시간 축의 원본. 10초 간격 표본과 구역별 인원 수. 좌표·프레임은 없다.",
+   "row": 1
+  },
+  "meal": {
+   "c": "data",
+   "n": "data/meal.json",
+   "s": "주간 식단",
+   "d": "NEIS 결과 캐시. 라우터가 그대로 내주고 rollup 이 nutrition_days 로 복사한다.",
+   "row": 2
+  },
+  "newsj": {
+   "c": "data",
+   "n": "data/news.json",
+   "s": "메타 + digest",
+   "d": "제목·출처·날짜·링크 + LLM 요약 3줄. 본문 미저장(저작권).",
+   "row": 3
+  },
+  "reports": {
+   "c": "data",
+   "n": "data/reports.db",
+   "s": "reports",
+   "d": "LLM 이 쓴 preview/recap 텍스트. insights.db 와 분리해 계산 데이터와 생성 텍스트를 섞지 않는다.",
+   "row": 4
+  },
+  "insights": {
+   "c": "data",
+   "n": "data/insights.db",
+   "s": "8 테이블",
+   "d": "집계 결과. 히트맵·예보·인기도의 근거. user_version 으로 마이그레이션.",
+   "row": 5
+  },
+  "admindb": {
+   "c": "data",
+   "n": "data/admin.db",
+   "s": "admin_log",
+   "d": "관리 행위 감사 로그(누가·언제·무엇을). 스트림 켜짐 이력도 여기.",
+   "row": 6
+  },
+  "zonesj": {
+   "c": "data",
+   "n": "zones.json + .local",
+   "s": "구역 정의 (overlay)",
+   "d": "git 추적 템플릿(zones.json) 위에 Pi 전용 미추적 zones.local.json 을 겹쳐 읽는다. Pi 체크아웃이 dirty 되지 않게.",
+   "row": 7
+  },
+  "sock": {
+   "c": "data",
+   "n": "/run/mealboard/meta.sock",
+   "s": "프레임 메타 (저장 없음)",
+   "d": "vision 이 프레임마다 던지는 트랙 메타. 구독자가 있을 때만 관리 앱이 bind — 아무도 안 보면 좌표가 프로세스를 떠나지 않는다.",
+   "row": 8
+  },
+  "r_status": {
+   "c": "api",
+   "n": "routers/status·history",
+   "s": "/api/status /api/history",
+   "d": "현재 대기시간과 최근 N분 추이. 120초 넘게 표본이 없으면 no_data.",
+   "row": 1
+  },
+  "r_meal": {
+   "c": "api",
+   "n": "routers/meal",
+   "s": "/api/meal",
+   "d": "meal.json 을 그대로 응답.",
+   "row": 2
+  },
+  "r_news": {
+   "c": "api",
+   "n": "routers/news",
+   "s": "/api/news",
+   "d": "news.json 을 그대로 응답.",
+   "row": 3
+  },
+  "r_insight": {
+   "c": "api",
+   "n": "routers/insight",
+   "s": "/api/insight/* 8종",
+   "d": "heatmap·day·menus·forecast·quality·nutrition·zones·text. insights.db 없으면 no_data+reason, 오늘은 queue.db 로 live 계산.",
+   "row": 5
+  },
+  "r_admin": {
+   "c": "api",
+   "n": "/api/admin/*",
+   "s": "whoami·stream·zones…",
+   "d": "관리 앱 전용 라우터. 모든 변경 요청은 감사 행을 남기고 JSON Content-Type 을 강제(CSRF).",
+   "row": 6
+  },
+  "r_pos": {
+   "c": "api",
+   "n": "routers/positions",
+   "s": "/api/positions",
+   "d": "평면도 위 익명 마커(순간값만, 이력 없음).",
+   "row": 7
+  },
+  "core": {
+   "c": "web",
+   "n": "js/core.js",
+   "s": "라우터 · 30초 tick",
+   "d": "해시 라우터, 화면 생명주기 register(), 30초 폴링 tick(활성 화면만). whoami 200 이면 admin.js 를 동적 import.",
+   "row": 0
+  },
+  "wait": {
+   "c": "web",
+   "n": "js/wait.js",
+   "s": "#wait",
+   "d": "대기시간 화면: 히어로+추이 통합 카드 위, 히트맵·황금·예보·병목·품질 인사이트 아래.",
+   "row": 1
+  },
+  "room": {
+   "c": "web",
+   "n": "js/room.js + floor.js",
+   "s": "#room",
+   "d": "급식실 현황(탑뷰+마커)과 구역 점유율·LLM 리포트. floor.js 는 평면도 그리기 공용.",
+   "row": 2
+  },
+  "week": {
+   "c": "web",
+   "n": "js/week.js · today.js",
+   "s": "#week #today",
+   "d": "주간식단+영양 추이+TOP5, 오늘급식+탄소 통합 카드.",
+   "row": 3
+  },
+  "newsw": {
+   "c": "web",
+   "n": "js/news.js",
+   "s": "#news",
+   "d": "이슈피드: 헤드라인·칩·digest 3줄·why·원문 링크.",
+   "row": 4
+  },
+  "adminjs": {
+   "c": "web",
+   "n": "admin-ui/admin.js",
+   "s": "#admin (tailnet 만)",
+   "d": "관리 뷰. 공개 static 에 두지 않고 관리 앱만 /admin-ui/ 로 서빙.",
+   "row": 6
+  },
+  "sw": {
+   "c": "web",
+   "n": "sw.js v8",
+   "s": "/js /css 네트워크 우선",
+   "d": "PWA 서비스 워커. 페이지·/js/·/css/ 는 네트워크 우선(셸과 모듈 버전 어긋남 방지), 나머지 캐시 우선.",
+   "row": 8
+  }
+ },
+ "edges": [
+  [
+   "t_api",
+   "main",
+   "call",
+   "uvicorn app.main:app"
+  ],
+  [
+   "t_mock",
+   "mock",
+   "call",
+   "python -m jobs.mock_feed"
+  ],
+  [
+   "t_neis",
+   "neis",
+   "call",
+   "oneshot"
+  ],
+  [
+   "t_news",
+   "news",
+   "call",
+   "oneshot"
+  ],
+  [
+   "t_report",
+   "report",
+   "call",
+   "oneshot"
+  ],
+  [
+   "t_rollup",
+   "rollup",
+   "call",
+   "--days 2"
+  ],
+  [
+   "t_admin",
+   "admin",
+   "call",
+   "uvicorn app.admin:app :8101"
+  ],
+  [
+   "t_serve",
+   "main",
+   "http",
+   "Funnel 443 → 8100"
+  ],
+  [
+   "t_serve",
+   "admin",
+   "http",
+   "Serve 8443 → 8101"
+  ],
+  [
+   "main",
+   "r_status",
+   "imp",
+   "include_router"
+  ],
+  [
+   "main",
+   "r_meal",
+   "imp",
+   "include_router"
+  ],
+  [
+   "main",
+   "r_news",
+   "imp",
+   "include_router"
+  ],
+  [
+   "main",
+   "r_insight",
+   "imp",
+   "include_router"
+  ],
+  [
+   "main",
+   "r_pos",
+   "imp",
+   "include_router"
+  ],
+  [
+   "admin",
+   "r_admin",
+   "imp",
+   "admin 라우터 + 공개 라우터"
+  ],
+  [
+   "admin",
+   "zones",
+   "imp",
+   "validate_zones"
+  ],
+  [
+   "admin",
+   "config",
+   "imp",
+   ""
+  ],
+  [
+   "mock",
+   "db",
+   "imp",
+   "connect()"
+  ],
+  [
+   "mock",
+   "zones",
+   "imp",
+   "count_by_zone"
+  ],
+  [
+   "mock",
+   "config",
+   "imp",
+   ""
+  ],
+  [
+   "mock",
+   "queue",
+   "wr",
+   "samples + zone_samples 한 트랜잭션"
+  ],
+  [
+   "mock",
+   "sock",
+   "http",
+   "--meta 합성 프레임"
+  ],
+  [
+   "neis",
+   "config",
+   "imp",
+   ""
+  ],
+  [
+   "neis",
+   "meal",
+   "wr",
+   "json.dumps"
+  ],
+  [
+   "news",
+   "newsbody",
+   "imp",
+   "fetch_body"
+  ],
+  [
+   "news",
+   "trans",
+   "imp",
+   "headline DeepL"
+  ],
+  [
+   "news",
+   "llm",
+   "imp",
+   "digest 요약"
+  ],
+  [
+   "news",
+   "newsj",
+   "wr",
+   "메타+digest 만"
+  ],
+  [
+   "report",
+   "llm",
+   "imp",
+   "complete()"
+  ],
+  [
+   "report",
+   "insdb",
+   "imp",
+   "connect_ro"
+  ],
+  [
+   "report",
+   "insights",
+   "rd",
+   "recap 입력"
+  ],
+  [
+   "report",
+   "meal",
+   "rd",
+   "preview 입력"
+  ],
+  [
+   "report",
+   "reports",
+   "wr",
+   "유일 writer"
+  ],
+  [
+   "rollup",
+   "lunch",
+   "imp",
+   "bounds/bin_of"
+  ],
+  [
+   "rollup",
+   "calc",
+   "imp",
+   "day_summary…"
+  ],
+  [
+   "rollup",
+   "zones",
+   "imp",
+   "area_m2"
+  ],
+  [
+   "rollup",
+   "config",
+   "imp",
+   ""
+  ],
+  [
+   "rollup",
+   "queue",
+   "rd",
+   "samples·zone_samples"
+  ],
+  [
+   "rollup",
+   "meal",
+   "rd",
+   "nutrition_days 사본"
+  ],
+  [
+   "rollup",
+   "insights",
+   "wr",
+   "유일 writer · DELETE→INSERT"
+  ],
+  [
+   "checkllm",
+   "llm",
+   "imp",
+   "스파이크"
+  ],
+  [
+   "db",
+   "queue",
+   "rd",
+   ""
+  ],
+  [
+   "insdb",
+   "insights",
+   "rd",
+   "mode=ro"
+  ],
+  [
+   "insdb",
+   "reports",
+   "rd",
+   "mode=ro"
+  ],
+  [
+   "r_status",
+   "db",
+   "imp",
+   ""
+  ],
+  [
+   "r_pos",
+   "db",
+   "imp",
+   ""
+  ],
+  [
+   "r_pos",
+   "zones",
+   "imp",
+   "zone_of"
+  ],
+  [
+   "r_meal",
+   "meal",
+   "rd",
+   ""
+  ],
+  [
+   "r_news",
+   "newsj",
+   "rd",
+   ""
+  ],
+  [
+   "r_insight",
+   "insdb",
+   "imp",
+   ""
+  ],
+  [
+   "r_insight",
+   "calc",
+   "imp",
+   "오늘 = live 즉석 계산"
+  ],
+  [
+   "r_insight",
+   "lunch",
+   "imp",
+   ""
+  ],
+  [
+   "r_insight",
+   "queue",
+   "rd",
+   "basis:live"
+  ],
+  [
+   "r_admin",
+   "admindb",
+   "wr",
+   "감사 행 (유일 writer)"
+  ],
+  [
+   "r_admin",
+   "zonesj",
+   "wr",
+   "zones.local.json 만"
+  ],
+  [
+   "r_admin",
+   "sock",
+   "http",
+   "SSE 구독 중만 bind"
+  ],
+  [
+   "zones",
+   "zonesj",
+   "rd",
+   "load_zones overlay"
+  ],
+  [
+   "core",
+   "wait",
+   "imp",
+   "register()"
+  ],
+  [
+   "core",
+   "room",
+   "imp",
+   ""
+  ],
+  [
+   "core",
+   "week",
+   "imp",
+   ""
+  ],
+  [
+   "core",
+   "newsw",
+   "imp",
+   ""
+  ],
+  [
+   "core",
+   "adminjs",
+   "imp",
+   "whoami 200 이면 import()"
+  ],
+  [
+   "wait",
+   "r_status",
+   "http",
+   "30초 폴링"
+  ],
+  [
+   "wait",
+   "r_insight",
+   "http",
+   "진입 1회 · day/quality 5분"
+  ],
+  [
+   "room",
+   "r_pos",
+   "http",
+   "30초 폴링"
+  ],
+  [
+   "room",
+   "r_insight",
+   "http",
+   "zones · text"
+  ],
+  [
+   "week",
+   "r_meal",
+   "http",
+   ""
+  ],
+  [
+   "week",
+   "r_insight",
+   "http",
+   "nutrition · menus"
+  ],
+  [
+   "newsw",
+   "r_news",
+   "http",
+   ""
+  ],
+  [
+   "adminjs",
+   "r_admin",
+   "http",
+   "SSE · MJPEG opt-in"
+  ],
+  [
+   "sw",
+   "core",
+   "rd",
+   "SHELL 캐시 · 네트워크 우선"
+  ]
+ ],
+ "dbs": [
+  {
+   "id": "queue",
+   "name": "queue.db",
+   "writer": "mock_feed / vision",
+   "readers": [
+    "routers/status·history·positions",
+    "rollup (14:10)",
+    "insight (오늘=live)"
+   ],
+   "tables": [
+    {
+     "n": "samples",
+     "pk": "ts",
+     "cols": [
+      [
+       "ts",
+       "TEXT PK · ISO 로컬시각"
+      ],
+      [
+       "queue_len",
+       "INTEGER · L 대기 인원"
+      ],
+      [
+       "rate_per_min",
+       "REAL · λ 5분 이동평균"
+      ],
+      [
+       "wait_min",
+       "REAL · W=L/λ"
+      ],
+      [
+       "state",
+       "ok | no_data | insufficient_rate"
+      ]
+     ]
+    },
+    {
+     "n": "zone_samples",
+     "pk": "(ts, zone)",
+     "cols": [
+      [
+       "ts",
+       "TEXT · samples.ts 와 같은 트랜잭션"
+      ],
+      [
+       "zone",
+       "TEXT · counter|aisle|seating"
+      ],
+      [
+       "n",
+       "INTEGER · 구역 인원 (집계 숫자만)"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "insights",
+   "name": "insights.db",
+   "writer": "jobs/rollup.py",
+   "readers": [
+    "routers/insight (mode=ro)",
+    "jobs/report.py (recap 입력)"
+   ],
+   "tables": [
+    {
+     "n": "runs",
+     "pk": "id",
+     "cols": [
+      [
+       "id",
+       ""
+      ],
+      [
+       "started_at / finished_at",
+       ""
+      ],
+      [
+       "args · dates · n_days",
+       ""
+      ],
+      [
+       "ok · error",
+       "실행 이력"
+      ]
+     ]
+    },
+    {
+     "n": "lunch_days",
+     "pk": "date",
+     "cols": [
+      [
+       "date",
+       "TEXT PK"
+      ],
+      [
+       "weekday · window_lo/hi · source",
+       "mock|vision 구분"
+      ],
+      [
+       "n_samples · coverage_pct · stale_min · insufficient_min",
+       "측정 품질"
+      ],
+      [
+       "peak_wait(_ts) · peak_queue(_ts) · avg_wait",
+       "피크"
+      ],
+      [
+       "served_est · typical_rate · rise_rate",
+       ""
+      ],
+      [
+       "golden_min · bottleneck_min",
+       ""
+      ],
+      [
+       "menu_json · main_dish",
+       ""
+      ],
+      [
+       "calc_version · computed_at",
+       ""
+      ]
+     ]
+    },
+    {
+     "n": "lunch_bins",
+     "pk": "(date, bin)",
+     "cols": [
+      [
+       "date · weekday · bin",
+       "5분 bin, idx(weekday,bin) → 히트맵"
+      ],
+      [
+       "n · ok_n · insufficient_n",
+       ""
+      ],
+      [
+       "avg_queue · max_queue · avg_rate",
+       ""
+      ],
+      [
+       "avg_wait · max_wait",
+       ""
+      ]
+     ]
+    },
+    {
+     "n": "zone_bins",
+     "pk": "(date, bin, zone)",
+     "cols": [
+      [
+       "date · bin · zone",
+       ""
+      ],
+      [
+       "n · avg_n · max_n",
+       "구역 점유율"
+      ]
+     ]
+    },
+    {
+     "n": "events",
+     "pk": "(date, kind, start_ts)",
+     "cols": [
+      [
+       "date · kind",
+       "golden|bottleneck|stale|insufficient"
+      ],
+      [
+       "start_ts · end_ts · minutes",
+       ""
+      ],
+      [
+       "value · detail",
+       ""
+      ]
+     ]
+    },
+    {
+     "n": "menu_days",
+     "pk": "(date, menu)",
+     "cols": [
+      [
+       "date · menu · position",
+       ""
+      ],
+      [
+       "peak_wait · rise_rate · peak_queue · served_est",
+       "메뉴별 그날 반응"
+      ]
+     ]
+    },
+    {
+     "n": "menu_stats",
+     "pk": "menu",
+     "cols": [
+      [
+       "menu",
+       "TEXT PK"
+      ],
+      [
+       "n_days · avg_peak_wait · avg_rise_rate · avg_peak_queue",
+       ""
+      ],
+      [
+       "popularity",
+       "100·(0.5·rise/base + 0.5·wait/base)"
+      ],
+      [
+       "first_date · last_date",
+       "매 실행 전체 재생성"
+      ]
+     ]
+    },
+    {
+     "n": "nutrition_days",
+     "pk": "date",
+     "cols": [
+      [
+       "date",
+       "TEXT PK"
+      ],
+      [
+       "kcal · energy_pct · … · mar · kgco2e",
+       "meal.json week[] 사본"
+      ],
+      [
+       "menu_json · fetched_at",
+       "이력 축적"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "reports",
+   "name": "reports.db",
+   "writer": "jobs/report.py",
+   "readers": [
+    "routers/insight → /api/insight/text"
+   ],
+   "tables": [
+    {
+     "n": "reports",
+     "pk": "id",
+     "cols": [
+      [
+       "id · ts",
+       ""
+      ],
+      [
+       "kind",
+       "preview | recap"
+      ],
+      [
+       "for_date",
+       "lunch_days.date 와 맞춤"
+      ],
+      [
+       "engine · model",
+       "hailo | template"
+      ],
+      [
+       "ok · ms",
+       ""
+      ],
+      [
+       "headline ≤40 · body ≤120 · tone",
+       "스키마 검증 통과분만"
+      ],
+      [
+       "input_json",
+       "숫자·메뉴명만 (프레임·좌표 없음)"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "admin",
+   "name": "admin.db",
+   "writer": "app/admin (관리 앱)",
+   "readers": [
+    "/api/admin/audit"
+   ],
+   "tables": [
+    {
+     "n": "admin_log",
+     "pk": "id",
+     "cols": [
+      [
+       "id · ts · user",
+       ""
+      ],
+      [
+       "action · target · detail",
+       "restart · stream.on/off · zones.put · lockdown"
+      ],
+      [
+       "ok · ip",
+       ""
+      ]
+     ]
+    }
+   ]
+  }
+ ],
+ "rels": [
+  [
+   "queue.samples",
+   "queue.zone_samples",
+   "ts"
+  ],
+  [
+   "insights.lunch_days",
+   "insights.lunch_bins",
+   "date"
+  ],
+  [
+   "insights.lunch_days",
+   "insights.zone_bins",
+   "date"
+  ],
+  [
+   "insights.lunch_days",
+   "insights.events",
+   "date"
+  ],
+  [
+   "insights.lunch_days",
+   "insights.menu_days",
+   "date"
+  ],
+  [
+   "insights.lunch_days",
+   "insights.nutrition_days",
+   "date"
+  ],
+  [
+   "insights.menu_days",
+   "insights.menu_stats",
+   "menu"
+  ],
+  [
+   "insights.lunch_bins",
+   "insights.zone_bins",
+   "date+bin"
+  ],
+  [
+   "queue.zone_samples",
+   "insights.zone_bins",
+   "rollup 집계"
+  ],
+  [
+   "queue.samples",
+   "insights.lunch_bins",
+   "rollup 집계"
+  ],
+  [
+   "insights.lunch_days",
+   "reports.reports",
+   "for_date"
+  ]
+ ]
+}

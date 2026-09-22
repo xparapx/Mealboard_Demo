@@ -4,6 +4,7 @@
 NEIS 급식 API 의 메뉴·알레르기·영양 지표(에너지 충족률·적정비율·MAR)와 주간 식단, 잔반 탄소 카드, 익명 위치 마커를 웹 대시보드(PWA)로 보여준다.
 학생·교사는 QR 로 접속한다. 영상은 어디에도 저장·전송하지 않고 숫자만 SQLite 에 남긴다.
 
+- 🗺️ **프로젝트 지도(설계·연결·DB — 지속 갱신 정본 개요)**: https://xparapx.github.io/Mealboard_Demo/project-map.html ([docs/project-map.html](docs/project-map.html))
 - 구축 매뉴얼(전 단계·코드 수록): [docs/manual.html](docs/manual.html) · 화면 도면(스펙의 단일 출처): [docs/layout.html](docs/layout.html)
 - Claude Code 작업 규칙: [CLAUDE.md](CLAUDE.md)
 
@@ -22,7 +23,7 @@ data/       queue.db·insights.db·reports.db·admin.db·meal.json·news.json·p
             / nutrition_std.json·carbon_std.json·news_feeds.json·zones.json(템플릿) (포함)
 deploy/     mealboard-{api,mock,vision,admin,neis,news,rollup,report}.service, *.timer, sudoers-mealboard, cloudflared-config.yml(견본)
 tests/      순수 로직 140개 — waittime·typical·lunch·zones·insight_calc·mealjson·admin_{auth,guard,sysctl,stream,zones}·report·news
-docs/       manual.html(구축 매뉴얼) · layout.html(화면 도면) · PLAN-2026-09.md(확장 계획서, §6 진행표)
+docs/       project-map.html(프로젝트 지도, 지속 갱신) · manual.html(구축 매뉴얼) · layout.html(화면 도면) · PLAN-2026-09.md(확장 계획서, §6 진행표)
 setup_pi.sh Pi 최초 설치·유닛 갱신 (멱등) · check_manual.py 매뉴얼 코드 블록 ↔ 파일 대조
 ```
 

@@ -1,3 +1,7 @@
+### 프로젝트 지도 도입 — README 정본 개요 (2026-09-22)
+
+전 저장소 공통 결정(지도=지속 갱신 정본 개요)에 따라 `docs/project-map.json`+`project-map.html` 생성(46노드·71간선·DB 4 — project-map 스킬 mealboard 예시 기반, PLAN-2026-09 구조). README 상단 대표 링크 추가. **가정**: GitHub Pages가 아직 비활성(404) — 사용자가 Settings→Pages에서 main/docs로 켜면 github.io 링크가 살아난다(그 전에는 저장소 내 상대 링크 사용).
+
 # Mealboard 작업 로그 (WORKLOG)
 
 > 작업 이력·세션 인계의 단일 보관소(최신이 위, yyyy-mm 절). **README 는 프로젝트 소개 전용,

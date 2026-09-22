@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mealboard 프로젝트 지도</title>
+<style>
+
+/* ===== project-map v3 — 파스텔 라이트 퍼스트 (soft gradient · glass card · big type) ===== */
+:root, :root[data-theme=light]{
+  --paper:#f6f4f1; --side:rgba(255,255,255,.72); --surface:#ffffff; --sand:#f3f0eb; --line:#e7e2da;
+  --ink:#1d1c2e; --ink2:#5d5a70; --foot:#9a97a8;
+  --acc:#6f66e8; --acc-t:rgba(111,102,232,.12);
+  --melon:#d94f72; --melon-t:rgba(217,79,114,.10);
+  --teal:#1e9e86; --teal-t:rgba(30,158,134,.10);
+  --sky:#3f7cd6; --sky-t:rgba(63,124,214,.10);
+  --gold:#c07f00; --gold-t:rgba(255,179,0,.14);
+  --badge-ink:#1d1c2e;
+  --l0:#ffd9a4; --l1:#c9c3f5; --l2:#a9d9f2; --l3:#f5b9d1; --l4:#bfe8cd; --l5:#f2e39e;
+  --shc:rgba(29,28,46,.05); --sh2:rgba(29,28,46,.09);
+  --glow1:rgba(201,195,245,.55); --glow2:rgba(255,217,164,.5); --glow3:rgba(169,217,242,.45);
+  --r:18px; color-scheme:light;
+}
+:root[data-theme=dark]{
+  --paper:#16151f; --side:rgba(24,23,36,.8); --surface:#201f2e; --sand:#2a2939; --line:#37354a;
+  --ink:#ecebf4; --ink2:#a9a6bc; --foot:#6f6c82;
+  --acc:#9d95f5; --acc-t:rgba(157,149,245,.16);
+  --melon:#f07898; --melon-t:rgba(240,120,152,.14);
+  --teal:#43c7ad; --teal-t:rgba(67,199,173,.13);
+  --sky:#7fabf0; --sky-t:rgba(127,171,240,.13);
+  --gold:#f0bf62; --gold-t:rgba(240,191,98,.15);
+  --badge-ink:#16151f;
+  --l0:#e8b878; --l1:#a49bec; --l2:#7db8dd; --l3:#dd8fb4; --l4:#83c9a0; --l5:#d8c46f;
+  --shc:rgba(0,0,0,.28); --sh2:rgba(0,0,0,.4);
+  --glow1:rgba(120,110,220,.16); --glow2:rgba(230,180,110,.10); --glow3:rgba(90,140,200,.12);
+  color-scheme:dark;
+}
+:root[data-theme=dark] .node.c0 rect{fill:color-mix(in srgb,var(--l0) 13%,var(--surface));stroke:color-mix(in srgb,var(--l0) 45%,var(--line))}
+:root[data-theme=dark] .node.c2 rect{fill:color-mix(in srgb,var(--l1) 13%,var(--surface));stroke:color-mix(in srgb,var(--l1) 45%,var(--line))}
+:root[data-theme=dark] .node.c3 rect{fill:color-mix(in srgb,var(--l3) 12%,var(--surface));stroke:color-mix(in srgb,var(--l3) 45%,var(--line))}
+:root[data-theme=dark] .node.c4 rect{fill:color-mix(in srgb,var(--l2) 13%,var(--surface));stroke:color-mix(in srgb,var(--l2) 45%,var(--line))}
+:root[data-theme=dark] .node.c5 rect{fill:color-mix(in srgb,var(--l4) 13%,var(--surface));stroke:color-mix(in srgb,var(--l4) 45%,var(--line))}
+:root[data-theme=dark] .node text{fill:#f4f3fa}
+:root[data-theme=dark] .node text.sub{fill:#bab7cc}
+:root[data-theme=dark] .lane,:root[data-theme=dark] .lin{background:color-mix(in srgb,var(--lc,var(--sand)) 14%,var(--surface))}
+*{box-sizing:border-box}
+html,body{margin:0;color:var(--ink);font:16px/1.7 "Pretendard","Noto Sans KR",system-ui,sans-serif}
+body{background:
+  radial-gradient(900px 500px at 8% -4%, var(--glow1), transparent 60%),
+  radial-gradient(800px 460px at 96% 0%, var(--glow2), transparent 55%),
+  radial-gradient(700px 500px at 70% 100%, var(--glow3), transparent 60%),
+  var(--paper);
+  background-attachment:fixed}
+
+/* ---- shell: 유리질 사이드 + 메인 ---- */
+.app{display:grid;grid-template-columns:264px minmax(0,1fr);min-height:100vh}
+.sidebar{background:var(--side);backdrop-filter:blur(14px);border-right:1px solid var(--line);padding:26px 18px;position:sticky;top:0;height:100vh;overflow:auto;display:flex;flex-direction:column}
+.brand{padding:2px 10px 18px;border-bottom:1px solid var(--line)}
+.brand small{display:block;font-size:11.5px;color:var(--foot);letter-spacing:.14em;text-transform:uppercase;font-weight:600}
+.brand b{display:block;font-size:17px;font-weight:800;line-height:1.35;margin-top:6px;letter-spacing:-.01em}
+.tabs{display:flex;flex-direction:column;gap:5px;margin-top:20px}
+.tabs button{display:flex;gap:11px;align-items:center;text-align:left;border:0;background:transparent;color:var(--ink2);font:inherit;font-size:14.5px;font-weight:600;padding:11px 12px;border-radius:12px;cursor:pointer}
+.tabs button .n{flex:0 0 24px;height:22px;border-radius:8px;display:grid;place-items:center;background:var(--sand);color:var(--ink2);font-size:11.5px;font-weight:800}
+.tabs button:hover{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px var(--shc)}
+.tabs button[aria-selected=true]{background:var(--surface);color:var(--ink);box-shadow:0 2px 6px var(--shc),0 8px 20px var(--shc)}
+.tabs button[aria-selected=true] .n{color:var(--badge-ink)}
+.tabs button[data-tab=ov][aria-selected=true] .n{background:var(--l0)}
+.tabs button[data-tab=sc][aria-selected=true] .n{background:var(--l5)}
+.tabs button[data-tab=map][aria-selected=true] .n{background:var(--l1)}
+.tabs button[data-tab=db][aria-selected=true] .n{background:var(--l2)}
+.tabs button[data-tab=ops][aria-selected=true] .n{background:var(--l4)}
+.tabs button[data-tab=gloss][aria-selected=true] .n{background:var(--l3)}
+.tabs button[data-tab^="em-"][aria-selected=true] .n{background:var(--l1)}
+.tabs button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.node:focus-visible,.tbl:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:6px}
+.embed-frame{display:block;width:100%;height:calc(100vh - 150px);min-height:540px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.embed-frame.inline{height:68vh;min-height:460px;margin-bottom:24px}
+.sidefoot{margin-top:auto;padding:16px 10px 2px;font-size:11.5px;color:var(--foot);line-height:1.6}
+#thm{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:var(--ink);border:0;color:var(--paper);font:inherit;font-size:13px;font-weight:600;padding:10px 14px;border-radius:999px;cursor:pointer;margin-bottom:12px}
+#thm:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+#thm .m{display:none}
+:root[data-theme=light] #thm .s{display:none}
+:root[data-theme=light] #thm .m{display:inline}
+main{min-width:0;padding:34px 44px 80px}
+main h1{margin:0 0 6px;font-size:30px;font-weight:800;letter-spacing:-.02em;text-wrap:balance;line-height:1.25}
+main h1 small{display:block;font-weight:500;color:var(--ink2);font-size:14.5px;margin:8px 0 0;letter-spacing:0}
+main>h1{margin-bottom:26px}
+section[hidden]{display:none}
+
+/* ---- 지도/스키마 공용: 무대 + 우측 상세 패널 ---- */
+.wrap{display:flex;flex-direction:column;gap:20px}
+.stage{background:var(--surface);border-radius:var(--r);border:1px solid var(--line);box-shadow:0 2px 6px var(--shc),0 18px 44px var(--sh2);padding:20px;overflow:auto}
+svg{display:block;width:100%;height:auto;font-family:inherit}
+.panel{background:var(--surface);border-radius:var(--r);border:1px solid var(--line);box-shadow:0 2px 6px var(--shc),0 18px 44px var(--sh2);padding:26px 30px;min-height:120px}
+.pgrid{display:grid;grid-template-columns:minmax(300px,1.2fr) 1fr 1fr;gap:6px 40px}
+@media(max-width:1000px){.pgrid{grid-template-columns:1fr}}
+.panel h2{font-size:17.5px;margin:0 0 4px;font-weight:800;letter-spacing:-.01em}
+.panel .path{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--ink2);word-break:break-all}
+.panel p{margin:12px 0 0;font-size:14.5px}
+.panel p.desc{background:var(--sand);border-radius:12px;padding:12px 14px;margin-top:14px}
+.panel h3{font-size:12.5px;color:var(--foot);margin:18px 0 6px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.panel ul{margin:0;padding-left:18px;font-size:14px}
+.panel li{margin:3px 0}
+.panel li b{font-weight:600}
+.chip{display:inline-block;font-size:12.5px;font-weight:600;padding:3px 11px;border-radius:999px;margin:2px 5px 2px 0;background:var(--sand)}
+.chip.w{background:var(--melon-t);color:var(--melon)}.chip.r{background:var(--teal-t);color:var(--teal)}.chip.t{background:var(--acc-t);color:var(--acc)}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--ink2);padding:12px 6px 0}
+.legend span::before{content:"";display:inline-block;width:22px;height:0;border-top:3px solid;margin-right:7px;vertical-align:middle;border-radius:2px}
+.legend .call::before{border-color:var(--ink)}.legend .imp::before{border-color:var(--ink2);border-top-style:dashed}
+.legend .wr::before{border-color:var(--melon)}.legend .rd::before{border-color:var(--teal)}.legend .http::before{border-color:var(--sky)}
+
+/* ---- 설계 맵: 파스텔 밴드 + 흰 카드 ---- */
+.ov p.intro{max-width:960px;margin:0 0 26px;font-size:16.5px;color:var(--ink2)}
+.lane{display:flex;align-items:stretch;gap:10px;margin:0 0 14px;flex-wrap:wrap;padding:16px 18px;background:color-mix(in srgb,var(--lc,var(--sand)) 26%,var(--surface));border:1px solid color-mix(in srgb,var(--lc,var(--line)) 40%,var(--line));border-radius:16px}
+.lane em{font-style:normal;font-size:13.5px;color:var(--ink);width:132px;flex:none;font-weight:800;align-self:center;line-height:1.5}
+.lane .n{background:var(--surface);border-radius:12px;padding:11px 15px;min-width:160px;flex:1 1 0;box-shadow:0 1px 3px var(--shc)}
+.lane .n b{display:block;font-size:14px;font-weight:700}.lane .n span{font-size:12.5px;color:var(--ink2)}
+.lane i{font-style:normal;color:var(--foot);font-size:16px;align-self:center}
+
+/* ---- 연결 지도 SVG ---- */
+.node{cursor:pointer}
+.node rect{fill:var(--surface);stroke:var(--line);stroke-width:1.2;rx:12;filter:drop-shadow(0 1px 2px var(--shc))}
+.node.on rect{stroke:var(--acc);stroke-width:2.2;filter:drop-shadow(0 3px 6px var(--sh2))}
+.node.dim{opacity:.2}
+.node text{font-size:13px;fill:var(--ink);font-weight:600}
+.node text.sub{font-size:11px;fill:var(--ink2);font-weight:400}
+.node.c0 rect{fill:color-mix(in srgb,var(--l0) 32%,var(--surface))}
+.node.c1 rect{fill:var(--surface)}
+.node.c2 rect{fill:color-mix(in srgb,var(--l1) 26%,var(--surface))}
+.node.c3 rect{fill:color-mix(in srgb,var(--l3) 26%,var(--surface))}
+.node.c4 rect{fill:color-mix(in srgb,var(--l2) 30%,var(--surface))}
+.node.c5 rect{fill:color-mix(in srgb,var(--l4) 30%,var(--surface))}
+.node.c6 rect{fill:var(--sand)}
+.col-label{font-size:13px;fill:var(--ink);font-weight:700;letter-spacing:.06em}
+.edge{fill:none;stroke-width:1.6;opacity:.3;pointer-events:none}
+.edge.call{stroke:var(--ink)}.edge.imp{stroke:var(--ink2);stroke-dasharray:4 4}
+.edge.wr{stroke:var(--melon)}.edge.rd{stroke:var(--teal)}.edge.http{stroke:var(--sky)}
+.edge.on{opacity:1;stroke-width:2.6}.edge.dim{opacity:.05}
+.edge-label{font-size:10.5px;fill:var(--ink2);pointer-events:none;opacity:0}
+.edge-label.on{opacity:1}
+
+/* ---- DB 스키마 ---- */
+#dbsvg{margin:0 auto}
+.db .face{fill:var(--surface);stroke:color-mix(in srgb,var(--dbc,var(--line)) 45%,var(--line));stroke-width:1.2;filter:drop-shadow(0 2px 5px var(--shc))}
+.db .dot{fill:var(--dbc,var(--acc))}
+.db .title{font-size:15px;font-weight:800;fill:var(--ink)}
+.tbl{cursor:pointer}
+.tbl rect{fill:color-mix(in srgb,var(--dbc,var(--sand)) 14%,var(--sand));stroke:none;rx:9}
+.tbl.on rect{fill:var(--acc)}.tbl.on text{fill:#fff}
+.tbl text{font-size:12px;fill:var(--ink)}
+.rel{fill:none;stroke:var(--acc);stroke-width:1.7;stroke-dasharray:5 4;opacity:0;pointer-events:none}
+.rel.on{opacity:1}
+.writer{font-size:11px;fill:var(--melon);font-weight:700}
+.reader{font-size:11.5px;fill:var(--teal);font-weight:700}
+.db text{fill:var(--ink2)}
+table.cols{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:8px}
+table.cols td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+table.cols td:first-child{font-family:ui-monospace,Menlo,Consolas,monospace;word-break:break-all;max-width:180px}
+.gloss table.cols{font-size:15px;margin-top:12px}
+.gloss table.cols td{padding:11px 12px;line-height:1.65}
+.gloss table.cols td:first-child{max-width:260px;min-width:170px;font-size:14px}
+
+/* ---- 시나리오 (시간 축) ---- */
+.sc p.intro{max-width:900px;margin:0 0 20px;color:var(--ink2);font-size:16.5px}
+.scsel{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 24px}
+.scsel button{border:1px solid var(--line);background:var(--surface);color:var(--ink2);font:inherit;font-size:14px;font-weight:600;padding:9px 18px;border-radius:999px;cursor:pointer;box-shadow:0 1px 3px var(--shc)}
+.scsel button:hover{color:var(--ink)}
+.scsel button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.scsel button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.tl{position:relative;margin:0;padding:0 0 0 38px;list-style:none;max-width:920px}
+.tl::before{content:"";position:absolute;left:12px;top:10px;bottom:10px;width:2px;background:var(--line)}
+.tl li{position:relative;margin:0 0 16px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:15px 20px;box-shadow:0 2px 6px var(--shc)}
+.tl li::before{content:"";position:absolute;left:-31px;top:20px;width:11px;height:11px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 3px var(--paper)}
+.tl .t{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--acc);font-weight:700;margin-right:10px}
+.tl .txt{font-size:15.5px}
+.tl .nd{display:inline-block;border:1px solid var(--line);background:var(--sand);color:var(--ink);font:inherit;font-size:13px;font-weight:600;padding:4px 13px;border-radius:999px;cursor:pointer;margin:8px 7px 0 0}
+.tl .nd:hover{border-color:var(--acc);color:var(--acc);background:var(--acc-t)}
+.tl .nd:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.tl .nd::after{content:" ↗";font-size:11.5px;color:var(--foot)}
+
+/* ---- 데이터 여정 (lineage) ---- */
+.linwrap{margin:0 0 26px}
+.linwrap h2{font-size:19px;margin:0 0 12px;font-weight:800;letter-spacing:-.01em}
+.lin{display:flex;align-items:stretch;gap:10px;margin:0 0 12px;flex-wrap:wrap;padding:13px 16px;background:color-mix(in srgb,var(--lc,var(--sand)) 24%,var(--surface));border:1px solid color-mix(in srgb,var(--lc,var(--line)) 40%,var(--line));border-radius:16px}
+.lin em{font-style:normal;font-size:13.5px;color:var(--ink);width:164px;flex:none;font-weight:800;align-self:center;line-height:1.45}
+.lin .n{background:var(--surface);border-radius:12px;padding:9px 14px;min-width:130px;flex:1 1 0;box-shadow:0 1px 3px var(--shc)}
+.lin .n b{display:block;font-size:13.5px;font-weight:700}.lin .n span{font-size:12px;color:var(--ink2)}
+.lin i{font-style:normal;color:var(--foot);align-self:center}
+
+/* ---- 운영 · 배포 ---- */
+#opsbody p.intro{max-width:1000px;margin:0 0 24px;color:var(--ink2);font-size:16.5px}
+.opsgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:20px}
+.dev{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:24px 26px;box-shadow:0 2px 6px var(--shc),0 18px 44px var(--sh2)}
+.dev h2{font-size:18px;margin:0;font-weight:800;letter-spacing:-.01em}
+.dev .host{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.55}
+table.svc{width:100%;border-collapse:collapse;font-size:14.5px;margin-top:14px}
+table.svc td{padding:9px 9px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.6}
+table.svc td:first-child{font-family:ui-monospace,Menlo,Consolas,monospace;white-space:nowrap;font-weight:600}
+table.svc .meta{color:var(--ink2);font-size:13px;margin-top:2px}
+.dev ul{margin:14px 0 0;padding-left:18px;font-size:14.5px;color:var(--ink2);line-height:1.7}
+.dev ul li{margin:6px 0}
+
+/* ---- 핵심 기술 · 용어 ---- */
+.gloss{font-size:16px}
+.gloss h2{font-size:21px;margin:30px 0 12px;font-weight:800;letter-spacing:-.01em}
+.gloss h2:first-child{margin-top:0}
+.gloss .flow{display:grid;grid-template-columns:repeat(5,1fr);gap:28px;margin:18px 0}
+.gloss .flow div{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px;font-size:14.5px;line-height:1.55;box-shadow:0 2px 6px var(--shc);position:relative}
+.gloss .flow div b{display:block;font-size:15px;font-weight:800;margin-bottom:6px}
+.gloss .flow div small{display:block;font-size:13px;color:var(--ink2);line-height:1.55;margin-top:6px}
+.gloss .flow div.hl{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc-t),0 2px 6px var(--shc)}
+.gloss .flow div+div::before{content:"→";position:absolute;left:-23px;top:50%;transform:translateY(-50%);color:var(--foot);font-size:15px}
+.gloss p{margin:10px 0}
+.gloss code,.panel code{background:var(--sand);padding:1px 7px;border-radius:7px;font-size:.92em}
+.note{border-left:3px solid var(--melon);background:var(--melon-t);border-radius:0 14px 14px 0;padding:16px 20px;margin-top:24px;font-size:15px;line-height:1.7}
+@media(max-width:700px){.gloss .flow{grid-template-columns:1fr 1fr}.gloss .flow div+div::before{display:none}}
+@media(max-width:900px){.app{grid-template-columns:1fr}.sidebar{position:static;height:auto}.tabs{flex-direction:row;flex-wrap:wrap}main{padding:20px 18px 60px}}
+@media(prefers-reduced-motion:no-preference){.edge,.node,.tbl rect,.rel{transition:opacity .18s,stroke-width .18s,fill .18s}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('pm-theme')||'light')}catch(e){document.documentElement.setAttribute('data-theme','light')}</script>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand"><small>project-map</small><b id="brand"></b></div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="ov"><span class="n">1</span>설계 맵 (큰 그림)</button>
+    <button role="tab" aria-selected="false" data-tab="sc" id="scbtn" hidden><span class="n">·</span>시나리오 (시간 축)</button>
+    <button role="tab" aria-selected="false" data-tab="map"><span class="n">2</span>스크립트 연결 지도</button>
+    <button role="tab" aria-selected="false" data-tab="db"><span class="n">3</span><span id="dblabel">DB 스키마</span></button>
+    <button role="tab" aria-selected="false" data-tab="ops" id="opsbtn" hidden><span class="n">·</span>운영 · 배포</button>
+    <button role="tab" aria-selected="false" data-tab="gloss" id="glossbtn"><span class="n">4</span><span id="glosslabel">핵심 기술 · 용어</span></button>
+  </nav>
+  <div class="sidefoot">
+    <button id="thm" type="button" aria-label="테마 전환"><span class="s">☀</span><span class="m">🌙</span><span>테마 전환</span></button>
+    <span id="foot"></span>
+  </div>
+</aside>
+<main>
+<h1 id="title"></h1>
+
+<section id="ov"><div class="ov" id="ovbody"></div></section>
+
+<section id="sc" hidden><div class="sc" id="scbody"></div></section>
+
+<section id="map" hidden>
+  <div class="wrap">
+    <div class="stage">
+      <svg id="mapsvg" role="img" aria-label="스크립트 연결 지도"></svg>
+      <div class="legend">
+        <span class="call">실행/호출</span><span class="imp">import</span>
+        <span class="wr">파일 쓰기 (파일당 쓰기 주체 하나)</span><span class="rd">파일 읽기</span><span class="http">HTTP / 소켓</span>
+      </div>
+    </div>
+    <aside class="panel" id="mappanel"><div class="pgrid">
+      <div><h2>노드를 선택하세요</h2></div>
+      <p style="margin:0">세로 열은 "누가 시작시키는가"에서 "누가 최종 소비하는가"까지의 순서입니다. 노드를 클릭하면 그 파일의 역할 요약과, 무엇을 부르고 누가 부르는지가 여기 나옵니다.</p>
+      <p style="margin:0">공용 모듈 열은 스스로 실행되는 일이 없습니다 — 다른 스크립트가 <code>import</code> 해서 함수만 빌려 씁니다.</p>
+    </div></aside>
+  </div>
+</section>
+
+<section id="db" hidden>
+  <div class="wrap">
+    <div class="stage">
+      <svg id="dbsvg" role="img" aria-label="DB 스키마"></svg>
+      <div class="legend"><span class="wr">쓰기 주체 (writer)</span><span class="rd">읽기만 (reader)</span><span class="imp">테이블 클릭 → 컬럼 + 같은 키로 이어지는 테이블</span></div>
+    </div>
+    <aside class="panel" id="dbpanel"><div class="pgrid">
+      <div><h2>테이블을 선택하세요</h2></div>
+      <p style="margin:0">DB 파일마다 쓰기 주체(writer)를 하나로 두면 잠금 경합이 없고, 파일이 잘못됐을 때 의심할 프로그램이 하나로 좁혀집니다.</p>
+      <p style="margin:0">파일 사이 점선은 외래키가 아니라 같은 값(보통 날짜·시각 문자열)으로 코드에서 조인하는 관계입니다.</p>
+    </div></aside>
+  </div>
+</section>
+
+<section id="ops" hidden><div id="opsbody"></div></section>
+
+<section id="gloss" hidden><div class="gloss" id="glossbody">
+    <h2>"API" 는 스크립트도, DB 호출도 아닙니다</h2>
+    <p>API 는 "서버가 클라이언트에게 약속한 <b>주소와 응답 모양</b>" 입니다. 어떤 스크립트가 만들었는지, 뒤에서 DB 를 읽는지 JSON 파일을 읽는지는 약속에 들어가지 않습니다.</p>
+    <div class="flow">
+      <div><b>실행 주체</b>타이머 / 서비스</div>
+      <div><b>스크립트</b>계산해서 저장</div>
+      <div><b>데이터 파일</b>결과가 놓이는 곳</div>
+      <div class="hl"><b>엔드포인트</b>서버가 여는 문<br><code>GET /api/…</code></div>
+      <div><b>소비자</b>브라우저가 fetch</div>
+    </div>
+    <table class="cols">
+      <tr><td>API</td><td>추상적 약속. "이 주소에 이런 JSON 이 온다"</td></tr>
+      <tr><td>엔드포인트</td><td>그 약속의 한 줄. 메서드+경로 하나 = 라우터 함수 하나</td></tr>
+      <tr><td>스크립트 / 잡</td><td>타이머가 돌리는 독립 프로세스. HTTP 와 무관, 파일을 남기고 종료</td></tr>
+    </table>
+    <div class="note"><b>안내</b> — 이 탭은 <code>glossary_html</code> 로 프로젝트 맞춤 내용(핵심 구현 기술 + 용어)으로 교체하도록 설계되어 있습니다.</div>
+</div></section>
+</main>
+</div>
+
+<script>
+const DATA = {"title": "Mealboard 프로젝트 지도", "subtitle": "급식실 대기시간·영양 대시보드 — 카메라 λ·L → Little's law → PWA · 지속 갱신(기준 2026-09-22, PLAN-2026-09 구조)", "overview": {"intro": "왼쪽에서 오른쪽으로 데이터가 흐릅니다. 모든 것은 Pi 한 대 안에서 돕니다. 축(행)마다 쓰는 파일과 시각이 다르고, 서로는 파일로만 만납니다.", "lanes": [{"label": "개발 흐름", "items": ["개발 PC|코드 작성 · git push", "GitHub|저장소 원본", "Pi 5 (학교)|git pull · systemd"]}, {"label": "실시간 축", "items": ["카메라 / mock|사람 수 세기", "queue.db|숫자만 저장", "FastAPI :8100|/api/status·positions", "브라우저|30초 폴링"]}, {"label": "집계 축 (배치)", "items": ["rollup 14:10|하루 집계", "insights.db|8 테이블", "report 14:20|로컬 LLM 리포트", "reports.db|headline·body", "/api/insight/*|진입 시 1회"]}, {"label": "급식·뉴스 축", "items": ["NEIS API|fetch_neis 새벽", "meal.json|주간 식단", "RSS·Guardian|fetch_news 06:10", "news.json|메타+digest"]}, {"label": "관리 축 (tailnet)", "items": ["관리 앱 :8101|Serve 8443", "admin.db|감사 로그", "zones.local.json|구역 편집", "meta.sock|프레임 메타 · 저장 없음"]}, {"label": "공개", "items": ["Tailscale Funnel|443 → 8100", "학생·교사|QR → PWA"]}]}, "columns": [{"id": "timer", "label": "실행 주체 (systemd · Tailscale)"}, {"id": "job", "label": "스크립트 / 프로세스"}, {"id": "lib", "label": "공용 모듈 (import 만 됨)"}, {"id": "data", "label": "데이터 파일"}, {"id": "api", "label": "FastAPI 서버"}, {"id": "web", "label": "브라우저"}], "nodes": {"t_api": {"c": "timer", "n": "mealboard-api.service", "s": "상시 · 8100", "d": "공개 FastAPI 를 부팅 시 자동 실행하고 죽으면 재시작한다. Funnel 이 이 포트를 인터넷에 낸다.", "row": 0}, "t_mock": {"c": "timer", "n": "mealboard-mock / vision", "s": "상시 · 카메라(대역)", "d": "홈 Pi 는 mock, 학교 Pi 는 vision. 둘을 동시에 켜지 않는다 — queue.db 쓰기 주체는 하나.", "row": 1}, "t_neis": {"c": "timer", "n": "mealboard-neis.timer", "s": "매일 새벽", "d": "fetch_neis.py 를 하루 한 번 oneshot 으로 돌린다.", "row": 2}, "t_news": {"c": "timer", "n": "mealboard-news.timer", "s": "매일 06:10", "d": "fetch_news.py 를 하루 한 번. 05:45 report 뒤라 Hailo 충돌이 없다.", "row": 3}, "t_report": {"c": "timer", "n": "mealboard-report.timer", "s": "05:45 · 14:20", "d": "아침 preview, 오후 recap 두 번. recap 은 rollup(14:10) 뒤.", "row": 4}, "t_rollup": {"c": "timer", "n": "mealboard-rollup.timer", "s": "매일 14:10", "d": "점심이 끝난 뒤 최근 2일을 집계. Persistent=true 라 꺼져 있던 날도 보충 실행.", "row": 5}, "t_admin": {"c": "timer", "n": "mealboard-admin.service", "s": "상시 · 8101", "d": "관리 앱. 127.0.0.1 에만 바인드하고 tailscale serve 8443 이 tailnet 안에서만 연결한다.", "row": 6}, "t_serve": {"c": "timer", "n": "tailscale funnel / serve", "s": "443→8100 · 8443→8101", "d": "Funnel = 인터넷 공개, Serve = tailnet 전용. reset 명령은 절대 금지(Funnel 까지 지워짐).", "row": 7}, "main": {"c": "job", "n": "app/main.py (uvicorn)", "s": "라우터 include + static", "d": "공개 서버의 조립 지점. 라우터들을 include 하고 마지막에 static 을 mount 한다(/api/* 가 먼저 잡히도록).", "row": 0}, "mock": {"c": "job", "n": "jobs/mock_feed.py", "s": "vision/counter.py 대역", "d": "점심 인파 곡선을 흉내내 samples·zone_samples 를 쓴다. --scenario stall/gap 으로 병목·결측 상태를 재현.", "row": 1}, "neis": {"c": "job", "n": "jobs/fetch_neis.py", "s": "NEIS → 영양 지표", "d": "NEIS 급식 API 를 호출해 주간 식단·영양 지표·탄소 추정을 meal.json 에 저장.", "row": 2}, "news": {"c": "job", "n": "jobs/fetch_news.py", "s": "RSS 3건 → 본문 → 요약", "d": "기후 RSS 에서 3건 선정 → 본문 확보 → 로컬 LLM 한국어 요약(digest). 실패 시 DeepL 도입부 번역. 본문은 저장하지 않는다.", "row": 3}, "report": {"c": "job", "n": "jobs/report.py", "s": "preview/recap 리포트", "d": "숫자·메뉴명만 LLM 에 넣어 헤드라인·본문을 만들고 스키마 검증 후 reports.db 에 저장. 실패 시 규칙 템플릿.", "row": 4}, "rollup": {"c": "job", "n": "jobs/rollup.py", "s": "하루 단위 집계", "d": "insights.db 의 유일한 writer. queue.db 표본을 5분 bin 으로 집계하고 황금 구간·병목·메뉴 인기도를 계산. 하루 단위 DELETE→INSERT 한 트랜잭션.", "row": 5}, "admin": {"c": "job", "n": "app/admin (관리 앱)", "s": "auth·audit·stream·zones", "d": "tailnet 전용 두 번째 FastAPI. 신원 허용목록(fail-closed), 서비스 재시작, 메타 SSE, MJPEG opt-in, 구역 편집, 감사 로그.", "row": 6}, "checkllm": {"c": "job", "n": "check_llm.py", "s": "스파이크 · 수동 1회", "d": "Hailo-10H 에서 로컬 LLM 이 실제로 되는지 30분 검증. tok/s·품질·YOLO 공존·컨텍스트 상한을 재고 go/no-go.", "row": 8}, "config": {"c": "lib", "n": "app/config.py", "s": ".env · 경로 · 상수", "d": ".env 와 파일 경로, 포트, 상수를 읽는 유일한 곳. 다른 모듈은 여기서 가져다 쓴다(하드코딩 금지).", "row": 0}, "db": {"c": "lib", "n": "app/db.py", "s": "queue.db connect", "d": "queue.db 연결과 스키마. WAL 모드로 읽기·쓰기가 서로 막지 않게 한다.", "row": 1}, "lunch": {"c": "lib", "n": "app/lunch.py", "s": "시간창 · bin", "d": "점심 시간창 파싱과 5분 bin 계산. 순수 함수라 sqlite 없이 테스트.", "row": 2}, "zones": {"c": "lib", "n": "vision/zones.py", "s": "구역 판정 · 호모그래피", "d": "zones.json 로드(+local overlay)·검증, 점의 구역 판정, 4점 호모그래피. vision·mock·rollup·관리 앱이 공용.", "row": 3}, "calc": {"c": "lib", "n": "app/insight_calc.py", "s": "순수 계산 (황금·병목…)", "d": "커버리지·황금 구간·병목·인기도 판정 규칙. rollup 이 저장용으로, insight 라우터가 오늘(live) 즉석 계산용으로 같은 함수를 쓴다.", "row": 4}, "insdb": {"c": "lib", "n": "app/insights_db.py", "s": "connect_ro()", "d": "insights.db·reports.db 를 읽기 전용(mode=ro)으로 연다. 파일이 없으면 만들지 않고 None.", "row": 5}, "newsbody": {"c": "lib", "n": "jobs/newsbody.py", "s": "본문 확보 3전략", "d": "기사 본문을 RSS content:encoded → Guardian API → HTML 단락 순으로 시도. 메모리에서만 쓴다.", "row": 6}, "trans": {"c": "lib", "n": "jobs/translators.py", "s": "DeepL / local", "d": "헤드라인 번역 엔진 선택(TRANSLATOR=deepl|local|none).", "row": 7}, "llm": {"c": "lib", "n": "jobs/llm.py", "s": "LocalLLM · valid_korean", "d": "Hailo GenAI 래퍼와 출력 검증기(한글 비율, 길이비, 숫자 부분집합 규칙). report·news·check_llm 이 공용.", "row": 8}, "queue": {"c": "data", "n": "data/queue.db", "s": "samples · zone_samples", "d": "실시간 축의 원본. 10초 간격 표본과 구역별 인원 수. 좌표·프레임은 없다.", "row": 1}, "meal": {"c": "data", "n": "data/meal.json", "s": "주간 식단", "d": "NEIS 결과 캐시. 라우터가 그대로 내주고 rollup 이 nutrition_days 로 복사한다.", "row": 2}, "newsj": {"c": "data", "n": "data/news.json", "s": "메타 + digest", "d": "제목·출처·날짜·링크 + LLM 요약 3줄. 본문 미저장(저작권).", "row": 3}, "reports": {"c": "data", "n": "data/reports.db", "s": "reports", "d": "LLM 이 쓴 preview/recap 텍스트. insights.db 와 분리해 계산 데이터와 생성 텍스트를 섞지 않는다.", "row": 4}, "insights": {"c": "data", "n": "data/insights.db", "s": "8 테이블", "d": "집계 결과. 히트맵·예보·인기도의 근거. user_version 으로 마이그레이션.", "row": 5}, "admindb": {"c": "data", "n": "data/admin.db", "s": "admin_log", "d": "관리 행위 감사 로그(누가·언제·무엇을). 스트림 켜짐 이력도 여기.", "row": 6}, "zonesj": {"c": "data", "n": "zones.json + .local", "s": "구역 정의 (overlay)", "d": "git 추적 템플릿(zones.json) 위에 Pi 전용 미추적 zones.local.json 을 겹쳐 읽는다. Pi 체크아웃이 dirty 되지 않게.", "row": 7}, "sock": {"c": "data", "n": "/run/mealboard/meta.sock", "s": "프레임 메타 (저장 없음)", "d": "vision 이 프레임마다 던지는 트랙 메타. 구독자가 있을 때만 관리 앱이 bind — 아무도 안 보면 좌표가 프로세스를 떠나지 않는다.", "row": 8}, "r_status": {"c": "api", "n": "routers/status·history", "s": "/api/status /api/history", "d": "현재 대기시간과 최근 N분 추이. 120초 넘게 표본이 없으면 no_data.", "row": 1}, "r_meal": {"c": "api", "n": "routers/meal", "s": "/api/meal", "d": "meal.json 을 그대로 응답.", "row": 2}, "r_news": {"c": "api", "n": "routers/news", "s": "/api/news", "d": "news.json 을 그대로 응답.", "row": 3}, "r_insight": {"c": "api", "n": "routers/insight", "s": "/api/insight/* 8종", "d": "heatmap·day·menus·forecast·quality·nutrition·zones·text. insights.db 없으면 no_data+reason, 오늘은 queue.db 로 live 계산.", "row": 5}, "r_admin": {"c": "api", "n": "/api/admin/*", "s": "whoami·stream·zones…", "d": "관리 앱 전용 라우터. 모든 변경 요청은 감사 행을 남기고 JSON Content-Type 을 강제(CSRF).", "row": 6}, "r_pos": {"c": "api", "n": "routers/positions", "s": "/api/positions", "d": "평면도 위 익명 마커(순간값만, 이력 없음).", "row": 7}, "core": {"c": "web", "n": "js/core.js", "s": "라우터 · 30초 tick", "d": "해시 라우터, 화면 생명주기 register(), 30초 폴링 tick(활성 화면만). whoami 200 이면 admin.js 를 동적 import.", "row": 0}, "wait": {"c": "web", "n": "js/wait.js", "s": "#wait", "d": "대기시간 화면: 히어로+추이 통합 카드 위, 히트맵·황금·예보·병목·품질 인사이트 아래.", "row": 1}, "room": {"c": "web", "n": "js/room.js + floor.js", "s": "#room", "d": "급식실 현황(탑뷰+마커)과 구역 점유율·LLM 리포트. floor.js 는 평면도 그리기 공용.", "row": 2}, "week": {"c": "web", "n": "js/week.js · today.js", "s": "#week #today", "d": "주간식단+영양 추이+TOP5, 오늘급식+탄소 통합 카드.", "row": 3}, "newsw": {"c": "web", "n": "js/news.js", "s": "#news", "d": "이슈피드: 헤드라인·칩·digest 3줄·why·원문 링크.", "row": 4}, "adminjs": {"c": "web", "n": "admin-ui/admin.js", "s": "#admin (tailnet 만)", "d": "관리 뷰. 공개 static 에 두지 않고 관리 앱만 /admin-ui/ 로 서빙.", "row": 6}, "sw": {"c": "web", "n": "sw.js v8", "s": "/js /css 네트워크 우선", "d": "PWA 서비스 워커. 페이지·/js/·/css/ 는 네트워크 우선(셸과 모듈 버전 어긋남 방지), 나머지 캐시 우선.", "row": 8}}, "edges": [["t_api", "main", "call", "uvicorn app.main:app"], ["t_mock", "mock", "call", "python -m jobs.mock_feed"], ["t_neis", "neis", "call", "oneshot"], ["t_news", "news", "call", "oneshot"], ["t_report", "report", "call", "oneshot"], ["t_rollup", "rollup", "call", "--days 2"], ["t_admin", "admin", "call", "uvicorn app.admin:app :8101"], ["t_serve", "main", "http", "Funnel 443 → 8100"], ["t_serve", "admin", "http", "Serve 8443 → 8101"], ["main", "r_status", "imp", "include_router"], ["main", "r_meal", "imp", "include_router"], ["main", "r_news", "imp", "include_router"], ["main", "r_insight", "imp", "include_router"], ["main", "r_pos", "imp", "include_router"], ["admin", "r_admin", "imp", "admin 라우터 + 공개 라우터"], ["admin", "zones", "imp", "validate_zones"], ["admin", "config", "imp", ""], ["mock", "db", "imp", "connect()"], ["mock", "zones", "imp", "count_by_zone"], ["mock", "config", "imp", ""], ["mock", "queue", "wr", "samples + zone_samples 한 트랜잭션"], ["mock", "sock", "http", "--meta 합성 프레임"], ["neis", "config", "imp", ""], ["neis", "meal", "wr", "json.dumps"], ["news", "newsbody", "imp", "fetch_body"], ["news", "trans", "imp", "headline DeepL"], ["news", "llm", "imp", "digest 요약"], ["news", "newsj", "wr", "메타+digest 만"], ["report", "llm", "imp", "complete()"], ["report", "insdb", "imp", "connect_ro"], ["report", "insights", "rd", "recap 입력"], ["report", "meal", "rd", "preview 입력"], ["report", "reports", "wr", "유일 writer"], ["rollup", "lunch", "imp", "bounds/bin_of"], ["rollup", "calc", "imp", "day_summary…"], ["rollup", "zones", "imp", "area_m2"], ["rollup", "config", "imp", ""], ["rollup", "queue", "rd", "samples·zone_samples"], ["rollup", "meal", "rd", "nutrition_days 사본"], ["rollup", "insights", "wr", "유일 writer · DELETE→INSERT"], ["checkllm", "llm", "imp", "스파이크"], ["db", "queue", "rd", ""], ["insdb", "insights", "rd", "mode=ro"], ["insdb", "reports", "rd", "mode=ro"], ["r_status", "db", "imp", ""], ["r_pos", "db", "imp", ""], ["r_pos", "zones", "imp", "zone_of"], ["r_meal", "meal", "rd", ""], ["r_news", "newsj", "rd", ""], ["r_insight", "insdb", "imp", ""], ["r_insight", "calc", "imp", "오늘 = live 즉석 계산"], ["r_insight", "lunch", "imp", ""], ["r_insight", "queue", "rd", "basis:live"], ["r_admin", "admindb", "wr", "감사 행 (유일 writer)"], ["r_admin", "zonesj", "wr", "zones.local.json 만"], ["r_admin", "sock", "http", "SSE 구독 중만 bind"], ["zones", "zonesj", "rd", "load_zones overlay"], ["core", "wait", "imp", "register()"], ["core", "room", "imp", ""], ["core", "week", "imp", ""], ["core", "newsw", "imp", ""], ["core", "adminjs", "imp", "whoami 200 이면 import()"], ["wait", "r_status", "http", "30초 폴링"], ["wait", "r_insight", "http", "진입 1회 · day/quality 5분"], ["room", "r_pos", "http", "30초 폴링"], ["room", "r_insight", "http", "zones · text"], ["week", "r_meal", "http", ""], ["week", "r_insight", "http", "nutrition · menus"], ["newsw", "r_news", "http", ""], ["adminjs", "r_admin", "http", "SSE · MJPEG opt-in"], ["sw", "core", "rd", "SHELL 캐시 · 네트워크 우선"]], "dbs": [{"id": "queue", "name": "queue.db", "writer": "mock_feed / vision", "readers": ["routers/status·history·positions", "rollup (14:10)", "insight (오늘=live)"], "tables": [{"n": "samples", "pk": "ts", "cols": [["ts", "TEXT PK · ISO 로컬시각"], ["queue_len", "INTEGER · L 대기 인원"], ["rate_per_min", "REAL · λ 5분 이동평균"], ["wait_min", "REAL · W=L/λ"], ["state", "ok | no_data | insufficient_rate"]]}, {"n": "zone_samples", "pk": "(ts, zone)", "cols": [["ts", "TEXT · samples.ts 와 같은 트랜잭션"], ["zone", "TEXT · counter|aisle|seating"], ["n", "INTEGER · 구역 인원 (집계 숫자만)"]]}]}, {"id": "insights", "name": "insights.db", "writer": "jobs/rollup.py", "readers": ["routers/insight (mode=ro)", "jobs/report.py (recap 입력)"], "tables": [{"n": "runs", "pk": "id", "cols": [["id", ""], ["started_at / finished_at", ""], ["args · dates · n_days", ""], ["ok · error", "실행 이력"]]}, {"n": "lunch_days", "pk": "date", "cols": [["date", "TEXT PK"], ["weekday · window_lo/hi · source", "mock|vision 구분"], ["n_samples · coverage_pct · stale_min · insufficient_min", "측정 품질"], ["peak_wait(_ts) · peak_queue(_ts) · avg_wait", "피크"], ["served_est · typical_rate · rise_rate", ""], ["golden_min · bottleneck_min", ""], ["menu_json · main_dish", ""], ["calc_version · computed_at", ""]]}, {"n": "lunch_bins", "pk": "(date, bin)", "cols": [["date · weekday · bin", "5분 bin, idx(weekday,bin) → 히트맵"], ["n · ok_n · insufficient_n", ""], ["avg_queue · max_queue · avg_rate", ""], ["avg_wait · max_wait", ""]]}, {"n": "zone_bins", "pk": "(date, bin, zone)", "cols": [["date · bin · zone", ""], ["n · avg_n · max_n", "구역 점유율"]]}, {"n": "events", "pk": "(date, kind, start_ts)", "cols": [["date · kind", "golden|bottleneck|stale|insufficient"], ["start_ts · end_ts · minutes", ""], ["value · detail", ""]]}, {"n": "menu_days", "pk": "(date, menu)", "cols": [["date · menu · position", ""], ["peak_wait · rise_rate · peak_queue · served_est", "메뉴별 그날 반응"]]}, {"n": "menu_stats", "pk": "menu", "cols": [["menu", "TEXT PK"], ["n_days · avg_peak_wait · avg_rise_rate · avg_peak_queue", ""], ["popularity", "100·(0.5·rise/base + 0.5·wait/base)"], ["first_date · last_date", "매 실행 전체 재생성"]]}, {"n": "nutrition_days", "pk": "date", "cols": [["date", "TEXT PK"], ["kcal · energy_pct · … · mar · kgco2e", "meal.json week[] 사본"], ["menu_json · fetched_at", "이력 축적"]]}]}, {"id": "reports", "name": "reports.db", "writer": "jobs/report.py", "readers": ["routers/insight → /api/insight/text"], "tables": [{"n": "reports", "pk": "id", "cols": [["id · ts", ""], ["kind", "preview | recap"], ["for_date", "lunch_days.date 와 맞춤"], ["engine · model", "hailo | template"], ["ok · ms", ""], ["headline ≤40 · body ≤120 · tone", "스키마 검증 통과분만"], ["input_json", "숫자·메뉴명만 (프레임·좌표 없음)"]]}]}, {"id": "admin", "name": "admin.db", "writer": "app/admin (관리 앱)", "readers": ["/api/admin/audit"], "tables": [{"n": "admin_log", "pk": "id", "cols": [["id · ts · user", ""], ["action · target · detail", "restart · stream.on/off · zones.put · lockdown"], ["ok · ip", ""]]}]}], "rels": [["queue.samples", "queue.zone_samples", "ts"], ["insights.lunch_days", "insights.lunch_bins", "date"], ["insights.lunch_days", "insights.zone_bins", "date"], ["insights.lunch_days", "insights.events", "date"], ["insights.lunch_days", "insights.menu_days", "date"], ["insights.lunch_days", "insights.nutrition_days", "date"], ["insights.menu_days", "insights.menu_stats", "menu"], ["insights.lunch_bins", "insights.zone_bins", "date+bin"], ["queue.zone_samples", "insights.zone_bins", "rollup 집계"], ["queue.samples", "insights.lunch_bins", "rollup 집계"], ["insights.lunch_days", "reports.reports", "for_date"]]};
+document.getElementById('title').innerHTML=(DATA.title||'프로젝트 지도')+(DATA.subtitle?`<small>${DATA.subtitle}</small>`:'');
+document.getElementById('brand').textContent=DATA.title||'프로젝트 지도';
+document.getElementById('foot').textContent=DATA.subtitle||'';
+document.title=DATA.title||'프로젝트 지도';
+if(DATA.glossary_html)document.getElementById('glossbody').innerHTML=DATA.glossary_html;
+if(DATA.glossary_label)document.getElementById('glosslabel').textContent=DATA.glossary_label;
+if(DATA.glossary===false)document.getElementById('glossbtn').hidden=true;
+if((DATA.scenarios||[]).length)document.getElementById('scbtn').hidden=false;
+if(DATA.ops)document.getElementById('opsbtn').hidden=false;
+if((DATA.lineage||[]).length)document.getElementById('dblabel').textContent='데이터 (여정 · 스키마)';
+const curTheme=()=>document.documentElement.getAttribute('data-theme')||'light';
+function applyEmbedTheme(f){try{f.contentDocument&&f.contentDocument.documentElement.setAttribute('data-theme',curTheme())}catch(err){}}
+function syncEmbedThemes(){document.querySelectorAll('.embed-frame').forEach(applyEmbedTheme)}
+(DATA.embeds||[]).forEach(e=>{
+  const f=document.createElement('iframe');f.className='embed-frame';f.title=e.label;
+  f.addEventListener('load',()=>applyEmbedTheme(f));  // archify 등 내장 문서 테마를 부모와 동기화
+  let loaded=false;  // 무거운 내장 문서는 첫 방문 때만 파싱
+  const load=()=>{if(!loaded){f.srcdoc=e.html;loaded=true}};
+  if(e.into){  // 기존 탭(section id) 상단에 삽입 — 요약 시각 자료 먼저, 상세는 아래
+    const s=document.getElementById(e.into); if(!s) return;
+    f.classList.add('inline'); s.prepend(f);
+    if(!s.hidden) load();
+    else{const b=document.querySelector('.tabs button[data-tab='+e.into+']'); b&&b.addEventListener('click',load);}
+    return;
+  }
+  const nav=document.querySelector('.tabs');
+  const b=document.createElement('button');
+  b.setAttribute('role','tab');b.setAttribute('aria-selected','false');b.dataset.tab='em-'+e.id;
+  const n=document.createElement('span');n.className='n';n.textContent=nav.children.length+1;
+  b.append(n,e.label);nav.append(b);
+  const s=document.createElement('section');s.id='em-'+e.id;s.hidden=true;
+  s.append(f);document.querySelector('main').append(s);
+  b.addEventListener('click',load);
+});
+(function(){let i=1;document.querySelectorAll('.tabs button').forEach(b=>{if(!b.hidden)b.querySelector('.n').textContent=i++})})();
+document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
+  document.querySelectorAll('main>section').forEach(s=>s.hidden = s.id!==b.dataset.tab);
+}));
+document.getElementById('thm').addEventListener('click',()=>{
+  const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',t);
+  try{localStorage.setItem('pm-theme',t)}catch(e){}
+  syncEmbedThemes();
+});
+const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+let selectNode=null;
+function gotoNode(id){
+  const b=document.querySelector('.tabs button[data-tab=map]'); if(!b) return;
+  b.click(); if(selectNode) selectNode(id);
+  const g=document.querySelector('#mapsvg .node[data-id="'+id+'"]');
+  if(g&&g.scrollIntoView) g.scrollIntoView({block:'center',inline:'nearest'});
+}
+
+/* ---------- 설계 맵: 레인별 색상 ---------- */
+(function(){
+  const ov=DATA.overview||{};const el=document.getElementById('ovbody');
+  let h=ov.intro?`<p class="intro">${esc(ov.intro)}</p>`:'';
+  (ov.lanes||[]).forEach((l,li)=>{
+    h+=`<div class="lane" style="--lc:var(--l${li%6})"><em>${esc(l.label)}</em>`
+      +l.items.map((it,i)=>{const [b,s]=String(it).split('|');return (i?'<i>→</i>':'')+`<div class="n"><b>${esc(b)}</b><span>${esc(s||'')}</span></div>`}).join('')+'</div>';
+  });
+  el.innerHTML=h||'<p>overview.lanes 가 비어 있습니다.</p>';
+})();
+
+/* ---------- 스크립트 연결 지도 ---------- */
+(function(){
+  const NODES=DATA.nodes||{},EDGES=DATA.edges||[],COLS=DATA.columns||[];
+  const NW=212,NH=52,ROW=82,CW=246;
+  const svg=document.getElementById('mapsvg'),NS='http://www.w3.org/2000/svg';
+  const el=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e};
+  const colIdx=Object.fromEntries(COLS.map((c,i)=>[c.id,i]));
+  const used={};let maxRow=0;
+  Object.values(NODES).forEach(n=>{if(n.row!=null){(used[n.c]??=new Set()).add(n.row);maxRow=Math.max(maxRow,n.row)}});
+  Object.values(NODES).forEach(n=>{if(n.row==null){let r=0;const u=(used[n.c]??=new Set());while(u.has(r))r++;u.add(r);n.row=r;maxRow=Math.max(maxRow,r)}});
+  const W=20+COLS.length*CW,H=60+(maxRow+1)*ROW;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  COLS.forEach((c,i)=>{const t=el('text',{x:20+i*CW,y:22,class:'col-label'});t.textContent=c.label;svg.appendChild(t)});
+  const pos=id=>{const n=NODES[id];return {x:20+colIdx[n.c]*CW,y:40+n.row*ROW}};
+  const gE=el('g',{}),gL=el('g',{}),gN=el('g',{});svg.append(gE,gL,gN);
+  const edgeEls=[];
+  EDGES.forEach(([f,t,ty,lab])=>{
+    if(!NODES[f]||!NODES[t]){console.warn('unknown edge',f,t);return}
+    const a=pos(f),b=pos(t),fw=b.x>=a.x;
+    const x1=fw?a.x+NW:a.x,x2=fw?b.x:b.x+NW,y1=a.y+NH/2,y2=b.y+NH/2,dx=Math.max(40,Math.abs(x2-x1)/2);
+    const d=`M${x1},${y1} C${x1+(fw?dx:-dx)},${y1} ${x2-(fw?dx:-dx)},${y2} ${x2},${y2}`;
+    const p=el('path',{d,class:'edge '+ty});gE.appendChild(p);
+    const lb=el('text',{x:(x1+x2)/2,y:(y1+y2)/2-4,class:'edge-label','text-anchor':'middle'});lb.textContent=lab||'';gL.appendChild(lb);
+    edgeEls.push({p,lb,f,t,ty,lab});
+  });
+  Object.entries(NODES).forEach(([id,n])=>{
+    const {x,y}=pos(id);
+    const g=el('g',{class:'node c'+colIdx[n.c],'data-id':id,tabindex:0,role:'button'});
+    g.appendChild(el('rect',{x,y,width:NW,height:NH}));
+    const t1=el('text',{x:x+12,y:y+21,'font-weight':600});t1.textContent=n.n;
+    const t2=el('text',{x:x+12,y:y+38,class:'sub'});t2.textContent=n.s||'';
+    g.append(t1,t2);gN.appendChild(g);
+    const sel=()=>select(id);
+    g.addEventListener('click',sel);g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sel()}});
+  });
+  const TY={call:'실행',imp:'import',wr:'쓰기',rd:'읽기',http:'HTTP/소켓'};
+  selectNode=id=>NODES[id]&&select(id);
+  function select(id){
+    const linked=new Set([id]);
+    edgeEls.forEach(e=>{const on=e.f===id||e.t===id;e.p.classList.toggle('on',on);e.p.classList.toggle('dim',!on);e.lb.classList.toggle('on',on);if(on){linked.add(e.f);linked.add(e.t)}});
+    gN.querySelectorAll('.node').forEach(g=>{const k=g.dataset.id;g.classList.toggle('on',k===id);g.classList.toggle('dim',!linked.has(k))});
+    const n=NODES[id],out=edgeEls.filter(e=>e.f===id),inn=edgeEls.filter(e=>e.t===id);
+    const li=e=>{const o=e.f===id?e.t:e.f;return `<li><span class="chip ${e.ty==='wr'?'w':e.ty==='rd'?'r':e.ty==='call'?'t':''}">${TY[e.ty]||e.ty}</span><b>${esc(NODES[o].n)}</b>${e.lab?' — '+esc(e.lab):''}</li>`};
+    document.getElementById('mappanel').innerHTML=`<div class="pgrid">
+      <div><h2>${esc(n.n)}</h2><div class="path">${esc(n.s||'')}</div>${n.d?`<p class="desc">${esc(n.d)}</p>`:''}</div>
+      <div><h3>이 노드가 하는 것 (→)</h3><ul>${out.map(li).join('')||'<li>없음</li>'}</ul></div>
+      <div><h3>이 노드를 부르는/읽는 것 (←)</h3><ul>${inn.map(li).join('')||'<li>없음 — 진입점</li>'}</ul></div></div>`;
+  }
+})();
+
+/* ---------- DB 스키마 ---------- */
+(function(){
+  const DBS=DATA.dbs||[],RELS=DATA.rels||[];
+  const svg=document.getElementById('dbsvg'),NS='http://www.w3.org/2000/svg';
+  const el=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e};
+  const W=340,TH=26,GAP=8,OFF=14,COLW=400,PER=3;
+  // writer 문자열 줄바꿈 (실린더 폭 안에서)
+  const wrap=(s,n)=>{const out=[];let cur='';String(s).split(/\s+/).forEach(w=>{if((cur+' '+w).trim().length>n){if(cur)out.push(cur);cur=w}else cur=(cur+' '+w).trim()});if(cur)out.push(cur);return out};
+  const colY=[60,60,60];let maxY=0;
+  DBS.forEach((d,i)=>{d._wl=wrap('writer · '+d.writer,52);
+    const H=48+d._wl.length*15+8+d.tables.length*(TH+GAP)+12+(d.readers.length+1)*16;
+    const c=i%PER;d._x=d.x??(30+c*COLW);d._y=d.y??colY[c];d._h=H;colY[c]=d._y+H+OFF+40;maxY=Math.max(maxY,d._y+H+OFF+20)});
+  const VW=Math.max(1,Math.min(DBS.length,PER))*COLW+60;
+  svg.setAttribute('viewBox',`0 0 ${VW} ${maxY+20}`);
+  svg.style.maxWidth=Math.min(VW*1.2,1500)+'px';           // 1-DB 소형 지도가 전폭으로 확대되는 것 방지
+  const tpos={};const gDb=el('g',{}),gRel=el('g',{});svg.append(gDb,gRel);
+  DBS.forEach(d=>{
+    const H=d._h,x=d._x,y=d._y,i=DBS.indexOf(d),g=el('g',{class:'db',style:'--dbc:var(--l'+(i%6)+')'});
+    g.appendChild(el('rect',{class:'face',x,y:y+OFF,width:W,height:H,rx:16}));
+    g.appendChild(el('circle',{class:'dot',cx:x+22,cy:y+OFF+19,r:5.5}));
+    const tt=el('text',{x:x+36,y:y+OFF+24,class:'title'});tt.textContent=d.name;g.appendChild(tt);
+    d._wl.forEach((ln,i)=>{const w=el('text',{x:x+14,y:y+OFF+42+i*15,class:'writer'});w.textContent=ln;g.appendChild(w)});
+    const tbase=y+OFF+48+d._wl.length*15+4;
+    d.tables.forEach((t,i)=>{
+      const ty=tbase+i*(TH+GAP),id=d.id+'.'+t.n;
+      const tg=el('g',{class:'tbl','data-id':id,tabindex:0,role:'button'});
+      tg.appendChild(el('rect',{x:x+14,y:ty,width:W-28,height:TH}));
+      const tx=el('text',{x:x+24,y:ty+17});tx.textContent=t.n;tg.appendChild(tx);
+      const pk=el('text',{x:x+W-24,y:ty+17,'text-anchor':'end','font-size':10});pk.textContent=t.pk?'PK '+t.pk:'';tg.appendChild(pk);
+      tpos[id]={x:x+14,y:ty,w:W-28,h:TH,db:d,t};
+      const sel=()=>select(id);tg.addEventListener('click',sel);tg.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sel()}});
+      g.appendChild(tg);
+    });
+    let ry=tbase+d.tables.length*(TH+GAP)+12;
+    const rl=el('text',{x:x+14,y:ry,class:'reader'});rl.textContent='readers';g.appendChild(rl);
+    d.readers.forEach(r=>{ry+=16;const t=el('text',{x:x+26,y:ry,'font-size':11});t.textContent='· '+r;g.appendChild(t)});
+    gDb.appendChild(g);
+  });
+  const relEls=RELS.filter(([a,b])=>tpos[a]&&tpos[b]).map(([a,b,k])=>{
+    const A=tpos[a],B=tpos[b],same=A.db===B.db;
+    const d=same?`M${A.x+A.w},${A.y+A.h/2} C${A.x+A.w+30},${A.y+A.h/2} ${B.x+B.w+30},${B.y+B.h/2} ${B.x+B.w},${B.y+B.h/2}`
+                :`M${A.x+A.w},${A.y+A.h/2} C${(A.x+B.x)/2+60},${A.y+A.h/2} ${(A.x+B.x)/2-60},${B.y+B.h/2} ${B.x},${B.y+B.h/2}`;
+    const p=el('path',{d,class:'rel'});gRel.appendChild(p);
+    const lb=el('text',{x:same?A.x+A.w+34:(A.x+A.w+B.x)/2,y:(A.y+B.y)/2+A.h/2,class:'edge-label'});lb.textContent=k||'';gRel.appendChild(lb);
+    return {p,lb,a,b,k};
+  });
+  function select(id){
+    const rel=relEls.filter(r=>r.a===id||r.b===id);
+    relEls.forEach(r=>{const on=rel.includes(r);r.p.classList.toggle('on',on);r.lb.classList.toggle('on',on)});
+    const linked=new Set([id,...rel.flatMap(r=>[r.a,r.b])]);
+    svg.querySelectorAll('.tbl').forEach(g=>g.classList.toggle('on',linked.has(g.dataset.id)));
+    const {db,t}=tpos[id];
+    document.getElementById('dbpanel').innerHTML=`<div class="pgrid" style="grid-template-columns:minmax(280px,1fr) minmax(340px,1.5fr) minmax(200px,.8fr)">
+      <div><h2>${esc(t.n)}</h2><div class="path">${esc(db.name)}${t.pk?' · PK '+esc(t.pk):''}</div>
+        <p style="margin-top:10px"><span class="chip w">writer ${esc(db.writer)}</span></p>${t.d?`<p class="desc">${esc(t.d)}</p>`:''}</div>
+      <div><h3>컬럼</h3><table class="cols">${(t.cols||[]).map(([c,d])=>`<tr><td>${esc(c)}</td><td>${esc(d)}</td></tr>`).join('')}</table></div>
+      <div><h3>이어지는 테이블</h3><ul>${rel.map(r=>`<li><b>${esc((r.a===id?r.b:r.a).split('.').slice(1).join('.'))}</b> — ${esc(r.k)}</li>`).join('')||'<li>없음</li>'}</ul></div></div>`;
+  }
+})();
+
+/* ---------- 시나리오 (시간 축) ---------- */
+(function(){
+  const SCS=DATA.scenarios||[]; if(!SCS.length) return;
+  const NODES=DATA.nodes||{}; const el=document.getElementById('scbody');
+  let cur=0;
+  function draw(){
+    const s=SCS[cur];
+    let h=SCS.length>1?'<div class="scsel" role="group" aria-label="시나리오 선택">'
+      +SCS.map((x,i)=>`<button type="button" aria-pressed="${i===cur}" data-i="${i}">${esc(x.label)}</button>`).join('')+'</div>':'';
+    if(s.intro) h+=`<p class="intro">${esc(s.intro)}</p>`;
+    h+='<ol class="tl">'+ (s.steps||[]).map(st=>{
+      const nodes=[st.node,...(st.also||[])].filter(id=>id&&NODES[id]);
+      return `<li>${st.t?`<span class="t">${esc(st.t)}</span>`:''}<span class="txt">${esc(st.text||'')}</span>`
+        +(nodes.length?'<div>'+nodes.map(id=>`<button type="button" class="nd" data-node="${esc(id)}">${esc(NODES[id].n)}</button>`).join('')+'</div>':'')
+        +'</li>';
+    }).join('')+'</ol>';
+    el.innerHTML=h;
+    el.querySelectorAll('.scsel button').forEach(b=>b.addEventListener('click',()=>{cur=+b.dataset.i;draw()}));
+    el.querySelectorAll('.nd').forEach(b=>b.addEventListener('click',()=>gotoNode(b.dataset.node)));
+  }
+  draw();
+})();
+
+/* ---------- 데이터 여정 (lineage) — 데이터 탭 상단 ---------- */
+(function(){
+  const LIN=DATA.lineage||[]; if(!LIN.length) return;
+  const w=document.createElement('div'); w.className='linwrap';
+  w.innerHTML='<h2>데이터 여정 — 탄생 → 이동 → 저장 → 가공 → 소비</h2>'
+    +LIN.map((l,li)=>`<div class="lin" style="--lc:var(--l${li%6})"><em>${esc(l.label)}</em>`
+      +(l.steps||[]).map((it,i)=>{const [b,s]=String(it).split('|');return (i?'<i>→</i>':'')+`<div class="n"><b>${esc(b)}</b><span>${esc(s||'')}</span></div>`}).join('')+'</div>').join('');
+  document.getElementById('db').prepend(w);
+})();
+
+/* ---------- 운영 · 배포 ---------- */
+(function(){
+  const O=DATA.ops; if(!O) return;
+  const el=document.getElementById('opsbody');
+  let h=O.intro?`<p class="intro">${esc(O.intro)}</p>`:'';
+  h+='<div class="opsgrid">'+(O.devices||[]).map(d=>{
+    let c=`<div class="dev"><h2>${esc(d.label)}</h2>${d.host?`<div class="host">${esc(d.host)}</div>`:''}`;
+    if((d.services||[]).length) c+='<table class="svc">'+d.services.map(s=>
+      `<tr><td>${esc(s.name)}</td><td>${esc(s.d||'')}<div class="meta">${[s.port?'port '+s.port:'',s.restart?'restart: '+s.restart:'',s.health?'health: '+s.health:''].filter(Boolean).map(esc).join(' · ')}</div></td></tr>`).join('')+'</table>';
+    if((d.notes||[]).length) c+='<ul>'+d.notes.map(n=>`<li>${esc(n)}</li>`).join('')+'</ul>';
+    return c+'</div>';
+  }).join('');
+  if((O.checks||[]).length) h+=`<div class="dev"><h2>헬스체크 · 점검 절차</h2><ul>${O.checks.map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div>`;
+  h+='</div>';
+  el.innerHTML=h;
+})();
+</script>
+</body>
+</html>
