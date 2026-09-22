@@ -4,9 +4,13 @@
 NEIS 급식 API 의 메뉴·알레르기·영양 지표(에너지 충족률·적정비율·MAR)와 주간 식단, 잔반 탄소 카드, 익명 위치 마커를 웹 대시보드(PWA)로 보여준다.
 학생·교사는 QR 로 접속한다. 영상은 어디에도 저장·전송하지 않고 숫자만 SQLite 에 남긴다.
 
-- 🗺️ **프로젝트 지도(설계·연결·DB — 지속 갱신 정본 개요)**: https://xparapx.github.io/Mealboard_Demo/project-map.html ([docs/project-map.html](docs/project-map.html))
-- 구축 매뉴얼(전 단계·코드 수록): [docs/manual.html](docs/manual.html) · 화면 도면(스펙의 단일 출처): [docs/layout.html](docs/layout.html)
-- Claude Code 작업 규칙: [CLAUDE.md](CLAUDE.md)
+🗺️ **프로젝트개요(프로젝트 지도 — 설계·연결·DB, 지속 갱신 정본):** https://xparapx.github.io/Mealboard_Demo/project-map.html  
+📘 **매뉴얼(구축 전 단계·코드 수록):** https://xparapx.github.io/Mealboard_Demo/manual.html  
+🖼️ **화면 도면(스펙의 단일 출처):** https://xparapx.github.io/Mealboard_Demo/layout.html
+
+`Raspberry Pi 5` · `Camera Module 3 Wide` · `YOLO11n · ByteTrack` · `Hailo-10H` · `FastAPI` · `SQLite` · `PWA` · `NEIS API` · `Cloudflare Tunnel` · `DeepL`
+
+Claude Code 작업 규칙: [CLAUDE.md](CLAUDE.md)
 
 ## 구조
 
