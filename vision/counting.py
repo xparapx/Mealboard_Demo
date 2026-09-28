@@ -152,6 +152,8 @@ class FifoEstimator:
         """t 단조 초, queue_len = 이번 틱의 L, served_net = 직전 틱 이후 순통과 수(출구 +1·복귀 −1 합, 음수는 0), predicted_min = 이 순간의 원시 예측.
         통과가 있었으면 그 사람들의 대기시간 이벤트를 남기고 마지막 대기(초)를 돌려준다(없으면 None)"""
         n = max(0, int(served_net or 0))
+        if self.t_first is None:
+            self.t_first = t
         self.D += n
         A = max(self.A, self.D + max(0, int(queue_len or 0)))
         if A > self.A:                                          # 새로 진입한 사람들: (진입 시각, 그때까지의 누적 도착, 그 순간 예측)
@@ -168,8 +170,9 @@ class FifoEstimator:
                 if not self.arrivals:
                     continue                                    # 도착 곡선이 아직 k 에 못 미침(L 이 0 인데 통과가 났다 — 화각 밖 진입)
                 t_in, _, pred = self.arrivals[0]
-                if t_in >= t:
-                    continue                                    # 진입이 이번 틱에 추론된 사람(L 에 없던 통과자) — 대기 미상이라 버린다
+                if t_in >= t or t_in == self.t_first:
+                    continue                                    # 이번 틱에 추론된 진입(L 에 없던 통과자)·첫 틱의 기존 대기자 — 진입 시각 미상이라 버린다
+                                                                # (첫 틱 제외는 09-28 실측: 재시작 직후 K 0.5 로 눌리던 잔상의 원인)
                 wait = t - t_in
                 ratio = (wait / 60) / pred if pred is not None and pred >= self.MIN_PRED_MIN else None
                 self.events.append((t, wait, ratio))
@@ -191,6 +194,7 @@ class FifoEstimator:
     def reset(self):
         self.A = 0
         self.D = 0
+        self.t_first = None        # 첫 틱 시각 — 그때 이미 서 있던 인원은 진입 시각을 모른다
         self.arrivals = deque()    # (t, 누적 도착 A, 그 순간 예측)
         self.events = deque()      # (통과 t, 대기 초, 비율 또는 None)
 

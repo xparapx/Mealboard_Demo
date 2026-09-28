@@ -190,3 +190,12 @@ def test_fifo_K_는_5건부터_클램프():
         f.add(i * 10, 1, 0, predicted_min=0.5)
         f.add(i * 10 + 5, 0, 1, predicted_min=0.5)     # 5초 대기 = 0.083분 / 예측 0.5 → 비율 0.17 → 클램프 0.5
     assert f.stats(80)["k"] == 0.5
+
+
+def test_fifo_첫_틱의_기존_대기자는_이벤트에서_제외():
+    f = FifoEstimator()
+    f.add(0, 3, 0)                             # 시작 시점에 이미 3명 — 진입 시각 미상
+    assert f.add(30, 2, 1) is None             # 그중 첫 통과 → 버림
+    f.add(40, 3, 0)                            # 4번째 진입(40초)
+    f.add(60, 1, 2)                            # 2·3번째 통과 → 둘 다 첫 틱 인원 → 버림
+    assert f.add(100, 0, 1) == 60              # 4번째 통과 → 진입 40초 → 대기 60초
