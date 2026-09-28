@@ -28,6 +28,7 @@ data/       queue.db·insights.db·reports.db·admin.db·meal.json·news.json·p
 deploy/     mealboard-{api,mock,vision,admin,neis,news,rollup,report}.service, *.timer, sudoers-mealboard, cloudflared-config.yml(견본)
 tests/      순수 로직 140개 — waittime·typical·lunch·zones·insight_calc·mealjson·admin_{auth,guard,sysctl,stream,zones}·report·news
 docs/       project-map.html(프로젝트 지도, 지속 갱신) · manual.html(구축 매뉴얼) · layout.html(화면 도면) · PLAN-2026-09.md(확장 계획서, §6 진행표)
+            · PROPOSAL-2026-11-challenge.md(공공 AI 대전환 챌린지 출품 보완 제안서)
 setup_pi.sh Pi 최초 설치·유닛 갱신 (멱등) · check_manual.py 매뉴얼 코드 블록 ↔ 파일 대조
 ```
 
