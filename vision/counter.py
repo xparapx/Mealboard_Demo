@@ -260,9 +260,9 @@ def main():
                                        "raw": raw, "measured": ds["measured_min"], "k": ds["k"], "served_n": served_acc,
                                        "pts": pts if zones.h_img2floor else None}, zones.zones)
                 print(f"[{win.label}] 대기 {queue:3d}명  처리 {lam:5.1f}/분  예상 {wait}분  {state}  실측 {ds['measured_min']}분(n={ds['n']}{'·fifo' if fs['n'] else '·dwell'})  추론 {infer_ms:.0f}ms  트랙 {len(tracks)}")
-            served_acc = 0
             else:                                                 # 창 밖(또는 mock 출처) — 기록 없음, 관리자만 실사를 본다
                 print(f"[기록 없음{'·' + win.label if win else ''}] (관리자 열람 중: 실측 L={queue} λ={lam:.1f} 추론 {infer_ms:.0f}ms 트랙 {len(tracks)})")
+            served_acc = 0                                        # 표본 틱마다 리셋 — 다음 틱의 순통과 수를 새로 센다
         time.sleep(max(0, period - (time.monotonic() - t0)))
 
 
