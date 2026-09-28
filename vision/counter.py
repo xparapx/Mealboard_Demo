@@ -23,7 +23,7 @@ from app.config import (DEBUG_FLAG, DEBUG_PORT, DWELL_BIAS, FEED_SOURCE, QUEUE_S
                         VISION_IMGSZ, VISION_SIZE, YOLO_WEIGHTS, ZONES_JSON)
 from app.db import connect
 from app.lunch import meal_now
-from vision.counting import DwellTracker, LineCounter, MedianWindow, RateWindow, foot_of_bbox
+from vision.counting import DwellTracker, FifoEstimator, LineCounter, MedianWindow, RateWindow, foot_of_bbox
 from vision.debug_stream import DebugStream, annotate
 from vision.meta import MetaSender
 from vision.record import write_positions, write_sample
@@ -33,6 +33,7 @@ from vision.waittime import estimate_wait
 from vision.zones import LOCAL_NAME, lambda_line, load_zones, point_in_polygon, project, zone_of
 
 SAMPLE_SEC = 10         # 표본 주기 (mock 의 TICK 과 같다)
+TRACK_GRACE = 15.0      # 트랙이 결과에서 빠져도 이만큼은 기억(부호·진입) 유지 — ByteTrack track_buffer(30프레임≈3fps 10초)+여유(09-28)
 POS_SEC = 5             # positions.json 갱신 주기 (09-16: 평면도 마커를 화면 5초 폴링에 맞춰 — DB 표본보다 잦아도 파일 하나 덮어쓰기뿐)
 RELOAD_SEC = 2          # zones 파일 mtime 확인 주기
 IDLE_FPS = 1            # 창 밖 + 보는 사람 없음: 카메라만 살려 두는 속도
@@ -120,7 +121,9 @@ def main():
     sender = MetaSender()
     con = connect()
     rate = RateWindow(RATE_WINDOW_SEC)
-    dwell = DwellTracker(bias=DWELL_BIAS)                         # 자동 실측·보정(09-16 B안) — ROI 진입→λ선 통과 체류시간
+    dwell = DwellTracker(bias=DWELL_BIAS)                         # 자동 실측·보정(09-16 B안) — ROI 진입→λ선 통과 체류시간(트랙 ID 의존)
+    fifo = FifoEstimator()                                        # 자동 실측 1순위(09-28 P1): 누적 도착·출발 곡선 — ID 없이 사람 수만으로
+    served_acc = 0                                                # 직전 표본 이후 순통과 수(출구 +1·복귀 −1)
     qmed = MedianWindow(25)                                       # L 평활(09-17): 검출이 한두 프레임 끊겨도 0 으로 꺼지지 않게
     wmed = MedianWindow(90)                                       # 공표 대기 평활(09-17): 깜빡임 대신 추세만 — 원시값은 raw 로 그대로 남는다
     last_raw = None                                               # 직전 표본의 원시 예측(분) — 진입자의 '진입 시점 예측' 으로 기억
@@ -139,6 +142,8 @@ def main():
             win = cur
             rate.reset()
             dwell.reset()                                         # 창이 바뀌면 실측·보정도 처음부터
+            fifo.reset()
+            served_acc = 0
             qmed.reset()
             wmed.reset()
             last_raw = None
@@ -188,19 +193,21 @@ def main():
             if tid >= 0:
                 dwell.observe(tid, in_roi, t0, last_raw)          # ROI 에 처음 보인 순간 = 줄 진입(그때의 예측을 함께 기억)
             if zones.counter and tid >= 0:
-                c = zones.counter.update(tid, (fx, fy))
+                c = zones.counter.update(tid, (fx, fy), t0)
                 if c > 0:
                     served += 1; crossings.append({"id": tid, "dir": "out", "ts": ts})
                     dwell.crossed(tid, t0)                        # 배식대 통과 — 실제 대기시간 실측 이벤트
                 elif c < 0:
-                    crossings.append({"id": tid, "dir": "in", "ts": ts})
+                    served -= 1; crossings.append({"id": tid, "dir": "in", "ts": ts})   # 복귀는 뺀다(09-28) — λ선 앞 왕복 이중 카운트 제거
             tracks.append({"id": tid, "bbox_norm": [round(box[0] / img_w, 3), round(box[1] / img_h, 3), round(box[2] / img_w, 3), round(box[3] / img_h, 3)],
                            "foot_xy_norm": [round(u, 3), round(v, 3)], "floor_xy_norm": list(fl) if fl else None,
                            "in_roi": in_roi, "zone": zone_of(fl[0], fl[1], zones.zones) if fl else None,
                            "xyxy": box, "foot": (fx, fy)})
         if zones.counter:
-            zones.counter.forget(ids)
-            dwell.forget(ids)
+            zones.counter.forget(ids, t0, TRACK_GRACE)            # 한 프레임 누락에 기억을 지우지 않는다(09-28 — 체류 0건·통과 누락의 직접 원인)
+            dwell.forget(ids, t0, TRACK_GRACE)
+        served = max(0, served)                                   # 프레임 안 순통과(복귀가 더 많으면 0 — 음수 λ 는 없다)
+        served_acc += served
         rate.add(t0, served)
         lam = rate.per_min(t0)
         # 순간 L(09-18 사용자 결정): 기본은 화면 안 트랙 전체 — ROI 가 실제 줄보다 좁으면 '사람은 많은데 1명' 이 된다.
@@ -210,7 +217,11 @@ def main():
         qm = qmed.median(t0)
         queue = int(round(qm)) if qm is not None else inst        # 공표 L = 25초 중앙값(09-17 평활)
         raw, state = estimate_wait(queue, lam)
-        ds = dwell.stats(t0)                                      # {n, measured_min, k} — 이동 창 요약(개인 값은 저장 안 함)
+        # 자동 실측(09-28): 1순위 FIFO 누적곡선(표본 틱마다 L·순통과 수만으로 — ID 끊김 무관), 이벤트가 아직 없으면 트랙 체류(B안) 폴백
+        if t0 - last_sample >= SAMPLE_SEC:
+            fifo.add(t0, queue, served_acc, raw)
+        fs, ds0 = fifo.stats(t0), dwell.stats(t0)
+        ds = fs if fs["n"] else ds0
         last_raw = raw
         wnow = round(raw * ds["k"], 1) if raw is not None and ds["k"] else raw   # 자동 보정: 원시 × K(실측/예측 중앙값, 0.5~3.0)
         if state == "ok":
@@ -246,9 +257,10 @@ def main():
             last_sample = t0
             if should_record(win, FEED_SOURCE):                   # 실측 — 숫자(과 바닥 좌표의 순간 상태)만
                 write_sample(con, ts, {"queue": queue, "rate": round(lam, 2), "wait": wait, "state": state,
-                                       "raw": raw, "measured": ds["measured_min"], "k": ds["k"],
+                                       "raw": raw, "measured": ds["measured_min"], "k": ds["k"], "served_n": served_acc,
                                        "pts": pts if zones.h_img2floor else None}, zones.zones)
-                print(f"[{win.label}] 대기 {queue:3d}명  처리 {lam:5.1f}/분  예상 {wait}분  {state}  추론 {infer_ms:.0f}ms  트랙 {len(tracks)}")
+                print(f"[{win.label}] 대기 {queue:3d}명  처리 {lam:5.1f}/분  예상 {wait}분  {state}  실측 {ds['measured_min']}분(n={ds['n']}{'·fifo' if fs['n'] else '·dwell'})  추론 {infer_ms:.0f}ms  트랙 {len(tracks)}")
+            served_acc = 0
             else:                                                 # 창 밖(또는 mock 출처) — 기록 없음, 관리자만 실사를 본다
                 print(f"[기록 없음{'·' + win.label if win else ''}] (관리자 열람 중: 실측 L={queue} λ={lam:.1f} 추론 {infer_ms:.0f}ms 트랙 {len(tracks)})")
         time.sleep(max(0, period - (time.monotonic() - t0)))

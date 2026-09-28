@@ -134,3 +134,59 @@ def test_체류_편향_배율은_실측과_비율_모두에_걸린다():
     d2 = DwellTracker(bias=1.4)
     d2.observe(9, True, 0.0, 1.0)
     assert d2.crossed(9, 19.0) is None             # 20초 문턱은 날것 기준 — 배율로 통과 못 한다
+
+
+# ---- 09-28: 유예 forget 과 FIFO 누적곡선 추정기 ----------------------------------------------
+from vision.counting import DwellTracker, FifoEstimator
+
+
+def test_forget_는_grace_안에서는_기억을_지우지_않는다():
+    c = LineCounter((0, 0), (100, 0), out_dir=1, buffer=5)
+    c.update(1, (10, -30), t=0.0)
+    c.forget([], t=5.0, grace=15.0)           # 한 프레임 누락 — 아직 유예 안
+    assert 1 in c.side
+    assert c.update(1, (10, 30), t=6.0) == 1   # 복귀하며 통과 → 세어진다(옛 코드는 기억이 지워져 0)
+    c.forget([], t=30.0, grace=15.0)
+    assert c.side == {}
+
+
+def test_dwell_진입_기록도_유예():
+    d = DwellTracker()
+    d.observe(7, True, 0.0, 2.0)
+    d.forget([], t=3.0, grace=15.0)
+    assert d.crossed(7, 40.0) == 40.0          # 진입이 살아 있어 체류 40초 이벤트
+    d.observe(8, True, 0.0, 2.0)
+    d.forget([], t=20.0, grace=15.0)
+    assert d.crossed(8, 40.0) is None          # 유예를 넘기면 지워진다
+
+
+def test_fifo_결정적_큐에서_대기시간을_복원한다():
+    """10초마다 1명 도착, 30초에 한 명씩 배식되는 줄 — 3명이 쌓인 정상 상태에서 대기 ≈ 90초"""
+    f = FifoEstimator()
+    f.add(0, 3, 0, predicted_min=1.5)          # 처음부터 3명이 서 있다
+    t = 0
+    for i in range(1, 30):                     # 30초마다 1명 도착·1명 배식 → 줄 3명 유지, 각자 90초 대기
+        t = i * 30
+        f.add(t, 3, 1, predicted_min=1.5)
+    s = f.stats(t)
+    assert s["n"] >= 5
+    assert s["measured_min"] == 1.5            # 90초
+    assert s["k"] == 1.0                       # 예측 1.5분과 일치 → K=1
+
+
+def test_fifo_는_ID_와_무관하고_L_0_통과는_버린다():
+    f = FifoEstimator()
+    assert f.add(0, 0, 1) is None             # 줄이 비었는데 통과 — 진입이 같은 틱에 추론됨(대기 미상) → 이벤트 없음
+    f.add(10, 4, 0)                            # 4명 진입(10초 시점)
+    f.add(20, 4, 0)
+    w = f.add(70, 3, 1)                        # 첫 통과 — 진입 10초 → 대기 60초
+    assert w == 60
+    assert f.stats(70) == {"n": 1, "measured_min": 1.0, "k": None}
+
+
+def test_fifo_K_는_5건부터_클램프():
+    f = FifoEstimator()
+    for i in range(1, 8):
+        f.add(i * 10, 1, 0, predicted_min=0.5)
+        f.add(i * 10 + 5, 0, 1, predicted_min=0.5)     # 5초 대기 = 0.083분 / 예측 0.5 → 비율 0.17 → 클램프 0.5
+    assert f.stats(80)["k"] == 0.5

@@ -745,7 +745,8 @@ CREATE TABLE IF NOT EXISTS samples (
   state        TEXT NOT NULL,      -- ok | no_data | insufficient_rate
   wait_raw_min     REAL,           -- 원시 W = L / λ (09-16 자동 보정 B안 — 수동 실측 대조용으로 원시도 남긴다)
   measured_wait_min REAL,          -- 자동 실측: ROI 진입→λ선 통과 체류시간의 이동 창 중앙값(분). 개인 값은 저장하지 않는다
-  calib        REAL                -- 보정계수 K = median(실측/진입 시점 예측), 0.5~3.0. 실측이 모자라면 NULL
+  calib        REAL,               -- 보정계수 K = median(실측/진입 시점 예측), 0.5~3.0. 실측이 모자라면 NULL
+  served_n     INTEGER             -- 직전 표본 이후 순통과 수(출구 +1·복귀 −1 합, 09-28) — FIFO 누적곡선 재계산·λ 대조용. mock 은 NULL
 );
 CREATE TABLE IF NOT EXISTS zone_samples (
   ts   TEXT    NOT NULL,           -- samples.ts 와 같은 시각
@@ -768,7 +769,7 @@ def connect():
     con.executescript(SCHEMA)                # 없으면 만들고, 있으면 그대로
     # 09-16 자동 보정 B안: 기존 파일에 새 열을 더한다(추가만 — DELETE/UPDATE 없음). 옛 행은 NULL
     have = {r[1] for r in con.execute(&quot;PRAGMA table_info(samples)&quot;)}
-    for col in (&quot;wait_raw_min REAL&quot;, &quot;measured_wait_min REAL&quot;, &quot;calib REAL&quot;):
+    for col in (&quot;wait_raw_min REAL&quot;, &quot;measured_wait_min REAL&quot;, &quot;calib REAL&quot;, &quot;served_n INTEGER&quot;):
         if col.split()[0] not in have:
             con.execute(f&quot;ALTER TABLE samples ADD COLUMN {col}&quot;)
     con.commit()

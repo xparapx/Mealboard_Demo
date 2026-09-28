@@ -29,8 +29,11 @@ class LineCounter:
     def __init__(self, a, b, out_dir=1, buffer=20.0):
         self.a, self.b, self.out_dir, self.buffer = tuple(a), tuple(b), 1 if out_dir >= 0 else -1, float(buffer)
         self.side = {}
+        self.seen = {}                                          # tid → 마지막 관측 시각(유예 forget 용, 09-28)
 
-    def update(self, tid, p):
+    def update(self, tid, p, t=None):
+        if t is not None:
+            self.seen[tid] = t
         d = signed_dist(self.a, self.b, p) * self.out_dir      # >0 = 출구 쪽
         if abs(d) < self.buffer:
             return 0                                            # 완충띠 — 판정을 미룬다(기억은 그대로)
@@ -41,14 +44,18 @@ class LineCounter:
             return 0
         return s
 
-    def forget(self, alive):
-        """사라진 트랙의 기억을 지운다(ByteTrack ID 는 재사용되지 않지만 dict 가 자라지 않게)"""
+    def forget(self, alive, t=None, grace=0.0):
+        """사라진 트랙의 기억을 지운다. 09-28: ByteTrack 은 매칭 실패 트랙을 결과에 내보내지 않으므로 한 프레임만 가려져도
+        alive 에서 빠진다 — grace 초 동안은 기억을 유지해 복귀한 같은 ID 의 부호(=통과 판정)가 이어지게 한다(t 없으면 즉시)"""
         alive = set(alive)
-        for tid in [t for t in self.side if t not in alive]:
-            del self.side[tid]
+        for tid in [k for k in self.side if k not in alive]:
+            if t is None or t - self.seen.get(tid, t) >= grace:
+                del self.side[tid]
+                self.seen.pop(tid, None)
 
     def reset(self):
         self.side.clear()
+        self.seen.clear()
 
 
 class DwellTracker:
@@ -68,10 +75,12 @@ class DwellTracker:
         self.window = float(window_sec)
         self.bias = float(bias)     # 체류 과소 편향 보정(09-17, .env DWELL_BIAS): 트랙 끊김으로 실측이 짧게 재진다 —
         self.entries = {}           # 수동 실측 대조(12:44 실제 1.3분 vs 자동 0.9분 ≈ ×1.4)로 정한 배율, 실측이 쌓이면 조정
+        self.seen = {}              # tid → 마지막 관측 시각(유예 forget 용, 09-28)
         self.events = deque()       # (통과 t, 보정된 체류 초, 비율 또는 None)
 
     def observe(self, tid, in_roi, t, predicted_min):
-        """프레임마다 부른다 — ROI 안에서 처음 보인 트랙의 진입을 기억한다(깜빡임으로 잠깐 나가도 리셋하지 않는다)"""
+        """프레임마다 부른다 — ROI 안에서 처음 보인 트랙의 진입을 기억한다(깜빡임으로 잠깐 나가도 리셋하지 않는다 — forget 의 grace 가 보장)"""
+        self.seen[tid] = t
         if in_roi and tid not in self.entries:
             self.entries[tid] = (t, predicted_min)
 
@@ -89,10 +98,13 @@ class DwellTracker:
         self.events.append((t, dwell, ratio))
         return dwell
 
-    def forget(self, alive):
+    def forget(self, alive, t=None, grace=0.0):
+        """09-28: 한 프레임 누락에도 진입 기록을 즉시 지우던 것이 체류 이벤트 0건의 직접 원인 — grace 초 안에 복귀하면 유지"""
         alive = set(alive)
-        for tid in [t for t in self.entries if t not in alive]:
-            del self.entries[tid]
+        for tid in [k for k in self.entries if k not in alive]:
+            if t is None or t - self.seen.get(tid, t) >= grace:
+                del self.entries[tid]
+                self.seen.pop(tid, None)
 
     def stats(self, t):
         """이동 창 요약 → {n, measured_min, k}. measured_min = 체류 중앙값(분), k = 비율 중앙값(클램프) 또는 None"""
@@ -109,7 +121,78 @@ class DwellTracker:
 
     def reset(self):
         self.entries.clear()
+        self.seen.clear()
         self.events.clear()
+
+
+def _median(v):
+    v = sorted(v)
+    n = len(v)
+    return None if not n else (v[n // 2] if n % 2 else (v[n // 2 - 1] + v[n // 2]) / 2)
+
+
+class FifoEstimator:
+    """개별 추적 없이 실제 대기시간을 재는 누적곡선(Newell) 추정기 — 09-28 도입(제안서 P1). 트랙 ID 가 이어지지 않아도 되고
+    사람 수만 쓴다(개인 정보 없음). 표본 틱마다 add(t, L, served_net) 를 부른다:
+      누적 출발 D(t) += 순통과 수,  누적 도착 A(t) = max(A(t-1), D(t) + L(t))   (인원 보존·단조)
+    선착순(FIFO)이면 'N 번째 통과자 = N 번째 진입자' 이므로, 이번 틱에 통과한 사람의 대기 = t − (A 가 D 에 처음 닿은 시각).
+    이벤트는 DwellTracker 와 같은 모양의 이동 창 요약(체류 중앙값·K)으로만 쓰인다. 새치기·합류로 순서가 섞이면 개별 값에
+    오차가 생기지만 중앙값이 흡수한다. 한계: L 의 편향(화각 밖 꼬리)은 그대로 전달된다 — 그건 커버리지 문제로 따로 푼다."""
+
+    MIN_EVENTS = 5
+    MIN_PRED_MIN = 0.5
+    CLAMP = (0.5, 3.0)
+    MAX_ARRIVALS = 4000            # 도착 곡선 점 상한(10초 틱 ≈ 11시간) — 창 전환 때 reset 되므로 실제로는 닿지 않는다
+
+    def __init__(self, window_sec=900):
+        self.window = float(window_sec)
+        self.reset()
+
+    def add(self, t, queue_len, served_net, predicted_min=None):
+        """t 단조 초, queue_len = 이번 틱의 L, served_net = 직전 틱 이후 순통과 수(출구 +1·복귀 −1 합, 음수는 0), predicted_min = 이 순간의 원시 예측.
+        통과가 있었으면 그 사람들의 대기시간 이벤트를 남기고 마지막 대기(초)를 돌려준다(없으면 None)"""
+        n = max(0, int(served_net or 0))
+        self.D += n
+        A = max(self.A, self.D + max(0, int(queue_len or 0)))
+        if A > self.A:                                          # 새로 진입한 사람들: (진입 시각, 그때까지의 누적 도착, 그 순간 예측)
+            self.arrivals.append((t, A, predicted_min))
+            if len(self.arrivals) > self.MAX_ARRIVALS:
+                self.arrivals.popleft()
+            self.A = A
+        last = None
+        if n:
+            # D 번째 진입자가 들어온 시각 = 누적 도착이 D 에 처음 닿은 점. 통과 n 명 각각(D-n+1 … D)에 대해 이벤트를 남긴다
+            for k in range(self.D - n + 1, self.D + 1):
+                while self.arrivals and self.arrivals[0][1] < k:
+                    self.arrivals.popleft()                     # 누적 도착이 k 미만인 점은 이후 어떤 통과자에게도 필요 없다(k 단조 증가)
+                if not self.arrivals:
+                    continue                                    # 도착 곡선이 아직 k 에 못 미침(L 이 0 인데 통과가 났다 — 화각 밖 진입)
+                t_in, _, pred = self.arrivals[0]
+                if t_in >= t:
+                    continue                                    # 진입이 이번 틱에 추론된 사람(L 에 없던 통과자) — 대기 미상이라 버린다
+                wait = t - t_in
+                ratio = (wait / 60) / pred if pred is not None and pred >= self.MIN_PRED_MIN else None
+                self.events.append((t, wait, ratio))
+                last = wait
+        return last
+
+    def stats(self, t):
+        """이동 창 요약 → {n, measured_min, k} — DwellTracker.stats 와 같은 모양"""
+        while self.events and self.events[0][0] < t - self.window:
+            self.events.popleft()
+        dwells = [e[1] for e in self.events]
+        ratios = [e[2] for e in self.events if e[2] is not None]
+        measured = round(_median(dwells) / 60, 1) if dwells else None
+        k = None
+        if len(ratios) >= self.MIN_EVENTS:
+            k = round(min(max(_median(ratios), self.CLAMP[0]), self.CLAMP[1]), 2)
+        return {"n": len(dwells), "measured_min": measured, "k": k}
+
+    def reset(self):
+        self.A = 0
+        self.D = 0
+        self.arrivals = deque()    # (t, 누적 도착 A, 그 순간 예측)
+        self.events = deque()      # (통과 t, 대기 초, 비율 또는 None)
 
 
 class MedianWindow:
