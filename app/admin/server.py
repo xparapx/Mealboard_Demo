@@ -9,9 +9,10 @@ Cloudflare 를 거쳐 온 요청(cf-ray 또는 Access JWT 헤더)은 app/admin/a
 import asyncio
 import contextlib
 import mimetypes
+from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from ..config import ADMIN_LOCAL_KEY, ADMIN_PORT, ADMIN_USERS, BASE, CF_ACCESS_AUD, CF_ACCESS_TEAM
@@ -102,6 +103,16 @@ def create_app():
             # 유닛은 --no-access-log — 이 URL 은 저널에 남지 않는다
             res.set_cookie(COOKIE, request.query_params["key"], httponly=True, samesite="strict", max_age=12 * 3600)
         return res
+
+    @app.get("/icons/{name}")
+    def icon(name: str):
+        """관리 주소의 홈 화면 아이콘은 공구 배지판(10-04 사용자 요청) — 명시 라우트가 아래 "/" 마운트보다 먼저 맞아
+        /icons/* 만 static/icons/admin/ 으로 덮어쓴다. 배지판이 없는 파일(qr.png 등)은 공개판 그대로"""
+        name = Path(name).name                                      # 경로 조각 하나만 허용
+        for d in (BASE / "static" / "icons" / "admin", BASE / "static" / "icons"):
+            if (d / name).is_file():
+                return FileResponse(d / name)
+        return JSONResponse({"detail": "not found"}, status_code=404)
 
     app.mount("/admin-ui", StaticFiles(directory=BASE / "app" / "admin" / "static"), name="admin-ui")   # 관리 UI 는 공개 static 에 두지 않는다
     app.mount("/", StaticFiles(directory=BASE / "static", html=True), name="static")

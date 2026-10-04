@@ -1570,7 +1570,7 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v42&quot;;   // 10-04: PWA·iOS 홈 화면 아이콘(apple-touch-icon + icon-192/512)
+const CACHE = &quot;mealboard-v43&quot;;   // 10-04: 관리 탭 즉시 표시(probe yes 기억) + 관리자 아이콘 공구 배지
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
@@ -5340,7 +5340,7 @@ export const why = r =&gt; !r || /reports\.db/.test(r) ? null : /insights\.db/.t
 const DESK_MQ = matchMedia(&quot;(min-width: 900px)&quot;);
 export const desktop = () =&gt; DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = &quot;v42&quot;;                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = &quot;v43&quot;;                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
@@ -5517,10 +5517,14 @@ if (&quot;serviceWorker&quot; in navigator) {
 window.MB = { S, go, poll, observe, ORDER, NAMES, screens: SCREENS, active: () =&gt; active, wanted };   // 콘솔·테스트·관리 모듈의 손잡이
 try {
   // SSH 터널은 `/?key=…` 로 들어온다(서버가 그 응답에 쿠키를 준다) — 그때는 세션의 '없음' 기억을 무시하고 다시 묻는다
-  if (sessionStorage.getItem(&quot;mb_admin_probe&quot;) !== &quot;no&quot; || location.search.includes(&quot;key=&quot;))
+  const probe = sessionStorage.getItem(&quot;mb_admin_probe&quot;);
+  const loadAdmin = () =&gt;
+    // ?v= 꼬리표(09-11): 배포마다 새 모듈 그래프 — 브라우저 모듈 맵은 탭 수명 동안 재검증하지 않아 편집기가 옛 코드로 남았다. 값은 sw.js CACHE 와 함께 올린다
+    import(`/admin-ui/admin.js?v=${UI_VERSION}`).then(m =&gt; m.default?.(window.MB)).catch(() =&gt; {});
+  if (probe === &quot;yes&quot;) loadAdmin();                      // 지난 확인 성공(같은 탭 세션) — whoami 왕복을 기다리지 않아 관리 탭이 바로 뜬다(10-04).
+  if (probe !== &quot;no&quot; || location.search.includes(&quot;key=&quot;))  // 인증이 그새 풀렸다면 관리 API 가 어차피 거부하고, 아래 재확인이 기억을 고친다
     fetch(&quot;/api/admin/whoami&quot;, { cache: &quot;no-store&quot; }).then(r =&gt; {
-      // ?v= 꼬리표(09-11): 배포마다 새 모듈 그래프 — 브라우저 모듈 맵은 탭 수명 동안 재검증하지 않아 편집기가 옛 코드로 남았다. 값은 sw.js CACHE 와 함께 올린다
-      if (r.ok) { sessionStorage.removeItem(&quot;mb_admin_probe&quot;); import(`/admin-ui/admin.js?v=${UI_VERSION}`).then(m =&gt; m.default?.(window.MB)).catch(() =&gt; {}); }
+      if (r.ok) { sessionStorage.setItem(&quot;mb_admin_probe&quot;, &quot;yes&quot;); if (probe !== &quot;yes&quot;) loadAdmin(); }
       else sessionStorage.setItem(&quot;mb_admin_probe&quot;, &quot;no&quot;);
     }).catch(() =&gt; {});
 } catch {}</code></pre>
@@ -5925,9 +5929,10 @@ Cloudflare 를 거쳐 온 요청(cf-ray 또는 Access JWT 헤더)은 app/admin/a
 import asyncio
 import contextlib
 import mimetypes
+from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from ..config import ADMIN_LOCAL_KEY, ADMIN_PORT, ADMIN_USERS, BASE, CF_ACCESS_AUD, CF_ACCESS_TEAM
@@ -6018,6 +6023,16 @@ def create_app():
             # 유닛은 --no-access-log — 이 URL 은 저널에 남지 않는다
             res.set_cookie(COOKIE, request.query_params[&quot;key&quot;], httponly=True, samesite=&quot;strict&quot;, max_age=12 * 3600)
         return res
+
+    @app.get(&quot;/icons/{name}&quot;)
+    def icon(name: str):
+        &quot;&quot;&quot;관리 주소의 홈 화면 아이콘은 공구 배지판(10-04 사용자 요청) — 명시 라우트가 아래 &quot;/&quot; 마운트보다 먼저 맞아
+        /icons/* 만 static/icons/admin/ 으로 덮어쓴다. 배지판이 없는 파일(qr.png 등)은 공개판 그대로&quot;&quot;&quot;
+        name = Path(name).name                                      # 경로 조각 하나만 허용
+        for d in (BASE / &quot;static&quot; / &quot;icons&quot; / &quot;admin&quot;, BASE / &quot;static&quot; / &quot;icons&quot;):
+            if (d / name).is_file():
+                return FileResponse(d / name)
+        return JSONResponse({&quot;detail&quot;: &quot;not found&quot;}, status_code=404)
 
     app.mount(&quot;/admin-ui&quot;, StaticFiles(directory=BASE / &quot;app&quot; / &quot;admin&quot; / &quot;static&quot;), name=&quot;admin-ui&quot;)   # 관리 UI 는 공개 static 에 두지 않는다
     app.mount(&quot;/&quot;, StaticFiles(directory=BASE / &quot;static&quot;, html=True), name=&quot;static&quot;)

@@ -42,7 +42,7 @@
   새 PC 는 공개키를 Pi 콘솔에서 `authorized_keys` 에 추가한 뒤 위 별칭을 만든다. `.env` 의 `PI_USER`·`PI_HOST` 와 같은 값.
 - **QR 은 할 일이 아니다(09-03 확인)**: Pi 의 `qr.png`·`static/icons/qr.png` 는 매뉴얼 STEP 9 의 `qrencode` 로
   만든 접속용 QR(내용 = Funnel 주소)이며 git 미추적이 맞다 — 한 줄로 재생성 가능.
-  **PWA·iOS 홈 화면 아이콘은 10-04 추가(사용자 요청)**: `static/icons/` 의 `apple-touch-icon.png`(180, iOS 는 manifest 아이콘을 무시하고 이것만 본다)·`icon-192/512.png` — git 추적(qr.png 만 ignore). head 에 `apple-touch-icon`·`apple-mobile-web-app-title` 링크. 재생성은 생성 스크립트 방식(Pillow, 틸 밥그릇+김) — 디자인을 바꾸면 1024 캔버스에서 다시 그려 3종을 함께 뽑는다.
+  **PWA·iOS 홈 화면 아이콘은 10-04 추가(사용자 요청)**: `static/icons/` 의 `apple-touch-icon.png`(180, iOS 는 manifest 아이콘을 무시하고 이것만 본다)·`icon-192/512.png` — git 추적(qr.png 만 ignore). head 에 `apple-touch-icon`·`apple-mobile-web-app-title` 링크. 재생성은 `setup_icons.py`(Pillow, 틸 밥그릇+김). **관리자판은 공구 배지**(`static/icons/admin/`, 같은 스크립트가 생성) — 관리 앱 server.py 의 `/icons/{name}` 라우트가 "/" 마운트보다 먼저 맞아 관리 주소에서만 배지판이 나간다. 관리 주소의 아이콘 fetch 는 Cloudflare Access 가 가로채므로 **Zero Trust 에 bypass 앱 `admin.kjhs-meal.com/icons`**(우회·Everyone, 10-04 사용자 생성, 대시보드 전용 설정 — 재구축 시 수동). 관리 탭이 반 박자 늦게 뜨던 것은 core.js 가 whoami 성공도 세션에 기억(`mb_admin_probe=yes`)해 재방문엔 즉시 import 로 완화(첫 방문은 구조상 그대로).
 - **확장 계획서 `docs/PLAN-2026-09.md`(09-03 승인)가 다음 작업의 단일 출처.** 단계: 0 규칙 개정 → 1 집계 DB·`/api/insight/*` →
   2 프론트 5화면(모바일 하단 dock `#wait #room #week #today #news`, 데스크톱 보드+좌측 레일, 인사이트 카드는 주제별 화면 아래) →
   3 tailnet 전용 관리 앱(8101, Serve 8443, 허용목록) → 4 로컬 LLM(Hailo GenAI) 리포트·기사 본문 요약 → 5 문서. 단계마다 사용자 확인.
