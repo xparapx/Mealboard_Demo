@@ -40,9 +40,9 @@
 - **개발 PC → Pi 는 키 로그인.** 어느 PC든 `ssh mbpi` 한 마디로 붙는다(`~/.ssh/config`, User `xparapx`, HostName `rsp`).
   키 파일은 PC 마다 다르다(맥북 `id_ed25519_mealboard`, jh-home PC `id_ed25519`) — Pi 의 `authorized_keys` 에 PC 별로 한 줄씩.
   새 PC 는 공개키를 Pi 콘솔에서 `authorized_keys` 에 추가한 뒤 위 별칭을 만든다. `.env` 의 `PI_USER`·`PI_HOST` 와 같은 값.
-- **QR·PWA 아이콘은 할 일이 아니다(09-03 확인)**: Pi 의 `qr.png`·`static/icons/qr.png` 는 매뉴얼 STEP 9 의 `qrencode` 로
-  만든 접속용 QR(내용 = Funnel 주소)이며 git 미추적이 맞다 — 한 줄로 재생성 가능. `static/icons/icon-192.png` 는 Pi 에도
-  원래 없고(404) 매뉴얼대로 없어도 동작한다. 재설치 시 "깨지는" 것은 없다.
+- **QR 은 할 일이 아니다(09-03 확인)**: Pi 의 `qr.png`·`static/icons/qr.png` 는 매뉴얼 STEP 9 의 `qrencode` 로
+  만든 접속용 QR(내용 = Funnel 주소)이며 git 미추적이 맞다 — 한 줄로 재생성 가능.
+  **PWA·iOS 홈 화면 아이콘은 10-04 추가(사용자 요청)**: `static/icons/` 의 `apple-touch-icon.png`(180, iOS 는 manifest 아이콘을 무시하고 이것만 본다)·`icon-192/512.png` — git 추적(qr.png 만 ignore). head 에 `apple-touch-icon`·`apple-mobile-web-app-title` 링크. 재생성은 생성 스크립트 방식(Pillow, 틸 밥그릇+김) — 디자인을 바꾸면 1024 캔버스에서 다시 그려 3종을 함께 뽑는다.
 - **확장 계획서 `docs/PLAN-2026-09.md`(09-03 승인)가 다음 작업의 단일 출처.** 단계: 0 규칙 개정 → 1 집계 DB·`/api/insight/*` →
   2 프론트 5화면(모바일 하단 dock `#wait #room #week #today #news`, 데스크톱 보드+좌측 레일, 인사이트 카드는 주제별 화면 아래) →
   3 tailnet 전용 관리 앱(8101, Serve 8443, 허용목록) → 4 로컬 LLM(Hailo GenAI) 리포트·기사 본문 요약 → 5 문서. 단계마다 사용자 확인.
