@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mealboard 챌린지 준비 점검서</title>
+<meta name="description" content="2026 공공 AI 대전환 챌린지(세션 1) 안내서 요구사항과 Mealboard 보완 제안 20건의 진척·추가 항목을 2026-10-11 기준으로 재정리한 점검서">
+<style>
+:root{
+  --bg:#F5F2E9; --card:#FFFCF6; --ink:#2B2A26; --ink2:#5E5A52; --ink3:#8A857B;
+  --teal:#1F8A82; --teal2:#E3F1EF; --amber:#C98A1B; --amber2:#FBF0D8; --red:#B5483A; --red2:#F8E3DF;
+  --line:#E7E1D3; --charcoal:#33322E;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1E1D1A; --card:#27261F; --ink:#EFEADF; --ink2:#C7C1B4; --ink3:#9A958A;
+    --teal2:#1E3A37; --amber2:#3C3220; --red2:#3E2522; --line:#3A3830; --charcoal:#111;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1E1D1A; --card:#27261F; --ink:#EFEADF; --ink2:#C7C1B4; --ink3:#9A958A;
+  --teal2:#1E3A37; --amber2:#3C3220; --red2:#3E2522; --line:#3A3830; --charcoal:#111;
+}
+*{box-sizing:border-box}
+html{font-size:16px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Pretendard","Pretendard Variable","Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+main{max-width:980px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:2rem;line-height:1.25;margin:0 0 .4rem;letter-spacing:-.01em}
+h2{font-size:1.4rem;margin:2.4rem 0 .8rem;padding-top:.4rem;border-top:3px solid var(--teal);letter-spacing:-.01em}
+h3{font-size:1.1rem;margin:1.6rem 0 .5rem}
+p{margin:.5rem 0}
+.sub{color:var(--ink2);font-size:1.02rem}
+.meta{color:var(--ink3);font-size:.9rem;margin-top:.6rem}
+.card{background:var(--card);border-radius:24px;padding:22px 24px;margin:16px 0;box-shadow:0 1px 2px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.06)}
+.lead{font-size:1.08rem}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0}
+.kpi{background:var(--card);border-radius:18px;padding:14px 16px;box-shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px rgba(0,0,0,.05)}
+.kpi b{display:block;font-size:1.5rem;line-height:1.1;color:var(--teal)}
+.kpi span{display:block;color:var(--ink2);font-size:.86rem;margin-top:4px}
+.kpi.warn b{color:var(--amber)} .kpi.bad b{color:var(--red)}
+table{width:100%;border-collapse:collapse;font-size:.93rem;margin:10px 0 4px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+th{background:var(--teal2);color:var(--ink);font-weight:700;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+td.c{text-align:center;white-space:nowrap}
+.tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.78rem;font-weight:700;white-space:nowrap;line-height:1.6}
+.ok{background:var(--teal2);color:var(--teal)} .mid{background:var(--amber2);color:var(--amber)} .no{background:var(--red2);color:var(--red)} .gray{background:var(--line);color:var(--ink2)}
+.new{background:var(--charcoal);color:#fff}
+ul,ol{margin:.4rem 0 .4rem 1.2rem;padding:0}
+li{margin:.25rem 0}
+li::marker{color:var(--teal)}
+.note{color:var(--ink2);font-size:.9rem}
+.box{border-left:4px solid var(--teal);background:var(--teal2);padding:12px 16px;border-radius:0 14px 14px 0;margin:12px 0}
+.box.warn{border-color:var(--amber);background:var(--amber2)}
+.box.bad{border-color:var(--red);background:var(--red2)}
+code{font-family:ui-monospace,Consolas,"D2Coding",monospace;font-size:.88em;background:var(--line);padding:1px 5px;border-radius:5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:700px){.grid2{grid-template-columns:1fr} html{font-size:15px} h1{font-size:1.6rem} .card{padding:18px 16px;border-radius:18px} th,td{padding:7px 6px}}
+.toc{columns:2;column-gap:28px;font-size:.95rem}
+.toc a{color:var(--teal);text-decoration:none}
+.toc a:hover{text-decoration:underline}
+.small{font-size:.86rem;color:var(--ink2)}
+.chk{list-style:none;margin-left:0}
+.chk li{padding-left:1.6em;position:relative}
+.chk li::before{content:"☐";position:absolute;left:0;color:var(--teal);font-weight:700}
+footer{margin-top:40px;color:var(--ink3);font-size:.85rem;border-top:1px solid var(--line);padding-top:12px}
+@page{size:A4;margin:16mm 14mm}
+@media print{
+  :root{--bg:#fff;--card:#fff}
+  body{background:#fff;color:#111}
+  main{max-width:none;padding:0}
+  .card,.kpi{box-shadow:none;border:1px solid #DDD} .kpi{break-inside:avoid}
+  h2{break-after:avoid;margin-top:1.6rem}
+  h3{break-after:avoid}
+  table{break-inside:auto} tr{break-inside:avoid}
+  .toc{display:none}
+  a{color:inherit;text-decoration:none}
+  .pb{break-before:page}
+}
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>Mealboard — 「2026 공공 AI 대전환 챌린지」 준비 점검서</h1>
+  <p class="sub">세션 1(AI 정부 실험실 챔피언십 · 자유주제) 안내서 요구사항 대조 + 09-28 보완 제안 20건의 진척 + 재검토로 새로 추가된 사항 + 수정 로드맵</p>
+  <p class="meta">기준일 2026-10-11(토) · 작성 Claude(지도교사 요청) · 원문: 「2026년 공공 AI 대전환 챌린지 행사계획 및 안내서」(행정안전부·NIA, 19쪽) · 이전 문서: <code>docs/PROPOSAL-2026-11-challenge.md</code>(09-28)</p>
+</header>
+
+<div class="kpis">
+  <div class="kpi warn"><b>D-5</b><span>10-16 참가수요조사서<br>(기관 AI 담당부서 → 행안부 공문)</span></div>
+  <div class="kpi"><b>D-31</b><span>11-11 본 제출<br>(메일 + 공공 GitLab)</span></div>
+  <div class="kpi"><b>11-13~17</b><span>예선 서면·AI 심사<br>상위 10팀(6팀 결선)</span></div>
+  <div class="kpi"><b>11-26</b><span>결선 발표·시연<br>고양 킨텍스</span></div>
+</div>
+
+<section class="card">
+  <h3 style="margin-top:0">한 장 요약</h3>
+  <p class="lead"><b>결론은 그대로 "출품 적합"이다. 다만 안내서를 조문 단위로 다시 읽으니 지난 제안서에 없던 <u>필수급 요구 3가지</u>가 드러났고, 09-28 로드맵은 2주차 항목부터 밀려 있다.</b></p>
+  <ol>
+    <li><b>모델 비종속 구조 + LLM 연결 설정 절(필수)</b> — 구동안내서 양식 2 에 「LLM 연결 설정: 어떤 모델을 어디에 연결하는지, 교체 방법, 키 입력 위치」가 고정 항목이고, 공통 개발 규칙은 "2종 이상 모델에서 주요 기능 정상 구동 입증 권장". Mealboard 의 <code>jobs/llm.py</code> 는 Hailo 백엔드 하나뿐이다. → <b>N1</b></li>
+    <li><b>재배포 제한 구성요소 명시(필수)</b> — "오픈소스 라이선스 준수 책임은 참가팀, 재배포가 제한되는 구성요소는 구동안내서에 명시". Mealboard 의 핵심 의존성 <b>ultralytics 는 AGPL-3.0</b> 이며 수상 시 행안부가 복제·수정·재배포·위탁 개발까지 하게 되는 구조와 충돌 가능성이 있다. → <b>N2</b></li>
+    <li><b>심사위원이 Pi·카메라 없이 구동할 수 있어야 한다(필수)</b> — "구동안내서대로 구동할 수 없는 산출물은 심사 제외". 예선은 서면·AI 심사 + 구동 결과. mock 모드는 있지만 '처음부터 순서대로' 5분 안에 Windows/macOS 에서 끝나는 경로와 모의데이터 꾸러미는 아직 없다. → <b>N3</b></li>
+  </ol>
+  <p>진척: 제안 20건 중 <span class="tag ok">완료 2</span>(P1 FIFO · P2 트랙 유예) <span class="tag mid">부분 3</span>(P7 · P12 · P18 문서 일부) <span class="tag no">미착수 15</span>. 이번 주(2주차) 예정이던 P3·P8·P13 은 시작 전. 남은 4.5주를 <b>① 제출물·필수 요건 → ② 점수 직결 보강 → ③ 선택</b> 순으로 다시 짰다(§5).</p>
+</section>
+
+<nav class="toc card">
+  <b>차례</b>
+  <ol>
+    <li><a href="#s1">안내서 요구사항 ↔ Mealboard 대응표</a></li>
+    <li><a href="#s2">평가지표 5개 · 현재 근거와 보강점</a></li>
+    <li><a href="#s3">지난 제안 20건 진척(09-28 → 10-11)</a></li>
+    <li><a href="#s4">재검토로 추가된 사항 N1~N10</a></li>
+    <li><a href="#s5">수정 로드맵(10-11 → 11-11)</a></li>
+    <li><a href="#s6">하지 말 것 · 재확인 목록</a></li>
+    <li><a href="#s7">제출물 체크리스트(파일명 규격 포함)</a></li>
+  </ol>
+</nav>
+
+<!-- ============ 1 ============ -->
+<h2 id="s1">1. 안내서 요구사항 ↔ Mealboard 대응표</h2>
+<p class="note">상태: <span class="tag ok">충족</span> 지금 그대로 됨 · <span class="tag mid">보완</span> 있으나 손봐야 함 · <span class="tag no">미비</span> 없음 · <span class="tag gray">확인</span> 사람(교사·기관)이 확인할 사항</p>
+
+<div class="card">
+<h3 style="margin-top:0">1.1 참가 자격·단위·절차(안내서 2절·4절·FAQ)</h3>
+<table>
+<thead><tr><th>안내서 요구</th><th>Mealboard 현재</th><th style="width:72px">상태</th></tr></thead>
+<tbody>
+<tr><td>참가 대상: 중앙·지방정부 및 <b>공공기관 직원</b>, 개인 또는 <b>동일 기관</b> 팀. 시상 단위는 기관(단체), 상장은 기관 명의에 성명 병기</td><td>공립고 교사(교육공무원) 개인 또는 같은 학교 교직원 팀. <b>학생은 '직원'이 아니라 팀원 등록 불가</b> → 학생 기여는 '개발 경위 요약'과 README 크레딧으로, 저작권·사용권 동의는 교사(출품자)가 서명하므로 학생·보호자에게 사전 설명 필요</td><td class="c"><span class="tag gray">확인</span></td></tr>
+<tr><td>① 참가수요조사서(붙임 2) — <b>10-16</b>, 기관 AI 담당부서가 행안부 공공인공지능혁신과에 <b>공문</b></td><td>'기관' 이 학교인지 교육청인지, 학교의 'AI 담당부서' 가 누구인지 미확인. 수요조사는 희망자 목록이라 늦어도 치명적이진 않으나, 11-11 '기관별 신청 목록(붙임 3)' 도 같은 부서가 공문으로 내야 하므로 <b>이번 주에 라인을 확정</b>해야 한다</td><td class="c"><span class="tag no">미비</span></td></tr>
+<tr><td>② 본 제출 11-11: 신청 목록 공문(기관) + 제출물 일체(참가자 → <code>databus@nia.or.kr</code> 메일, 산출물 → 공공 GitLab). 메일 도착 기준 접수, 제목 규격 <code>[공공 AI 대전환 챌린지 제출]_세션1_기관명_팀명</code></td><td>해당 없음(절차) — §7 체크리스트에 규격 수록</td><td class="c"><span class="tag ok">충족</span></td></tr>
+<tr><td>기존 개발물·타 공모전 수상작을 보완해 출품 가능. 공개 개발물을 참고했으면 출처 명시 권장</td><td>8월부터 공개 저장소에서 개발 — 선행성은 git 이력으로 증명. 참고한 공개물(Newell 누적곡선·Canon 특허·OpenDataCam 등)은 제안서 §7 에 이미 정리 → 구동안내서 '알려진 제약' 또는 README 로 옮기면 끝</td><td class="c"><span class="tag mid">보완</span></td></tr>
+</tbody></table>
+</div>
+
+<div class="card">
+<h3 style="margin-top:0">1.2 제출물 5종(안내서 5절·양식 1·2)</h3>
+<table>
+<thead><tr><th>제출물 · 규격</th><th>Mealboard 현재</th><th style="width:72px">상태</th></tr></thead>
+<tbody>
+<tr><td><b>산출물(공공 GitLab)</b> — 회원가입 → 프로젝트 <b>비공개</b> → Topics '2026 공공 AI 대전환 챌린지 세션1' → README 에 <b>접속 주소·주요 기능·실행/작동 방법</b> → 실행파일 형태는 함께 등록. <b>마감 후 수정·업데이트 불가</b>(변경 이력 확인 시 제외 가능)</td><td>GitHub 저장소(public 유지 결정, 10-11)를 GitLab 에 미러. README 는 '소개 전용' 규칙이라 실행 방법이 짧다 → GitLab 용 README 는 접속 주소(<code>kjhs-meal.com</code>)·기능·심사위원 구동 절차를 앞세운 별도 판으로. 제출 커밋에 태그를 찍고 GitLab 쪽은 <b>동결</b>(GitHub 는 계속 개발)</td><td class="c"><span class="tag mid">보완</span></td></tr>
+<tr><td><b>참가신청서(양식 1)</b> PDF 1부 — 과제명·결과물 형태·<b>사용 모델명/교체 가능 여부</b>·GitLab 링크·개요. 개인정보 동의 + <b>수상 시 행안부 무상 사용권(복제·수정·배포·2차 저작·위탁업체 사용) 기간 제한 없이</b> + 홍보 활용 + 부정행위 시 환수 동의</td><td>'사용 모델명/교체 가능 여부' 칸이 있다 = LLM 교체 가능성을 심사 전제로 본다는 뜻. 지금 답은 "Qwen3-1.7B(Hailo-10H 로컬) · 교체 불가" → N1 뒤 "Qwen3(로컬) / Gemma·EXAONE(Ollama) / 규칙 템플릿, <code>.env</code> 한 줄 교체" 로 바뀐다</td><td class="c"><span class="tag mid">보완</span></td></tr>
+<tr><td><b>구동안내서(양식 2)</b> A4 3~5쪽 — 실행 환경 / 설치·실행 절차(처음부터 순서대로) / <b>LLM 연결 설정</b>(모델·위치·교체 방법·키 입력 위치) / 모의데이터 안내 / 기능 사용 순서(핵심 흐름 1~3개) / 알려진 제약(재배포 제한 라이브러리) + <b>개발 경위 요약 1쪽</b></td><td><code>docs/manual.html</code>(7,400줄, Pi 구축 매뉴얼)은 심사용이 아니다. 심사위원용 5쪽은 <b>'Pi 없이 mock 으로 5분'</b> 경로를 1~2쪽, LLM 연결 1쪽, 기능 흐름 3개(대기시간 화면 → 관리 앱 보정 → 리포트) 1쪽, 제약·라이선스 1쪽, 경위 1쪽으로 새로 쓴다</td><td class="c"><span class="tag no">미비</span></td></tr>
+<tr><td><b>시연영상</b> 약 5분 이내 mp4, 구동안내서 핵심 흐름을 실제 화면으로(음성 또는 자막), 심사위원 구동 참고용</td><td>없음. <b>급식실 실사 프레임은 영상에도 넣지 않는다</b>(§2 원칙) → 공개 화면·평면도 밀집도·관리 앱(디버그 뷰는 모자이크가 아니라 아예 제외)·mock 구동·Pi 터미널(서비스 상태)로 구성</td><td class="c"><span class="tag no">미비</span></td></tr>
+<tr><td><b>모의데이터(선택)</b> — 민감자료 제외</td><td>mock 피드 생성기는 있으나 '파일' 꾸러미가 없다. 샘플 <code>queue.db</code>(익명 숫자뿐이라 실측 2주치 그대로 가능)·<code>meal.json</code>·<code>insights.db</code>·<code>zones.local.json</code> 예시를 <code>samples/</code> 로 묶으면 심사위원이 집계·히트맵·리포트까지 바로 본다</td><td class="c"><span class="tag mid">보완</span></td></tr>
+</tbody></table>
+</div>
+
+<div class="card">
+<h3 style="margin-top:0">1.3 공통 개발 규칙 · 권리(안내서 6절·7절)</h3>
+<table>
+<thead><tr><th>규칙</th><th>Mealboard 현재</th><th style="width:72px">상태</th></tr></thead>
+<tbody>
+<tr><td><b>개발 방향</b>: '27년 정보화사업 구축을 염두 — 기능 확장보다 <b>핵심 기능의 안정 구현·운영·유지관리 수월한 구조</b> 권장</td><td>단일 Python 스택·systemd 유닛 저장소 포함·설정 3파일·멱등 <code>setup_pi.sh</code>·테스트 202 건 — 구조는 맞다. 발표에서 "기능 20개" 가 아니라 "핵심 3개가 안정" 으로 말해야 한다는 뜻이기도 하다 → 제안 20건 중 11-11 전엔 점수 직결 9건만</td><td class="c"><span class="tag ok">충족</span></td></tr>
+<tr><td><b>모델 비종속</b>: 특정 LLM 에 종속되지 않고 교체 가능한 구조, <b>2종 이상 모델에서 주요 기능 정상 구동 입증 권장</b>. 공통기반 지원 모델: Gemma·Llama·GPT-OSS·EXAONE·HyperCLOVA X·Solar</td><td><code>jobs/llm.py LocalLLM</code> 은 Hailo HEF 전용. 뉴스 요약·리포트 해설이 LLM 사용처. 교체 구조 없음 → <b>N1</b>(가장 큰 신규 항목)</td><td class="c"><span class="tag no">미비</span></td></tr>
+<tr><td><b>자료 사용</b>: 개발 단계 민감자료 금지, 공개자료·모의데이터만</td><td>카메라 프레임은 저장·전송 자체가 없고 DB 는 인원수·시각 숫자뿐 — 이 규칙에 가장 잘 맞는 설계. 다만 저장소 문서에 학교 LAN IP·tailnet 호스트명·관리 주소가 적혀 있다(민감자료는 아니나 운영 세부) → 제출본에서 정리(N10)</td><td class="c"><span class="tag mid">보완</span></td></tr>
+<tr><td><b>원본 보호</b>: 투입 원본은 읽기 전용, 산출물은 별도 위치</td><td>NEIS·RSS 원본은 읽기만, 산출물은 <code>data/</code>; 파일당 쓰기 주체 하나 규칙 — 충족. 구동안내서에 한 줄로 적는다</td><td class="c"><span class="tag ok">충족</span></td></tr>
+<tr><td><b>권리</b>: 수상작은 행안부에 복제·수정·배포·2차 저작·범정부 구축·위탁업체 사용 무상 허락. <b>오픈소스·외부 라이브러리 라이선스 준수 책임은 참가팀</b>, 재배포 제한 구성요소는 구동안내서 명시</td><td>ultralytics(AGPL-3.0)·YOLO 가중치(AGPL)·HailoRT·Hailo HEF 모델(Hailo 라이선스)·Qwen3(Apache-2.0)·DeepL API(약관)·FastAPI 등(MIT/BSD) — <b>목록·검토 없음</b> → <b>N2</b></td><td class="c"><span class="tag no">미비</span></td></tr>
+<tr><td><b>유의</b>: 서류 규격 미준수·누락 시 제외, 구동 불가 산출물 제외, 수상 후 사유 확인 시 취소·환수</td><td>→ §7 체크리스트로 관리. '구동 불가' 가 가장 현실적인 탈락 사유 → N3</td><td class="c"><span class="tag mid">보완</span></td></tr>
+</tbody></table>
+</div>
+
+<!-- ============ 2 ============ -->
+<h2 id="s2">2. 평가지표 5개 · 현재 근거와 보강점</h2>
+<p class="note">예선·결선 동일 배점. 예선은 <b>전문가 + AI 심사 병행</b>(과제 설명서·산출물 검토 + 구동 결과) — 문서가 기계가 읽어도 구조적으로 명확해야 한다(제목 체계·표·수치).</p>
+<div class="card">
+<table>
+<thead><tr><th style="width:110px">지표(배점)</th><th>안내서 세부</th><th>지금 내세울 근거</th><th>11-11 전 보강(§4·§5 번호)</th></tr></thead>
+<tbody>
+<tr><td><b>필요성 20</b></td><td>문제의 구체성·중요성, 목적 타당성·공공 가치</td><td>전국 92% 식당 배식·시차 배식 구조, 착석 20분(AAP·CDC, JAMA RCT), 잔반·식사시간 상관, 초·중·고 급식실 대기 안내 국내 무사례</td><td>P13 '착석 식사시간' 프레임을 히어로·신청서 개요에. 자교 실측 수치(창별 대기 분포·피크) 한 장</td></tr>
+<tr><td><b>창의성 30</b></td><td>차별화된 아이디어, AI·데이터 활용 방식의 참신성</td><td>카메라가 <b>숫자만</b> 남기는 큐잉 센서(법정 예외 §25①6 설계), Little's law + <b>FIFO 누적곡선 자동 실측</b>(P1 가동 중, K≈1.0~1.2), 에지 LLM 해설, NEIS 영양·탄소·알레르기 통합</td><td>P3 실측 프로토콜로 "스스로 정확도를 증명" 서사 완성. P11 분산 추천은 선택</td></tr>
+<tr><td><b>활용성 20</b></td><td>실제 적용 가능성, 시간 단축·비용 절감·품질 향상</td><td>09-11 부터 실운영(공개 주소, 학생·교사 사용), 영양교사 운영평가 항목 대응</td><td>P10 주간 리포트 MVP, P9 키오스크(폰 없는 학생·수업 중 기기 금지법 대응), P14 영양 기준 프리셋</td></tr>
+<tr><td><b>완성도 15</b></td><td>구현 수준·안정성·사용 편의, <b>소스코드·이용안내서 충실성</b></td><td>테스트 202, systemd 8 유닛, 관리 앱(Access), PWA, 프로젝트 지도·매뉴얼(GitHub Pages), WORKLOG</td><td><b>N3 심사위원 구동 경로 + 모의데이터</b>, N2 라이선스, P7 불확실성 한 줄, P8 접근성 패스, P12 투명성 시트</td></tr>
+<tr><td><b>확산가능성 15</b></td><td>타 기관·유사 업무 재사용, 지속 운영·범정부 공동활용</td><td>오픈소스 공개 저장소, Pi 1대 20~30만 원, 설정 3파일, 전국 학교 동일 NEIS API</td><td><b>N1 모델 비종속</b>(안내서가 확산 지표의 실질 요건으로 본다), P18 이식 패키지 + 개인정보 서식 세트, P15 탄소 계수 출처</td></tr>
+</tbody></table>
+</div>
+
+<!-- ============ 3 ============ -->
+<h2 id="s3" class="pb">3. 지난 제안 20건 진척(09-28 → 10-11)</h2>
+<p class="note">상세 근거는 제안서 원문 §3. 여기서는 상태·변동만. 우선순위는 §5 에서 다시 매겼다(<b>필수</b> = 제출 요건, <b>점수</b> = 지표 직결, <b>선택</b> = 결선용·후속).</p>
+<div class="card">
+<table>
+<thead><tr><th style="width:52px">번호</th><th>항목</th><th style="width:72px">상태</th><th>10-11 기준 메모</th><th style="width:60px">재분류</th></tr></thead>
+<tbody>
+<tr><td>P1</td><td>FIFO 누적곡선 대기시간 추정기</td><td class="c"><span class="tag ok">완료</span></td><td>09-28 배포(<code>counting.FifoEstimator</code>, <code>samples.served_n</code>). 점심 창 실측 0.7~1.0분 = 수동 랩 중앙값과 일치, K 0.5 시동 왜곡은 첫 틱 제외로 해결(<code>70e57a7</code>). 석식 창 검증은 아직</td><td>점수</td></tr>
+<tr><td>P2</td><td>트랙 기억 유예 + 순유입 λ</td><td class="c"><span class="tag ok">완료</span></td><td><code>TRACK_GRACE=15</code>, 복귀 −1. 진단 지표 <code>reappear_n</code>·<code>new_id_n</code> 열은 넣지 않음(남은 소항목)</td><td>점수</td></tr>
+<tr><td>P3</td><td>표준 실측 프로토콜 + ground_truth 표 + 품질 API</td><td class="c"><span class="tag no">미착수</span></td><td>수동 실측 3회(09-18·21·22) 기록은 WORKLOG 에만. '후미 학생 λ선 도착' 랩 체인 방식은 합의됨. <code>jobs/ground_truth.py</code> 제안만</td><td><b>점수↑</b></td></tr>
+<tr><td>P4</td><td>측정 신뢰도 3단계 + 카메라 이동 감지</td><td class="c"><span class="tag no">미착수</span></td><td>—</td><td>선택</td></tr>
+<tr><td>P5</td><td>예보 평가·구간·나우캐스트·수축</td><td class="c"><span class="tag no">미착수</span></td><td>—</td><td>선택</td></tr>
+<tr><td>P6</td><td>Hailo-10H 검출로 fps 3→15+</td><td class="c"><span class="tag no">미착수</span></td><td>결선 전 완료 비현실적 → '진행 중·예비 수치' 로만. 11-11 전 착수 안 함</td><td>선택</td></tr>
+<tr><td>P7</td><td>히어로 불확실성 한 줄 + 상태별 대체 정보</td><td class="c"><span class="tag mid">부분</span></td><td>'배식 시작 대기' → '측정 준비 중'(09-22), 각주에 '오늘 범위 a~b분' 은 이미 있음. '약'·상대 갱신 시각·창 밖 행동 문장 미구현</td><td>점수</td></tr>
+<tr><td>P8</td><td>판정 어휘 공공 표준 정렬 + 접근성 패스</td><td class="c"><span class="tag no">미착수</span></td><td>—</td><td>점수</td></tr>
+<tr><td>P9</td><td>키오스크(TV) 모드 <code>#tv</code></td><td class="c"><span class="tag no">미착수</span></td><td>—</td><td>점수</td></tr>
+<tr><td>P10</td><td>영양교사 주간 리포트 화면</td><td class="c"><span class="tag no">미착수</span></td><td><code>reports.db</code>·규칙 템플릿은 있음(05:45·14:20 생성). 화면·인쇄판만 없음</td><td>점수</td></tr>
+<tr><td>P11</td><td>분산 추천 넛지 카드</td><td class="c"><span class="tag no">미착수</span></td><td>—</td><td>선택</td></tr>
+<tr><td>P12</td><td>투명성 시트 + PWA 설치 정비 + 위젯</td><td class="c"><span class="tag mid">부분</span></td><td>아이콘 192/512·apple-touch-icon 완료(10-04, sw v43). manifest <code>description</code>·<code>screenshots</code>·투명성 시트·<code>/embed</code> 미구현</td><td>점수</td></tr>
+<tr><td>P13</td><td>'착석 식사시간' 지표·프레임 전환</td><td class="c"><span class="tag no">미착수</span></td><td>—</td><td><b>점수↑</b></td></tr>
+<tr><td>P14</td><td>영양 기준 프리셋(2021/2027)</td><td class="c"><span class="tag no">미착수</span></td><td>—</td><td>점수</td></tr>
+<tr><td>P15</td><td>탄소 계수 재설계</td><td class="c"><span class="tag no">미착수</span></td><td>—</td><td>점수</td></tr>
+<tr><td>P16</td><td>잔반 총량 입력 → 예보·학급 목표</td><td class="c"><span class="tag no">미착수</span></td><td>—</td><td>선택</td></tr>
+<tr><td>P17</td><td>익명 메뉴 반응 투표</td><td class="c"><span class="tag no">미착수</span></td><td>—</td><td>선택</td></tr>
+<tr><td>P18</td><td>이식 패키지 + 법적 근거 문서 세트</td><td class="c"><span class="tag mid">부분</span></td><td>구조 문서는 크게 전진: 학생용 프로젝트 지도(10-07, 6탭·시나리오 '배포 직접 해 보기'·'관리자 보정'), GitHub Pages 가동, archify 설계도 2종. <code>site.json</code>·수용 검사·개인정보 서식 세트는 없음</td><td>점수</td></tr>
+<tr><td>P19</td><td>외부 데이터 정확도 검증 + 시차배식 시뮬레이터</td><td class="c"><span class="tag no">미착수</span></td><td>—</td><td>선택</td></tr>
+<tr><td>P20</td><td>공공데이터 온보딩 자동화·알레르기 알림</td><td class="c"><span class="tag no">미착수</span></td><td>—</td><td>선택</td></tr>
+</tbody></table>
+<p class="small">제안 밖에서 같은 기간에 끝난 신뢰성 작업: λ 측정선을 ROI 변에서 안쪽으로 자동 생성(09-21~22, 화면 경계 λ=0 사고의 구조적 차단), 발 잘림 투영 보정, 히트맵 오늘 행 실황화, 관리 탭·아이콘 정비. 이들은 '완성도' 서사의 재료다.</p>
+</div>
+
+<!-- ============ 4 ============ -->
+<h2 id="s4" class="pb">4. 재검토로 추가된 사항 N1~N10</h2>
+<p class="note">안내서 원문을 조문 단위로 대조해 09-28 제안서에 없거나 약했던 항목. <span class="tag new">필수</span> 는 제출 요건 또는 탈락 사유와 직결.</p>
+
+<div class="card">
+<h3 style="margin-top:0"><span class="tag new">필수</span> N1. 모델 비종속 LLM 백엔드 + 2종 구동 입증</h3>
+<p><b>왜</b>: 구동안내서 고정 항목 'LLM 연결 설정', 참가신청서 '사용 모델명/교체 가능 여부', 공통 규칙 '2종 이상 모델 구동 입증 권장', 확산가능성 지표. Mealboard 에서 LLM 은 보조(뉴스 영어 요약·리포트 해설)지만 심사 틀이 LLM 도구를 전제로 짜여 있어 <b>이 칸이 비면 '교체 불가' 로 읽힌다</b>.</p>
+<p><b>무엇</b>: <code>jobs/llm.py</code> 에 백엔드 인터페이스(<code>generate(prompt, max_tokens) → text</code>)를 두고 셋을 구현 — ① <code>hailo</code>(현행 Qwen3 HEF, 창 밖 전용) ② <code>openai</code>(OpenAI 호환 HTTP: Ollama·vLLM·공통기반 게이트웨이 전부 같은 모양 — <code>LLM_BASE_URL</code>·<code>LLM_MODEL</code>·<code>LLM_API_KEY</code>) ③ <code>template</code>(LLM 없음, 규칙 문장 — 지금의 폴백). <code>.env LLM_BACKEND</code> 한 줄 교체, 검증기(숫자 부분집합)는 백엔드 무관하게 공통. 개발 PC 에서 Ollama 로 <b>Gemma 3 와 EXAONE</b>(둘 다 공통기반 지원 모델) 두 종으로 뉴스 요약·리포트 해설이 검증기를 통과하는 기록(모델명·tok/s·통과율)을 구동안내서 표로. Pi 에 이미 있는 <code>hailo-ollama</code> 유닛도 같은 ② 경로로 붙는다.</p>
+<p><b>난이도 하~중</b>(백엔드 60줄 + 테스트 + 문서). 11-11 전 반드시.</p>
+</div>
+
+<div class="card">
+<h3 style="margin-top:0"><span class="tag new">필수</span> N2. 라이선스 전수 조사 + 재배포 제한 명시 + AGPL 대응</h3>
+<p><b>왜</b>: "라이선스 준수 책임은 참가팀, 재배포 제한 구성요소는 구동안내서 명시" + 수상 시 행안부가 복제·수정·배포·위탁 개발. <b>ultralytics(YOLO11 코드·가중치)는 AGPL-3.0</b> — 네트워크로 서비스하는 파생물도 소스 공개 의무가 있고, 행안부 위탁업체가 비공개로 재구성하는 시나리오와 충돌한다. 이것을 모르고 적지 않으면 '수상 후 사유 확인 시 취소' 조항의 전형적 사례가 된다.</p>
+<p><b>무엇</b>: ① <code>pip-licenses</code> 로 전 의존성 표(이름·버전·라이선스) → <code>docs/LICENSES.md</code> ② 저장소 자체 라이선스 파일이 없다면 추가(권장 MIT 또는 Apache-2.0 — AGPL 의존성과의 관계를 명시) ③ 구동안내서 '알려진 제약' 에 "ultralytics·YOLO 가중치 AGPL-3.0: 본 산출물은 소스 공개로 조건 충족, 비공개 재배포 시 Ultralytics 상용 라이선스 또는 검출기 교체 필요" 한 단락 ④ <b>교체 가능성 시연</b>: 검출기도 모델 비종속임을 보이면 약점이 강점으로 — 추론 백엔드를 <code>ultralytics</code> / <code>onnxruntime</code>(YOLO-NAS·RT-DETR 등 Apache 계열 가중치) / <code>hailo</code> 셋으로 뽑는 인터페이스만 정의하고 11-11 전엔 ONNX 경로 1개를 창 밖에 PC 에서 동작 확인(정확도 비교 없이 '구동' 수준). 트래커(ByteTrack)는 MIT 라 무관하나 <code>ultralytics.trackers</code> 를 import 하면 같은 AGPL 이므로 <code>supervision</code>(MIT) 또는 자체 구현 경로를 명시. ⑤ Hailo HEF·HailoRT 는 Hailo 라이선스(재배포 제한 가능) → "Hailo 가속은 선택 사양, 없으면 CPU 경로" 로 적는다. ⑥ DeepL API Free 약관·NEIS 공공데이터 이용약관·폰트 라이선스도 표에.</p>
+<p><b>난이도 하(조사·문서) + 중(ONNX 경로)</b>. 문서 부분은 10월 셋째 주에 끝낸다.</p>
+</div>
+
+<div class="card">
+<h3 style="margin-top:0"><span class="tag new">필수</span> N3. 심사위원 구동 경로 "Pi·카메라 없이 5분" + 모의데이터 꾸러미</h3>
+<p><b>왜</b>: "구동안내서대로 구동할 수 없는 산출물은 심사 제외". 예선 심사위원은 Windows 노트북에서 README 를 보고 돌린다. 현재 README 의 개발 PC 절차(<code>uv venv && uv sync</code> → mock → uvicorn 두 창)는 되지만, 집계·히트맵·리포트·관리 앱은 데이터가 쌓여야 보여서 <b>첫 10분엔 빈 화면</b>이 많다.</p>
+<p><b>무엇</b>: ① <code>samples/</code> — 실측 2주치 <code>queue.db</code>(인원수·시각 숫자뿐이라 그대로 공개 가능; 더미 구간 없음 확인), <code>insights.db</code>, <code>reports.db</code>, <code>meal.json</code>(NEIS 캐시), <code>news.json</code>, <code>zones.local.json</code>(보정 예시), <code>.env.judge</code>(키 없이 도는 설정: <code>FEED_SOURCE=mock</code>·<code>LLM_BACKEND=template</code>·<code>TRANSLATOR=none</code>) ② 한 명령 부팅 스크립트 <code>run_judge.(ps1|sh)</code>: venv → 샘플 복사 → mock(<code>--speed</code>)·api·admin 동시 기동 → 브라우저 열기. 관리 앱은 로컬 키 URL 로 바로 진입 ③ 시각을 샘플 날짜로 고정하는 스위치(<code>MB_NOW=2026-10-02T12:35</code>)가 없으면 창 밖 시각에 돌린 심사위원은 '급식 시간이 아닙니다' 만 본다 — <code>app/lunch.py</code>·<code>schedule.py</code> 의 now 주입점 하나로 가능 ④ Windows 10/11·macOS 에서 깨끗한 계정으로 리허설 2회(학생이 하면 좋은 과제) ⑤ 구동안내서 '설치·실행 절차' 는 이 스크립트 기준으로 10줄 이내.</p>
+<p><b>난이도 중</b>. 10월 넷째 주 완료, 11월 첫 주 리허설.</p>
+</div>
+
+<div class="card">
+<h3 style="margin-top:0"><span class="tag new">필수</span> N4. 공공 GitLab 등록·동결 절차</h3>
+<ul>
+<li><code>gitlab.aigov.go.kr</code> 가입 가능 여부(공무원 인증 방식)를 <b>이번 주</b>에 확인 — 교육공무원 계정 체계가 다를 수 있다.</li>
+<li>제출 커밋에 태그 <code>v2026.11-submit</code>, GitLab 은 그 시점 미러 후 <b>push 중단</b>(마감 후 변경 이력 = 제외 사유). GitHub 는 결선 준비를 계속하되 결선 시연은 태그 시점 코드와 '그 뒤 바뀐 것' 을 구분해 말한다.</li>
+<li>GitLab README 는 심사용 판: 접속 주소 → 30초 요약 → 심사위원 구동(N3) → 기능 → 구조도(archify 임베드 이미지) → 라이선스(N2) → 학생 기여·출처. 비공개·Topics 설정은 체크리스트(§7).</li>
+<li>용량: 모델 가중치(<code>yolo11n.pt</code> 5 MB 는 포함 가능, HEF 2.9 GB 는 제외하고 내려받기 URL)·샘플 DB 크기 확인.</li>
+</ul>
+</div>
+
+<div class="card">
+<h3 style="margin-top:0"><span class="tag new">필수</span> N5. 참가 라인·수요조사(10-16)·학생 기여 정리</h3>
+<ul>
+<li>학교의 'AI 담당부서' 와 공문 발송 주체 확정(정보부장 또는 교무기획), 교육청 경유 여부 확인. 붙임 2 수요조사서는 희망자 명단 수준이니 10-16 까지 보내 두는 것이 안전(미제출이 참가 불가 사유인지는 안내서에 명시 없음 — 문의처 053-230-1984 에 확인).</li>
+<li>팀 구성: 교사 단독 또는 교직원 팀(영양교사가 팀원이면 활용성 서사가 강해진다 — 리포트 요구사항 인터뷰도 겸한다).</li>
+<li><b>학생 기여·권리</b>: 학생은 팀원 불가 → 개발 경위 요약·README 에 역할별 크레딧, 학생·보호자에게 '수상 시 행안부 무상 사용권' 을 설명하고 동의(간단한 서면) 를 받아 두는 것이 안전하다. 코드·문서에 학생 실명이 남아 있는지 점검(N10 과 함께).</li>
+</ul>
+</div>
+
+<div class="card">
+<h3 style="margin-top:0">N6. 개발 경위 요약 1쪽 — 서사 고정</h3>
+<p>양식 2 끝의 '개발 경위 요약(문제 인식과 접근 방식)' 은 결선 발표 서사의 축약판이다: ① 학생이 겪은 문제(줄 → 식사시간 부족) → ② 학생 프로젝트로 Pi 1대·카메라 1대 → ③ '프레임을 저장하지 않는다' 를 첫 원칙으로 둔 이유(학교 협의 전제·§25①6) → ④ Little's law 의 한계를 실측으로 확인하고 FIFO 누적곡선으로 스스로 보정하게 된 과정(수동 랩 3회 → K 1.0) → ⑤ 교사 보완(운영 도구·확산 패키지). 수치는 자교 실측에서(창별 대기 중앙값·피크·실측 대조 오차).</p>
+</div>
+
+<div class="card">
+<h3 style="margin-top:0">N7. 시연영상 5분 구성안(실사 없음)</h3>
+<table>
+<thead><tr><th style="width:70px">시간</th><th>장면</th><th>원칙</th></tr></thead>
+<tbody>
+<tr><td>0:00~0:40</td><td>문제 한 컷(급식실 평면도 애니메이션 + 숫자) → 공개 주소 <code>kjhs-meal.com</code> 접속, 대기시간 화면 실시간(급식 창에 녹화)</td><td>급식실 실사·학생 얼굴 없음. 화면 녹화만</td></tr>
+<tr><td>0:40~1:40</td><td>구동안내서 흐름 1: 심사위원 구동 — <code>run_judge</code> 한 줄 → 브라우저에 다섯 화면이 샘플 데이터로 뜨는 과정</td><td>N3 그대로</td></tr>
+<tr><td>1:40~2:50</td><td>흐름 2: 관리 앱 — 프레임 잡기·ROI·λ선·4점 보정(디버그 뷰는 <b>급식실 비어 있을 때</b> 또는 mock 메타로)·실측 보정 K 값 변화</td><td>사람이 찍힌 디버그 영상은 넣지 않는다</td></tr>
+<tr><td>2:50~3:50</td><td>흐름 3: LLM 교체 — <code>.env</code> 한 줄로 Hailo Qwen3 → Ollama Gemma → template, 리포트 해설 결과 비교(N1)</td><td>모델 비종속 입증 장면</td></tr>
+<tr><td>3:50~4:40</td><td>정확도 증명: 수동 실측 랩 vs FIFO 실측 vs 공표값 표, 히트맵·주간 리포트</td><td>단일 % 발표 금지(범위·버킷)</td></tr>
+<tr><td>4:40~5:00</td><td>확산: 설정 3파일·Pi 1대 BOM·개인정보 서식 세트 표지</td><td>—</td></tr>
+</tbody></table>
+<p class="small">자막 기반(음성 녹음 선택). 1080p, 자막은 3×5 룰. 녹화는 OBS 또는 Windows 캡처.</p>
+</div>
+
+<div class="card">
+<h3 style="margin-top:0">N8. '핵심 기능 3개' 선언 — 범위 고정</h3>
+<p>안내서가 "기능을 넓히기보다 핵심 기능 안정" 을 명시했으므로 제출물에서 핵심을 셋으로 못 박는다: <b>① 예상 대기시간(자동 실측 보정 포함) ② 급식실 밀집도·히트맵(평면도, 숫자만) ③ 급식 영양·탄소·알레르기 + 운영 리포트</b>. 이슈피드·워드클라우드는 '부가' 로 분류해 구동안내서 기능 순서에서 뒤로. 발표도 이 셋으로.</p>
+</div>
+
+<div class="card">
+<h3 style="margin-top:0">N9. 저장소 공개 상태 — public 유지(10-11 결정) 와 제출의 관계</h3>
+<p>안내서는 비공개를 요구하지 않는다(GitLab 쪽만 비공개 = 심사위원 열람용). 공개 GitHub 는 선행성 증거·확산 지표·학생 포트폴리오로 유리하다. 조건: 유출 키 교체(09-12 미결 — CF 터널 토큰·DeepL 키), 운영 세부 정리(N10). 제출 뒤 GitHub 에 계속 커밋해도 규정 위반이 아니다(GitLab 동결만 지키면 된다).</p>
+</div>
+
+<div class="card">
+<h3 style="margin-top:0">N10. 제출본 위생 점검</h3>
+<ul>
+<li>학교 LAN IP·tailnet 호스트명·관리 주소·학교망 우회 IP 등 운영 세부는 <code>CLAUDE.md</code>·WORKLOG 에서 걷어내거나 제출 미러에서 제외(심사와 무관한 공격면 노출 방지).</li>
+<li>학생 실명·학번·사진 없는지 전수 grep. 학교명은 '충남 공주 ○○고' 수준으로 두되 공개 주소에 이미 학교명이 있으니 과도하게 숨길 필요는 없다.</li>
+<li><code>.env.example</code> 의 키 이름이 구동안내서 'LLM 연결 설정·키 입력 위치' 와 1:1 로 맞는지.</li>
+<li>테스트 전부 통과·<code>check_manual.py</code> 0·프로젝트 지도 <code>scan --diff</code> 깨끗 — 제출 태그 직전 3종 확인.</li>
+</ul>
+</div>
+
+<!-- ============ 5 ============ -->
+<h2 id="s5" class="pb">5. 수정 로드맵(10-11 → 11-11, 4.5주)</h2>
+<p class="note">09-28 로드맵은 1주차(P1·P2)만 완료. 남은 기간을 <b>필수(N) → 점수(P 9건) → 선택</b>으로 재배치. 매주 토요일 상태를 이 표에 갱신한다.</p>
+<div class="card">
+<table>
+<thead><tr><th style="width:120px">주차</th><th>필수(제출 요건)</th><th>점수(지표 직결)</th><th>산출물·검증</th></tr></thead>
+<tbody>
+<tr><td><b>3주차</b><br>10-11~10-18</td><td><b>N5</b> 참가 라인·수요조사 공문(10-16)·GitLab 가입 확인(N4) · <b>N1</b> LLM 백엔드 인터페이스 + openai 호환 + template, Ollama Gemma/EXAONE 구동 기록 · <b>N2</b> 라이선스 표·<code>LICENSE</code>·제약 문단</td><td>P3 <code>ground_truth</code> 표·관리 앱 입력·품질 API(실측 2회 기록) · P13 착석 지표 히어로 한 줄</td><td>수요조사서 발송, <code>docs/LICENSES.md</code>, 테스트 통과, 석식 창 FIFO 검증 1회</td></tr>
+<tr><td><b>4주차</b><br>10-19~10-25</td><td><b>N3</b> <code>samples/</code>·<code>run_judge</code>·<code>MB_NOW</code> 시각 고정 · N10 위생 점검 1차</td><td>P7 히어로 문구('약'·갱신 시각·창 밖 행동 문장) · P8 접근성(대비·셀 24px·어휘 뜻 문장) · P12 manifest description/screenshots + 투명성 시트</td><td>깨끗한 Windows 계정 리허설 1회, Lighthouse 접근성 기록</td></tr>
+<tr><td><b>5주차</b><br>10-26~11-01</td><td>구동안내서 초안(5쪽) · 참가신청서 초안 · N6 경위 1쪽</td><td>P10 주간 리포트 화면(인쇄 1장, 영양교사 인터뷰 1회) · P14 영양 프리셋 · P9 키오스크 <code>#tv</code> 기본형</td><td>급식실 TV 시범 1일, 리포트 PDF 샘플</td></tr>
+<tr><td><b>6주차</b><br>11-02~11-08</td><td><b>N7</b> 시연영상 촬영·편집 · GitLab 미러 + README 심사판 · N2 ONNX 검출 경로 구동 확인(가능하면)</td><td>P15 탄소 계수 식품군·출처 · P18 <code>site.json</code>·개인정보 서식 세트(안내판 문안·운영방침 절·§22①1 대응표)</td><td>macOS 리허설, 매뉴얼·layout·WORKLOG 동기화, 태그 <code>v2026.11-submit</code> 후보</td></tr>
+<tr><td><b>제출 주</b><br>11-09~11-11</td><td>최종 점검(§7) → 11-10 메일 발송(도착 기준이라 하루 여유) → GitLab 동결 → 기관 신청 목록 공문 확인</td><td>—</td><td>제출 완료 기록을 WORKLOG 에</td></tr>
+<tr><td><b>예선~결선</b><br>11-13~11-26</td><td>보완자료 요청 대응(안내서: 필요시 질의 가능)</td><td>P11 분산 추천·P4 신뢰도 표시·P5 예보 평가 중 1~2건을 결선 '다음 단계' 로 · 발표자료(형식 자유)</td><td>결선 리허설 2회, 예상 질문 4종 답변(현대그린푸드와 차이 · 계수 출처 · 개인정보 · 정확도 %)</td></tr>
+</tbody></table>
+<div class="box warn"><b>잘릴 때 버리는 순서</b>: P9 키오스크 → P15 탄소 → P14 영양 프리셋 → P12 투명성 시트 → P8 접근성(최소 대비 수정만 남김). <b>N1·N2·N3·N4·N5·N7 과 P3·P10 은 버리지 않는다.</b></div>
+</div>
+
+<!-- ============ 6 ============ -->
+<h2 id="s6">6. 하지 말 것 · 재확인 목록(갱신)</h2>
+<div class="grid2">
+<div class="card">
+<h3 style="margin-top:0">하지 말 것(09-28 10건 유지 + 추가 3)</h3>
+<ul>
+<li>GBM/LSTM 예보 모델을 지금 넣지 말 것 · 외형 임베딩·얼굴 특징을 저장하지 말 것 · 3 fps 에서 ReID 트래커로 갈아타지 말 것 · 곱셈 K 로 커버리지 누락을 메우지 말 것 · 의도적 과대표시 금지 · 불확실성 그래프를 히어로에 넣지 말 것 · 전교생 동시 푸시·개인 잔반 랭킹·개인 식판 촬영 금지 · 무지개 컬러맵·차트 라이브러리·프레임워크 도입 금지 · TV 실사 송출·MJPEG 녹화 금지 · 정확도 단일 숫자(MAPE) 발표 금지(원문 §5)</li>
+<li><span class="tag new">추가</span> 시연영상·발표자료에도 급식실 실사 프레임을 쓰지 말 것 — "저장하지 않는다" 는 주장과 영상 속 실사가 모순으로 보인다.</li>
+<li><span class="tag new">추가</span> 마감 뒤 GitLab 에 어떤 push 도 하지 말 것(README 오타 수정도 포함).</li>
+<li><span class="tag new">추가</span> 라이선스를 모르는 자산(아이콘·폰트·샘플 이미지)을 제출본에 넣지 말 것.</li>
+</ul>
+</div>
+<div class="card">
+<h3 style="margin-top:0">재확인(문서 인용 전)</h3>
+<ul>
+<li>개인정보 보호법 시행령 §22①1 조문 — 국가법령정보센터 원문 대조(아직 미수행).</li>
+<li>ultralytics AGPL-3.0 의 네트워크 서비스 조항 적용 범위, 가중치 파일의 라이선스 표기 — 공식 LICENSE·FAQ 원문.</li>
+<li>공공 GitLab 가입 자격(교육공무원 계정) 및 '기관' 단위 정의 — 문의처 확인.</li>
+<li>수요조사서 미제출 시 본 제출 가능 여부 — 문의처 확인.</li>
+<li>접근성 수치(2.9:1 등)는 계산값 — Lighthouse/axe 로 재측정.</li>
+<li>중학생 1인 잔반 79.2 g 등 검색 요약 기반 수치 — 원문.</li>
+<li>Hailo HEF·HailoRT 재배포 조건 — Hailo 개발자 약관 원문.</li>
+</ul>
+</div>
+</div>
+
+<!-- ============ 7 ============ -->
+<h2 id="s7" class="pb">7. 제출물 체크리스트</h2>
+<div class="grid2">
+<div class="card">
+<h3 style="margin-top:0">메일 (<code>databus@nia.or.kr</code>, 11-11 도착 기준)</h3>
+<ul class="chk">
+<li>제목 <code>[공공 AI 대전환 챌린지 제출]_세션1_기관명_팀명</code></li>
+<li><code>[참가신청서]_기관명_팀명.pdf</code> — 과제명·결과물 형태(웹/PWA)·<b>사용 모델명/교체 가능 여부</b>·GitLab 링크·개요, 동의 4항 체크·서명</li>
+<li><code>[구동안내서]_기관명_팀명.pdf</code> — A4 3~5쪽: 실행 환경 / 설치·실행 / <b>LLM 연결 설정</b> / 모의데이터 / 기능 순서 1~3 / 알려진 제약(<b>AGPL 등 재배포 제한</b>) + 개발 경위 1쪽</li>
+<li><code>[시연영상]_기관명_팀명.mp4</code> — 5분 이내, 실사 없음, 자막</li>
+<li>모의데이터(선택) — <code>samples/</code> zip 또는 GitLab 포함 안내</li>
+</ul>
+</div>
+<div class="card">
+<h3 style="margin-top:0">공공 GitLab (<code>gitlab.aigov.go.kr</code>)</h3>
+<ul class="chk">
+<li>회원가입 · 프로젝트 생성 · <b>공개 범위 비공개</b></li>
+<li>설정 → 일반 → Topics: <b>2026 공공 AI 대전환 챌린지 세션1</b></li>
+<li>README: 접속 주소 · 주요 기능 · 실행·작동 방법(심사위원 경로) · 라이선스 · 출처·크레딧</li>
+<li>소스 + 실행물(또는 실행 방법) · 샘플 데이터 · 모델 가중치(또는 URL)</li>
+<li>태그 <code>v2026.11-submit</code> 와 GitLab 커밋 해시 일치 · 이후 push 금지</li>
+<li>참가신청서에 링크 기재</li>
+</ul>
+<h3>기관 공문</h3>
+<ul class="chk">
+<li>10-16 참가수요조사서(붙임 2) — 기관 AI 담당부서 → 행안부 공공인공지능혁신과</li>
+<li>11-11 기관별 신청 목록(붙임 3)</li>
+</ul>
+</div>
+</div>
+
+<div class="box">
+<b>이 문서 뒤에 할 일</b>: §5 의 3주차 항목부터 작업 계획(PLAN 형식)으로 옮긴다. 코드 작업은 N1(LLM 백엔드) → P3(ground_truth) → N3(심사위원 구동) 순서, 문서 작업은 N2(라이선스) → N6(경위) → 구동안내서 순서. 사람이 할 일은 N5(참가 라인·공문·GitLab 가입·학생 동의) 하나로 모아 이번 주에 끝낸다.
+</div>
+
+<footer>
+Mealboard · 2026-10-11 · 이 점검서의 근거 원문은 행안부·NIA 「2026년 공공 AI 대전환 챌린지 행사계획 및 안내서」와 <code>docs/PROPOSAL-2026-11-challenge.md</code>(출처 70여 건). 재확인 목록(§6)의 항목은 원문 대조 전까지 인용하지 않는다.
+</footer>
+</main>
+</body>
+</html>
