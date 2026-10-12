@@ -2,7 +2,7 @@ import datetime as dt
 from fastapi import APIRouter
 from ..config import FEED_SOURCE, STALE_SEC          # STALE_SEC: 이 시간 넘게 새 행이 없으면 '데이터 없음'으로 본다
 from ..db import connect
-from ..lunch import describe, meal_next, meal_now, next_meal_day
+from ..lunch import describe, first_meal, meal_next, meal_now, next_meal_day
 from ..mealjson import read_meal
 
 router = APIRouter()
@@ -26,12 +26,13 @@ def next_with_day(now):
             if not nd:
                 return None
             d, k = nd[0], nd[1] + 1
-            win = meal_next(now.replace(hour=0, minute=0))[0]    # 그날의 첫 창
+            win = first_meal(d)                                # 그날의 첫 창
     else:
         nd = next_meal_day(now + dt.timedelta(days=1), dates)
         if not nd:
             return None
         d, k = nd[0], nd[1] + 1
+        win = first_meal(d)                                    # 그날의 창 목록(휴일 전날이면 석식이 다르다)에서
     out = describe(win)
     out.update({"days": k, "date": d.isoformat(), "weekday": WD[d.weekday()]})
     return out

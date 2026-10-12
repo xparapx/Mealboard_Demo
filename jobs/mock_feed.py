@@ -22,7 +22,7 @@ from collections import deque
 
 from app.config import ZONES_JSON
 from app.db import connect
-from app.lunch import MEALS, meal_now
+from app.lunch import meal_now, meals_for
 from vision.meta import MetaSender
 from vision.record import write_sample
 from vision.waittime import estimate_wait
@@ -150,7 +150,7 @@ def main():
         zones = []
     sim = Simulator(a.scenario)
     win = None                                                # 지금 열린 수집 창 — 바뀌는 순간 곡선을 처음부터
-    windows = ", ".join(f"{w.label} {hhmm(w.lo)}~{hhmm(w.hi)}" for w in MEALS) or "없음"
+    windows = ", ".join(f"{w.label} {hhmm(w.lo)}~{hhmm(w.hi)}" for w in meals_for(dt.datetime.now())) or "없음"
     print(f"mock_feed 시작  speed={a.speed}  scenario={a.scenario}  zones={[z['id'] for z in zones]}  수집 창: {windows}")
 
     while True:

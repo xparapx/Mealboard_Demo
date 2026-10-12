@@ -3,9 +3,10 @@
 시각 단위는 '자정부터 분'(minute of day, 0~1439) — SQLite strftime('%H')*60+strftime('%M') 과 같은 눈금이다.
 .env 의 LUNCH_START·LUNCH_END 는 이 모듈을 import 하는 순간 검증된다 — 잘못된 값은 서비스 시작을 막는다(요청 때 500 이 아니라)."""
 import datetime as dt
+import time
 
-from vision.schedule import current, describe, next_after, parse_windows   # noqa: F401  (describe 는 라우터가 이 모듈을 거쳐 쓴다)
-from .config import DINNER_END, DINNER_START, LUNCH_START, LUNCH_END, MEAL_WINDOWS
+from vision.schedule import current, describe, next_after, parse_dates, parse_windows, pick   # noqa: F401  (describe 는 라우터가 이 모듈을 거쳐 쓴다)
+from .config import DINNER_END, DINNER_START, LUNCH_START, LUNCH_END, MEAL_EVE_DATES, MEAL_WINDOWS, MEAL_WINDOWS_EVE
 
 BUCKET_MIN = 5          # 5분 단위로 묶는다. 30초 폴링 노이즈를 지우고 곡선을 읽히게
 DAY_MIN = 24 * 60
@@ -101,18 +102,53 @@ LUNCH_LO, LUNCH_HI = lunch_bounds()     # import 시점 검증. 잘못된 .env �
 DINNER_LO, DINNER_HI = dinner_bounds()
 
 # 수집 시간창(09-04): 3학년 점심 · 1·2학년 점심 · 석식. LUNCH_START~END 는 집계·관리 가드용 '점심 전체' 창으로 그대로 두고,
-# 이 세 창은 '지금 값이 실측인가'(카메라 노드 수집 on/off, /api/status feed.live, 화면의 더미데이터 띠) 만 정한다
-MEALS = parse_windows(MEAL_WINDOWS)     # import 시점 검증. 겹침·역순·오타는 여기서 ValueError
+# 이 세 창은 '지금 값이 실측인가'(카메라 노드 수집 on/off, /api/status feed.live, 화면의 더미데이터 띠) 만 정한다.
+# 10-12: 석식은 날에 따라 둘 — 평일 MEALS(17:30~18:30), 금요일·휴일 전날 MEALS_EVE(17:00~18:00). 어느 쪽인지는 meals_for(날짜) 가
+# NEIS 캐시(meal.json 의 급식 있는 날)로 가른다(vision/schedule.is_eve). 호출자는 MEALS 를 직접 보지 말고 meals_for/meal_now/meal_next 를 쓴다
+MEALS = parse_windows(MEAL_WINDOWS)         # import 시점 검증. 겹침·역순·오타는 여기서 ValueError
+MEALS_EVE = parse_windows(MEAL_WINDOWS_EVE) or MEALS
+EVE_DATES = parse_dates(MEAL_EVE_DATES)
+_MEALS_CACHE = {}                           # {date: (expires, windows)} — counter 는 초당 수 번 묻는다. meal.json 은 10분마다만 다시 읽는다
+_MEALS_TTL = 600
+
+
+def _as_date(t):
+    t = _as_dt(t)
+    return t.date() if isinstance(t, dt.datetime) else t
+
+
+def meals_for(t):
+    """그날(ISO 문자열·datetime·date)의 수집 창 목록 — 휴일 전날이면 MEALS_EVE, 아니면 MEALS"""
+    d = _as_date(t)
+    hit = _MEALS_CACHE.get(d)
+    if hit and hit[0] > time.monotonic():
+        return hit[1]
+    from .mealjson import read_meal                      # 지연 import: mealjson → insight_calc → lunch 순환
+    dates = tuple(x.get("date", "") for x in (read_meal().get("week") or []) if x.get("menu"))
+    ws = pick(d, MEALS, MEALS_EVE, dates, EVE_DATES)
+    _MEALS_CACHE.clear()
+    _MEALS_CACHE[d] = (time.monotonic() + _MEALS_TTL, ws)
+    return ws
+
+
+def first_meal(t):
+    """그날의 첫 창 또는 None"""
+    ws = meals_for(t)
+    return ws[0] if ws else None
 
 
 def meal_now(t):
     """ISO 문자열 또는 datetime → 지금 열린 수집 창(MealWindow) 또는 None"""
-    return current(MEALS, minute_of_day(t))
+    return current(meals_for(t), minute_of_day(t))
 
 
 def meal_next(t):
-    """→ (다음에 열릴 창, 며칠 뒤) 또는 None(창이 하나도 없을 때)"""
-    return next_after(MEALS, minute_of_day(t))
+    """→ (다음에 열릴 창, 며칠 뒤) 또는 None(창이 하나도 없을 때). 내일로 넘어가면 **내일의** 창 목록(휴일 전날 여부가 다를 수 있다)에서 첫 창"""
+    nxt = next_after(meals_for(t), minute_of_day(t))
+    if nxt and nxt[1] == 1:
+        w = first_meal(_as_date(t) + dt.timedelta(days=1))
+        return (w, 1) if w else nxt
+    return nxt
 
 
 def next_meal_day(t, meal_dates=(), max_days=14):

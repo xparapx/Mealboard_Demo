@@ -26,10 +26,15 @@ API_PORT = int(os.getenv("API_PORT", "8100"))
 LUNCH_START = os.getenv("LUNCH_START", "11:30")     # 형식 검증은 app/lunch.py 가 import 시점에 한다
 LUNCH_END = os.getenv("LUNCH_END", "13:40")         # 09-16 사용자 실측: 중식은 13:40 까지
 DINNER_START = os.getenv("DINNER_START", "17:00")   # 석식 집계 창(09-16 중식/석식 분리) — 수집 창 MEAL_WINDOWS 의 석식과 별개 눈금
-DINNER_END = os.getenv("DINNER_END", "18:10")       # 09-16 사용자 실측: 석식은 18:10 까지
+DINNER_END = os.getenv("DINNER_END", "18:30")       # 10-12: 평일 석식 17:30~18:30 · 휴일 전날 17:00~18:00 을 모두 덮는 집계 창
 # 수집 시간창 세 개(09-04 운영 규칙): 카메라 노드는 이 창 안에서만 세고, 창 밖은 더미 곡선 + 화면 '더미데이터' 띠. 형식·겹침 검증은 vision/schedule.py (app/lunch.py import 시점)
-# 09-11: 시작을 10~30분 앞당긴다(교사 식사 등 시간표 밖 유동) — 중식 11:20, 석식 17:00. 09-16: 끝을 실측으로 조정 — 중식 13:40, 석식 18:10
-MEAL_WINDOWS = os.getenv("MEAL_WINDOWS", "11:20-12:30 3학년 점심;12:30-13:40 1·2학년 점심;17:00-18:10 석식")
+# 09-11: 중식 시작 11:20(교사 식사 등 시간표 밖 유동) · 09-16: 중식 끝 13:40 실측. **10-12 석식은 날에 따라 둘**(사용자 규칙):
+#   MEAL_WINDOWS     = 평일(월~목, 다음 날 급식 있음): 석식 17:30~18:30
+#   MEAL_WINDOWS_EVE = 금요일·휴일 전날(내일 급식 없음 — NEIS 캐시·주말로 판정, vision/schedule.is_eve): 석식 17:00~18:00
+#   MEAL_EVE_DATES   = 캐시가 못 보는 먼 휴일의 전날을 손으로('YYYY-MM-DD,…', 비워도 됨)
+MEAL_WINDOWS = os.getenv("MEAL_WINDOWS", "11:20-12:30 3학년 점심;12:30-13:40 1·2학년 점심;17:30-18:30 석식")
+MEAL_WINDOWS_EVE = os.getenv("MEAL_WINDOWS_EVE", "11:20-12:30 3학년 점심;12:30-13:40 1·2학년 점심;17:00-18:00 석식")
+MEAL_EVE_DATES = os.getenv("MEAL_EVE_DATES", "")
 STALE_SEC = 120                             # 이 시간 넘게 새 행·새 파일이 없으면 '데이터 없음' (status·positions·집계 커버리지 공통)
 ROLLUP_WINDOW = _choice("ROLLUP_WINDOW", "lunch", ("lunch", "all"))   # 집계 창 (스테이징 mock 은 종일 돌므로 all)
 FEED_SOURCE = _choice("FEED_SOURCE", "vision", ("mock", "vision"))    # 집계 행의 출처 표기

@@ -300,9 +300,13 @@ LUNCH_START=11:30
 LUNCH_END=13:40
 # 석식 집계 창(09-16 중식/석식 분리) — ROLLUP_WINDOW=lunch 면 rollup 이 중식·석식 두 창을 각각 집계한다. 끝 시각은 09-16 사용자 실측(중식 13:40·석식 18:10)
 DINNER_START=17:00
-DINNER_END=18:10
-# 수집 시간창(09-04 운영 규칙) — 카메라 노드는 이 창 안에서만 세고, 창 밖은 더미 곡선 + 화면 '더미데이터' 띠. 'HH:MM-HH:MM 라벨' 을 ; 로 나열. 겹치면 시작 거부
-MEAL_WINDOWS=11:20-12:30 3학년 점심;12:30-13:40 1·2학년 점심;17:00-18:10 석식
+DINNER_END=18:30
+# 수집 시간창(09-04 운영 규칙) — 카메라 노드는 이 창 안에서만 세고 기록한다(창 밖은 기록 없음). 'HH:MM-HH:MM 라벨' 을 ; 로 나열. 겹치면 시작 거부
+# 10-12: 석식은 날에 따라 둘 — 평일(내일 급식 있음) 17:30~18:30, 금요일·휴일 전날(내일 급식 없음, NEIS 캐시·주말로 자동 판정) 17:00~18:00
+MEAL_WINDOWS=11:20-12:30 3학년 점심;12:30-13:40 1·2학년 점심;17:30-18:30 석식
+MEAL_WINDOWS_EVE=11:20-12:30 3학년 점심;12:30-13:40 1·2학년 점심;17:00-18:00 석식
+# 캐시가 못 보는 먼 휴일의 '전날' 을 손으로 지정(YYYY-MM-DD, 쉼표). 보통 비워 둔다
+MEAL_EVE_DATES=
 # 이슈 링크 한국어 번역 (jobs/fetch_news.py). 없으면 원문 영어 그대로 나간다
 # DeepL API Free 키는 끝이 :fx 다 — 그걸 보고 무료/유료 엔드포인트를 고른다
 DEEPL_API_KEY=
@@ -695,10 +699,15 @@ API_PORT = int(os.getenv(&quot;API_PORT&quot;, &quot;8100&quot;))
 LUNCH_START = os.getenv(&quot;LUNCH_START&quot;, &quot;11:30&quot;)     # 형식 검증은 app/lunch.py 가 import 시점에 한다
 LUNCH_END = os.getenv(&quot;LUNCH_END&quot;, &quot;13:40&quot;)         # 09-16 사용자 실측: 중식은 13:40 까지
 DINNER_START = os.getenv(&quot;DINNER_START&quot;, &quot;17:00&quot;)   # 석식 집계 창(09-16 중식/석식 분리) — 수집 창 MEAL_WINDOWS 의 석식과 별개 눈금
-DINNER_END = os.getenv(&quot;DINNER_END&quot;, &quot;18:10&quot;)       # 09-16 사용자 실측: 석식은 18:10 까지
+DINNER_END = os.getenv(&quot;DINNER_END&quot;, &quot;18:30&quot;)       # 10-12: 평일 석식 17:30~18:30 · 휴일 전날 17:00~18:00 을 모두 덮는 집계 창
 # 수집 시간창 세 개(09-04 운영 규칙): 카메라 노드는 이 창 안에서만 세고, 창 밖은 더미 곡선 + 화면 '더미데이터' 띠. 형식·겹침 검증은 vision/schedule.py (app/lunch.py import 시점)
-# 09-11: 시작을 10~30분 앞당긴다(교사 식사 등 시간표 밖 유동) — 중식 11:20, 석식 17:00. 09-16: 끝을 실측으로 조정 — 중식 13:40, 석식 18:10
-MEAL_WINDOWS = os.getenv(&quot;MEAL_WINDOWS&quot;, &quot;11:20-12:30 3학년 점심;12:30-13:40 1·2학년 점심;17:00-18:10 석식&quot;)
+# 09-11: 중식 시작 11:20(교사 식사 등 시간표 밖 유동) · 09-16: 중식 끝 13:40 실측. **10-12 석식은 날에 따라 둘**(사용자 규칙):
+#   MEAL_WINDOWS     = 평일(월~목, 다음 날 급식 있음): 석식 17:30~18:30
+#   MEAL_WINDOWS_EVE = 금요일·휴일 전날(내일 급식 없음 — NEIS 캐시·주말로 판정, vision/schedule.is_eve): 석식 17:00~18:00
+#   MEAL_EVE_DATES   = 캐시가 못 보는 먼 휴일의 전날을 손으로('YYYY-MM-DD,…', 비워도 됨)
+MEAL_WINDOWS = os.getenv(&quot;MEAL_WINDOWS&quot;, &quot;11:20-12:30 3학년 점심;12:30-13:40 1·2학년 점심;17:30-18:30 석식&quot;)
+MEAL_WINDOWS_EVE = os.getenv(&quot;MEAL_WINDOWS_EVE&quot;, &quot;11:20-12:30 3학년 점심;12:30-13:40 1·2학년 점심;17:00-18:00 석식&quot;)
+MEAL_EVE_DATES = os.getenv(&quot;MEAL_EVE_DATES&quot;, &quot;&quot;)
 STALE_SEC = 120                             # 이 시간 넘게 새 행·새 파일이 없으면 '데이터 없음' (status·positions·집계 커버리지 공통)
 ROLLUP_WINDOW = _choice(&quot;ROLLUP_WINDOW&quot;, &quot;lunch&quot;, (&quot;lunch&quot;, &quot;all&quot;))   # 집계 창 (스테이징 mock 은 종일 돌므로 all)
 FEED_SOURCE = _choice(&quot;FEED_SOURCE&quot;, &quot;vision&quot;, (&quot;mock&quot;, &quot;vision&quot;))    # 집계 행의 출처 표기
@@ -785,7 +794,7 @@ def connect():
 from fastapi import APIRouter
 from ..config import FEED_SOURCE, STALE_SEC          # STALE_SEC: 이 시간 넘게 새 행이 없으면 '데이터 없음'으로 본다
 from ..db import connect
-from ..lunch import describe, meal_next, meal_now, next_meal_day
+from ..lunch import describe, first_meal, meal_next, meal_now, next_meal_day
 from ..mealjson import read_meal
 
 router = APIRouter()
@@ -809,12 +818,13 @@ def next_with_day(now):
             if not nd:
                 return None
             d, k = nd[0], nd[1] + 1
-            win = meal_next(now.replace(hour=0, minute=0))[0]    # 그날의 첫 창
+            win = first_meal(d)                                # 그날의 첫 창
     else:
         nd = next_meal_day(now + dt.timedelta(days=1), dates)
         if not nd:
             return None
         d, k = nd[0], nd[1] + 1
+        win = first_meal(d)                                    # 그날의 창 목록(휴일 전날이면 석식이 다르다)에서
     out = describe(win)
     out.update({&quot;days&quot;: k, &quot;date&quot;: d.isoformat(), &quot;weekday&quot;: WD[d.weekday()]})
     return out
@@ -1051,7 +1061,7 @@ from collections import deque
 
 from app.config import ZONES_JSON
 from app.db import connect
-from app.lunch import MEALS, meal_now
+from app.lunch import meal_now, meals_for
 from vision.meta import MetaSender
 from vision.record import write_sample
 from vision.waittime import estimate_wait
@@ -1179,7 +1189,7 @@ def main():
         zones = []
     sim = Simulator(a.scenario)
     win = None                                                # 지금 열린 수집 창 — 바뀌는 순간 곡선을 처음부터
-    windows = &quot;, &quot;.join(f&quot;{w.label} {hhmm(w.lo)}~{hhmm(w.hi)}&quot; for w in MEALS) or &quot;없음&quot;
+    windows = &quot;, &quot;.join(f&quot;{w.label} {hhmm(w.lo)}~{hhmm(w.hi)}&quot; for w in meals_for(dt.datetime.now())) or &quot;없음&quot;
     print(f&quot;mock_feed 시작  speed={a.speed}  scenario={a.scenario}  zones={[z['id'] for z in zones]}  수집 창: {windows}&quot;)
 
     while True:
@@ -2968,9 +2978,10 @@ uv run python check_manual.py                           # 불일치 0개
 시각 단위는 '자정부터 분'(minute of day, 0~1439) — SQLite strftime('%H')*60+strftime('%M') 과 같은 눈금이다.
 .env 의 LUNCH_START·LUNCH_END 는 이 모듈을 import 하는 순간 검증된다 — 잘못된 값은 서비스 시작을 막는다(요청 때 500 이 아니라).&quot;&quot;&quot;
 import datetime as dt
+import time
 
-from vision.schedule import current, describe, next_after, parse_windows   # noqa: F401  (describe 는 라우터가 이 모듈을 거쳐 쓴다)
-from .config import DINNER_END, DINNER_START, LUNCH_START, LUNCH_END, MEAL_WINDOWS
+from vision.schedule import current, describe, next_after, parse_dates, parse_windows, pick   # noqa: F401  (describe 는 라우터가 이 모듈을 거쳐 쓴다)
+from .config import DINNER_END, DINNER_START, LUNCH_START, LUNCH_END, MEAL_EVE_DATES, MEAL_WINDOWS, MEAL_WINDOWS_EVE
 
 BUCKET_MIN = 5          # 5분 단위로 묶는다. 30초 폴링 노이즈를 지우고 곡선을 읽히게
 DAY_MIN = 24 * 60
@@ -3066,18 +3077,53 @@ LUNCH_LO, LUNCH_HI = lunch_bounds()     # import 시점 검증. 잘못된 .env �
 DINNER_LO, DINNER_HI = dinner_bounds()
 
 # 수집 시간창(09-04): 3학년 점심 · 1·2학년 점심 · 석식. LUNCH_START~END 는 집계·관리 가드용 '점심 전체' 창으로 그대로 두고,
-# 이 세 창은 '지금 값이 실측인가'(카메라 노드 수집 on/off, /api/status feed.live, 화면의 더미데이터 띠) 만 정한다
-MEALS = parse_windows(MEAL_WINDOWS)     # import 시점 검증. 겹침·역순·오타는 여기서 ValueError
+# 이 세 창은 '지금 값이 실측인가'(카메라 노드 수집 on/off, /api/status feed.live, 화면의 더미데이터 띠) 만 정한다.
+# 10-12: 석식은 날에 따라 둘 — 평일 MEALS(17:30~18:30), 금요일·휴일 전날 MEALS_EVE(17:00~18:00). 어느 쪽인지는 meals_for(날짜) 가
+# NEIS 캐시(meal.json 의 급식 있는 날)로 가른다(vision/schedule.is_eve). 호출자는 MEALS 를 직접 보지 말고 meals_for/meal_now/meal_next 를 쓴다
+MEALS = parse_windows(MEAL_WINDOWS)         # import 시점 검증. 겹침·역순·오타는 여기서 ValueError
+MEALS_EVE = parse_windows(MEAL_WINDOWS_EVE) or MEALS
+EVE_DATES = parse_dates(MEAL_EVE_DATES)
+_MEALS_CACHE = {}                           # {date: (expires, windows)} — counter 는 초당 수 번 묻는다. meal.json 은 10분마다만 다시 읽는다
+_MEALS_TTL = 600
+
+
+def _as_date(t):
+    t = _as_dt(t)
+    return t.date() if isinstance(t, dt.datetime) else t
+
+
+def meals_for(t):
+    &quot;&quot;&quot;그날(ISO 문자열·datetime·date)의 수집 창 목록 — 휴일 전날이면 MEALS_EVE, 아니면 MEALS&quot;&quot;&quot;
+    d = _as_date(t)
+    hit = _MEALS_CACHE.get(d)
+    if hit and hit[0] &gt; time.monotonic():
+        return hit[1]
+    from .mealjson import read_meal                      # 지연 import: mealjson → insight_calc → lunch 순환
+    dates = tuple(x.get(&quot;date&quot;, &quot;&quot;) for x in (read_meal().get(&quot;week&quot;) or []) if x.get(&quot;menu&quot;))
+    ws = pick(d, MEALS, MEALS_EVE, dates, EVE_DATES)
+    _MEALS_CACHE.clear()
+    _MEALS_CACHE[d] = (time.monotonic() + _MEALS_TTL, ws)
+    return ws
+
+
+def first_meal(t):
+    &quot;&quot;&quot;그날의 첫 창 또는 None&quot;&quot;&quot;
+    ws = meals_for(t)
+    return ws[0] if ws else None
 
 
 def meal_now(t):
     &quot;&quot;&quot;ISO 문자열 또는 datetime → 지금 열린 수집 창(MealWindow) 또는 None&quot;&quot;&quot;
-    return current(MEALS, minute_of_day(t))
+    return current(meals_for(t), minute_of_day(t))
 
 
 def meal_next(t):
-    &quot;&quot;&quot;→ (다음에 열릴 창, 며칠 뒤) 또는 None(창이 하나도 없을 때)&quot;&quot;&quot;
-    return next_after(MEALS, minute_of_day(t))
+    &quot;&quot;&quot;→ (다음에 열릴 창, 며칠 뒤) 또는 None(창이 하나도 없을 때). 내일로 넘어가면 **내일의** 창 목록(휴일 전날 여부가 다를 수 있다)에서 첫 창&quot;&quot;&quot;
+    nxt = next_after(meals_for(t), minute_of_day(t))
+    if nxt and nxt[1] == 1:
+        w = first_meal(_as_date(t) + dt.timedelta(days=1))
+        return (w, 1) if w else nxt
+    return nxt
 
 
 def next_meal_day(t, meal_dates=(), max_days=14):
