@@ -236,7 +236,7 @@ footer{margin-top:40px;color:var(--ink3);font-size:.85rem;border-top:1px solid v
 <div class="card">
 <h3 style="margin-top:0"><span class="tag new">필수</span> N4. 공공 GitLab 등록·동결 절차</h3>
 <ul>
-<li><code>gitlab.aigov.go.kr</code> 가입 가능 여부(공무원 인증 방식)를 <b>이번 주</b>에 확인 — 교육공무원 계정 체계가 다를 수 있다.</li>
+<li><code>gitlab.aigov.go.kr</code> 가입·프로젝트 생성 — <b>10-12 완료</b>(교육청 cne.go.kr 메일로 가입, 개인 네임스페이스 생성이 막혀 있어 그룹 <code>kongju-hs</code> 를 만들고 그 아래 <code>mealboard</code> 생성, 공식 주제 <code>2026_challenge_session_1</code> 선택). 내용 업로드는 11월 초.</li>
 <li>제출 커밋에 태그 <code>v2026.11-submit</code>, GitLab 은 그 시점 미러 후 <b>push 중단</b>(마감 후 변경 이력 = 제외 사유). GitHub 는 결선 준비를 계속하되 결선 시연은 태그 시점 코드와 '그 뒤 바뀐 것' 을 구분해 말한다.</li>
 <li>GitLab README 는 심사용 판: 접속 주소 → 30초 요약 → 심사위원 구동(N3) → 기능 → 구조도(archify 임베드 이미지) → 라이선스(N2) → 학생 기여·출처. 비공개·Topics 설정은 체크리스트(§7).</li>
 <li>용량: 모델 가중치(<code>yolo11n.pt</code> 5 MB 는 포함 가능, HEF 2.9 GB 는 제외하고 내려받기 URL)·샘플 DB 크기 확인.</li>
@@ -351,8 +351,8 @@ footer{margin-top:40px;color:var(--ink3);font-size:.85rem;border-top:1px solid v
 <div class="card">
 <h3 style="margin-top:0">공공 GitLab (<code>gitlab.aigov.go.kr</code>)</h3>
 <ul class="chk">
-<li>회원가입 · 프로젝트 생성 · <b>공개 범위 비공개</b></li>
-<li>설정 → 일반 → Topics: <b>2026 공공 AI 대전환 챌린지 세션1</b></li>
+<li>회원가입 · 프로젝트 생성 · <b>공개 범위 비공개</b> — <b>완료 10-12</b>: 그룹 <code>kongju-hs</code>(비공개) 아래 <code>https://gitlab.aigov.go.kr/kongju-hs/mealboard</code>, 계정 이메일은 교육청(cne.go.kr) 주소(참가신청서 접수대표 이메일과 동일하게)</li>
+<li>설정 → 일반 → 주제(Topics): 공식 주제 <code>2026_challenge_session_1</code> — <b>완료 10-12</b>(+ ai · web-service)</li>
 <li>README: 접속 주소 · 주요 기능 · 실행·작동 방법(심사위원 경로) · 라이선스 · 출처·크레딧</li>
 <li>소스 + 실행물(또는 실행 방법) · 샘플 데이터 · 모델 가중치(또는 URL)</li>
 <li>태그 <code>v2026.11-submit</code> 와 GitLab 커밋 해시 일치 · 이후 push 금지</li>
