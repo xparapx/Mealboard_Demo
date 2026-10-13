@@ -63,24 +63,27 @@ const WDC = { 1: "#9BD7D5", 2: "#FBE9B7", 3: "#F3B2A4", 4: "#CBC2FB", 5: "#BFE3F
 function renderWd(d) {
   const rows = (d && d.weekdays || []).filter(w => w.avg_wait != null);
   if (!setState("wdcard", d && d.state === "ok" && rows.length > 0, d && d.reason)) return;
-  const W = 320, H = 150, padT = 22, padB = 36, padL = 26, padR = 8, n = 5;
-  const max = Math.max(3, ...rows.map(w => w.peak_wait ?? w.avg_wait)) * 1.1;
+  const W = 320, H = 150, padT = 30, padB = 36, padL = 26, padR = 8, n = 5;
+  // 축은 평균 대기 기준 — 최고 대기(피크)는 평균의 10배가 흔해 같은 축에 두면 막대가 납작해진다(10-13 실데이터 확인). 피크는 막대 위 숫자로
+  const max = Math.max(1, ...rows.map(w => w.avg_wait)) * 1.25;
   const Y = v => padT + (1 - v / max) * (H - padT - padB), colW = (W - padL - padR) / n, bw = colW * .5;
   const by = Object.fromEntries(rows.map(w => [w.weekday, w]));
-  let s = [0, Math.round(max / 2)].map(v => `<line x1="${padL}" y1="${Y(v).toFixed(1)}" x2="${W - padR}" y2="${Y(v).toFixed(1)}" stroke="${HAIR}"/>` + txt(padL - 6, Y(v), `${v}분`, { a: "end", size: 8.5 })).join("");
+  const tick = max >= 2 ? Math.round(max / 2) : Math.round(max * 5) / 10;
+  let s = [0, tick].map(v => `<line x1="${padL}" y1="${Y(v).toFixed(1)}" x2="${W - padR}" y2="${Y(v).toFixed(1)}" stroke="${HAIR}"/>` + txt(padL - 6, Y(v), `${v}분`, { a: "end", size: 8.5 })).join("");
   for (let wd = 1; wd <= 5; wd++) {
     const cx = padL + (wd - .5) * colW, w = by[wd];
     s += `<rect x="${(cx - 14).toFixed(1)}" y="${H - padB + 8}" width="28" height="16" rx="6" fill="${WDC[wd]}"/>` + txt(cx, H - padB + 16, WD[wd], { w: 700, fill: INK, size: 9.5 });
     if (!w) { s += txt(cx, H - padB - 6, "자료 없음", { size: 8 }); continue; }
     const y = Y(w.avg_wait), h = H - padB - y;
     s += `<rect x="${(cx - bw / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(2, h).toFixed(1)}" rx="4" fill="${ramp(SUNSETDARK, w.avg_wait / max)}"/>`;
-    if (w.peak_wait != null) s += `<line x1="${(cx - bw / 2 - 4).toFixed(1)}" y1="${Y(w.peak_wait).toFixed(1)}" x2="${(cx + bw / 2 + 4).toFixed(1)}" y2="${Y(w.peak_wait).toFixed(1)}" stroke="${INK}" stroke-width="2" stroke-linecap="round"/>`;
-    s += txt(cx, y - 7, `${f1(w.avg_wait)}분`, { w: 700, fill: INK, size: 9 }) + txt(cx, H - 6, `${w.days}일${w.served != null ? ` · ${Math.round(w.served)}명` : ""}`, { size: 8 });
+    s += txt(cx, y - 7, `${f1(w.avg_wait)}분`, { w: 700, fill: INK, size: 9 });
+    if (w.peak_wait != null) s += txt(cx, y - 18, `최고 ${f1(w.peak_wait)}`, { size: 8, fill: "#A23A2B" });
+    s += txt(cx, H - 6, `${w.days}일${w.served != null ? ` · ${Math.round(w.served)}명` : ""}`, { size: 8 });
   }
   $("#wdsvg").innerHTML = s;
   const top = rows.reduce((a, b) => b.avg_wait > a.avg_wait ? b : a), low = rows.reduce((a, b) => b.avg_wait < a.avg_wait ? b : a);
   $("#wdlead").innerHTML = rows.length > 1 ? `가장 붐비는 요일 <b>${WD[top.weekday]}요일</b> (평균 ${f1(top.avg_wait)}분) · 가장 한산한 요일 <b>${WD[low.weekday]}요일</b> (${f1(low.avg_wait)}분)` : `요일 비교는 2개 요일 이상 쌓이면 뜻이 생깁니다`;
-  $("#wdfoot").textContent = `${MEAL_KO[d.meal]} · 최근 ${d.weeks}주 · 막대 = 평균 대기, 가로선 = 최고 대기(하루 피크의 평균), 아래 = 집계 일수 · 식수 추정`;
+  $("#wdfoot").textContent = `${MEAL_KO[d.meal]} · 최근 ${d.weeks}주 · 막대 = 평균 대기, 위 붉은 숫자 = 최고 대기(하루 피크의 평균), 아래 = 집계 일수 · 식수 추정`;
 }
 
 /* ---------------- ③ 일별 추이 ---------------- */
