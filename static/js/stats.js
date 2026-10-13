@@ -92,14 +92,14 @@ function renderDaily(d) {
   const rows = (d && d.daily || []).filter(r => r.avg_wait != null);
   if (!setState("dailycard", d && d.state === "ok" && rows.length > 0, d && d.reason)) { dailyGeo = null; return; }
   const W = 320, H = 150, padT = 10, padB = 18, padL = 26, padR = 30, n = rows.length;
-  const max = Math.max(3, ...rows.map(r => r.peak_wait ?? r.avg_wait)) * 1.1;
+  const max = Math.max(1, ...rows.map(r => r.avg_wait)) * 1.25;        // 축은 평균 기준(피크는 호버 읽기·리드에서) — 요일 카드와 같은 이유
   const served = rows.map(r => r.served).filter(v => v != null), smax = Math.max(1, ...served) * 1.1;
   const X = i => padL + (i + .5) / n * (W - padL - padR), Y = v => padT + (1 - v / max) * (H - padT - padB), YS = v => padT + (1 - v / smax) * (H - padT - padB);
   const bw = Math.max(2, Math.min(14, (W - padL - padR) / n * .6));
-  let s = [0, Math.round(max / 2), Math.round(max)].map(v => `<line x1="${padL}" y1="${Y(v).toFixed(1)}" x2="${W - padR}" y2="${Y(v).toFixed(1)}" stroke="${HAIR}"/>` + txt(padL - 6, Y(v), `${v}분`, { a: "end", size: 8.5 })).join("");
+  const tick = max >= 2 ? Math.round(max / 2) : Math.round(max * 5) / 10;
+  let s = [0, tick].map(v => `<line x1="${padL}" y1="${Y(v).toFixed(1)}" x2="${W - padR}" y2="${Y(v).toFixed(1)}" stroke="${HAIR}"/>` + txt(padL - 6, Y(v), `${v}분`, { a: "end", size: 8.5 })).join("");
   rows.forEach((r, i) => {
     s += `<rect x="${(X(i) - bw / 2).toFixed(1)}" y="${Y(r.avg_wait).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(2, H - padB - Y(r.avg_wait)).toFixed(1)}" rx="3" fill="${ramp(SUNSETDARK, r.avg_wait / max)}"/>`;
-    if (r.peak_wait != null) s += `<line x1="${(X(i) - bw / 2 - 2).toFixed(1)}" y1="${Y(r.peak_wait).toFixed(1)}" x2="${(X(i) + bw / 2 + 2).toFixed(1)}" y2="${Y(r.peak_wait).toFixed(1)}" stroke="${INK}" stroke-width="1.5" stroke-opacity=".6"/>`;
   });
   if (served.length >= 2) {
     const pts = rows.map((r, i) => r.served == null ? null : `${X(i).toFixed(1)},${YS(r.served).toFixed(1)}`).filter(Boolean);
@@ -116,7 +116,7 @@ function renderDaily(d) {
   $("#dailylead").innerHTML = `마지막 집계 <b>${md(last.date)}(${WD[last.weekday]})</b> 평균 ${f1(last.avg_wait)}분 · 최고 ${f1(last.peak_wait)}분`
     + (last.served != null ? ` · 식수 약 ${last.served}명` : "") + (prev ? ` · 전날 대비 <b>${Math.abs(diff) < 0.05 ? "비슷" : (diff > 0 ? "+" : "−") + f1(Math.abs(diff)) + "분"}</b>` : "");
   const ks = rows.map(r => r.k).filter(v => v != null);
-  $("#dailyfoot").textContent = `${MEAL_KO[d.meal]} · 최근 ${d.weeks}주 ${rows.length}일 · 막대 = 평균 대기, 가로선 = 최고, 회색 파선 = 식수 추정(오른쪽 눈금)`
+  $("#dailyfoot").textContent = `${MEAL_KO[d.meal]} · 최근 ${d.weeks}주 ${rows.length}일 · 막대 = 평균 대기, 회색 파선 = 식수 추정(오른쪽 눈금) · 막대에 대면 최고 대기·커버리지·K`
     + (ks.length ? ` · 실측 보정 K 중앙값 ${f1(ks.reduce((a, b) => a + b, 0) / ks.length)}` : "");
 }
 function dailyHover(e) {
