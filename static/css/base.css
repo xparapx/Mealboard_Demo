@@ -34,7 +34,7 @@ a.u { border-bottom: 1px solid rgba(12,109,106,.35); }
                            stroke-linecap: round; stroke-linejoin: round; }
 .dock a[aria-current="page"], .rail a[aria-current="page"] { color: var(--teal-ink); }
 .dock a[aria-current="page"] .fill, .rail a[aria-current="page"] .fill { fill: var(--teal); stroke: var(--teal); }
-.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(5, 1fr);
+.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;   /* 10-13: 항목 수(6, 관리 7)에 따라 */
         height: calc(var(--dock-h) + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);
         background: var(--surface); box-shadow: 0 -1px 0 var(--hair), 0 -8px 24px rgba(51,49,45,.06); }
 .dock a { position: relative; z-index: 1; height: var(--dock-h); -webkit-tap-highlight-color: transparent; }

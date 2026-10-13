@@ -25,6 +25,8 @@
     <path d="M14 3.2v4.4M16.8 3.2v4.4M19.6 3.2v4.4" stroke-width="2"/><path d="M14 7.6a2.8 2.8 0 0 0 5.6 0" stroke-width="2"/>
     <path d="M16.8 10.6V20" stroke-width="3.4"/></symbol>
   <symbol id="i-news" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="3"/><path d="M7.5 9h9M7.5 12.5h9M7.5 16h5.5"/></symbol>
+  <!-- 통계(10-13): 막대 셋 + 기준선 -->
+  <symbol id="i-stats" viewBox="0 0 24 24"><path d="M4 20h16"/><rect class="fill" x="6" y="11" width="3.2" height="6.5" rx="1"/><rect class="fill" x="10.4" y="6" width="3.2" height="11.5" rx="1"/><rect class="fill" x="14.8" y="9" width="3.2" height="8.5" rx="1"/></symbol>
 </svg>
 
 <!-- 모바일 하단 dock (< 900px). 버튼은 앵커 — 해시가 곧 화면이고 뒤로가기가 화면 단위로 동작한다 -->
@@ -32,6 +34,7 @@
   <i class="mark" aria-hidden="true"></i>
   <a href="#wait" data-go="wait" role="tab"><svg><use href="#i-wait"/></svg>대기시간</a>
   <a href="#room" data-go="room" role="tab"><svg><use href="#i-room"/></svg>실시간뷰</a>
+  <a href="#stats" data-go="stats" role="tab"><svg><use href="#i-stats"/></svg>통계</a>
   <a href="#week" data-go="week" role="tab"><svg><use href="#i-week"/></svg>주간식단</a>
   <a href="#today" data-go="today" role="tab"><svg><use href="#i-today"/></svg>오늘급식</a>
   <a href="#news" data-go="news" role="tab"><svg><use href="#i-news"/></svg>이슈피드</a>
@@ -40,6 +43,7 @@
 <aside class="rail" aria-label="화면">
   <a href="#wait" data-go="wait"><svg><use href="#i-wait"/></svg>대기시간</a>
   <a href="#room" data-go="room"><svg><use href="#i-room"/></svg>실시간뷰</a>
+  <a href="#stats" data-go="stats"><svg><use href="#i-stats"/></svg>통계</a>
   <a href="#week" data-go="week"><svg><use href="#i-week"/></svg>주간식단</a>
   <a href="#today" data-go="today"><svg><use href="#i-today"/></svg>오늘급식</a>
   <a href="#news" data-go="news"><svg><use href="#i-news"/></svg>이슈피드</a>
@@ -155,6 +159,23 @@
       </div>
       <div class="empty" id="zoneempty">최근 10분 표본 없음</div>
     </section>
+    <!-- 평소 밀집도(10-13 사용자 요청) — 최근 7일 그 끼니 창의 타일별 평균 인원 누적 + 진한 타일 묶음(클러스터) ①②③ 마커. 숫자뿐, 개별 위치 없음 -->
+    <section class="card insight" id="typcard" data-state="no_data">
+      <div class="eyebrow">평소 밀집도 · 최근 7일</div>
+      <div class="mealseg" id="typseg"></div>
+      <div class="body">
+        <div class="zonewrap">
+          <div class="stage zonestage"><canvas id="typplan"></canvas>
+            <div class="heatbar" id="typbar" hidden><span>적음</span><i></i><span>많음</span></div></div>
+          <div class="zoneside">
+            <div class="lead" id="typlead"></div>
+            <div class="chips2 clusters" id="typchips"></div>
+            <div class="note foot" id="typfoot"></div>
+          </div>
+        </div>
+      </div>
+      <div class="empty" id="typempty">최근 7일 표본이 쌓이면 반영됩니다</div>
+    </section>
     <section class="card insight" id="reportcard" data-state="no_data">
       <div class="eyebrow">오늘 리포트</div>
       <div class="body">
@@ -163,6 +184,80 @@
         <div class="log"><div id="reportchips"></div></div>
       </div>
       <div class="empty" id="reportempty">리포트는 급식실 Pi 의 로컬 AI 가 준비되면 나옵니다</div>
+    </section>
+  </section>
+
+  <!-- ②-b 통계(10-13 사용자 요청) — 이력 차트 6장. 전부 집계 숫자, 인라인 SVG(라이브러리 없음). 기간 토글은 화면 위 한 곳, 끼니 토글은 카드마다 -->
+  <section class="view" id="stats" role="tabpanel" aria-label="통계">
+    <div class="rangebar" id="statsrange" role="group" aria-label="기간">
+      <span>기간</span>
+      <button type="button" data-weeks="4" aria-pressed="true">4주</button>
+      <button type="button" data-weeks="8" aria-pressed="false">8주</button>
+      <button type="button" data-weeks="12" aria-pressed="false">12주</button>
+    </div>
+    <section class="card insight" id="bandcard" data-state="no_data">
+      <div class="eyebrow">시간대별 대기 · 분포</div>
+      <div class="mealseg" id="bandseg"></div>
+      <div class="body">
+        <div class="lead" id="bandlead"></div>
+        <svg class="chart" id="bandsvg" viewBox="0 0 320 150" preserveAspectRatio="none" aria-label="시간대별 평소 대기 분포"></svg>
+        <div class="legend2"><span><i style="background:#129793"></i>평소 평균</span><span><i style="background:rgba(18,151,147,.3)"></i>P25~P75 · ±1σ</span><span><i style="background:#7c1d6f"></i>오늘</span></div>
+        <div class="note foot" id="bandfoot"></div>
+      </div>
+      <div class="empty" id="bandempty">일정 기간 데이터 수집 후 반영됩니다</div>
+    </section>
+    <section class="card insight" id="wdcard" data-state="no_data">
+      <div class="eyebrow">요일별 비교</div>
+      <div class="mealseg" id="wdseg"></div>
+      <div class="body">
+        <div class="lead" id="wdlead"></div>
+        <svg class="chart" id="wdsvg" viewBox="0 0 320 150" preserveAspectRatio="none" aria-label="요일별 평균·최고 대기"></svg>
+        <div class="note foot" id="wdfoot"></div>
+      </div>
+      <div class="empty" id="wdempty">일정 기간 데이터 수집 후 반영됩니다</div>
+    </section>
+    <section class="card insight" id="dailycard" data-state="no_data">
+      <div class="eyebrow">일별 추이 · 대기와 식수</div>
+      <div class="mealseg" id="dailyseg"></div>
+      <div class="body">
+        <div class="lead" id="dailylead"></div>
+        <svg class="chart" id="dailysvg" viewBox="0 0 320 150" preserveAspectRatio="none" aria-label="일별 평균·최고 대기와 식수"></svg>
+        <div class="note foot" id="dailyfoot"></div>
+      </div>
+      <div class="empty" id="dailyempty">일정 기간 데이터 수집 후 반영됩니다</div>
+    </section>
+    <section class="card insight" id="nutstatcard" data-state="no_data">
+      <div class="eyebrow">영양 인사이트 · 일별</div>
+      <div class="mealseg" id="nutseg"></div>
+      <div class="body">
+        <div class="lead" id="nutlead"></div>
+        <div class="sublab">에너지 충족률 · 적정 90~110%</div>
+        <svg class="chart short" id="nutsvg" viewBox="0 0 320 96" preserveAspectRatio="none" aria-label="일별 에너지 충족률"></svg>
+        <div class="sublab">에너지 적정비율 · 최근 평균이 범위 안인가</div>
+        <div class="gauges" id="macrog"></div>
+        <div class="note foot" id="nutfoot"></div>
+      </div>
+      <div class="empty" id="nutstatempty">영양 이력이 아직 없습니다</div>
+    </section>
+    <section class="card insight" id="menuwaitcard" data-state="no_data">
+      <div class="eyebrow">줄이 길어지는 메뉴</div>
+      <div class="mealseg" id="menuseg"></div>
+      <div class="body">
+        <div class="lead" id="menuwaitlead"></div>
+        <ol class="rank" id="menuwaitlist"></ol>
+        <div class="note foot" id="menuwaitfoot"></div>
+      </div>
+      <div class="empty" id="menuwaitempty">2일 이상 나온 메뉴 아직 없음</div>
+    </section>
+    <section class="card insight" id="evcard" data-state="no_data">
+      <div class="eyebrow">시각별 황금 · 병목</div>
+      <div class="mealseg" id="evseg"></div>
+      <div class="body">
+        <div class="lead" id="evlead"></div>
+        <svg class="chart" id="evsvg" viewBox="0 0 320 150" preserveAspectRatio="none" aria-label="시각별 황금·병목 누적 분"></svg>
+        <div class="note foot" id="evfoot"></div>
+      </div>
+      <div class="empty" id="evempty">일정 기간 데이터 수집 후 반영됩니다</div>
     </section>
   </section>
 
@@ -255,7 +350,7 @@
   </section>
 </main>
 
-<!-- js/core.js 가 화면 모듈(wait·room·week·today·news)을 불러 등록하고 라우터·폴링을 돌린다 (빌드 도구 없음, ES 모듈) -->
+<!-- js/core.js 가 화면 모듈(wait·room·stats·week·today·news)을 불러 등록하고 라우터·폴링을 돌린다 (빌드 도구 없음, ES 모듈) -->
 <script>
 /* 진단: 모듈이 읽히지 않거나(옛 브라우저 문법) 실행 중 오류가 나면 흰 화면 대신 맨 위에 붉은 띠로 오류 문장을 보인다 — 휴대폰에서 원인을 읽을 수 있게 */
 addEventListener("error", function (e) {

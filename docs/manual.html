@@ -769,6 +769,8 @@ CREATE TABLE IF NOT EXISTS cell_samples (
   n    INTEGER NOT NULL,           -- 그 순간 셀 안 인원수(0 인 셀은 쓰지 않는다). 최근 30분 밀집도 히트맵의 재료 — 숫자만
   PRIMARY KEY (ts, cell)
 );
+-- 10-13: 평소 밀집도(최근 7일)·통계 화면이 ts 범위로 훑는다 — PRIMARY KEY (ts, cell) 이 이미 ts 선두라 인덱스가 되지만 명시해 둔다
+CREATE INDEX IF NOT EXISTS idx_cell_samples_ts ON cell_samples (ts);
 &quot;&quot;&quot;
 
 
@@ -1300,6 +1302,8 @@ systemctl status mealboard-api --no-pager</code></pre>
     &lt;path d=&quot;M14 3.2v4.4M16.8 3.2v4.4M19.6 3.2v4.4&quot; stroke-width=&quot;2&quot;/&gt;&lt;path d=&quot;M14 7.6a2.8 2.8 0 0 0 5.6 0&quot; stroke-width=&quot;2&quot;/&gt;
     &lt;path d=&quot;M16.8 10.6V20&quot; stroke-width=&quot;3.4&quot;/&gt;&lt;/symbol&gt;
   &lt;symbol id=&quot;i-news&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;rect x=&quot;3.5&quot; y=&quot;4&quot; width=&quot;17&quot; height=&quot;16&quot; rx=&quot;3&quot;/&gt;&lt;path d=&quot;M7.5 9h9M7.5 12.5h9M7.5 16h5.5&quot;/&gt;&lt;/symbol&gt;
+  &lt;!-- 통계(10-13): 막대 셋 + 기준선 --&gt;
+  &lt;symbol id=&quot;i-stats&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M4 20h16&quot;/&gt;&lt;rect class=&quot;fill&quot; x=&quot;6&quot; y=&quot;11&quot; width=&quot;3.2&quot; height=&quot;6.5&quot; rx=&quot;1&quot;/&gt;&lt;rect class=&quot;fill&quot; x=&quot;10.4&quot; y=&quot;6&quot; width=&quot;3.2&quot; height=&quot;11.5&quot; rx=&quot;1&quot;/&gt;&lt;rect class=&quot;fill&quot; x=&quot;14.8&quot; y=&quot;9&quot; width=&quot;3.2&quot; height=&quot;8.5&quot; rx=&quot;1&quot;/&gt;&lt;/symbol&gt;
 &lt;/svg&gt;
 
 &lt;!-- 모바일 하단 dock (&lt; 900px). 버튼은 앵커 — 해시가 곧 화면이고 뒤로가기가 화면 단위로 동작한다 --&gt;
@@ -1307,6 +1311,7 @@ systemctl status mealboard-api --no-pager</code></pre>
   &lt;i class=&quot;mark&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;
   &lt;a href=&quot;#wait&quot; data-go=&quot;wait&quot; role=&quot;tab&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-wait&quot;/&gt;&lt;/svg&gt;대기시간&lt;/a&gt;
   &lt;a href=&quot;#room&quot; data-go=&quot;room&quot; role=&quot;tab&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-room&quot;/&gt;&lt;/svg&gt;실시간뷰&lt;/a&gt;
+  &lt;a href=&quot;#stats&quot; data-go=&quot;stats&quot; role=&quot;tab&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-stats&quot;/&gt;&lt;/svg&gt;통계&lt;/a&gt;
   &lt;a href=&quot;#week&quot; data-go=&quot;week&quot; role=&quot;tab&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-week&quot;/&gt;&lt;/svg&gt;주간식단&lt;/a&gt;
   &lt;a href=&quot;#today&quot; data-go=&quot;today&quot; role=&quot;tab&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-today&quot;/&gt;&lt;/svg&gt;오늘급식&lt;/a&gt;
   &lt;a href=&quot;#news&quot; data-go=&quot;news&quot; role=&quot;tab&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-news&quot;/&gt;&lt;/svg&gt;이슈피드&lt;/a&gt;
@@ -1315,6 +1320,7 @@ systemctl status mealboard-api --no-pager</code></pre>
 &lt;aside class=&quot;rail&quot; aria-label=&quot;화면&quot;&gt;
   &lt;a href=&quot;#wait&quot; data-go=&quot;wait&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-wait&quot;/&gt;&lt;/svg&gt;대기시간&lt;/a&gt;
   &lt;a href=&quot;#room&quot; data-go=&quot;room&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-room&quot;/&gt;&lt;/svg&gt;실시간뷰&lt;/a&gt;
+  &lt;a href=&quot;#stats&quot; data-go=&quot;stats&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-stats&quot;/&gt;&lt;/svg&gt;통계&lt;/a&gt;
   &lt;a href=&quot;#week&quot; data-go=&quot;week&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-week&quot;/&gt;&lt;/svg&gt;주간식단&lt;/a&gt;
   &lt;a href=&quot;#today&quot; data-go=&quot;today&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-today&quot;/&gt;&lt;/svg&gt;오늘급식&lt;/a&gt;
   &lt;a href=&quot;#news&quot; data-go=&quot;news&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-news&quot;/&gt;&lt;/svg&gt;이슈피드&lt;/a&gt;
@@ -1430,6 +1436,23 @@ systemctl status mealboard-api --no-pager</code></pre>
       &lt;/div&gt;
       &lt;div class=&quot;empty&quot; id=&quot;zoneempty&quot;&gt;최근 10분 표본 없음&lt;/div&gt;
     &lt;/section&gt;
+    &lt;!-- 평소 밀집도(10-13 사용자 요청) — 최근 7일 그 끼니 창의 타일별 평균 인원 누적 + 진한 타일 묶음(클러스터) ①②③ 마커. 숫자뿐, 개별 위치 없음 --&gt;
+    &lt;section class=&quot;card insight&quot; id=&quot;typcard&quot; data-state=&quot;no_data&quot;&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;평소 밀집도 · 최근 7일&lt;/div&gt;
+      &lt;div class=&quot;mealseg&quot; id=&quot;typseg&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;zonewrap&quot;&gt;
+          &lt;div class=&quot;stage zonestage&quot;&gt;&lt;canvas id=&quot;typplan&quot;&gt;&lt;/canvas&gt;
+            &lt;div class=&quot;heatbar&quot; id=&quot;typbar&quot; hidden&gt;&lt;span&gt;적음&lt;/span&gt;&lt;i&gt;&lt;/i&gt;&lt;span&gt;많음&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;zoneside&quot;&gt;
+            &lt;div class=&quot;lead&quot; id=&quot;typlead&quot;&gt;&lt;/div&gt;
+            &lt;div class=&quot;chips2 clusters&quot; id=&quot;typchips&quot;&gt;&lt;/div&gt;
+            &lt;div class=&quot;note foot&quot; id=&quot;typfoot&quot;&gt;&lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;typempty&quot;&gt;최근 7일 표본이 쌓이면 반영됩니다&lt;/div&gt;
+    &lt;/section&gt;
     &lt;section class=&quot;card insight&quot; id=&quot;reportcard&quot; data-state=&quot;no_data&quot;&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;오늘 리포트&lt;/div&gt;
       &lt;div class=&quot;body&quot;&gt;
@@ -1438,6 +1461,80 @@ systemctl status mealboard-api --no-pager</code></pre>
         &lt;div class=&quot;log&quot;&gt;&lt;div id=&quot;reportchips&quot;&gt;&lt;/div&gt;&lt;/div&gt;
       &lt;/div&gt;
       &lt;div class=&quot;empty&quot; id=&quot;reportempty&quot;&gt;리포트는 급식실 Pi 의 로컬 AI 가 준비되면 나옵니다&lt;/div&gt;
+    &lt;/section&gt;
+  &lt;/section&gt;
+
+  &lt;!-- ②-b 통계(10-13 사용자 요청) — 이력 차트 6장. 전부 집계 숫자, 인라인 SVG(라이브러리 없음). 기간 토글은 화면 위 한 곳, 끼니 토글은 카드마다 --&gt;
+  &lt;section class=&quot;view&quot; id=&quot;stats&quot; role=&quot;tabpanel&quot; aria-label=&quot;통계&quot;&gt;
+    &lt;div class=&quot;rangebar&quot; id=&quot;statsrange&quot; role=&quot;group&quot; aria-label=&quot;기간&quot;&gt;
+      &lt;span&gt;기간&lt;/span&gt;
+      &lt;button type=&quot;button&quot; data-weeks=&quot;4&quot; aria-pressed=&quot;true&quot;&gt;4주&lt;/button&gt;
+      &lt;button type=&quot;button&quot; data-weeks=&quot;8&quot; aria-pressed=&quot;false&quot;&gt;8주&lt;/button&gt;
+      &lt;button type=&quot;button&quot; data-weeks=&quot;12&quot; aria-pressed=&quot;false&quot;&gt;12주&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;section class=&quot;card insight&quot; id=&quot;bandcard&quot; data-state=&quot;no_data&quot;&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;시간대별 대기 · 분포&lt;/div&gt;
+      &lt;div class=&quot;mealseg&quot; id=&quot;bandseg&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;lead&quot; id=&quot;bandlead&quot;&gt;&lt;/div&gt;
+        &lt;svg class=&quot;chart&quot; id=&quot;bandsvg&quot; viewBox=&quot;0 0 320 150&quot; preserveAspectRatio=&quot;none&quot; aria-label=&quot;시간대별 평소 대기 분포&quot;&gt;&lt;/svg&gt;
+        &lt;div class=&quot;legend2&quot;&gt;&lt;span&gt;&lt;i style=&quot;background:#129793&quot;&gt;&lt;/i&gt;평소 평균&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;background:rgba(18,151,147,.3)&quot;&gt;&lt;/i&gt;P25~P75 · ±1σ&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;background:#7c1d6f&quot;&gt;&lt;/i&gt;오늘&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;note foot&quot; id=&quot;bandfoot&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;bandempty&quot;&gt;일정 기간 데이터 수집 후 반영됩니다&lt;/div&gt;
+    &lt;/section&gt;
+    &lt;section class=&quot;card insight&quot; id=&quot;wdcard&quot; data-state=&quot;no_data&quot;&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;요일별 비교&lt;/div&gt;
+      &lt;div class=&quot;mealseg&quot; id=&quot;wdseg&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;lead&quot; id=&quot;wdlead&quot;&gt;&lt;/div&gt;
+        &lt;svg class=&quot;chart&quot; id=&quot;wdsvg&quot; viewBox=&quot;0 0 320 150&quot; preserveAspectRatio=&quot;none&quot; aria-label=&quot;요일별 평균·최고 대기&quot;&gt;&lt;/svg&gt;
+        &lt;div class=&quot;note foot&quot; id=&quot;wdfoot&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;wdempty&quot;&gt;일정 기간 데이터 수집 후 반영됩니다&lt;/div&gt;
+    &lt;/section&gt;
+    &lt;section class=&quot;card insight&quot; id=&quot;dailycard&quot; data-state=&quot;no_data&quot;&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;일별 추이 · 대기와 식수&lt;/div&gt;
+      &lt;div class=&quot;mealseg&quot; id=&quot;dailyseg&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;lead&quot; id=&quot;dailylead&quot;&gt;&lt;/div&gt;
+        &lt;svg class=&quot;chart&quot; id=&quot;dailysvg&quot; viewBox=&quot;0 0 320 150&quot; preserveAspectRatio=&quot;none&quot; aria-label=&quot;일별 평균·최고 대기와 식수&quot;&gt;&lt;/svg&gt;
+        &lt;div class=&quot;note foot&quot; id=&quot;dailyfoot&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;dailyempty&quot;&gt;일정 기간 데이터 수집 후 반영됩니다&lt;/div&gt;
+    &lt;/section&gt;
+    &lt;section class=&quot;card insight&quot; id=&quot;nutstatcard&quot; data-state=&quot;no_data&quot;&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;영양 인사이트 · 일별&lt;/div&gt;
+      &lt;div class=&quot;mealseg&quot; id=&quot;nutseg&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;lead&quot; id=&quot;nutlead&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;sublab&quot;&gt;에너지 충족률 · 적정 90~110%&lt;/div&gt;
+        &lt;svg class=&quot;chart short&quot; id=&quot;nutsvg&quot; viewBox=&quot;0 0 320 96&quot; preserveAspectRatio=&quot;none&quot; aria-label=&quot;일별 에너지 충족률&quot;&gt;&lt;/svg&gt;
+        &lt;div class=&quot;sublab&quot;&gt;에너지 적정비율 · 최근 평균이 범위 안인가&lt;/div&gt;
+        &lt;div class=&quot;gauges&quot; id=&quot;macrog&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;note foot&quot; id=&quot;nutfoot&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;nutstatempty&quot;&gt;영양 이력이 아직 없습니다&lt;/div&gt;
+    &lt;/section&gt;
+    &lt;section class=&quot;card insight&quot; id=&quot;menuwaitcard&quot; data-state=&quot;no_data&quot;&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;줄이 길어지는 메뉴&lt;/div&gt;
+      &lt;div class=&quot;mealseg&quot; id=&quot;menuseg&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;lead&quot; id=&quot;menuwaitlead&quot;&gt;&lt;/div&gt;
+        &lt;ol class=&quot;rank&quot; id=&quot;menuwaitlist&quot;&gt;&lt;/ol&gt;
+        &lt;div class=&quot;note foot&quot; id=&quot;menuwaitfoot&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;menuwaitempty&quot;&gt;2일 이상 나온 메뉴 아직 없음&lt;/div&gt;
+    &lt;/section&gt;
+    &lt;section class=&quot;card insight&quot; id=&quot;evcard&quot; data-state=&quot;no_data&quot;&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;시각별 황금 · 병목&lt;/div&gt;
+      &lt;div class=&quot;mealseg&quot; id=&quot;evseg&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;body&quot;&gt;
+        &lt;div class=&quot;lead&quot; id=&quot;evlead&quot;&gt;&lt;/div&gt;
+        &lt;svg class=&quot;chart&quot; id=&quot;evsvg&quot; viewBox=&quot;0 0 320 150&quot; preserveAspectRatio=&quot;none&quot; aria-label=&quot;시각별 황금·병목 누적 분&quot;&gt;&lt;/svg&gt;
+        &lt;div class=&quot;note foot&quot; id=&quot;evfoot&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;empty&quot; id=&quot;evempty&quot;&gt;일정 기간 데이터 수집 후 반영됩니다&lt;/div&gt;
     &lt;/section&gt;
   &lt;/section&gt;
 
@@ -1530,7 +1627,7 @@ systemctl status mealboard-api --no-pager</code></pre>
   &lt;/section&gt;
 &lt;/main&gt;
 
-&lt;!-- js/core.js 가 화면 모듈(wait·room·week·today·news)을 불러 등록하고 라우터·폴링을 돌린다 (빌드 도구 없음, ES 모듈) --&gt;
+&lt;!-- js/core.js 가 화면 모듈(wait·room·stats·week·today·news)을 불러 등록하고 라우터·폴링을 돌린다 (빌드 도구 없음, ES 모듈) --&gt;
 &lt;script&gt;
 /* 진단: 모듈이 읽히지 않거나(옛 브라우저 문법) 실행 중 오류가 나면 흰 화면 대신 맨 위에 붉은 띠로 오류 문장을 보인다 — 휴대폰에서 원인을 읽을 수 있게 */
 addEventListener(&quot;error&quot;, function (e) {
@@ -1580,10 +1677,10 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v43&quot;;   // 10-04: 관리 탭 즉시 표시(probe yes 기억) + 관리자 아이콘 공구 배지
+const CACHE = &quot;mealboard-v44&quot;;   // 10-13: 통계 화면(이력 차트 6) + 실시간뷰 평소 밀집도·클러스터
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
-  &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
+  &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/stats.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
 
 self.addEventListener(&quot;install&quot;, e =&gt;
   e.waitUntil(caches.open(CACHE).then(c =&gt; c.addAll(SHELL)).then(() =&gt; self.skipWaiting())));
@@ -3900,6 +3997,71 @@ def popularity(rise, peak_wait, base_rise, base_wait):
     return round(100 * sum(terms) / len(terms)) if terms else None
 
 
+def band_stats(rows, key=&quot;avg_wait&quot;):
+    &quot;&quot;&quot;시간대별 분포(10-13 통계 화면): lunch_bins 모양의 행들 [{bin, &lt;key&gt;}] (여러 날) → bin 별 {bin, n, mean, sd, p25, p75, lo, hi}.
+    sd 는 표본 표준편차(n≥2, 아니면 0) — 화면은 mean±sd 띠('볼린저 밴드')를 그린다. 값이 None 인 행은 뺀다&quot;&quot;&quot;
+    by = {}
+    for r in rows:
+        v = r.get(key)
+        if v is None:
+            continue
+        by.setdefault(int(r[&quot;bin&quot;]), []).append(float(v))
+    out = []
+    for b, xs in sorted(by.items()):
+        xs.sort()
+        n = len(xs)
+        mean = sum(xs) / n
+        sd = statistics.stdev(xs) if n &gt;= 2 else 0.0
+        q = statistics.quantiles(xs, n=4) if n &gt;= 2 else [xs[0], xs[0], xs[0]]
+        out.append({&quot;bin&quot;: b, &quot;n&quot;: n, &quot;mean&quot;: round(mean, 2), &quot;sd&quot;: round(sd, 2), &quot;p25&quot;: round(q[0], 2), &quot;p75&quot;: round(q[2], 2),
+                    &quot;lo&quot;: round(max(0.0, mean - sd), 2), &quot;hi&quot;: round(mean + sd, 2)})
+    return out
+
+
+def _hex_neighbors(i, cols, rows):
+    &quot;&quot;&quot;뾰족한 꼭짓점이 위인 육각 격자(홀수 행 반 칸 오른쪽, vision/zones.hex_center)의 이웃 6개&quot;&quot;&quot;
+    row, col = divmod(i, cols)
+    odd = row &amp; 1
+    cand = [(row, col - 1), (row, col + 1), (row - 1, col), (row + 1, col),
+            (row - 1, col + 1 if odd else col - 1), (row + 1, col + 1 if odd else col - 1)]
+    return [r * cols + c for r, c in cand if 0 &lt;= r &lt; rows and 0 &lt;= c &lt; cols]
+
+
+def hex_clusters(cells, cols, rows, thresh=0.5, top=3):
+    &quot;&quot;&quot;밀집도 셀 [{i, avg, w}] → 서로 이웃한 '진한' 타일(w ≥ thresh) 묶음을 인원 합 순으로 상위 top 개.
+    각 묶음: {rank, cells:[i], n_cells, avg:묶음 평균 인원 합, peak_i, x, y(정규화 무게중심 — zone_of 로 이름을 붙인다)}.
+    실시간뷰 '평소 밀집도' 카드가 ①②③ 마커로 그린다(10-13 사용자 요청). 개별 위치가 아니라 타일 합계의 묶음이다&quot;&quot;&quot;
+    from vision.zones import hex_center
+    val = {int(c[&quot;i&quot;]): c for c in cells if c.get(&quot;w&quot;, 0) &gt;= thresh and 0 &lt;= int(c[&quot;i&quot;]) &lt; cols * rows}
+    seen, groups = set(), []
+    for i in sorted(val):
+        if i in seen:
+            continue
+        stack, comp = [i], []
+        seen.add(i)
+        while stack:
+            k = stack.pop()
+            comp.append(k)
+            for nb in _hex_neighbors(k, cols, rows):
+                if nb in val and nb not in seen:
+                    seen.add(nb)
+                    stack.append(nb)
+        tot = sum(val[k][&quot;avg&quot;] for k in comp)
+        if tot &lt;= 0:
+            continue
+        xs = [hex_center(k, cols, rows) for k in comp]
+        ws = [val[k][&quot;avg&quot;] for k in comp]
+        cx = sum(x * w for (x, _), w in zip(xs, ws)) / tot
+        cy = sum(y * w for (_, y), w in zip(xs, ws)) / tot
+        peak = max(comp, key=lambda k: val[k][&quot;avg&quot;])
+        groups.append({&quot;cells&quot;: sorted(comp), &quot;n_cells&quot;: len(comp), &quot;avg&quot;: round(tot, 2), &quot;peak_i&quot;: peak,
+                       &quot;x&quot;: round(cx, 4), &quot;y&quot;: round(cy, 4)})
+    groups.sort(key=lambda g: -g[&quot;avg&quot;])
+    for r, g in enumerate(groups[:top], 1):
+        g[&quot;rank&quot;] = r
+    return groups[:top]
+
+
 def median_or_none(xs, nd=2):
     xs = [x for x in xs if x is not None]
     return round(statistics.median(xs), nd) if xs else None
@@ -4342,12 +4504,12 @@ from contextlib import closing
 from fastapi import APIRouter, Query
 
 from ..config import DB_PATH, FEED_SOURCE, ROLLUP_WINDOW, ZONES_JSON
-from ..insight_calc import GOLDEN_WAIT, day_summary, density, golden_bins, median_or_none
+from ..insight_calc import GOLDEN_WAIT, band_stats, day_summary, density, golden_bins, hex_clusters, median_or_none
 from ..insights_db import connect_reports_ro, connect_ro, meta
 from ..lunch import BUCKET_MIN, DAY_MIN, DINNER_HI, DINNER_LO, LUNCH_HI, LUNCH_LO, iso_at, minute_of_day, seconds_of_day, weekday_of
 from ..mealjson import menu_on, nutrition_rows, read_meal
 from .typical import MIN_BUCKETS
-from vision.zones import GRID_COLS, GRID_ROWS, load_zones, polygon_area_m2
+from vision.zones import GRID_COLS, GRID_ROWS, load_zones, polygon_area_m2, zone_of
 
 router = APIRouter(prefix=&quot;/api/insight&quot;)
 LIVE_MIN = 180                 # 오늘 즉석 계산에 쓰는 최근 분
@@ -4392,6 +4554,22 @@ def _since(weeks):
 def _window(meal):
     lo, hi = _bounds(meal)
     return {&quot;lo&quot;: lo, &quot;hi&quot;: hi, &quot;name&quot;: ROLLUP_WINDOW, &quot;meal&quot;: meal}
+
+
+_CACHE = {}                    # 무거운 즉석 집계(평소 밀집도·통계)의 짧은 캐시 {key: (expires_epoch, response)} — 화면은 5분마다 묻는다
+_CACHE_TTL = 600
+
+
+def _cached(key, make):
+    now = dt.datetime.now().timestamp()
+    hit = _CACHE.get(key)
+    if hit and hit[0] &gt; now:
+        return hit[1]
+    val = make()
+    if len(_CACHE) &gt; 32:
+        _CACHE.clear()
+    _CACHE[key] = (now + _CACHE_TTL, val)
+    return val
 
 
 def _rollup_meta():
@@ -4652,11 +4830,18 @@ def nutrition(weeks: int = Query(8, ge=1, le=26), meal: str = MealQ()):
         with closing(con):        # nutrition_days 의 meal 은 항상 lunch|dinner (upsert 가 창 모드와 무관하게 둘 다 쌓는다)
             rows = con.execute(&quot;SELECT * FROM nutrition_days WHERE meal = ? AND date &gt;= ? ORDER BY date&quot;, (meal, _since(weeks))).fetchall()
         if rows:
-            return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: &quot;nutrition_days&quot;, &quot;meal&quot;: meal, &quot;weeks&quot;: _weeks_from([dict(r) for r in rows])}
+            days = [dict(r) for r in rows]
+            return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: &quot;nutrition_days&quot;, &quot;meal&quot;: meal, &quot;weeks&quot;: _weeks_from(days), &quot;days&quot;: _day_rows(days)}
     week = nutrition_rows(read_meal(), meals=(meal,))         # 집계가 없으면 meal.json 의 이번 주만
     if not week:
-        return _no(&quot;영양 이력도 이번 주 식단도 없다&quot;, meal=meal, weeks=[])
-    return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: &quot;meal_json&quot;, &quot;meal&quot;: meal, &quot;weeks&quot;: _weeks_from(week)}
+        return _no(&quot;영양 이력도 이번 주 식단도 없다&quot;, meal=meal, weeks=[], days=[])
+    return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: &quot;meal_json&quot;, &quot;meal&quot;: meal, &quot;weeks&quot;: _weeks_from(week), &quot;days&quot;: _day_rows(week)}
+
+
+def _day_rows(days):
+    &quot;&quot;&quot;nutrition_days 행 → 통계 화면용 일별 요약(메뉴 json 은 뺀다 — 10-13)&quot;&quot;&quot;
+    keys = (&quot;date&quot;, &quot;kcal&quot;, &quot;energy_pct&quot;, &quot;protein_pct&quot;, &quot;carb_ratio&quot;, &quot;protein_ratio&quot;, &quot;fat_ratio&quot;, &quot;macro_ok&quot;, &quot;mar&quot;, &quot;kgco2e&quot;)
+    return [{k: d.get(k) for k in keys} for d in days if d.get(&quot;energy_pct&quot;) is not None]
 
 
 # ---- 7. 구역 점유율 --------------------------------------------------------------------------
@@ -4726,6 +4911,127 @@ def density_now(minutes: int = Query(30, ge=5, le=180)):
     return {&quot;state&quot;: &quot;ok&quot;, &quot;minutes&quot;: minutes, &quot;since&quot;: since, &quot;ticks&quot;: ticks, &quot;grid&quot;: {&quot;cols&quot;: GRID_COLS, &quot;rows&quot;: GRID_ROWS},
             &quot;cells&quot;: density({r[&quot;cell&quot;]: r[&quot;s&quot;] for r in cell_rows}, ticks, GRID_COLS, GRID_ROWS), &quot;zones&quot;: zones,
             &quot;peak_zone&quot;: zones[0][&quot;id&quot;] if zones else None}
+
+
+# ---- 7c. 평소 밀집도 (최근 N일 누적, queue.db 즉석 — 10-13 사용자 요청) ----------------------------
+
+MEAL_KO = {&quot;lunch&quot;: &quot;중식&quot;, &quot;dinner&quot;: &quot;석식&quot;}
+
+
+@router.get(&quot;/density_typical&quot;)
+def density_typical(days: int = Query(7, ge=1, le=28), meal: str = MealQ()):
+    &quot;&quot;&quot;최근 days 일 동안 그 끼니 창 안의 셀별 평균 인원(타일 히트맵) + 진한 타일이 이어진 '클러스터' 상위 3개(①②③, 무게중심이 속한 구역 이름).
+    실시간뷰의 '최근 10분' 과 같은 타일 기하·같은 색. 7일치 cell_samples 를 훑으므로 10분 캐시. 숫자만 — 개별 위치는 어디에도 없다&quot;&quot;&quot;
+    return _cached((&quot;density_typical&quot;, days, meal), lambda: _density_typical(days, meal))
+
+
+def _density_typical(days, meal):
+    lo, hi = _bounds(meal)
+    since = (dt.date.today() - dt.timedelta(days=days)).isoformat()
+    con = connect_ro(DB_PATH, &quot;cell_samples&quot;)
+    if con is None:
+        return _no(&quot;셀 표본이 아직 없다&quot;, days=days, meal=meal, cells=[], zones=[], clusters=[])
+    with closing(con):                                   # 창은 시각만 본다(요일 무관) — 날짜별 창 차이(휴일 전날 석식)는 집계 창 DINNER_* 가 넉넉히 덮는다
+        tod = &quot;(CAST(strftime('%H', ts) AS INTEGER) * 60 + CAST(strftime('%M', ts) AS INTEGER))&quot;
+        ticks = con.execute(f&quot;SELECT COUNT(*) FROM samples WHERE ts &gt;= ? AND {tod} &gt;= ? AND {tod} &lt; ?&quot;, (since, lo, hi)).fetchone()[0]
+        cell_rows = con.execute(f&quot;SELECT cell, SUM(n) s FROM cell_samples WHERE ts &gt;= ? AND {tod} &gt;= ? AND {tod} &lt; ? GROUP BY cell&quot;,
+                                (since, lo, hi)).fetchall()
+        zone_rows = con.execute(f&quot;SELECT zone, SUM(n) s FROM zone_samples WHERE ts &gt;= ? AND {tod} &gt;= ? AND {tod} &lt; ? GROUP BY zone&quot;,
+                                (since, lo, hi)).fetchall()
+        ndays = con.execute(f&quot;SELECT COUNT(DISTINCT substr(ts, 1, 10)) FROM samples WHERE ts &gt;= ? AND {tod} &gt;= ? AND {tod} &lt; ?&quot;,
+                            (since, lo, hi)).fetchone()[0]
+    if not ticks or not cell_rows:
+        return _no(f&quot;최근 {days}일 {MEAL_KO.get(meal, meal)} 창 표본 없음&quot;, days=days, meal=meal, cells=[], zones=[], clusters=[])
+    try:
+        doc = load_zones(ZONES_JSON)
+        zlist, names = doc[&quot;zones&quot;], {z[&quot;id&quot;]: z[&quot;name&quot;] for z in doc[&quot;zones&quot;]}
+    except (OSError, ValueError):
+        zlist, names = [], {}
+    cells = density({r[&quot;cell&quot;]: r[&quot;s&quot;] for r in cell_rows}, ticks, GRID_COLS, GRID_ROWS)
+    clusters = []
+    for g in hex_clusters(cells, GRID_COLS, GRID_ROWS):
+        zid = zone_of(g[&quot;x&quot;], g[&quot;y&quot;], zlist) if zlist else None
+        clusters.append({**g, &quot;zone&quot;: zid, &quot;label&quot;: names.get(zid, &quot;통로&quot; if zid is None else zid)})
+    total = sum(r[&quot;s&quot;] for r in zone_rows) or 1
+    zones = [{&quot;id&quot;: r[&quot;zone&quot;], &quot;label&quot;: names.get(r[&quot;zone&quot;], r[&quot;zone&quot;]), &quot;avg_n&quot;: round(r[&quot;s&quot;] / ticks, 1), &quot;share_pct&quot;: round(100 * r[&quot;s&quot;] / total)}
+             for r in sorted(zone_rows, key=lambda r: -r[&quot;s&quot;])]
+    return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: &quot;cell_samples&quot;, &quot;days&quot;: days, &quot;n_days&quot;: ndays, &quot;meal&quot;: meal, &quot;window&quot;: _window(meal), &quot;since&quot;: since,
+            &quot;ticks&quot;: ticks, &quot;grid&quot;: {&quot;cols&quot;: GRID_COLS, &quot;rows&quot;: GRID_ROWS}, &quot;cells&quot;: cells, &quot;clusters&quot;: clusters, &quot;zones&quot;: zones}
+
+
+# ---- 9. 통계 화면 (10-13 사용자 요청) — 시간대 분포·요일 비교·일별 추이·메뉴별 대기·시각별 이벤트 -----------------
+
+@router.get(&quot;/stats&quot;)
+def stats(weeks: int = Query(4, ge=1, le=12), meal: str = MealQ()):
+    &quot;&quot;&quot;통계 화면 한 번 호출 — insights.db 만 읽는다(오늘 실황 선은 _today_cells 로 덧붙인다). 응답은 전부 집계 숫자:
+    bands  : 5분 bin 별 평균 대기의 mean·sd·p25·p75 (최근 weeks 주, 같은 출처 날만) — '볼린저 밴드'
+    today  : 오늘 그 끼니 창의 5분 bin 평균 대기(실황)
+    weekdays: 월~금 요일별 평균·최고 대기, 식수 추정, 황금·병목 분(일수로 평균)
+    daily  : 날짜별 평균·최고 대기, 식수, 커버리지, 보정 K
+    menus  : 메뉴별 평균 최고 대기(2일↑) 상위 — '줄이 길어지는 메뉴'
+    events : 5분 bin 별 황금·병목 분 합계(시작 시각 기준) — 시차 배식(P21) 설계 재료&quot;&quot;&quot;
+    return _cached((&quot;stats&quot;, weeks, meal), lambda: _stats(weeks, meal))
+
+
+def _stats(weeks, meal):
+    sm = _stored(meal)
+    since = _since(weeks)
+    con = connect_ro()
+    if con is None:
+        return _no(NO_DB, meal=meal, weeks=weeks, bands=[], today=[], weekdays=[], daily=[], menus=[], events=[])
+    with closing(con):
+        days = [dict(r) for r in con.execute(
+            &quot;SELECT date, weekday, avg_wait, peak_wait, peak_wait_ts, peak_queue, served_est, coverage_pct, golden_min, bottleneck_min, &quot;
+            &quot;typical_rate FROM lunch_days WHERE meal = ? AND source = ? AND date &gt;= ? ORDER BY date&quot;, (sm, FEED_SOURCE, since))]
+        bins = [dict(r) for r in con.execute(
+            &quot;SELECT b.date, b.bin, b.avg_wait FROM lunch_bins b JOIN lunch_days l ON l.date = b.date AND l.meal = b.meal &quot;
+            &quot;WHERE b.meal = ? AND l.source = ? AND b.date &gt;= ? AND b.avg_wait IS NOT NULL&quot;, (sm, FEED_SOURCE, since))]
+        evs = [dict(r) for r in con.execute(
+            &quot;SELECT e.kind, e.start_ts, e.minutes FROM events e JOIN lunch_days l ON l.date = e.date AND l.meal = e.meal &quot;
+            &quot;WHERE e.meal = ? AND l.source = ? AND e.date &gt;= ? AND e.kind IN ('golden', 'bottleneck')&quot;, (sm, FEED_SOURCE, since))]
+        menus = [dict(r) for r in con.execute(
+            &quot;SELECT menu, n_days, avg_peak_wait, avg_peak_queue, popularity FROM menu_stats WHERE meal = ? AND n_days &gt;= ? AND avg_peak_wait IS NOT NULL &quot;
+            &quot;ORDER BY avg_peak_wait DESC LIMIT 8&quot;, (sm, MIN_DAYS))]
+    if not days:
+        return _no(&quot;집계된 날이 아직 없다&quot;, meal=meal, weeks=weeks, bands=[], today=[], weekdays=[], daily=[], menus=[], events=[])
+    lo, hi = _bounds(meal)
+    # 요일별
+    wd = {}
+    for d in days:
+        wd.setdefault(d[&quot;weekday&quot;], []).append(d)
+
+    def avg(rows, k):
+        v = [r[k] for r in rows if r.get(k) is not None]
+        return round(sum(v) / len(v), 1) if v else None
+    weekdays = [{&quot;weekday&quot;: w, &quot;days&quot;: len(rows), &quot;avg_wait&quot;: avg(rows, &quot;avg_wait&quot;), &quot;peak_wait&quot;: avg(rows, &quot;peak_wait&quot;),
+                 &quot;served&quot;: avg(rows, &quot;served_est&quot;), &quot;golden_min&quot;: avg(rows, &quot;golden_min&quot;), &quot;bottleneck_min&quot;: avg(rows, &quot;bottleneck_min&quot;)}
+                for w, rows in sorted(wd.items()) if 1 &lt;= w &lt;= 5]
+    # 시각별 이벤트
+    ev = {}
+    for e in evs:
+        b = minute_of_day(e[&quot;start_ts&quot;]) // BUCKET_MIN * BUCKET_MIN
+        if lo &lt;= b &lt; hi:
+            ev.setdefault(b, {&quot;golden_min&quot;: 0.0, &quot;bottleneck_min&quot;: 0.0})[f&quot;{e['kind']}_min&quot;] += float(e[&quot;minutes&quot;] or 0)
+    events = [{&quot;bin&quot;: b, &quot;golden_min&quot;: round(v[&quot;golden_min&quot;], 1), &quot;bottleneck_min&quot;: round(v[&quot;bottleneck_min&quot;], 1)} for b, v in sorted(ev.items())]
+    # 날짜별 보정 K(queue.db samples.calib 의 그날 창 중앙값) — 측정 품질 추이
+    kq = {}
+    qcon = connect_ro(DB_PATH, &quot;samples&quot;)
+    if qcon is not None:
+        with closing(qcon):
+            tod = &quot;(CAST(strftime('%H', ts) AS INTEGER) * 60 + CAST(strftime('%M', ts) AS INTEGER))&quot;
+            for r in qcon.execute(f&quot;SELECT substr(ts, 1, 10) d, calib FROM samples WHERE ts &gt;= ? AND calib IS NOT NULL AND {tod} &gt;= ? AND {tod} &lt; ?&quot;,
+                                  (since, lo, hi)):
+                kq.setdefault(r[&quot;d&quot;], []).append(r[&quot;calib&quot;])
+    daily = [{&quot;date&quot;: d[&quot;date&quot;], &quot;weekday&quot;: d[&quot;weekday&quot;], &quot;avg_wait&quot;: d[&quot;avg_wait&quot;], &quot;peak_wait&quot;: d[&quot;peak_wait&quot;], &quot;peak_at&quot;: d[&quot;peak_wait_ts&quot;],
+              &quot;served&quot;: d[&quot;served_est&quot;], &quot;coverage_pct&quot;: d[&quot;coverage_pct&quot;], &quot;golden_min&quot;: d[&quot;golden_min&quot;], &quot;bottleneck_min&quot;: d[&quot;bottleneck_min&quot;],
+              &quot;k&quot;: median_or_none(kq.get(d[&quot;date&quot;], []))} for d in days]
+    today_wd, today_cells = _today_cells(meal)
+    today = [{&quot;bin&quot;: c[&quot;minute_of_day&quot;], &quot;wait&quot;: c[&quot;wait_min&quot;]} for c in today_cells if c[&quot;wait_min&quot;] is not None]
+    base = median_or_none([m[&quot;avg_peak_wait&quot;] for m in menus], 1)
+    return {&quot;state&quot;: &quot;ok&quot;, &quot;basis&quot;: &quot;rollup&quot;, &quot;meal&quot;: meal, &quot;weeks&quot;: weeks, &quot;since&quot;: since, &quot;n_days&quot;: len(days), &quot;window&quot;: _window(meal),
+            &quot;bands&quot;: band_stats(bins), &quot;today&quot;: today, &quot;weekdays&quot;: weekdays, &quot;daily&quot;: daily, &quot;events&quot;: events,
+            &quot;menus&quot;: [{&quot;menu&quot;: m[&quot;menu&quot;], &quot;n_days&quot;: m[&quot;n_days&quot;], &quot;peak_wait&quot;: round(m[&quot;avg_peak_wait&quot;], 1), &quot;popularity&quot;: m[&quot;popularity&quot;]} for m in menus],
+            &quot;menu_base&quot;: base}
 
 
 # ---- 8. LLM 글 (reports.db, Phase 4b 가 채운다) ------------------------------------------------
@@ -5348,6 +5654,7 @@ curl -s https://kjhs-meal.com/api/insight/quality</code></pre>
    두 박자: poll(라이브, every) 과 slow(집계에서 오는 인사이트, SLOW_EVERY) — 둘 다 core 가 시각으로 가른다 */
 import * as wait from &quot;./wait.js&quot;;
 import * as room from &quot;./room.js&quot;;
+import * as stats from &quot;./stats.js&quot;;
 import * as week from &quot;./week.js&quot;;
 import * as today from &quot;./today.js&quot;;
 import * as news from &quot;./news.js&quot;;
@@ -5386,7 +5693,7 @@ export const why = r =&gt; !r || /reports\.db/.test(r) ? null : /insights\.db/.t
 const DESK_MQ = matchMedia(&quot;(min-width: 900px)&quot;);
 export const desktop = () =&gt; DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = &quot;v43&quot;;                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = &quot;v44&quot;;                       // 10-13: 통계 화면 + 평소 밀집도                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
@@ -5459,9 +5766,9 @@ function autoSwitch(f) {
 async function feedTick() { if (document.hidden) return; try { const f = (await j(&quot;/api/status&quot;)).feed; renderFeed(f); autoSwitch(f); } catch (e) { console.error(&quot;feed&quot;, e); } }
 
 /* ---------------- 화면 등록 · 라우터 ---------------- */
-const ORDER = [&quot;wait&quot;, &quot;room&quot;, &quot;week&quot;, &quot;today&quot;, &quot;news&quot;];
-const NAMES = { wait: &quot;대기시간&quot;, room: &quot;실시간뷰&quot;, week: &quot;주간식단&quot;, today: &quot;오늘급식&quot;, news: &quot;이슈피드&quot; };
-const SCREENS = { wait: wait.screen, room: room.screen, week: week.screen, today: today.screen, news: news.screen };
+const ORDER = [&quot;wait&quot;, &quot;room&quot;, &quot;stats&quot;, &quot;week&quot;, &quot;today&quot;, &quot;news&quot;];        // 10-13: 통계(이력 차트) 화면 추가 — 실시간뷰 다음
+const NAMES = { wait: &quot;대기시간&quot;, room: &quot;실시간뷰&quot;, stats: &quot;통계&quot;, week: &quot;주간식단&quot;, today: &quot;오늘급식&quot;, news: &quot;이슈피드&quot; };
+const SCREENS = { wait: wait.screen, room: room.screen, stats: stats.screen, week: week.screen, today: today.screen, news: news.screen };
 const lastPoll = {}, lastSlow = {};                    // name → 마지막 폴링 시각 (라이브 / 느린 인사이트)
 const scrollYs = {};                                   // 화면별 세로 스크롤 위치 — 돌아오면 그 자리
 let active = null;
@@ -5585,9 +5892,9 @@ try {
    점멸은 #marks 의 CSS opacity 애니메이션(1.4초, 0.55~1)이며 이 화면이 활성일 때만 돈다(.plan.live).
    /api/positions 는 이 화면이 보일 때만 5초마다 — 다른 화면에서는 요청이 나가지 않는다.
    아래 카드: 최근 10분 밀집도(육각 타일별 인원수 합계 — 같은 평면도 위에 flare 히트맵, 5초마다) · 오늘 리포트(로컬 LLM 글, 30분마다) */
-import { $, j, jSoft, S, esc, fit, hm, canvasAuto, setState } from &quot;./core.js&quot;;
+import { $, j, jSoft, S, esc, fit, hm, canvasAuto, setState, MEAL_KO, defaultMeal, mealSeg } from &quot;./core.js&quot;;
 import { SUNSETDARK, gradient } from &quot;./colors.js&quot;;
-import { drawFloor, drawHeat, drawMarkers, drawZoneLabels, geom } from &quot;./floor.js&quot;;
+import { drawClusters, drawFloor, drawHeat, drawMarkers, drawZoneLabels, geom } from &quot;./floor.js&quot;;
 
 let G = null;
 let ZONES = null;                                      // zones.json 의 구역(정규화 다각형·이름) — 라벨만 그린다. /api/insight/zones 에서 한 번                                          // #plan 의 투영 — 평면도를 그린 크기. 상자가 바뀌면 canvasAuto 가 다시 만든다
@@ -5603,7 +5910,7 @@ function drawFloorLayer() {
 
 async function loadZones() {                           // 구역 정의는 설정이라 하루에 몇 번 바뀌지 않는다 — 부팅 때 + 30분 slow 에서
   const z = await jSoft(&quot;/api/insight/zones?weeks=1&quot;);
-  if (z &amp;&amp; z.zones &amp;&amp; z.zones.length) { ZONES = z.zones; drawFloorLayer(); renderPlan(S.lastPos || { state: &quot;no_data&quot; }); drawZoneCard(); }
+  if (z &amp;&amp; z.zones &amp;&amp; z.zones.length) { ZONES = z.zones; drawFloorLayer(); renderPlan(S.lastPos || { state: &quot;no_data&quot; }); drawZoneCard(); drawTypCard(); }
 }
 
 export function renderPlan(p) {
@@ -5647,6 +5954,46 @@ function renderZones(d) {
   $(&quot;#zonebar&quot;).hidden = false;
 }
 
+/* 평소 밀집도(10-13 사용자 요청) — 최근 7일 그 끼니 창의 타일별 평균 누적 + 클러스터 ①②③. 두 끼니를 함께 받아 캐시, 토글은 즉시 */
+const TYP = { lunch: null, dinner: null };
+let typMeal = &quot;lunch&quot;;
+const CIRC = [&quot;①&quot;, &quot;②&quot;, &quot;③&quot;];
+
+function drawTypCard() {
+  const d = TYP[typMeal]; if (!d || d.state !== &quot;ok&quot;) return;
+  const c = $(&quot;#typplan&quot;), W = c.clientWidth || 318;
+  const H = c.clientHeight || Math.round(W * 460 / 318);
+  const { g } = fit(c, H);
+  const Gt = geom(W, H);
+  drawFloor(g, Gt);
+  drawZoneLabels(g, Gt, ZONES);
+  drawHeat(g, Gt, d.cells, d.grid.cols, d.grid.rows);
+  drawClusters(g, Gt, d.clusters, d.grid.cols, d.grid.rows);
+}
+
+function renderTyp(d) {
+  if (d) TYP[d.meal || typMeal] = d;
+  const cur = TYP[typMeal];
+  const ok = cur &amp;&amp; cur.state === &quot;ok&quot; &amp;&amp; cur.cells &amp;&amp; cur.cells.length;
+  if (!setState(&quot;typcard&quot;, !!ok, cur &amp;&amp; cur.reason)) { $(&quot;#typbar&quot;).hidden = true; return; }
+  drawTypCard();
+  const cl = cur.clusters || [];
+  $(&quot;#typlead&quot;).innerHTML = cl.length
+    ? `최근 ${cur.n_days}일 ${MEAL_KO[typMeal]} 시간, 사람이 늘 모이는 자리는 &lt;b&gt;${esc(cl[0].label)}&lt;/b&gt; 쪽입니다`
+    : `최근 ${cur.n_days}일 ${MEAL_KO[typMeal]} 시간의 평균 밀집도`;
+  $(&quot;#typchips&quot;).innerHTML = cl.map((c, i) =&gt;
+    `&lt;span class=&quot;${i ? &quot;ghost&quot; : &quot;&quot;}&quot;&gt;&lt;b&gt;${CIRC[i] || i + 1}&lt;/b&gt;${esc(c.label)}&lt;small&gt;타일 ${c.n_cells}개 · 평균 ${c.avg}명&lt;/small&gt;&lt;/span&gt;`).join(&quot;&quot;)
+    + (cur.zones || []).slice(0, 3).map(z =&gt; `&lt;span class=&quot;ghost dim&quot;&gt;${esc(z.label)}&lt;small&gt;${z.share_pct}% · 평균 ${z.avg_n}명&lt;/small&gt;&lt;/span&gt;`).join(&quot;&quot;);
+  $(&quot;#typfoot&quot;).textContent = `${cur.since} 이후 ${cur.n_days}일 · 표본 ${cur.ticks}개 · 타일별 평균 인원, 번호는 진한 타일(최대의 절반↑)이 이어진 묶음 · 개별 위치는 저장하지 않습니다`;
+  $(&quot;#typbar&quot;).hidden = false;
+}
+
+async function loadTyp() {
+  const [l, d] = await Promise.all([jSoft(&quot;/api/insight/density_typical?days=7&amp;meal=lunch&quot;), jSoft(&quot;/api/insight/density_typical?days=7&amp;meal=dinner&quot;)]);
+  TYP.lunch = l; TYP.dinner = d;
+  renderTyp(null);
+}
+
 function renderReport(d) {
   const item = (d.items || []).find(x =&gt; x.kind === &quot;recap&quot;) || (d.items || [])[0];
   if (!setState(&quot;reportcard&quot;, d.state === &quot;ok&quot; &amp;&amp; !!item, d.reason)) return;
@@ -5656,13 +6003,17 @@ function renderReport(d) {
     + `&lt;small&gt;${item.kind === &quot;preview&quot; ? &quot;아침 예보&quot; : &quot;점심 결산&quot;} · ${(item.created_at || &quot;&quot;).slice(5, 16).replace(&quot;T&quot;, &quot; &quot;)}&lt;/small&gt;`;
 }
 
-const RENDER = { zonecard: renderZones, reportcard: renderReport };
+const RENDER = { zonecard: renderZones, reportcard: renderReport, typcard: renderTyp };
 
 export const screen = {
   mount() {                                            // 부팅 때 core 가 부른다(순환 import 의 TDZ 회피)
     canvasAuto($(&quot;#plan&quot;), () =&gt; { drawFloorLayer(); renderPlan(S.lastPos || { state: &quot;no_data&quot; }); });
     canvasAuto($(&quot;#zoneplan&quot;), drawZoneCard);
+    canvasAuto($(&quot;#typplan&quot;), drawTypCard);
     $(&quot;#zonebar&quot;).querySelector(&quot;i&quot;).style.background = gradient(SUNSETDARK);
+    $(&quot;#typbar&quot;).querySelector(&quot;i&quot;).style.background = gradient(SUNSETDARK);
+    typMeal = defaultMeal();
+    mealSeg($(&quot;#typseg&quot;), typMeal, m =&gt; { typMeal = m; renderTyp(null); });
     loadZones();
   },
   every: 5000,                                         // 09-16: 마커·밀집도 5초(vision 의 positions 갱신 주기와 맞춤 — core tick 도 5초)
@@ -5670,7 +6021,7 @@ export const screen = {
     const [p, z] = await Promise.all([j(&quot;/api/positions&quot;), jSoft(&quot;/api/insight/density?minutes=10&quot;)]);
     S.lastPos = p; renderPlan(p); renderZones(z);
   },
-  async slow() { renderReport(await jSoft(&quot;/api/insight/text&quot;)); loadZones(); },   // 리포트·구역 정의 — core 가 30분마다
+  async slow() { renderReport(await jSoft(&quot;/api/insight/text&quot;)); loadZones(); loadTyp(); },   // 리포트·구역 정의·평소 밀집도 — core 가 30분마다
   fail() { S.lastPos = { state: &quot;no_data&quot; }; renderPlan(S.lastPos); },    // 서버에 닿지 못하면 옛 위치를 '지금'처럼 두지 않는다
   activate() { $(&quot;#plancard&quot;).classList.add(&quot;live&quot;); },                   // 점멸은 보일 때만
   deactivate() { $(&quot;#plancard&quot;).classList.remove(&quot;live&quot;); },
@@ -5847,6 +6198,31 @@ export function drawZones(g, G, zones, occ = {}, labels = true) {
 /* 밀집도 육각 타일 — cells = [{i, w}] (i = row*cols+col, w 0~1). 기하는 vision/zones.py(hex_center)와 같다:
    뾰족한 꼭짓점이 위, 홀수 행은 반 칸 오른쪽, 반지름은 x 로 1/(cols·√3) · y 로 1/(rows·1.5). 값이 있는 타일만 plotly &quot;Sunsetdark&quot;(colors.js, 09-04 — 잠깐 jet 을 썼다가 같은 날 되돌림) 로 채우고
    나머지는 벌집 윤곽만 아주 옅게. 구역 이름·마커 없음. 최근 30분의 타일별 합계이지 개별 위치가 아니다 */
+/* 밀집도 클러스터 마커(10-13) — 평소 밀집도의 진한 타일 묶음(서버 insight_calc.hex_clusters)을 ①②③ 배지로. 묶음 타일은 차콜 윤곽, 배지는 무게중심.
+   개별 위치가 아니라 타일 합계의 묶음이다 */
+export function drawClusters(g, G, clusters, cols, rows) {
+  const S3 = Math.sqrt(3), rx = 1 / (cols * S3), ry = 1 / (rows * 1.5);
+  g.save();
+  (clusters || []).forEach(c =&gt; {
+    g.beginPath();
+    c.cells.forEach(i =&gt; {
+      const col = i % cols, row = Math.floor(i / cols), cx = (col + .5 + .5 * (row &amp; 1)) / cols, cy = (1 + 1.5 * row) / (rows * 1.5);
+      for (let k = 0; k &lt; 6; k++) {
+        const th = Math.PI / 6 + k * Math.PI / 3, [sx, sy] = G.P(cx + rx * .9 * Math.cos(th), cy + ry * .9 * Math.sin(th));
+        (k ? g.lineTo : g.moveTo).call(g, sx, sy);
+      }
+      g.closePath();
+    });
+    g.strokeStyle = &quot;rgba(51,49,45,.55)&quot;; g.lineWidth = 1.5; g.stroke();
+    const [px, py] = G.P(c.x, c.y), r = 11;
+    g.beginPath(); g.arc(px, py, r, 0, Math.PI * 2); g.fillStyle = &quot;#33312D&quot;; g.fill();
+    g.strokeStyle = &quot;#FFFCF6&quot;; g.lineWidth = 2; g.stroke();
+    g.fillStyle = &quot;#FFFCF6&quot;; g.font = &quot;700 12px system-ui, sans-serif&quot;; g.textAlign = &quot;center&quot;; g.textBaseline = &quot;middle&quot;;
+    g.fillText(String(c.rank), px, py + .5);
+  });
+  g.restore();
+}
+
 export function drawHeat(g, G, cells, cols, rows) {
   const { X, Y } = G, S3 = Math.sqrt(3);
   const rx = 1 / (cols * S3), ry = 1 / (rows * 1.5);                // 정규화 반지름(x·y)

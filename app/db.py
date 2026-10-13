@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS cell_samples (
   n    INTEGER NOT NULL,           -- 그 순간 셀 안 인원수(0 인 셀은 쓰지 않는다). 최근 30분 밀집도 히트맵의 재료 — 숫자만
   PRIMARY KEY (ts, cell)
 );
+-- 10-13: 평소 밀집도(최근 7일)·통계 화면이 ts 범위로 훑는다 — PRIMARY KEY (ts, cell) 이 이미 ts 선두라 인덱스가 되지만 명시해 둔다
+CREATE INDEX IF NOT EXISTS idx_cell_samples_ts ON cell_samples (ts);
 """
 
 

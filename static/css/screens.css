@@ -279,7 +279,25 @@ details > summary::-webkit-details-marker { display: none; }
   #zonecard .zoneside .chips2 span { justify-content: space-between; font-size: 14px; padding: 12px 16px; border-radius: 16px; }
   #zonecard .zoneside .chips2 span small { font-size: 12.5px; }
   #zonecard .zoneside .foot { margin-top: 4px; font-size: 12px; }
-  #reportcard { grid-column: 1 / 13; grid-row: 2; }
+  /* 평소 밀집도(10-13)는 행 2 전체 폭 — 밀집도 카드와 같은 가로 구성(평면도 왼쪽, 글은 오른쪽, 글 폭은 520 까지), 오늘 리포트는 행 3 */
+  #typcard { grid-column: 1 / 13; grid-row: 2; }
+  #typcard .zonewrap { display: flex; flex-direction: row; gap: 28px; align-items: stretch; margin-top: 12px; }
+  #typcard .zonestage { flex: none; width: var(--stage-w); margin-top: 0; }
+  #typcard .zoneside { flex: 1 1 0; min-width: 0; max-width: 520px; display: flex; flex-direction: column; gap: 14px; padding-top: 6px; }
+  #typcard .zoneside .lead { font-size: 17px; line-height: 1.45; margin-top: 0; }
+  #typcard .zoneside .chips2 { flex-direction: column; align-items: stretch; gap: 8px; margin-top: 2px; }
+  #typcard .zoneside .chips2 span { justify-content: flex-start; gap: 10px; font-size: 14px; padding: 12px 16px; border-radius: 16px; }
+  #typcard .zoneside .chips2 span small { margin-left: auto; font-size: 12.5px; }
+  #reportcard { grid-column: 1 / 13; grid-row: 3; }
+  /* 통계(10-13): 기간 띠 한 줄, 그 아래 카드 6장을 3열 2행 */
+  #stats > .rangebar { grid-column: 1 / 13; grid-row: 1; }
+  #bandcard { grid-column: 1 / 5; grid-row: 2; }
+  #wdcard { grid-column: 5 / 9; grid-row: 2; }
+  #dailycard { grid-column: 9 / 13; grid-row: 2; }
+  #nutstatcard { grid-column: 1 / 5; grid-row: 3; }
+  #menuwaitcard { grid-column: 5 / 9; grid-row: 3; }
+  #evcard { grid-column: 9 / 13; grid-row: 3; }
+  .chart { height: 190px; }
   /* 주간식단 */
   #weekcard { grid-column: 1 / 13; grid-row: 1; }
   /* 주간식단 폰트(09-12): 1920 보드에서는 컬럼 폭이 넉넉해 한 단계 더 키운다 */

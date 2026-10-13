@@ -9,6 +9,7 @@
    두 박자: poll(라이브, every) 과 slow(집계에서 오는 인사이트, SLOW_EVERY) — 둘 다 core 가 시각으로 가른다 */
 import * as wait from "./wait.js";
 import * as room from "./room.js";
+import * as stats from "./stats.js";
 import * as week from "./week.js";
 import * as today from "./today.js";
 import * as news from "./news.js";
@@ -47,7 +48,7 @@ export const why = r => !r || /reports\.db/.test(r) ? null : /insights\.db/.test
 const DESK_MQ = matchMedia("(min-width: 900px)");
 export const desktop = () => DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = "v43";                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = "v44";                       // 10-13: 통계 화면 + 평소 밀집도                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
@@ -120,9 +121,9 @@ function autoSwitch(f) {
 async function feedTick() { if (document.hidden) return; try { const f = (await j("/api/status")).feed; renderFeed(f); autoSwitch(f); } catch (e) { console.error("feed", e); } }
 
 /* ---------------- 화면 등록 · 라우터 ---------------- */
-const ORDER = ["wait", "room", "week", "today", "news"];
-const NAMES = { wait: "대기시간", room: "실시간뷰", week: "주간식단", today: "오늘급식", news: "이슈피드" };
-const SCREENS = { wait: wait.screen, room: room.screen, week: week.screen, today: today.screen, news: news.screen };
+const ORDER = ["wait", "room", "stats", "week", "today", "news"];        // 10-13: 통계(이력 차트) 화면 추가 — 실시간뷰 다음
+const NAMES = { wait: "대기시간", room: "실시간뷰", stats: "통계", week: "주간식단", today: "오늘급식", news: "이슈피드" };
+const SCREENS = { wait: wait.screen, room: room.screen, stats: stats.screen, week: week.screen, today: today.screen, news: news.screen };
 const lastPoll = {}, lastSlow = {};                    // name → 마지막 폴링 시각 (라이브 / 느린 인사이트)
 const scrollYs = {};                                   // 화면별 세로 스크롤 위치 — 돌아오면 그 자리
 let active = null;

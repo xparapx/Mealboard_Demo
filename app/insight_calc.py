@@ -220,6 +220,71 @@ def popularity(rise, peak_wait, base_rise, base_wait):
     return round(100 * sum(terms) / len(terms)) if terms else None
 
 
+def band_stats(rows, key="avg_wait"):
+    """시간대별 분포(10-13 통계 화면): lunch_bins 모양의 행들 [{bin, <key>}] (여러 날) → bin 별 {bin, n, mean, sd, p25, p75, lo, hi}.
+    sd 는 표본 표준편차(n≥2, 아니면 0) — 화면은 mean±sd 띠('볼린저 밴드')를 그린다. 값이 None 인 행은 뺀다"""
+    by = {}
+    for r in rows:
+        v = r.get(key)
+        if v is None:
+            continue
+        by.setdefault(int(r["bin"]), []).append(float(v))
+    out = []
+    for b, xs in sorted(by.items()):
+        xs.sort()
+        n = len(xs)
+        mean = sum(xs) / n
+        sd = statistics.stdev(xs) if n >= 2 else 0.0
+        q = statistics.quantiles(xs, n=4) if n >= 2 else [xs[0], xs[0], xs[0]]
+        out.append({"bin": b, "n": n, "mean": round(mean, 2), "sd": round(sd, 2), "p25": round(q[0], 2), "p75": round(q[2], 2),
+                    "lo": round(max(0.0, mean - sd), 2), "hi": round(mean + sd, 2)})
+    return out
+
+
+def _hex_neighbors(i, cols, rows):
+    """뾰족한 꼭짓점이 위인 육각 격자(홀수 행 반 칸 오른쪽, vision/zones.hex_center)의 이웃 6개"""
+    row, col = divmod(i, cols)
+    odd = row & 1
+    cand = [(row, col - 1), (row, col + 1), (row - 1, col), (row + 1, col),
+            (row - 1, col + 1 if odd else col - 1), (row + 1, col + 1 if odd else col - 1)]
+    return [r * cols + c for r, c in cand if 0 <= r < rows and 0 <= c < cols]
+
+
+def hex_clusters(cells, cols, rows, thresh=0.5, top=3):
+    """밀집도 셀 [{i, avg, w}] → 서로 이웃한 '진한' 타일(w ≥ thresh) 묶음을 인원 합 순으로 상위 top 개.
+    각 묶음: {rank, cells:[i], n_cells, avg:묶음 평균 인원 합, peak_i, x, y(정규화 무게중심 — zone_of 로 이름을 붙인다)}.
+    실시간뷰 '평소 밀집도' 카드가 ①②③ 마커로 그린다(10-13 사용자 요청). 개별 위치가 아니라 타일 합계의 묶음이다"""
+    from vision.zones import hex_center
+    val = {int(c["i"]): c for c in cells if c.get("w", 0) >= thresh and 0 <= int(c["i"]) < cols * rows}
+    seen, groups = set(), []
+    for i in sorted(val):
+        if i in seen:
+            continue
+        stack, comp = [i], []
+        seen.add(i)
+        while stack:
+            k = stack.pop()
+            comp.append(k)
+            for nb in _hex_neighbors(k, cols, rows):
+                if nb in val and nb not in seen:
+                    seen.add(nb)
+                    stack.append(nb)
+        tot = sum(val[k]["avg"] for k in comp)
+        if tot <= 0:
+            continue
+        xs = [hex_center(k, cols, rows) for k in comp]
+        ws = [val[k]["avg"] for k in comp]
+        cx = sum(x * w for (x, _), w in zip(xs, ws)) / tot
+        cy = sum(y * w for (_, y), w in zip(xs, ws)) / tot
+        peak = max(comp, key=lambda k: val[k]["avg"])
+        groups.append({"cells": sorted(comp), "n_cells": len(comp), "avg": round(tot, 2), "peak_i": peak,
+                       "x": round(cx, 4), "y": round(cy, 4)})
+    groups.sort(key=lambda g: -g["avg"])
+    for r, g in enumerate(groups[:top], 1):
+        g["rank"] = r
+    return groups[:top]
+
+
 def median_or_none(xs, nd=2):
     xs = [x for x in xs if x is not None]
     return round(statistics.median(xs), nd) if xs else None

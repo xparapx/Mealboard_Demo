@@ -418,7 +418,7 @@
    "c": "api",
    "n": "app/routers/insight.py",
    "s": "/api/insight/* — 히트맵·예보·품질·밀집도",
-   "d": "heatmap·day·forecast·quality·density·menus·nutrition·text 8종. ?meal=lunch|dinner 로 끼니를 고른다. 어제까지는 insights.db 집계를, 오늘은 queue.db 를 즉석 계산해 준다 — 히트맵의 '오늘 행'이 급식 중에 5분마다 차오르는 이유.",
+   "d": "heatmap·day·forecast·quality·density·menus·nutrition·text 8종. ?meal=lunch|dinner 로 끼니를 고른다. 어제까지는 insights.db 집계를, 오늘은 queue.db 를 즉석 계산해 준다 — 히트맵의 '오늘 행'이 급식 중에 5분마다 차오르는 이유. 10-13 추가: /stats(통계 화면 한 번 호출 — 밴드·요일·일별·메뉴·이벤트)·/density_typical(최근 7일 타일 평균 + 클러스터), 둘 다 10분 캐시.",
    "row": 6
   },
   "r_pos": {
@@ -453,36 +453,43 @@
    "c": "web",
    "n": "static/js/room.js + floor.js",
    "s": "#room 실시간뷰 (평면도)",
-   "d": "급식실을 위에서 본 2D 평면도에 익명 마커(5초)와 최근 10분 밀집도 육각 타일을 그린다. floor.js 는 평면도 그리기를 공용으로 맡고, 색은 colors.js 의 plotly 스케일(Sunsetdark)을 쓴다.",
+   "d": "급식실을 위에서 본 2D 평면도에 익명 마커(5초)와 최근 10분 밀집도 육각 타일을 그린다. 10-13 부터 '평소 밀집도(최근 7일)' 카드도 같은 평면도 위에 — 진한 타일이 이어진 묶음을 ①②③ 클러스터 마커로(서버 insight_calc.hex_clusters). floor.js 는 평면도 그리기를 공용으로 맡고, 색은 colors.js 의 plotly 스케일(Sunsetdark)을 쓴다.",
    "row": 2
+  },
+  "stats": {
+   "c": "web",
+   "n": "static/js/stats.js",
+   "s": "#stats 통계 화면",
+   "d": "실시간 위주 앱에 '이력' 을 더한 화면(10-13). 집계 숫자(insights.db)만으로 인라인 SVG 차트 6장: 시간대별 대기 분포(평균 ± 1σ 띠 + 오늘 선), 요일별 비교, 일별 추이(대기·식수), 영양 인사이트(에너지 충족률 적정 띠·탄단지 적정 범위 게이지), 줄이 길어지는 메뉴, 시각별 황금·병목. 기간 4·8·12주, 끼니 토글.",
+   "row": 3
   },
   "week": {
    "c": "web",
    "n": "static/js/week.js · today.js",
    "s": "#week 주간식단 · #today 오늘급식",
    "d": "요일별 중식/석식 식단(요일 5색), 오늘 메뉴와 영양 지표 3종, 내 알레르기 경고 띠(설정은 내 폰에만 저장), 잔반 탄소 카드.",
-   "row": 3
+   "row": 4
   },
   "newsw": {
    "c": "web",
    "n": "static/js/news.js",
    "s": "#news 이슈피드",
    "d": "기후·기술 뉴스 두 카드와 '오늘의 키워드' 워드클라우드(라이브러리 없이 직접 그림). 급식 시간이 아니면 이 화면에서 시작하고, 창이 열리는 순간 대기시간 화면으로 한 번 넘어간다.",
-   "row": 4
+   "row": 5
   },
   "adminjs": {
    "c": "web",
    "n": "app/admin/static/admin.js · zones-editor.js",
    "s": "#admin 관리 화면 (허용된 사람만)",
    "d": "서비스 상태·재시작, 실사·메타 스트림, 구역 편집기(ROI·λ선·보정 4점 슬라이더), 감사 로그. 공개 static 에 두지 않고 관리 앱만 /admin-ui/ 로 내준다 — 로그인 확인(whoami 200)이 될 때만 core.js 가 불러온다.",
-   "row": 7
+   "row": 8
   },
   "sw": {
    "c": "web",
    "n": "static/sw.js (v43)",
    "s": "PWA 서비스워커",
    "d": "홈 화면 설치와 오프라인 셸을 담당. 화면·/js/·/css/ 는 항상 네트워크 우선(옛 화면이 남는 사고 방지), /api/* 는 절대 캐시하지 않는다. 화면이 크게 바뀌면 CACHE 이름(v43)을 올려 모든 폰이 새로 받게 한다.",
-   "row": 9
+   "row": 10
   }
  },
  "edges": [
@@ -1019,6 +1026,18 @@
    "main",
    "http",
    "네트워크 우선 · /api 캐시 금지"
+  ],
+  [
+   "core",
+   "stats",
+   "imp",
+   "register()"
+  ],
+  [
+   "stats",
+   "r_insight",
+   "http",
+   "stats·nutrition 5분(두 끼니 함께)"
   ]
  ],
  "dbs": [

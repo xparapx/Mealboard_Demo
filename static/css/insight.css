@@ -102,3 +102,32 @@
                   color: var(--ink3); cursor: pointer; }
 .mealseg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(51,49,45,.16); }
 /* 히트맵 2열(.heat2)은 09-18 끼니 토글 개편으로 폐기 — 단일 .heat + #heatseg */
+
+
+/* ---- 통계 화면 · 평소 밀집도 (10-13) ---- */
+.chart { display: block; width: 100%; height: 150px; margin-top: 12px; touch-action: pan-y; }
+.chart.short { height: 96px; margin-top: 6px; }
+.legend2 { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; font-size: 10.5px; color: var(--ink3); }
+.legend2 span { display: inline-flex; align-items: center; gap: 5px; }
+.legend2 i { width: 14px; height: 4px; border-radius: 2px; }
+.sublab { margin-top: 14px; font-size: 11px; font-weight: 700; color: var(--ink2); }
+.gauges { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.gauge { display: grid; grid-template-columns: 56px 1fr 44px 48px; align-items: center; gap: 8px; font-size: 12px; }
+.gauge > span { color: var(--ink2); font-weight: 600; }
+.gauge .track { position: relative; height: 10px; border-radius: 5px; background: var(--well); }
+.gauge .band { position: absolute; top: 0; bottom: 0; border-radius: 5px; background: rgba(18,151,147,.28); }
+.gauge .pin { position: absolute; top: -3px; width: 4px; height: 16px; margin-left: -2px; border-radius: 2px; background: var(--teal-ink); }
+.gauge.off .pin { background: var(--melon); }
+.gauge b { font-size: 13px; color: var(--ink); text-align: right; }
+.gauge.off b { color: var(--melon-ink); }
+.gauge small { font-size: 10px; color: var(--ink3); }
+.rangebar { display: flex; align-items: center; gap: 4px; padding: 2px; border-radius: 999px; background: var(--well); width: max-content; max-width: 100%;
+            font-size: 11px; font-weight: 700; color: var(--ink3); }
+.rangebar > span { padding: 0 8px 0 12px; }
+.rangebar button { border: 0; background: none; padding: 6px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; color: var(--ink3); cursor: pointer; }
+.rangebar button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(51,49,45,.16); }
+#typplan { display: block; width: 100%; aspect-ratio: 318 / 460; }
+.chips2.clusters span { background: #33312D; color: #FFFCF6; }
+.chips2.clusters span b { font-size: 13px; }
+.chips2.clusters span.ghost { background: transparent; box-shadow: inset 0 0 0 1.5px var(--ink); color: var(--ink); }
+.chips2.clusters span.ghost.dim { box-shadow: inset 0 0 0 1.5px var(--hair); color: var(--ink2); }

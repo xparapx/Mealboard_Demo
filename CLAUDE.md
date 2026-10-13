@@ -81,6 +81,7 @@
   5.1.1 로 컴파일된 YOLO hef 와 Qwen2.5 hef 는 5.3.0 에서도 열린다. **운용 모델은 Qwen3-1.7B-Instruct**(`v5.3.0/blob/…`, 2.88 GB, `.env LLM_HEF`, `LLM_CONTEXT_CHARS=4800`):
   스파이크 go(요약·주입 PASS, 6,000자 OK, 3.6 tok/s), 실제 피드 3/3 요약 성공 + Why 까지. 한국어 직접 생성은 여전히 불가(반복 붕괴) → 영어 → DeepL 2단계 유지. Qwen2.5 파일은 예비로 남겨 둠.
   **`apt install hailo-h10-all` 을 다시 실행하지 말 것**(5.1.1 로 되돌아가며 `hailort` 와 충돌).
+- **통계 화면 + 평소 밀집도(10-13 사용자 요청)**: 여섯 번째 공개 화면 `#stats`(dock·레일 '통계', 실시간뷰 다음 — dock 은 `grid-auto-flow: column` 이라 항목 수대로 나뉜다, 관리 7번째). 모듈 `static/js/stats.js`, 차트는 전부 인라인 SVG(라이브러리 금지 유지), 데이터는 `/api/insight/stats?weeks=&meal=`(밴드 = `insight_calc.band_stats` mean·sd·p25·p75 / 요일 / 일별(+K 중앙값) / 메뉴별 최고 대기 / 시각별 황금·병목, 10분 캐시 `_cached`) + `/api/insight/nutrition` 의 새 `days[]`. 실시간뷰 `#typcard` = `/api/insight/density_typical?days=7&meal=`(queue.db cell_samples 의 그 끼니 창 7일 누적, `insight_calc.hex_clusters` 가 w≥0.5 이웃 타일을 묶어 ①②③ — `floor.js drawClusters`). queue.db 에 `idx_cell_samples_ts` 인덱스(writer 가 만든다). sw/UI **v44**. 테스트 211.
 - **배포 잔류 대책(09-11)**: 관리 UI 는 `?v=UI_VERSION`+`no-store`, 학생 화면은 새 서비스워커가 탭을 넘겨받을 때 자동 재로드 — 화면이 바뀌면 `core.UI_VERSION` 과 `sw.js CACHE` 를 같이 올린다(지금 v30).
 - **더미 표본 정리 도구 `jobs/purge_mock.py`(09-11)**: queue.db 에는 출처 열이 없어 '실측 시작 시각' 이전 행을 더미로 본다. 세 겹(빈 조건 거부·자동 `.bak`·되돌리기 명령) + VACUUM. Pi 는 09-11 17:35 이전을 걷어냈다(백업 파일은 data/ 에 남김). 더미가 다시 필요하면 `mealboard-mock` 유닛·`FEED_SOURCE=mock` 으로.
   **영양 지표·영양소별 표기는 중식 한 끼 기준**(`nutrition_std.json per_meal`) — 석식은 메뉴·kcal·알레르기만(각주로 명시). 주간식단 요일·날짜는 별도 칩(`.week .day`).

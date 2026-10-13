@@ -1,5 +1,5 @@
 /* 관리 화면 — v5 카드 골격 그대로(외곽선 없음, radius 24, e1). 색 규칙: 틸=정상/라이브, 멜론=경고·파괴적, 차콜=구조, 옐로 금지. 버튼은 44px 알약 */
-.dock[data-n="6"] { grid-template-columns: repeat(6, 1fr); }
+.dock[data-n] { grid-auto-flow: column; grid-auto-columns: 1fr; }   /* 10-13: base.css 가 항목 수대로 나눈다 — 관리 버튼이 붙어도 그대로 */
 .adminhead { background: var(--ink); color: var(--surface); box-shadow: var(--e2); }
 .adminhead .eyebrow { color: rgba(255,253,246,.52); }
 .adminhead .who { font-size: 20px; font-weight: 700; margin-top: 6px; letter-spacing: -.01em; }

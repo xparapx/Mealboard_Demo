@@ -13,12 +13,12 @@ from contextlib import closing
 from fastapi import APIRouter, Query
 
 from ..config import DB_PATH, FEED_SOURCE, ROLLUP_WINDOW, ZONES_JSON
-from ..insight_calc import GOLDEN_WAIT, day_summary, density, golden_bins, median_or_none
+from ..insight_calc import GOLDEN_WAIT, band_stats, day_summary, density, golden_bins, hex_clusters, median_or_none
 from ..insights_db import connect_reports_ro, connect_ro, meta
 from ..lunch import BUCKET_MIN, DAY_MIN, DINNER_HI, DINNER_LO, LUNCH_HI, LUNCH_LO, iso_at, minute_of_day, seconds_of_day, weekday_of
 from ..mealjson import menu_on, nutrition_rows, read_meal
 from .typical import MIN_BUCKETS
-from vision.zones import GRID_COLS, GRID_ROWS, load_zones, polygon_area_m2
+from vision.zones import GRID_COLS, GRID_ROWS, load_zones, polygon_area_m2, zone_of
 
 router = APIRouter(prefix="/api/insight")
 LIVE_MIN = 180                 # 오늘 즉석 계산에 쓰는 최근 분
@@ -63,6 +63,22 @@ def _since(weeks):
 def _window(meal):
     lo, hi = _bounds(meal)
     return {"lo": lo, "hi": hi, "name": ROLLUP_WINDOW, "meal": meal}
+
+
+_CACHE = {}                    # 무거운 즉석 집계(평소 밀집도·통계)의 짧은 캐시 {key: (expires_epoch, response)} — 화면은 5분마다 묻는다
+_CACHE_TTL = 600
+
+
+def _cached(key, make):
+    now = dt.datetime.now().timestamp()
+    hit = _CACHE.get(key)
+    if hit and hit[0] > now:
+        return hit[1]
+    val = make()
+    if len(_CACHE) > 32:
+        _CACHE.clear()
+    _CACHE[key] = (now + _CACHE_TTL, val)
+    return val
 
 
 def _rollup_meta():
@@ -323,11 +339,18 @@ def nutrition(weeks: int = Query(8, ge=1, le=26), meal: str = MealQ()):
         with closing(con):        # nutrition_days 의 meal 은 항상 lunch|dinner (upsert 가 창 모드와 무관하게 둘 다 쌓는다)
             rows = con.execute("SELECT * FROM nutrition_days WHERE meal = ? AND date >= ? ORDER BY date", (meal, _since(weeks))).fetchall()
         if rows:
-            return {"state": "ok", "basis": "nutrition_days", "meal": meal, "weeks": _weeks_from([dict(r) for r in rows])}
+            days = [dict(r) for r in rows]
+            return {"state": "ok", "basis": "nutrition_days", "meal": meal, "weeks": _weeks_from(days), "days": _day_rows(days)}
     week = nutrition_rows(read_meal(), meals=(meal,))         # 집계가 없으면 meal.json 의 이번 주만
     if not week:
-        return _no("영양 이력도 이번 주 식단도 없다", meal=meal, weeks=[])
-    return {"state": "ok", "basis": "meal_json", "meal": meal, "weeks": _weeks_from(week)}
+        return _no("영양 이력도 이번 주 식단도 없다", meal=meal, weeks=[], days=[])
+    return {"state": "ok", "basis": "meal_json", "meal": meal, "weeks": _weeks_from(week), "days": _day_rows(week)}
+
+
+def _day_rows(days):
+    """nutrition_days 행 → 통계 화면용 일별 요약(메뉴 json 은 뺀다 — 10-13)"""
+    keys = ("date", "kcal", "energy_pct", "protein_pct", "carb_ratio", "protein_ratio", "fat_ratio", "macro_ok", "mar", "kgco2e")
+    return [{k: d.get(k) for k in keys} for d in days if d.get("energy_pct") is not None]
 
 
 # ---- 7. 구역 점유율 --------------------------------------------------------------------------
@@ -397,6 +420,127 @@ def density_now(minutes: int = Query(30, ge=5, le=180)):
     return {"state": "ok", "minutes": minutes, "since": since, "ticks": ticks, "grid": {"cols": GRID_COLS, "rows": GRID_ROWS},
             "cells": density({r["cell"]: r["s"] for r in cell_rows}, ticks, GRID_COLS, GRID_ROWS), "zones": zones,
             "peak_zone": zones[0]["id"] if zones else None}
+
+
+# ---- 7c. 평소 밀집도 (최근 N일 누적, queue.db 즉석 — 10-13 사용자 요청) ----------------------------
+
+MEAL_KO = {"lunch": "중식", "dinner": "석식"}
+
+
+@router.get("/density_typical")
+def density_typical(days: int = Query(7, ge=1, le=28), meal: str = MealQ()):
+    """최근 days 일 동안 그 끼니 창 안의 셀별 평균 인원(타일 히트맵) + 진한 타일이 이어진 '클러스터' 상위 3개(①②③, 무게중심이 속한 구역 이름).
+    실시간뷰의 '최근 10분' 과 같은 타일 기하·같은 색. 7일치 cell_samples 를 훑으므로 10분 캐시. 숫자만 — 개별 위치는 어디에도 없다"""
+    return _cached(("density_typical", days, meal), lambda: _density_typical(days, meal))
+
+
+def _density_typical(days, meal):
+    lo, hi = _bounds(meal)
+    since = (dt.date.today() - dt.timedelta(days=days)).isoformat()
+    con = connect_ro(DB_PATH, "cell_samples")
+    if con is None:
+        return _no("셀 표본이 아직 없다", days=days, meal=meal, cells=[], zones=[], clusters=[])
+    with closing(con):                                   # 창은 시각만 본다(요일 무관) — 날짜별 창 차이(휴일 전날 석식)는 집계 창 DINNER_* 가 넉넉히 덮는다
+        tod = "(CAST(strftime('%H', ts) AS INTEGER) * 60 + CAST(strftime('%M', ts) AS INTEGER))"
+        ticks = con.execute(f"SELECT COUNT(*) FROM samples WHERE ts >= ? AND {tod} >= ? AND {tod} < ?", (since, lo, hi)).fetchone()[0]
+        cell_rows = con.execute(f"SELECT cell, SUM(n) s FROM cell_samples WHERE ts >= ? AND {tod} >= ? AND {tod} < ? GROUP BY cell",
+                                (since, lo, hi)).fetchall()
+        zone_rows = con.execute(f"SELECT zone, SUM(n) s FROM zone_samples WHERE ts >= ? AND {tod} >= ? AND {tod} < ? GROUP BY zone",
+                                (since, lo, hi)).fetchall()
+        ndays = con.execute(f"SELECT COUNT(DISTINCT substr(ts, 1, 10)) FROM samples WHERE ts >= ? AND {tod} >= ? AND {tod} < ?",
+                            (since, lo, hi)).fetchone()[0]
+    if not ticks or not cell_rows:
+        return _no(f"최근 {days}일 {MEAL_KO.get(meal, meal)} 창 표본 없음", days=days, meal=meal, cells=[], zones=[], clusters=[])
+    try:
+        doc = load_zones(ZONES_JSON)
+        zlist, names = doc["zones"], {z["id"]: z["name"] for z in doc["zones"]}
+    except (OSError, ValueError):
+        zlist, names = [], {}
+    cells = density({r["cell"]: r["s"] for r in cell_rows}, ticks, GRID_COLS, GRID_ROWS)
+    clusters = []
+    for g in hex_clusters(cells, GRID_COLS, GRID_ROWS):
+        zid = zone_of(g["x"], g["y"], zlist) if zlist else None
+        clusters.append({**g, "zone": zid, "label": names.get(zid, "통로" if zid is None else zid)})
+    total = sum(r["s"] for r in zone_rows) or 1
+    zones = [{"id": r["zone"], "label": names.get(r["zone"], r["zone"]), "avg_n": round(r["s"] / ticks, 1), "share_pct": round(100 * r["s"] / total)}
+             for r in sorted(zone_rows, key=lambda r: -r["s"])]
+    return {"state": "ok", "basis": "cell_samples", "days": days, "n_days": ndays, "meal": meal, "window": _window(meal), "since": since,
+            "ticks": ticks, "grid": {"cols": GRID_COLS, "rows": GRID_ROWS}, "cells": cells, "clusters": clusters, "zones": zones}
+
+
+# ---- 9. 통계 화면 (10-13 사용자 요청) — 시간대 분포·요일 비교·일별 추이·메뉴별 대기·시각별 이벤트 -----------------
+
+@router.get("/stats")
+def stats(weeks: int = Query(4, ge=1, le=12), meal: str = MealQ()):
+    """통계 화면 한 번 호출 — insights.db 만 읽는다(오늘 실황 선은 _today_cells 로 덧붙인다). 응답은 전부 집계 숫자:
+    bands  : 5분 bin 별 평균 대기의 mean·sd·p25·p75 (최근 weeks 주, 같은 출처 날만) — '볼린저 밴드'
+    today  : 오늘 그 끼니 창의 5분 bin 평균 대기(실황)
+    weekdays: 월~금 요일별 평균·최고 대기, 식수 추정, 황금·병목 분(일수로 평균)
+    daily  : 날짜별 평균·최고 대기, 식수, 커버리지, 보정 K
+    menus  : 메뉴별 평균 최고 대기(2일↑) 상위 — '줄이 길어지는 메뉴'
+    events : 5분 bin 별 황금·병목 분 합계(시작 시각 기준) — 시차 배식(P21) 설계 재료"""
+    return _cached(("stats", weeks, meal), lambda: _stats(weeks, meal))
+
+
+def _stats(weeks, meal):
+    sm = _stored(meal)
+    since = _since(weeks)
+    con = connect_ro()
+    if con is None:
+        return _no(NO_DB, meal=meal, weeks=weeks, bands=[], today=[], weekdays=[], daily=[], menus=[], events=[])
+    with closing(con):
+        days = [dict(r) for r in con.execute(
+            "SELECT date, weekday, avg_wait, peak_wait, peak_wait_ts, peak_queue, served_est, coverage_pct, golden_min, bottleneck_min, "
+            "typical_rate FROM lunch_days WHERE meal = ? AND source = ? AND date >= ? ORDER BY date", (sm, FEED_SOURCE, since))]
+        bins = [dict(r) for r in con.execute(
+            "SELECT b.date, b.bin, b.avg_wait FROM lunch_bins b JOIN lunch_days l ON l.date = b.date AND l.meal = b.meal "
+            "WHERE b.meal = ? AND l.source = ? AND b.date >= ? AND b.avg_wait IS NOT NULL", (sm, FEED_SOURCE, since))]
+        evs = [dict(r) for r in con.execute(
+            "SELECT e.kind, e.start_ts, e.minutes FROM events e JOIN lunch_days l ON l.date = e.date AND l.meal = e.meal "
+            "WHERE e.meal = ? AND l.source = ? AND e.date >= ? AND e.kind IN ('golden', 'bottleneck')", (sm, FEED_SOURCE, since))]
+        menus = [dict(r) for r in con.execute(
+            "SELECT menu, n_days, avg_peak_wait, avg_peak_queue, popularity FROM menu_stats WHERE meal = ? AND n_days >= ? AND avg_peak_wait IS NOT NULL "
+            "ORDER BY avg_peak_wait DESC LIMIT 8", (sm, MIN_DAYS))]
+    if not days:
+        return _no("집계된 날이 아직 없다", meal=meal, weeks=weeks, bands=[], today=[], weekdays=[], daily=[], menus=[], events=[])
+    lo, hi = _bounds(meal)
+    # 요일별
+    wd = {}
+    for d in days:
+        wd.setdefault(d["weekday"], []).append(d)
+
+    def avg(rows, k):
+        v = [r[k] for r in rows if r.get(k) is not None]
+        return round(sum(v) / len(v), 1) if v else None
+    weekdays = [{"weekday": w, "days": len(rows), "avg_wait": avg(rows, "avg_wait"), "peak_wait": avg(rows, "peak_wait"),
+                 "served": avg(rows, "served_est"), "golden_min": avg(rows, "golden_min"), "bottleneck_min": avg(rows, "bottleneck_min")}
+                for w, rows in sorted(wd.items()) if 1 <= w <= 5]
+    # 시각별 이벤트
+    ev = {}
+    for e in evs:
+        b = minute_of_day(e["start_ts"]) // BUCKET_MIN * BUCKET_MIN
+        if lo <= b < hi:
+            ev.setdefault(b, {"golden_min": 0.0, "bottleneck_min": 0.0})[f"{e['kind']}_min"] += float(e["minutes"] or 0)
+    events = [{"bin": b, "golden_min": round(v["golden_min"], 1), "bottleneck_min": round(v["bottleneck_min"], 1)} for b, v in sorted(ev.items())]
+    # 날짜별 보정 K(queue.db samples.calib 의 그날 창 중앙값) — 측정 품질 추이
+    kq = {}
+    qcon = connect_ro(DB_PATH, "samples")
+    if qcon is not None:
+        with closing(qcon):
+            tod = "(CAST(strftime('%H', ts) AS INTEGER) * 60 + CAST(strftime('%M', ts) AS INTEGER))"
+            for r in qcon.execute(f"SELECT substr(ts, 1, 10) d, calib FROM samples WHERE ts >= ? AND calib IS NOT NULL AND {tod} >= ? AND {tod} < ?",
+                                  (since, lo, hi)):
+                kq.setdefault(r["d"], []).append(r["calib"])
+    daily = [{"date": d["date"], "weekday": d["weekday"], "avg_wait": d["avg_wait"], "peak_wait": d["peak_wait"], "peak_at": d["peak_wait_ts"],
+              "served": d["served_est"], "coverage_pct": d["coverage_pct"], "golden_min": d["golden_min"], "bottleneck_min": d["bottleneck_min"],
+              "k": median_or_none(kq.get(d["date"], []))} for d in days]
+    today_wd, today_cells = _today_cells(meal)
+    today = [{"bin": c["minute_of_day"], "wait": c["wait_min"]} for c in today_cells if c["wait_min"] is not None]
+    base = median_or_none([m["avg_peak_wait"] for m in menus], 1)
+    return {"state": "ok", "basis": "rollup", "meal": meal, "weeks": weeks, "since": since, "n_days": len(days), "window": _window(meal),
+            "bands": band_stats(bins), "today": today, "weekdays": weekdays, "daily": daily, "events": events,
+            "menus": [{"menu": m["menu"], "n_days": m["n_days"], "peak_wait": round(m["avg_peak_wait"], 1), "popularity": m["popularity"]} for m in menus],
+            "menu_base": base}
 
 
 # ---- 8. LLM 글 (reports.db, Phase 4b 가 채운다) ------------------------------------------------

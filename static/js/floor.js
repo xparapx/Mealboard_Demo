@@ -166,6 +166,31 @@ export function drawZones(g, G, zones, occ = {}, labels = true) {
 /* 밀집도 육각 타일 — cells = [{i, w}] (i = row*cols+col, w 0~1). 기하는 vision/zones.py(hex_center)와 같다:
    뾰족한 꼭짓점이 위, 홀수 행은 반 칸 오른쪽, 반지름은 x 로 1/(cols·√3) · y 로 1/(rows·1.5). 값이 있는 타일만 plotly "Sunsetdark"(colors.js, 09-04 — 잠깐 jet 을 썼다가 같은 날 되돌림) 로 채우고
    나머지는 벌집 윤곽만 아주 옅게. 구역 이름·마커 없음. 최근 30분의 타일별 합계이지 개별 위치가 아니다 */
+/* 밀집도 클러스터 마커(10-13) — 평소 밀집도의 진한 타일 묶음(서버 insight_calc.hex_clusters)을 ①②③ 배지로. 묶음 타일은 차콜 윤곽, 배지는 무게중심.
+   개별 위치가 아니라 타일 합계의 묶음이다 */
+export function drawClusters(g, G, clusters, cols, rows) {
+  const S3 = Math.sqrt(3), rx = 1 / (cols * S3), ry = 1 / (rows * 1.5);
+  g.save();
+  (clusters || []).forEach(c => {
+    g.beginPath();
+    c.cells.forEach(i => {
+      const col = i % cols, row = Math.floor(i / cols), cx = (col + .5 + .5 * (row & 1)) / cols, cy = (1 + 1.5 * row) / (rows * 1.5);
+      for (let k = 0; k < 6; k++) {
+        const th = Math.PI / 6 + k * Math.PI / 3, [sx, sy] = G.P(cx + rx * .9 * Math.cos(th), cy + ry * .9 * Math.sin(th));
+        (k ? g.lineTo : g.moveTo).call(g, sx, sy);
+      }
+      g.closePath();
+    });
+    g.strokeStyle = "rgba(51,49,45,.55)"; g.lineWidth = 1.5; g.stroke();
+    const [px, py] = G.P(c.x, c.y), r = 11;
+    g.beginPath(); g.arc(px, py, r, 0, Math.PI * 2); g.fillStyle = "#33312D"; g.fill();
+    g.strokeStyle = "#FFFCF6"; g.lineWidth = 2; g.stroke();
+    g.fillStyle = "#FFFCF6"; g.font = "700 12px system-ui, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText(String(c.rank), px, py + .5);
+  });
+  g.restore();
+}
+
 export function drawHeat(g, G, cells, cols, rows) {
   const { X, Y } = G, S3 = Math.sqrt(3);
   const rx = 1 / (cols * S3), ry = 1 / (rows * 1.5);                // 정규화 반지름(x·y)
