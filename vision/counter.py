@@ -19,7 +19,7 @@ import datetime as dt
 import os
 import time
 
-from app.config import (DEBUG_FLAG, DEBUG_PORT, DWELL_BIAS, FEED_SOURCE, QUEUE_SOURCE, RATE_WINDOW_SEC, VIDEO_SOURCE, VISION_CONF, VISION_FPS,
+from app.config import (DEBUG_FLAG, DEBUG_PORT, DWELL_BIAS, FEED_SOURCE, QUEUE_SOURCE, RATE_WINDOW_SEC, VIDEO_SOURCE, VISION_CONF, VISION_FPS, WAIT_FLOOR_MIN,
                         VISION_IMGSZ, VISION_SIZE, YOLO_WEIGHTS, ZONES_JSON)
 from app.db import connect
 from app.lunch import meal_now
@@ -29,7 +29,7 @@ from vision.meta import MetaSender
 from vision.record import write_positions, write_sample
 from vision.schedule import should_record
 from vision.source import open_source, parse_size
-from vision.waittime import estimate_wait
+from vision.waittime import estimate_wait, apply_floor
 from vision.zones import LOCAL_NAME, lambda_line, load_zones, point_in_polygon, project, zone_of
 
 SAMPLE_SEC = 10         # 표본 주기 (mock 의 TICK 과 같다)
@@ -229,9 +229,9 @@ def main():
         wm = wmed.median(t0) if state == "ok" else None
         wait = round(wm, 1) if wm is not None else wnow           # 공표 대기 = 90초 중앙값(09-17 평활) — 원시는 raw 열에 그대로
         # 하한(09-17 사용자 결정, 수동 실측 12:44 대조에서 확정): 검출 깜빡임으로 L 이 빠져 원시가 0 으로 꺼지는 순간에도
-        # 줄에 사람이 보이면(L≥1) 최근 15분 실측 체류 중앙값 밑으로는 공표하지 않는다 — 0×K 는 K 로 못 살린다
-        if queue >= 1 and wait is not None and ds["measured_min"] is not None and ds["measured_min"] > wait:
-            wait = ds["measured_min"]
+        # 줄에 사람이 보이면(L≥1) 최근 15분 실측 체류 중앙값 밑으로는 공표하지 않는다 — 0×K 는 K 로 못 살린다.
+        # 10-15: 수동 실측 하한(.env WAIT_FLOOR_MIN)도 같은 자리 — ROI 포화로 자동 실측조차 꼬리를 못 볼 때(waittime.apply_floor)
+        wait = apply_floor(wait, queue, ds["measured_min"], WAIT_FLOOR_MIN)
         zone_counts = {}
         for t in tracks:
             if t["zone"]:

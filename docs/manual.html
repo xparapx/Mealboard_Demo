@@ -274,6 +274,7 @@ data/*
 !data/carbon_std.json
 !data/news_feeds.json
 !data/zones.json
+!data/ground_truth.csv
 .env
 .env.bak-*
 *.bak-*
@@ -307,6 +308,8 @@ MEAL_WINDOWS=11:20-12:30 3학년 점심;12:30-13:40 1·2학년 점심;17:30-18:3
 MEAL_WINDOWS_EVE=11:20-12:30 3학년 점심;12:30-13:40 1·2학년 점심;17:00-18:00 석식
 # 캐시가 못 보는 먼 휴일의 '전날' 을 손으로 지정(YYYY-MM-DD, 쉼표). 보통 비워 둔다
 MEAL_EVE_DATES=
+# 수동 실측 하한(분, 10-15): 줄이 보이면(L≥1) 공표 대기를 이 밑으로 내리지 않는다. ROI 가 줄의 일부만 덮을 때의 임시 처방 — 값은 랩 체인 중앙값(data/ground_truth.csv). 0 = 끔
+WAIT_FLOOR_MIN=0
 # 이슈 링크 한국어 번역 (jobs/fetch_news.py). 없으면 원문 영어 그대로 나간다
 # DeepL API Free 키는 끝이 :fx 다 — 그걸 보고 무료/유료 엔드포인트를 고른다
 DEEPL_API_KEY=
@@ -604,10 +607,10 @@ systemctl list-timers &#x27;mealboard*&#x27;          # neis 타이머 다음 �
 <h3>4-2. 코드</h3>
 <figure class="code">
 <figcaption><span class="path">vision/waittime.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
-<pre><code class="lang-python">&quot;&quot;&quot;대기시간 추정 — Little&#x27;s law  W = L / λ
+<pre><code class="lang-python">&quot;&quot;&quot;대기시간 추정 — Little's law  W = L / λ
 순수 함수만 둔다. 카메라·DB 를 모르므로 PC 에서도 그대로 테스트된다.&quot;&quot;&quot;
 
-MIN_RATE = 0.5   # 명/분. 이보다 낮으면 나눗셈이 폭주하므로 &#x27;산출 불가&#x27;로 처리
+MIN_RATE = 0.5   # 명/분. 이보다 낮으면 나눗셈이 폭주하므로 '산출 불가'로 처리
 
 
 def estimate_wait(queue_len, rate_per_min):
@@ -620,11 +623,22 @@ def estimate_wait(queue_len, rate_per_min):
         return 0.0, &quot;ok&quot;
     if rate_per_min &lt; MIN_RATE:
         return None, &quot;insufficient_rate&quot;
-    return round(queue_len / rate_per_min, 1), &quot;ok&quot;</code></pre>
+    return round(queue_len / rate_per_min, 1), &quot;ok&quot;
+
+
+def apply_floor(wait, queue_len, measured_min=None, floor_min=0.0):
+    &quot;&quot;&quot;공표 하한(09-17 자동 체류 중앙값 + 10-15 수동 실측 하한). 줄에 사람이 보이는데(L≥1) 공표가 하한보다 낮으면 하한으로 올린다.
+    하한 = max(자동 실측 중앙값, .env WAIT_FLOOR_MIN). 수동 하한은 ROI 가 줄의 일부만 덮어 L 이 포화될 때(10-15: 수동 1.5분 vs 공표 0.3분,
+    λ 15/분이면 실제 줄 ≈24명 vs L 4) 자동 실측도 못 살리는 꼬리를 메우는 임시 처방 — 근본 대책은 화각·ROI 가 줄 전체를 덮는 것.
+    wait 가 None(산출 불가)이거나 L=0 이면 손대지 않는다&quot;&quot;&quot;
+    if wait is None or queue_len is None or queue_len &lt; 1:
+        return wait
+    floor = max(float(measured_min or 0.0), float(floor_min or 0.0))
+    return round(floor, 1) if floor &gt; wait else wait</code></pre>
 </figure>
 <figure class="code">
 <figcaption><span class="path">tests/test_waittime.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
-<pre><code class="lang-python">from vision.waittime import estimate_wait
+<pre><code class="lang-python">from vision.waittime import apply_floor, estimate_wait
 
 
 def test_basic():
@@ -642,7 +656,17 @@ def test_rate_too_low():
 
 
 def test_no_data():
-    assert estimate_wait(None, 5) == (None, &quot;no_data&quot;)</code></pre>
+    assert estimate_wait(None, 5) == (None, &quot;no_data&quot;)
+
+
+def test_apply_floor_수동_실측_하한():
+    &quot;&quot;&quot;10-15: ROI 포화로 공표 0.3분인데 수동 실측 중앙값 1.5분 — 줄이 보이면 하한으로 올린다&quot;&quot;&quot;
+    assert apply_floor(0.3, 4, 0.3, 1.5) == 1.5
+    assert apply_floor(0.3, 4, 0.9, 0.0) == 0.9          # 자동 실측 중앙값만 있을 때(09-17)
+    assert apply_floor(2.0, 4, 0.9, 1.5) == 2.0          # 이미 하한 위면 그대로
+    assert apply_floor(0.3, 0, 0.9, 1.5) == 0.3          # L=0 이면 손대지 않는다(줄이 없으면 하한도 없다)
+    assert apply_floor(None, 4, 0.9, 1.5) is None        # 산출 불가는 그대로
+    assert apply_floor(0.3, 4, None, 0) == 0.3</code></pre>
 </figure>
 
 <h3>4-3. PC 에서 실행</h3>
@@ -727,6 +751,8 @@ VISION_IMGSZ = int(os.getenv(&quot;VISION_IMGSZ&quot;, &quot;640&quot;))
 VISION_CONF = float(os.getenv(&quot;VISION_CONF&quot;, &quot;0.35&quot;))
 YOLO_WEIGHTS = os.getenv(&quot;YOLO_WEIGHTS&quot;, str(DATA / &quot;models&quot; / &quot;yolo11n.pt&quot;))   # ultralytics 가중치. Hailo hef 백엔드는 다음 단계
 DWELL_BIAS = float(os.getenv(&quot;DWELL_BIAS&quot;, &quot;1.0&quot;))           # 체류 실측 과소 편향 보정 배율(09-17). 트랙 끊김으로 짧게 재진다 — 수동 실측 대조로 조정(오늘 Pi 는 1.4)
+WAIT_FLOOR_MIN = float(os.getenv(&quot;WAIT_FLOOR_MIN&quot;, &quot;0&quot;))      # 수동 실측 하한(분, 10-15): L≥1 이면 공표 대기를 이 밑으로 내리지 않는다. 0 = 끔.
+                                                             # ROI 가 줄의 일부만 덮어 L 이 포화될 때의 임시 처방 — 값은 수동 랩 체인 중앙값(data/ground_truth.csv)
 RATE_WINDOW_SEC = int(os.getenv(&quot;RATE_WINDOW_SEC&quot;, &quot;180&quot;))   # λ 이동합 창(초). 09-17 사용자 결정 2분→3분 — 2분 창은 통과 1명 = 0.5명/분 계단이라 λ 가 작을 때 W 가 널뛰었다(눈금 1/3명/분로 완화)
 QUEUE_SOURCE = os.getenv(&quot;QUEUE_SOURCE&quot;, &quot;tracks&quot;)           # 공표 대기 인원의 재료(09-18 사용자 결정): tracks=화면 안 트랙 전체 | roi=ROI 안만.
                                                              # ROI 가 실제 줄보다 좁으면 L 이 새서 '사람은 많은데 1명' 이 된다 — 기본은 tracks(같은 25초 중앙값 평활)
@@ -794,7 +820,7 @@ def connect():
 <figcaption><span class="path">app/routers/status.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
 <pre><code class="lang-python">import datetime as dt
 from fastapi import APIRouter
-from ..config import FEED_SOURCE, STALE_SEC          # STALE_SEC: 이 시간 넘게 새 행이 없으면 '데이터 없음'으로 본다
+from ..config import FEED_SOURCE, STALE_SEC, WAIT_FLOOR_MIN   # STALE_SEC: 이 시간 넘게 새 행이 없으면 '데이터 없음'으로 본다
 from ..db import connect
 from ..lunch import describe, first_meal, meal_next, meal_now, next_meal_day
 from ..mealjson import read_meal
@@ -873,6 +899,7 @@ def status():
             &quot;queue_len&quot;: row[&quot;queue_len&quot;], &quot;rate_per_min&quot;: row[&quot;rate_per_min&quot;],
             &quot;wait_min&quot;: row[&quot;wait_min&quot;],
             &quot;wait_raw_min&quot;: row[&quot;wait_raw_min&quot;], &quot;measured_wait_min&quot;: row[&quot;measured_wait_min&quot;], &quot;calib&quot;: row[&quot;calib&quot;],
+            &quot;floor_min&quot;: WAIT_FLOOR_MIN or None,        # 수동 실측 하한(10-15) — 화면 각주가 드러낸다
             &quot;wait_range&quot;: rng, &quot;feed&quot;: feed(now, state)}</code></pre>
 </figure>
 <p><code>STALE_SEC</code>: 2분 넘게 새 행이 없으면 마지막 값을 보여주는 대신 "데이터 없음"으로 바꿉니다. 카메라가 죽었는데 화면엔 "3분"이 계속 떠 있는 상황을 막는 장치입니다.</p>

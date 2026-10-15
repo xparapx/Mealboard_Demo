@@ -55,7 +55,7 @@ function renderStatus(st) {
   $("#hero").dataset.level = $("#waitcard").dataset.level = level(st);   // 상자(그림자·점선)도 같은 상태를 입는다 — :has() 없이
   $("#updated").textContent = st.updated_at ? new Date(st.updated_at).toLocaleTimeString("ko-KR") : "—";
   // 자동 실측·보정(09-16 B안) — 계수·오늘 창 범위가 있으면 각주에 드러낸다(수동 실측 대조용)
-  $("#metanote").textContent = (st.calib ? `실측 보정 ×${st.calib} · ` : "")
+  $("#metanote").textContent = (st.calib ? `실측 보정 ×${st.calib} · ` : "") + (st.floor_min ? `수동 실측 하한 ${st.floor_min}분 · ` : "")
     + (st.wait_range ? `오늘 ${st.wait_range.lo}~${st.wait_range.hi}분 범위 기준 · ` : "") + "추정치";
   // ③ 도착 시각 — 지금 줄을 서면 몇 시에 배식대에 닿는가. 데이터가 끊긴(no_data) 옛 값으로는 계산하지 않는다
   const ok = st.state !== "no_data" && st.wait_min != null;

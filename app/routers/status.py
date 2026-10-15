@@ -1,6 +1,6 @@
 import datetime as dt
 from fastapi import APIRouter
-from ..config import FEED_SOURCE, STALE_SEC          # STALE_SEC: 이 시간 넘게 새 행이 없으면 '데이터 없음'으로 본다
+from ..config import FEED_SOURCE, STALE_SEC, WAIT_FLOOR_MIN   # STALE_SEC: 이 시간 넘게 새 행이 없으면 '데이터 없음'으로 본다
 from ..db import connect
 from ..lunch import describe, first_meal, meal_next, meal_now, next_meal_day
 from ..mealjson import read_meal
@@ -79,4 +79,5 @@ def status():
             "queue_len": row["queue_len"], "rate_per_min": row["rate_per_min"],
             "wait_min": row["wait_min"],
             "wait_raw_min": row["wait_raw_min"], "measured_wait_min": row["measured_wait_min"], "calib": row["calib"],
+            "floor_min": WAIT_FLOOR_MIN or None,        # 수동 실측 하한(10-15) — 화면 각주가 드러낸다
             "wait_range": rng, "feed": feed(now, state)}

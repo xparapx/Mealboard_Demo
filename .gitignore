@@ -5,6 +5,7 @@ data/*
 !data/carbon_std.json
 !data/news_feeds.json
 !data/zones.json
+!data/ground_truth.csv
 .env
 .env.bak-*
 *.bak-*
