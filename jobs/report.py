@@ -165,9 +165,15 @@ def write(con, kind, date, res, inp):
 def run(kind, date, insights=INSIGHTS_DB_PATH, reports=REPORTS_DB_PATH, meal=None, dry_run=False, template_only=False, llm_factory=None,
         busy_wait_s=BUSY_WAIT_S, log=print):
     """→ (res, inp) 또는 (None, reason). 파일은 dry_run 이 아닐 때만 만든다"""
+    if kind == "preview":
+        # 주말·공휴일·방학엔 아침 예보를 만들지 않는다(10-17 사용자 — 토요일에 "오늘 식단…" 이 나갔다).
+        # 판정은 NEIS 캐시에 그날 메뉴가 있는가 — 공휴일·방학도 급식이 없으면 같은 기준으로 걸러진다(/api/status feed.meal_day 와 동일)
+        meal = meal if meal is not None else read_meal()
+        if weekday_of(date) in (0, 6) or not menu_on(meal, date):
+            return None, f"{date} 급식 없는 날(주말·공휴일·방학) — 아침 예보 생략"
     icon = connect_ro(insights, "lunch_days")
     try:
-        inp = build_preview(date, meal if meal is not None else read_meal(), icon) if kind == "preview" else build_recap(date, icon)
+        inp = build_preview(date, meal, icon) if kind == "preview" else build_recap(date, icon)
     finally:
         if icon is not None:
             icon.close()

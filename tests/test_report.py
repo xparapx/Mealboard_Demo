@@ -84,8 +84,19 @@ def test_LLM_없으면_템플릿_행이_쓰인다(dbs):
 
 def test_dry_run_은_파일을_만들지_않는다(dbs):
     ins, rep = dbs
-    res, _ = report.run("preview", "2026-09-03", insights=ins, reports=rep, meal={"week": []}, dry_run=True, template_only=True, log=lambda *a: None)
+    meal = {"week": [{"date": "20260903", "menu": ["된장찌개", "불고기"]}]}   # 10-17: 급식 있는 날만 예보가 만들어진다
+    res, _ = report.run("preview", "2026-09-03", insights=ins, reports=rep, meal=meal, dry_run=True, template_only=True, log=lambda *a: None)
     assert res["engine"] == "template" and not rep.exists()
+
+
+def test_주말과_급식_없는_날은_아침_예보를_건너뛴다(dbs):
+    ins, rep = dbs
+    meal = {"week": [{"date": "20260903", "menu": ["된장찌개"]}]}
+    res, why = report.run("preview", "2026-09-05", insights=ins, reports=rep, meal=meal, template_only=True, log=lambda *a: None)
+    assert res is None and "급식 없는 날" in why                   # 2026-09-05 = 토요일
+    res, why = report.run("preview", "2026-09-04", insights=ins, reports=rep, meal=meal, template_only=True, log=lambda *a: None)
+    assert res is None and "급식 없는 날" in why                   # 평일(금)이어도 NEIS 캐시에 메뉴 없음(공휴일·방학)
+    assert not rep.exists()                                        # 건너뛴 날은 reports.db 에 행도 없다
 
 
 def fake_llm(text):
