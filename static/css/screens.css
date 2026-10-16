@@ -298,6 +298,13 @@ details > summary::-webkit-details-marker { display: none; }
   #menuwaitcard { grid-column: 5 / 9; grid-row: 3; }
   #evcard { grid-column: 9 / 13; grid-row: 3; }
   .chart { height: 190px; }
+  /* 1·2행 카드 높이 동일(10-17 사용자 요청): fr 행은 가장 큰 내용(메뉴 목록 카드)에 맞춰 서로 같아진다.
+     짧은 카드는 차트가 남는 높이를 채운다 — 차트는 픽셀 좌표계(stats.js fit)라 늘어나도 글자가 안 찌그러진다 */
+  #stats[data-active] { grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr); }
+  #stats .insight { display: flex; flex-direction: column; }
+  #stats .insight:not([data-state="no_data"]) .body { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+  #stats .insight .body > .chart:not(.short) { flex: 1 1 auto; height: auto; min-height: 190px; }
+  #stats .insight .body > .foot { margin-top: auto; padding-top: 12px; }
   /* 주간식단 */
   #weekcard { grid-column: 1 / 13; grid-row: 1; }
   /* 주간식단 폰트(09-12): 1920 보드에서는 컬럼 폭이 넉넉해 한 단계 더 키운다 */

@@ -14,13 +14,21 @@ const f1 = v => v == null ? "—" : (Math.round(v * 10) / 10).toFixed(1);
 const md = d => `${+d.slice(5, 7)}/${+d.slice(8, 10)}`;
 const INK = "#33312D", INK3 = "#9A958A", TEAL = "#129793", MELON = "#D14A38", PURPLE = "#7c1d6f", PAPER = "#FFFCF6", HAIR = "#E7E1D3";
 const txt = (x, y, s, o = {}) => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${o.size || 9}" font-weight="${o.w || 500}" fill="${o.fill || INK3}" text-anchor="${o.a || "middle"}" dominant-baseline="${o.b || "middle"}" font-family="system-ui, sans-serif">${esc(s)}</text>`;
+function fit(svg, fw = 320, fh = 150) {
+  /* 픽셀 좌표계(10-17 사용자 지적): 고정 viewBox 320×150 + preserveAspectRatio=none 은 카드 폭에 맞춰 비균등 스케일이라
+     글자가 세로로 찌그러졌다 — 그릴 때마다 실제 크기를 viewBox 로 삼아 1:1 로 그린다(창 크기 변경은 mount 의 resize 가 다시 그림) */
+  const r = svg.getBoundingClientRect();
+  const W = Math.round(r.width) || fw, H = Math.round(r.height) || fh;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  return { W, H };
+}
 
 /* ---------------- ① 시간대별 대기 분포 ---------------- */
 let bandGeo = null;
 function renderBand(d) {
   const ok = d && d.state === "ok" && d.bands && d.bands.length >= 2;
   if (!setState("bandcard", ok, d && d.reason)) { bandGeo = null; return; }
-  const W = 320, H = 150, padL = 26, padR = 8, padT = 10, padB = 18;
+  const { W, H } = fit($("#bandsvg")), padL = 26, padR = 8, padT = 10, padB = 18;
   const lo = d.window?.lo ?? d.bands[0].bin, hi = d.window?.hi ?? d.bands[d.bands.length - 1].bin + 5;
   const bands = d.bands.filter(b => b.bin >= lo && b.bin < hi), today = (d.today || []).filter(t => t.bin >= lo && t.bin < hi);
   const max = Math.max(3, ...bands.map(b => b.hi), ...today.map(t => t.wait)) * 1.08;
@@ -63,7 +71,7 @@ const WDC = { 1: "#9BD7D5", 2: "#FBE9B7", 3: "#F3B2A4", 4: "#CBC2FB", 5: "#BFE3F
 function renderWd(d) {
   const rows = (d && d.weekdays || []).filter(w => w.avg_wait != null);
   if (!setState("wdcard", d && d.state === "ok" && rows.length > 0, d && d.reason)) return;
-  const W = 320, H = 150, padT = 30, padB = 36, padL = 26, padR = 8, n = 5;
+  const { W, H } = fit($("#wdsvg")), padT = 30, padB = 36, padL = 26, padR = 8, n = 5;
   // 축은 평균 대기 기준 — 최고 대기(피크)는 평균의 10배가 흔해 같은 축에 두면 막대가 납작해진다(10-13 실데이터 확인). 피크는 막대 위 숫자로
   const max = Math.max(1, ...rows.map(w => w.avg_wait)) * 1.25;
   const Y = v => padT + (1 - v / max) * (H - padT - padB), colW = (W - padL - padR) / n, bw = colW * .5;
@@ -91,7 +99,7 @@ let dailyGeo = null;
 function renderDaily(d) {
   const rows = (d && d.daily || []).filter(r => r.avg_wait != null);
   if (!setState("dailycard", d && d.state === "ok" && rows.length > 0, d && d.reason)) { dailyGeo = null; return; }
-  const W = 320, H = 150, padT = 10, padB = 18, padL = 26, padR = 30, n = rows.length;
+  const { W, H } = fit($("#dailysvg")), padT = 10, padB = 18, padL = 26, padR = 30, n = rows.length;
   const max = Math.max(1, ...rows.map(r => r.avg_wait)) * 1.25;        // 축은 평균 기준(피크는 호버 읽기·리드에서) — 요일 카드와 같은 이유
   const served = rows.map(r => r.served).filter(v => v != null), smax = Math.max(1, ...served) * 1.1;
   const X = i => padL + (i + .5) / n * (W - padL - padR), Y = v => padT + (1 - v / max) * (H - padT - padB), YS = v => padT + (1 - v / smax) * (H - padT - padB);
@@ -136,7 +144,7 @@ function renderNut(d) {
   const days = (d && d.days || []).filter(r => r.energy_pct != null);
   if (!setState("nutstatcard", d && d.state === "ok" && days.length > 0, d && d.reason)) return;
   // (a) 에너지 충족률 — 90~110% 적정 띠, 밖은 멜론 점
-  const W = 320, H = 96, padT = 8, padB = 16, padL = 30, padR = 8, n = days.length;
+  const { W, H } = fit($("#nutsvg"), 320, 96), padT = 8, padB = 16, padL = 30, padR = 8, n = days.length;
   const vals = days.map(r => r.energy_pct), lo = Math.min(80, ...vals) - 5, hi = Math.max(120, ...vals) + 5;
   const X = i => n > 1 ? padL + i / (n - 1) * (W - padL - padR) : W / 2, Y = v => padT + (1 - (v - lo) / (hi - lo)) * (H - padT - padB);
   let s = `<rect x="${padL}" y="${Y(110).toFixed(1)}" width="${W - padL - padR}" height="${(Y(90) - Y(110)).toFixed(1)}" fill="${TEAL}" fill-opacity=".12" rx="3"/>`
@@ -178,7 +186,7 @@ function renderMenu(d) {
 function renderEv(d) {
   const rows = (d && d.events || []);
   if (!setState("evcard", d && d.state === "ok" && rows.length > 0, d && (d.reason || "황금·병목 구간이 아직 없다"))) return;
-  const W = 320, H = 150, padL = 26, padR = 8, padT = 8, padB = 18, lo = d.window?.lo ?? rows[0].bin, hi = d.window?.hi ?? rows[rows.length - 1].bin + 5;
+  const { W, H } = fit($("#evsvg")), padL = 26, padR = 8, padT = 8, padB = 18, lo = d.window?.lo ?? rows[0].bin, hi = d.window?.hi ?? rows[rows.length - 1].bin + 5;
   const gmax = Math.max(1, ...rows.map(r => r.golden_min)), bmax = Math.max(1, ...rows.map(r => r.bottleneck_min)), top = Math.max(gmax, bmax);
   const mid = padT + (H - padT - padB) * .5, half = (H - padT - padB) / 2 - 4;
   const X = m => padL + (m - lo) / (hi - lo) * (W - padL - padR), bw = Math.max(2, (W - padL - padR) / ((hi - lo) / 5) - 1);
@@ -235,6 +243,8 @@ export const screen = {
     const hover = (id, fn, back) => { const el = $(id); el.addEventListener("pointermove", fn); el.addEventListener("pointerleave", back); };
     hover("#bandsvg", bandHover, () => { $("#bandcur")?.setAttribute("visibility", "hidden"); showCard("band"); });
     hover("#dailysvg", dailyHover, () => { $("#dailycur")?.setAttribute("visibility", "hidden"); showCard("daily"); });
+    let rt;                                     // 픽셀 좌표계라 크기가 바뀌면 다시 그린다(회전·창 크기 조절)
+    addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => CARDS.forEach(showCard), 200); });
   },
   every: 5 * 60000,                             // 집계는 하루 1~2회 — 5분이면 충분(오늘 실황 선만 움직인다)
   async poll() { followMeal(defaultMeal()); await load(false); },   // 14시 경계에서 손대지 않은 토글은 석식으로(wait.js 와 같은 규칙)
