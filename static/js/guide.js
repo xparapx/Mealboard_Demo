@@ -81,12 +81,17 @@ function place() {                                    // 밝은 칸(spot)과 말
   const spot = $("#tourspot");
   const w = Math.max(40, r.width + pad * 2), h = Math.max(40, r.height + pad * 2);
   spot.style.cssText = `left:${r.left - pad}px;top:${r.top - pad}px;width:${w}px;height:${h}px`;
-  const b = $("#tourbubble"), bw = b.offsetWidth, bh = b.offsetHeight, vw = innerWidth, vh = innerHeight;
-  if (vw < 900) { b.style.left = ""; b.style.top = ""; return; }           // 모바일: CSS 가 아래에 고정
-  let top = r.bottom + pad + 14;                                           // 기본은 카드 아래, 모자라면 위, 그래도 모자라면 오른쪽/왼쪽
+  const b = $("#tourbubble"), bw = b.offsetWidth, bh = b.offsetHeight, vw = innerWidth, vh = innerHeight, gap = 22;
+  if (vw < 900) { b.style.left = ""; b.style.top = ""; b.removeAttribute("data-pos"); return; }   // 모바일: CSS 가 아래에 고정(꼬리 없음)
+  let pos = "below", top = r.bottom + pad + gap;                           // 기본은 카드 아래, 모자라면 위, 그래도 모자라면 오른쪽/왼쪽 — 꼬리(data-pos)가 카드를 가리킨다
   let leftPx = Math.min(vw - bw - 16, Math.max(16, r.left));
-  if (top + bh > vh - 16) top = r.top - pad - bh - 14;
-  if (top < 16) { top = Math.max(16, Math.min(vh - bh - 16, r.top)); leftPx = r.right + pad + 14 + bw <= vw - 16 ? r.right + pad + 14 : Math.max(16, r.left - pad - bw - 14); }
+  if (top + bh > vh - 16) { pos = "above"; top = r.top - pad - bh - gap; }
+  if (top < 16) {
+    top = Math.max(16, Math.min(vh - bh - 16, r.top));
+    if (r.right + pad + gap + bw <= vw - 16) { pos = "right"; leftPx = r.right + pad + gap; }
+    else { pos = "left"; leftPx = Math.max(16, r.left - pad - bw - gap); }
+  }
+  b.dataset.pos = pos;
   b.style.left = leftPx + "px"; b.style.top = top + "px";
 }
 

@@ -274,22 +274,39 @@ details > summary::-webkit-details-marker { display: none; }
 .grun p { margin: 10px 0 0; font-size: 13px; line-height: 1.6; color: var(--ink2); }
 .grun b { color: var(--ink); }
 .grun code { font-size: 12px; padding: 1px 6px; border-radius: 6px; background: var(--well); color: var(--teal-ink); }
-/* 자동 시연 오버레이 — 전면 고정, 밝은 칸(spot)은 거대한 그림자로 나머지를 어둡게. 말풍선만 눌린다 */
+/* 자동 시연 오버레이 — 전면 고정, 밝은 칸(spot)은 거대한 그림자로 나머지를 어둡게. 말풍선만 눌린다.
+   10-18 사용자 지적: 말풍선이 카드와 똑같아 안내인지 UI 인지 구분이 안 됐다 → 화면의 어떤 카드도 쓰지 않는 조합(진한 차콜 바탕·크림 글자·틸 꼬리표),
+   밝은 카드를 가리키는 꼬리(data-pos)와 틸 링으로 '지금 이 카드를 설명 중' 을 시선으로 잇는다. 모바일은 하단 시트(꼬리 없음) */
 #tour { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
-#tour .spot { position: fixed; border-radius: 26px; box-shadow: 0 0 0 9999px rgba(51,49,45,.55), 0 0 0 2px rgba(255,252,246,.9);
+#tour .spot { position: fixed; border-radius: 26px; box-shadow: 0 0 0 9999px rgba(51,49,45,.62), 0 0 0 3px var(--teal), 0 0 0 9px rgba(18,151,147,.28);
               transition: left .35s var(--ease), top .35s var(--ease), width .35s var(--ease), height .35s var(--ease); }
 #tour .bubble { position: fixed; left: 12px; right: 12px; bottom: calc(var(--dock-h) + env(safe-area-inset-bottom) + 12px); pointer-events: auto;
-                padding: 16px 18px 14px; border-radius: 20px; background: var(--surface); box-shadow: var(--e2); }
-#tour .step { display: flex; align-items: center; gap: 10px; font-size: 11.5px; font-weight: 800; letter-spacing: .08em; color: var(--ink3); }
-#tour .step i { flex: 1; height: 4px; border-radius: 2px; background: var(--hair); overflow: hidden; }
-#tour .step i b { display: block; height: 100%; width: 0; background: var(--teal); }
-#tour h3 { margin: 8px 0 4px; font-size: 17px; letter-spacing: -.01em; }
-#tour p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--ink2); }
-#tour .ctl { display: flex; gap: 8px; margin-top: 12px; }
-#tour .ctl button { font: inherit; font-weight: 800; font-size: 13px; padding: 8px 14px; border: 0; border-radius: 999px; background: var(--well); color: var(--ink2); cursor: pointer; }
-#tour .ctl button.primary { background: var(--teal); color: #fff; }
-#tour .ctl button.x { margin-left: auto; background: var(--melon-tint); color: var(--melon-ink); }
-#tour .ctl button:disabled { opacity: .4; cursor: default; }
+                padding: 14px 18px 14px; border-radius: 22px; background: var(--ink); color: var(--ground); border: 1.5px solid rgba(18,151,147,.55);
+                box-shadow: 0 24px 60px rgba(51,49,45,.45), 0 0 0 1px rgba(255,252,246,.08) inset; }
+/* 꼬리 — 데스크톱에서 guide.js 가 data-pos(below|above|left|right)로 방향을 준다 */
+#tour .bubble::after { content: ""; position: absolute; width: 18px; height: 18px; background: var(--ink); transform: rotate(45deg);
+                       border: 1.5px solid rgba(18,151,147,.55); border-right-color: transparent; border-bottom-color: transparent; display: none; }
+#tour .bubble[data-pos="below"]::after { display: block; top: -10px; left: 34px; }
+#tour .bubble[data-pos="above"]::after { display: block; bottom: -10px; left: 34px; transform: rotate(225deg); }
+#tour .bubble[data-pos="right"]::after { display: block; left: -10px; top: 30px; transform: rotate(-45deg); }
+#tour .bubble[data-pos="left"]::after { display: block; right: -10px; top: 30px; transform: rotate(135deg); }
+#tour .tag { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 8px; border-radius: 999px; background: var(--teal); color: #fff;
+             font-size: 11px; font-weight: 800; letter-spacing: .06em; }
+#tour .tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,.3); }
+#tour .step { display: flex; align-items: center; gap: 10px; font-size: 11.5px; font-weight: 800; letter-spacing: .08em; color: rgba(245,242,233,.6); }
+#tour .step > span:last-of-type { margin-left: auto; font-variant-numeric: tabular-nums; }
+#tour .step i { flex: 1; height: 4px; border-radius: 2px; background: rgba(245,242,233,.14); overflow: hidden; }
+#tour .step i b { display: block; height: 100%; width: 0; background: var(--aqua); }
+#tour h3 { margin: 10px 0 5px; font-size: 19px; line-height: 1.25; letter-spacing: -.015em; color: #fff; font-weight: 800; }
+#tour h3::before { content: "“"; color: var(--aqua); margin-right: 2px; }
+#tour h3::after { content: "”"; color: var(--aqua); margin-left: 2px; }
+#tour p { margin: 0; font-size: 14px; line-height: 1.6; color: rgba(245,242,233,.88); }
+#tour .ctl { display: flex; gap: 8px; margin-top: 14px; }
+#tour .ctl button { font: inherit; font-weight: 800; font-size: 13px; padding: 8px 14px; border: 1.5px solid rgba(245,242,233,.22); border-radius: 999px;
+                    background: transparent; color: rgba(245,242,233,.85); cursor: pointer; }
+#tour .ctl button.primary { background: var(--teal); border-color: var(--teal); color: #fff; }
+#tour .ctl button.x { margin-left: auto; background: transparent; border-color: rgba(255,114,96,.6); color: #FFB3A6; }
+#tour .ctl button:disabled { opacity: .35; cursor: default; }
 body.touring { overflow-x: hidden; }
 
 /* 데스크톱 — 화면마다 12컬럼 그리드(1920×1080 기준, 09-03 개정). 왼쪽 5컬럼은 라이브 카드(대기시간·평면도)가 두 행을 차지하고
