@@ -41,7 +41,9 @@ for u in deploy/*.service deploy/*.timer; do
   rm -f "$tmp"
 done
 sudo systemctl daemon-reload
-sudo systemctl enable --now mealboard-api mealboard-mock mealboard-neis.timer mealboard-news.timer mealboard-rollup.timer mealboard-report.timer
+sudo systemctl enable --now mealboard-api mealboard-neis.timer mealboard-news.timer mealboard-rollup.timer mealboard-report.timer
+# mock(더미 피드)은 카메라 노드가 없는 Pi 에서만 — vision 이 enable 된 Pi 에서 mock 을 켜면 Conflicts= 로 vision 이 꺼지고 더미 행이 queue.db 에 섞인다(10-18 배포 중 실제로 1분간 발생)
+if systemctl is-enabled -q mealboard-vision 2>/dev/null; then echo "   vision 이 켜진 Pi — mock 은 건드리지 않는다"; else sudo systemctl enable --now mealboard-mock; fi
 sudo systemctl enable --now mealboard-demo        # 공개 데모(10-18): demo.kjhs-meal.com → 127.0.0.1:8800, 모의 데이터·가상 시계, 30분마다 되감기
 
 echo "== 6b. 관리 앱 — sudoers 드롭인(정확한 argv 만) + 저널 읽기 그룹 + 유닛"
