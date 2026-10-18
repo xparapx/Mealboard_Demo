@@ -42,6 +42,7 @@ for u in deploy/*.service deploy/*.timer; do
 done
 sudo systemctl daemon-reload
 sudo systemctl enable --now mealboard-api mealboard-mock mealboard-neis.timer mealboard-news.timer mealboard-rollup.timer mealboard-report.timer
+sudo systemctl enable --now mealboard-demo        # 공개 데모(10-18): demo.kjhs-meal.com → 127.0.0.1:8800, 모의 데이터·가상 시계, 30분마다 되감기
 
 echo "== 6b. 관리 앱 — sudoers 드롭인(정확한 argv 만) + 저널 읽기 그룹 + 유닛"
 tmp=$(mktemp); sed "s/__USER__/$USER/g" deploy/sudoers-mealboard > "$tmp"

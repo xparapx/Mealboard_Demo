@@ -3,7 +3,8 @@
     uv run python -m jobs.demo                 # 모의 데이터 8주치 생성 → 포트 8800 에 공개 앱 + 브라우저 열기
     uv run python -m jobs.demo --with-admin    # 관리 앱(8801)도 함께(보정 편집기·시스템 탭) — 주소에 로컬 키가 붙어 터미널에 찍힌다
     uv run python -m jobs.demo --generate-only # 데이터만 만들고 끝(검증용)
-    옵션: --port 8800 · --data data/demo · --keep(기존 데이터 유지) · --no-browser · --anchor 2026-10-14T12:38:00
+    옵션: --port 8800 · --data data/demo · --keep(기존 데이터 유지) · --no-browser · --anchor 2026-10-14T12:44:00
+          --loop 30 : 상시 공개 데모(Pi, demo.kjhs-meal.com) — 가상 시계가 기준에서 30분 흐르면 기준 뒤 표본을 지우고 되감아 늘 피크에서 시작
 
 운영·개발 데이터(data/)와 **완전히 분리된 폴더**(기본 data/demo/, git 제외)에 queue.db·insights.db·reports.db·meal.json·news.json·
 positions.json·zones.local.json 을 만든다. 생성은 결정론적(날짜가 난수 씨앗)이라 누가 켜도 같은 화면이 나온다.
@@ -410,8 +411,26 @@ def generate(data, anchor, log=print):
 
 # ---------------- 피더 · 서버 ----------------
 
-def feeder(data, anchor, stop):
-    """가상 시계가 가리키는 시각의 오늘 표본을 10초마다 이어 쓴다(카메라 노드의 대역). 창 밖에는 아무것도 쓰지 않는다 — 실제 vision 과 같다"""
+def rewind(con, data, anchor, plan, zones):
+    """상시 공개 데모의 되감기(--loop): 기준 시각 뒤에 피더가 쓴 표본을 지우고(데모 폴더의 생성 데이터뿐 — 운영 DB 가 아니다) 가상 시계를 기준으로.
+    집계·리포트는 기준 시각까지로 만들어져 있어 손댈 것이 없다"""
+    from app import clock
+    from vision.record import write_positions
+    ts = anchor.isoformat(timespec="seconds")
+    for t in ("samples", "zone_samples", "cell_samples"):
+        con.execute(f"DELETE FROM {t} WHERE ts >= ?", (ts,))
+    con.commit()
+    anchor_sec = anchor.hour * 3600 + anchor.minute * 60 + anchor.second
+    last = max((s for s in plan if s < anchor_sec), default=None)
+    if last is not None and plan[last]["pts"] is not None:
+        write_positions(iso(anchor.date(), last), len(plan[last]["pts"]), plan[last]["pts"])
+    clock.rewind()
+    return anchor_sec - TICK
+
+
+def feeder(data, anchor, stop, loop_min=0):
+    """가상 시계가 가리키는 시각의 오늘 표본을 10초마다 이어 쓴다(카메라 노드의 대역). 창 밖에는 아무것도 쓰지 않는다 — 실제 vision 과 같다.
+    loop_min > 0 이면 기준에서 그만큼 흐를 때마다 되감는다(상시 공개 데모가 늘 피크에서 시작하게)"""
     from app import clock
     from app.db import connect
     from vision.record import write_sample
@@ -428,6 +447,10 @@ def feeder(data, anchor, stop):
     con = connect()
     while not stop.is_set():
         now = clock.now()
+        if loop_min and (now - anchor).total_seconds() >= loop_min * 60:
+            written = rewind(con, data, anchor, plan, zones)
+            print(f"[loop] 가상 시계 되감기 → {anchor:%H:%M}", flush=True)
+            continue
         sec = now.hour * 3600 + now.minute * 60 + now.second
         if now.date() != today:                                               # 자정을 넘기면(가상) 멈춘다 — 다음 날 표본은 만들지 않는다
             break
@@ -441,11 +464,11 @@ def feeder(data, anchor, stop):
     con.close()
 
 
-def serve(data, anchor, port, admin_port, open_browser):
+def serve(data, anchor, port, admin_port, open_browser, loop_min=0):
     import uvicorn
     from app.main import app
     stop = threading.Event()
-    threading.Thread(target=feeder, args=(data, anchor, stop), daemon=True, name="demo-feeder").start()
+    threading.Thread(target=feeder, args=(data, anchor, stop, loop_min), daemon=True, name="demo-feeder").start()
     url = f"http://127.0.0.1:{port}/"
     admin_url = None
     if admin_port:
@@ -454,7 +477,7 @@ def serve(data, anchor, port, admin_port, open_browser):
         threading.Thread(target=uvicorn.Server(cfg).run, daemon=True, name="demo-admin").start()
         admin_url = f"http://127.0.0.1:{admin_port}/?key={os.environ['ADMIN_LOCAL_KEY']}"
     print("\n" + "=" * 72)
-    print(f"  Mealboard 시연 모드 — 공개 화면  {url}   (가상 시계 {anchor:%Y-%m-%d %a %H:%M} 부터)")
+    print(f"  Mealboard 시연 모드 — 공개 화면  {url}   (가상 시계 {anchor:%Y-%m-%d %a %H:%M} 부터{f', {loop_min}분마다 되감기' if loop_min else ''})")
     if admin_url:
         print(f"  관리 앱(보정 편집기·시스템)      {admin_url}")
     print("  화면 아래(또는 왼쪽) '앱 안내' 탭 → '자동 시연 시작' 을 누르면 여섯 화면을 돌며 설명합니다. 끝내려면 Ctrl+C")
@@ -476,6 +499,7 @@ def main(argv=None):
     ap.add_argument("--no-browser", action="store_true")
     ap.add_argument("--with-admin", action="store_true", help="관리 앱도 함께(포트 +1)")
     ap.add_argument("--generate-only", action="store_true", help="데이터만 만들고 서버는 띄우지 않는다")
+    ap.add_argument("--loop", type=int, default=0, metavar="MIN", help="상시 공개 데모: 가상 시계가 기준에서 MIN 분 흐르면 되감는다(0 = 안 함)")
     a = ap.parse_args(argv)
 
     anchor = dt.datetime.fromisoformat(a.anchor)
@@ -502,7 +526,7 @@ def main(argv=None):
         print(f"기존 데모 데이터 사용 — {data}")
     if a.generate_only:
         return 0
-    serve(data, anchor, a.port, a.port + 1 if a.with_admin else None, not a.no_browser)
+    serve(data, anchor, a.port, a.port + 1 if a.with_admin else None, not a.no_browser, a.loop)
     return 0
 
 

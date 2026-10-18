@@ -28,6 +28,13 @@ def today():
     return now().date()
 
 
+def rewind():
+    """가상 시계를 기준 시각으로 되감는다(상시 공개 데모 — jobs/demo.py --loop). 벽시계 모드에서는 아무 일도 없다"""
+    global _BOOT
+    if _ANCHOR is not None:
+        _BOOT = dt.datetime.now()
+
+
 def shifted(anchor, boot, real_now):
     """순수 계산(테스트용): 기준 anchor · 부팅 boot · 실제 real_now → 가상 지금"""
     return anchor + (real_now - boot)

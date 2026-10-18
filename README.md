@@ -34,6 +34,7 @@ setup_pi.sh Pi 최초 설치·유닛 갱신 (멱등) · check_manual.py 매뉴�
 
 ## 셋업 요약
 
+- **설치 없이 보기 — 공개 데모 `https://demo.kjhs-meal.com`**: 급식실 Pi 가 상시 띄우는 시연 화면(모의 데이터 · 가상 시계, 30분마다 피크 12:44 로 되감김). 실제 운영 화면은 `https://kjhs-meal.com`.
 - **처음 보는 분 · 심사위원(Pi·카메라 없이 5분)**: Python 3.11+ 과 [uv](https://docs.astral.sh/uv/) 만 있으면 된다.
   ```bash
   uv sync && uv run python -m jobs.demo

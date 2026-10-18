@@ -1,0 +1,16 @@
+[Unit]
+Description=Mealboard 공개 데모 (모의 데이터 · 가상 시계, demo.kjhs-meal.com → 127.0.0.1:8800)
+# 10-18 심사위원·외부용 상시 데모. 운영 data/ 와 분리된 data/demo/ 에만 쓰고(시작마다 새로 생성), 카메라·운영 API(8100)·관리 앱(8101)과 무관하다.
+# 가상 시계는 2026-10-14(수) 12:44(1·2학년 점심 피크)에서 시작해 30분마다 되감긴다 — 누가 언제 열어도 피크 장면. 관리 앱은 띄우지 않는다(--with-admin 없음).
+After=network.target
+
+[Service]
+User=__USER__
+WorkingDirectory=/opt/mealboard
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/mealboard/.venv/bin/python -X utf8 -m jobs.demo --no-browser --port 8800 --loop 30 --data data/demo
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
