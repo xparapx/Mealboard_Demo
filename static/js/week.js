@@ -1,13 +1,13 @@
 /* 주간식단 화면 — 이번 주 식단(요일 컬럼). meal.json 이 이미 월~금을 통째로 담고 있다. 오늘급식과 같은 응답을 쓴다(loadMeal 이 한 번 받아 둘 다 그린다).
    아래 인사이트 카드: 주간 영양 추이(kpi 3타일 + 스파크라인) · 메뉴 빈도 TOP5(순위 목록). 집계에서 오므로 30분마다 */
-import { $, jSoft, esc, WD, setState, MEAL_KO, mealSeg } from "./core.js";
+import { $, jSoft, esc, WD, setState, MEAL_KO, mealSeg, now } from "./core.js";
 import { splitAllergy, loadMeal } from "./today.js";
 
 export function renderWeek(m) {
   const card = $("#weekcard"), week = (m.week || []).filter(d => d.menu && d.menu.length);
   card.hidden = week.length < 2;
   if (card.hidden) return;
-  const n = new Date();                              // 오늘은 브라우저 시계로 정한다 — meal.json 은 05:40 캐시라 today 가 비는 날이 있다
+  const n = now();                                   // 오늘은 앱 시계(서버 기준, 10-18)로 정한다 — meal.json 은 05:40 캐시라 today 가 비는 날이 있다
   const today = `${n.getFullYear()}${String(n.getMonth() + 1).padStart(2, "0")}${String(n.getDate()).padStart(2, "0")}`;
   $("#weekgrid").innerHTML = week.map(d => {
     const dd = new Date(+d.date.slice(0, 4), +d.date.slice(4, 6) - 1, +d.date.slice(6, 8));

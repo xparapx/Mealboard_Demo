@@ -1,6 +1,6 @@
 /* 대기시간 화면 — 히어로(지금 줄을 서면) + 추이(최근 30분, 평소 곡선 겹침). 30초 폴링(status·history). 평소 곡선(/api/typical)은 어제까지의
    자료라 5분마다면 충분하다. 그 아래 인사이트 카드 다섯 장 — 황금·병목·품질은 5분(오늘 즉석 계산), 히트맵·예보는 30분(집계) (PLAN §3.5) */
-import { $, j, jSoft, S, esc, fit, hhmm, mm, hm, WD, minuteOfDay, canvasAuto, setState, renderFeed, MEAL_KO, defaultMeal, mealSeg } from "./core.js";
+import { $, j, jSoft, S, esc, fit, hhmm, mm, hm, WD, minuteOfDay, canvasAuto, setState, renderFeed, syncClock, now, MEAL_KO, defaultMeal, mealSeg } from "./core.js";
 import { SUNSETDARK, gradient, ramp } from "./colors.js";
 
 const BUSY_MIN = 12, EASY_MIN = 0.5; // 혼잡 폴백 · 여유 절대 상한(분)
@@ -60,8 +60,8 @@ function renderStatus(st) {
   // ③ 도착 시각 — 지금 줄을 서면 몇 시에 배식대에 닿는가. 데이터가 끊긴(no_data) 옛 값으로는 계산하지 않는다
   const ok = st.state !== "no_data" && st.wait_min != null;
   $("#arrive").hidden = !ok;
-  if (ok) $("#arriveat").textContent = hhmm(new Date(Date.now() + st.wait_min * 60000));
-  renderFeed(st.feed);                                 // 더미데이터 띠 — 이 화면은 30초 status 가 오므로 그 김에
+  if (ok) $("#arriveat").textContent = hhmm(new Date(now().getTime() + st.wait_min * 60000));
+  renderFeed(st.feed, st.demo);                                 // 더미데이터 띠 — 이 화면은 30초 status 가 오므로 그 김에
 }
 
 export async function refresh() {
@@ -69,6 +69,7 @@ export async function refresh() {
   const pSt = j("/api/status"), pH = j(`/api/history?minutes=${CHART_MIN}`);
   const pT = typStale ? j(`/api/typical?minutes=${CHART_MIN}`).catch(() => ({ state: "no_data", rows: [] })) : null;
   const st = await pSt;
+  syncClock(st);                                      // 서버 시계(가상 시계 심사 모드 포함)에 맞춘다 — 날짜·요일·도착 시각이 서버와 같은 '지금' 을 본다
   renderStatus(st);                                   // 히어로는 상태 116B 만으로 그린다 — 추이·평소 곡선이 휴대폰 회선에서 늦어도 숫자는 먼저
   const [h, t] = await Promise.all([pH, pT]);
   if (t) S.typ = { at: Date.now(), data: t };
@@ -106,7 +107,7 @@ export function drawChart(rows, typ, st) {
   showTrend(pts.length >= 2);
   if (pts.length < 2) return;
 
-  const hi = minuteOfDay(new Date()), lo = Math.max(0, hi - CHART_MIN);
+  const hi = minuteOfDay(now()), lo = Math.max(0, hi - CHART_MIN);
   const ref = (typ.state === "ok" ? typ.rows : []).filter(r => r.minute_of_day >= lo && r.minute_of_day <= hi);
   $("#reflab").hidden = !ref.length;
   $("#reflab").textContent = ref.length
@@ -187,7 +188,7 @@ function drawHeatGrid(el, d) {
   const hi = win.hi ?? Math.max(...d.cells.map(c => c.minute_of_day)) + 5;
   const step = Math.max(5, Math.ceil((hi - lo) / 5 / MAX_COLS) * 5);   // 5분 구간을 step 분으로 묶는다
   const cols = Math.ceil((hi - lo) / step);
-  const todayWd = new Date().getDay();
+  const todayWd = now().getDay();
   const grid = new Map();                     // "wd:col" → {sum, n, days}
   d.cells.forEach(c => {
     if (c.wait_min == null || c.minute_of_day < lo || c.minute_of_day >= hi) return;
@@ -220,10 +221,10 @@ function drawHeatGrid(el, d) {
 function markHeatNow() {
   /* 오늘 요일·지금 시각에 해당하는 타일에 data-now 를 얹는다(CSS 가 서서히 점멸) — 급식 창 밖에는 해당 셀이 없어 저절로 꺼진다.
      히트맵은 30분마다 다시 그리므로, 마커 이동은 30초 poll 이 이 함수만 다시 불러 처리한다(09-18 사용자 요청) */
-  const wd = new Date().getDay(), now = minuteOfDay(new Date());
+  const wd = now().getDay(), cur = minuteOfDay(now());
   const el = $("#heat"), step = +el.dataset.step || 5;
   el.querySelectorAll(".c[data-now]").forEach(b => b.removeAttribute("data-now"));
-  const b = [...el.querySelectorAll(`.c[data-wd="${wd}"]`)].find(x => { const m = +x.dataset.min; return now >= m && now < m + step; });
+  const b = [...el.querySelectorAll(`.c[data-wd="${wd}"]`)].find(x => { const m = +x.dataset.min; return cur >= m && cur < m + step; });
   if (b) b.setAttribute("data-now", "");
 }
 
@@ -263,7 +264,7 @@ function renderGolden(d) {
 function renderForecast(d) {
   const day = d.date ? new Date(d.date + "T12:00:00") : null;
   const when = day ? `${day.getMonth() + 1}/${day.getDate()} ${WD[day.getDay()]}요일` : "";
-  const todayIso = new Date().toLocaleDateString("sv-SE");   // 로컬 날짜 YYYY-MM-DD
+  const todayIso = now().toLocaleDateString("sv-SE");   // 로컬 날짜 YYYY-MM-DD (서버 시계 기준)
   $("#forecasteyebrow").textContent = (MEAL_KO[d.meal] ? MEAL_KO[d.meal] + " " : "") + (d.date && d.date === todayIso ? "오늘 예보" : "내일 예보");
   if (d.state === "no_meal") { setState("forecastcard", false, `${when} 급식이 없습니다`); return; }
   if (!setState("forecastcard", d.state === "ok" && d.curve && d.curve.length, d.reason)) return;

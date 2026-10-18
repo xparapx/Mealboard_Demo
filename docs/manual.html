@@ -353,6 +353,11 @@ LLM_REPORT=0
 LLM_CONTEXT_CHARS=3200
 # 헤드라인 번역기 — deepl | local | none
 TRANSLATOR=deepl
+# 심사위원 구동 경로(10-18) — 보통은 비워 둔다. jobs/demo.py 가 실행 시 환경 변수로 채운다
+# DATA_DIR: 데이터 폴더(기본 data/). DEMO_CLOCK: 가상 시계 기준 시각(YYYY-MM-DDTHH:MM:SS, 비면 벽시계). SHOW_GUIDE: 화면에 '앱 안내' 탭(1/0, 가상 시계면 기본 1)
+DATA_DIR=
+DEMO_CLOCK=
+SHOW_GUIDE=
 # The Guardian Content API 키 (기사 본문 확보용, 비상업 무료). 없으면 피드 요약으로 폴백
 GUARDIAN_API_KEY=
 
@@ -703,8 +708,9 @@ from dotenv import load_dotenv
 BASE = Path(__file__).resolve().parent.parent      # 저장소 루트
 load_dotenv(BASE / &quot;.env&quot;)
 
-DATA = BASE / &quot;data&quot;
-DATA.mkdir(exist_ok=True)
+# 데이터 폴더(10-18): 기본 data/. 심사위원 구동 경로(jobs/demo.py)는 DATA_DIR=data/demo 로 운영·개발 데이터와 완전히 분리된 폴더를 쓴다
+DATA = Path(os.getenv(&quot;DATA_DIR&quot;) or (BASE / &quot;data&quot;)).resolve()
+DATA.mkdir(parents=True, exist_ok=True)
 DB_PATH = DATA / &quot;queue.db&quot;                 # 쓰기 주체: vision(또는 mock)
 INSIGHTS_DB_PATH = DATA / &quot;insights.db&quot;     # 쓰기 주체: jobs/rollup.py
 REPORTS_DB_PATH = DATA / &quot;reports.db&quot;       # 쓰기 주체: jobs/report.py
@@ -762,7 +768,11 @@ DEBUG_FLAG = Path(&quot;/tmp/debug_on&quot;) if os.name != &quot;nt&quot; else R
 ADMIN_DB_PATH = DATA / &quot;admin.db&quot;                     # 쓰기 주체: 관리 앱 (감사 로그)
 LLM_HEF = os.getenv(&quot;LLM_HEF&quot;, &quot;&quot;)                    # 로컬 LLM(Hailo-10H GenAI) .hef 경로. 빈 값 = LLM 없음 → 모든 소비자가 규칙 템플릿·DeepL 로 폴백
 LLM_REPORT = os.getenv(&quot;LLM_REPORT&quot;, &quot;0&quot;) == &quot;1&quot;      # 리포트(아침 예보·점심 결산)에도 LLM 을 쓸지. 09-04 스파이크: 1.5B 모델은 한국어 문장이 무너지고 영어로도 사실을 지어내
-                                                      # 규칙 템플릿이 낫다 — 기본 0(템플릿). 한국어가 되는 모델이 오면 1</code></pre>
+                                                      # 규칙 템플릿이 낫다 — 기본 0(템플릿). 한국어가 되는 모델이 오면 1
+# 심사위원 구동 경로(10-18, N3): DEMO_CLOCK 은 app/clock.py 가 읽는 가상 시계 기준('YYYY-MM-DDTHH:MM:SS', 비면 벽시계).
+# SHOW_GUIDE=1 이면 화면에 일곱 번째 탭 '앱 안내'(자동 시연·설명)가 붙는다 — 가상 시계가 켜져 있으면 기본 1, 운영(Pi)은 기본 0
+DEMO_CLOCK = os.getenv(&quot;DEMO_CLOCK&quot;, &quot;&quot;).strip()
+SHOW_GUIDE = os.getenv(&quot;SHOW_GUIDE&quot;, &quot;1&quot; if DEMO_CLOCK else &quot;0&quot;) == &quot;1&quot;</code></pre>
 </figure>
 <figure class="code">
 <figcaption><span class="path">app/db.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
@@ -820,7 +830,8 @@ def connect():
 <figcaption><span class="path">app/routers/status.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
 <pre><code class="lang-python">import datetime as dt
 from fastapi import APIRouter
-from ..config import FEED_SOURCE, STALE_SEC, WAIT_FLOOR_MIN   # STALE_SEC: 이 시간 넘게 새 행이 없으면 '데이터 없음'으로 본다
+from .. import clock
+from ..config import DEMO_CLOCK, FEED_SOURCE, SHOW_GUIDE, STALE_SEC, WAIT_FLOOR_MIN   # STALE_SEC: 이 시간 넘게 새 행이 없으면 '데이터 없음'으로 본다
 from ..db import connect
 from ..lunch import describe, first_meal, meal_next, meal_now, next_meal_day
 from ..mealjson import read_meal
@@ -883,16 +894,24 @@ def wait_range(con, now, win):
     return {&quot;lo&quot;: round(row[&quot;lo&quot;], 1), &quot;hi&quot;: round(row[&quot;hi&quot;], 1), &quot;n&quot;: row[&quot;n&quot;]}
 
 
+def common(now):
+    &quot;&quot;&quot;모든 status 응답에 붙는 것(10-18): 서버 시계 now(화면이 자기 시계와의 차이를 맞춘다 — 가상 시계 심사 모드),
+    demo(가상 시계 기준·안내 띠 문구, 아니면 None), guide('앱 안내' 탭을 붙일지)&quot;&quot;&quot;
+    return {&quot;now&quot;: now.isoformat(timespec=&quot;seconds&quot;),
+            &quot;demo&quot;: {&quot;clock&quot;: DEMO_CLOCK, &quot;label&quot;: &quot;시연 모드 · 모의 데이터 · 가상 시계&quot;} if clock.active() else None,
+            &quot;guide&quot;: SHOW_GUIDE}
+
+
 @router.get(&quot;/api/status&quot;)
 def status():
-    now = dt.datetime.now()
+    now = clock.now()
     con = connect()
     row = con.execute(&quot;SELECT * FROM samples ORDER BY ts DESC LIMIT 1&quot;).fetchone()
     rng = wait_range(con, now, meal_now(now))
     con.close()
     if row is None:
         return {&quot;state&quot;: &quot;no_data&quot;, &quot;updated_at&quot;: None,
-                &quot;queue_len&quot;: None, &quot;rate_per_min&quot;: None, &quot;wait_min&quot;: None, &quot;feed&quot;: feed(now, &quot;no_data&quot;)}
+                &quot;queue_len&quot;: None, &quot;rate_per_min&quot;: None, &quot;wait_min&quot;: None, &quot;feed&quot;: feed(now, &quot;no_data&quot;), **common(now)}
     age = (now - dt.datetime.fromisoformat(row[&quot;ts&quot;])).total_seconds()
     state = &quot;no_data&quot; if age &gt; STALE_SEC else row[&quot;state&quot;]
     return {&quot;state&quot;: state, &quot;updated_at&quot;: row[&quot;ts&quot;], &quot;stale&quot;: age &gt; STALE_SEC,
@@ -900,7 +919,7 @@ def status():
             &quot;wait_min&quot;: row[&quot;wait_min&quot;],
             &quot;wait_raw_min&quot;: row[&quot;wait_raw_min&quot;], &quot;measured_wait_min&quot;: row[&quot;measured_wait_min&quot;], &quot;calib&quot;: row[&quot;calib&quot;],
             &quot;floor_min&quot;: WAIT_FLOOR_MIN or None,        # 수동 실측 하한(10-15) — 화면 각주가 드러낸다
-            &quot;wait_range&quot;: rng, &quot;feed&quot;: feed(now, state)}</code></pre>
+            &quot;wait_range&quot;: rng, &quot;feed&quot;: feed(now, state), **common(now)}</code></pre>
 </figure>
 <p><code>STALE_SEC</code>: 2분 넘게 새 행이 없으면 마지막 값을 보여주는 대신 "데이터 없음"으로 바꿉니다. 카메라가 죽었는데 화면엔 "3분"이 계속 떠 있는 상황을 막는 장치입니다.</p>
 <figure class="code">
@@ -914,6 +933,7 @@ import datetime as dt
 
 from fastapi import APIRouter, Query
 
+from .. import clock
 from ..db import connect
 
 router = APIRouter()
@@ -952,7 +972,7 @@ def _fold(rs):
 
 @router.get(&quot;/api/history&quot;)
 def history(minutes: int = Query(120, ge=1, le=1440), step: int = Query(STEP_DEFAULT, ge=0, le=STEP_MAX)):
-    since = (dt.datetime.now() - dt.timedelta(minutes=minutes)).isoformat(timespec=&quot;seconds&quot;)
+    since = (clock.now() - dt.timedelta(minutes=minutes)).isoformat(timespec=&quot;seconds&quot;)
     con = connect()
     rows = con.execute(
         &quot;SELECT ts, queue_len, rate_per_min, wait_min, state &quot;
@@ -1089,6 +1109,8 @@ import time
 from collections import deque
 
 from app.config import ZONES_JSON
+
+from app import clock
 from app.db import connect
 from app.lunch import meal_now, meals_for
 from vision.meta import MetaSender
@@ -1218,11 +1240,11 @@ def main():
         zones = []
     sim = Simulator(a.scenario)
     win = None                                                # 지금 열린 수집 창 — 바뀌는 순간 곡선을 처음부터
-    windows = &quot;, &quot;.join(f&quot;{w.label} {hhmm(w.lo)}~{hhmm(w.hi)}&quot; for w in meals_for(dt.datetime.now())) or &quot;없음&quot;
+    windows = &quot;, &quot;.join(f&quot;{w.label} {hhmm(w.lo)}~{hhmm(w.hi)}&quot; for w in meals_for(clock.now())) or &quot;없음&quot;
     print(f&quot;mock_feed 시작  speed={a.speed}  scenario={a.scenario}  zones={[z['id'] for z in zones]}  수집 창: {windows}&quot;)
 
     while True:
-        cur = meal_now(dt.datetime.now())
+        cur = meal_now(clock.now())
         if cur != win:                                        # 창이 열리거나 닫힘 → 줄 0 명에서 다시(창 시작에 인파가 몰려드는 모양)
             win = cur
             sim.reset()
@@ -1230,7 +1252,7 @@ def main():
         r = sim.step()
         counts, live = {}, not r[&quot;gap&quot;]
         if live:
-            ts = dt.datetime.now().isoformat(timespec=&quot;milliseconds&quot;)
+            ts = clock.now().isoformat(timespec=&quot;milliseconds&quot;)
             counts = write_sample(con, ts, r, zones)                  # vision/record.py — 카메라 노드와 같은 기록 함수
         zone_txt = &quot; &quot;.join(f&quot;{z}={n}&quot; for z, n in counts.items())
         tag = win.label if win else &quot;더미&quot;
@@ -1244,7 +1266,7 @@ def main():
         crossings = [{&quot;id&quot;: 1000 + k, &quot;dir&quot;: &quot;out&quot;, &quot;ts&quot;: ts} for k in range(r[&quot;served&quot;])]
         for k in range(n):
             frame_id += 1
-            ev = frame_event(frame_id, dt.datetime.now().isoformat(timespec=&quot;milliseconds&quot;), jitter(r[&quot;pts&quot;]), zones,
+            ev = frame_event(frame_id, clock.now().isoformat(timespec=&quot;milliseconds&quot;), jitter(r[&quot;pts&quot;]), zones,
                              r[&quot;rate&quot;], r[&quot;wait&quot;], r[&quot;state&quot;], crossings if k == 0 else ())
             sender.send(ev)
             time.sleep(pause / n)
@@ -1331,6 +1353,8 @@ systemctl status mealboard-api --no-pager</code></pre>
   &lt;symbol id=&quot;i-news&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;rect x=&quot;3.5&quot; y=&quot;4&quot; width=&quot;17&quot; height=&quot;16&quot; rx=&quot;3&quot;/&gt;&lt;path d=&quot;M7.5 9h9M7.5 12.5h9M7.5 16h5.5&quot;/&gt;&lt;/symbol&gt;
   &lt;!-- 통계(10-13): 막대 셋 + 기준선 --&gt;
   &lt;symbol id=&quot;i-stats&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;path d=&quot;M4 20h16&quot;/&gt;&lt;rect class=&quot;fill&quot; x=&quot;6&quot; y=&quot;11&quot; width=&quot;3.2&quot; height=&quot;6.5&quot; rx=&quot;1&quot;/&gt;&lt;rect class=&quot;fill&quot; x=&quot;10.4&quot; y=&quot;6&quot; width=&quot;3.2&quot; height=&quot;11.5&quot; rx=&quot;1&quot;/&gt;&lt;rect class=&quot;fill&quot; x=&quot;14.8&quot; y=&quot;9&quot; width=&quot;3.2&quot; height=&quot;8.5&quot; rx=&quot;1&quot;/&gt;&lt;/symbol&gt;
+  &lt;!-- 앱 안내(10-18, 심사 모드): 둥근 재생 버튼 --&gt;
+  &lt;symbol id=&quot;i-guide&quot; viewBox=&quot;0 0 24 24&quot;&gt;&lt;circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;8.5&quot;/&gt;&lt;path class=&quot;fill&quot; d=&quot;M10 8.6v6.8l5.4-3.4z&quot;/&gt;&lt;/symbol&gt;
 &lt;/svg&gt;
 
 &lt;!-- 모바일 하단 dock (&lt; 900px). 버튼은 앵커 — 해시가 곧 화면이고 뒤로가기가 화면 단위로 동작한다 --&gt;
@@ -1342,6 +1366,7 @@ systemctl status mealboard-api --no-pager</code></pre>
   &lt;a href=&quot;#week&quot; data-go=&quot;week&quot; role=&quot;tab&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-week&quot;/&gt;&lt;/svg&gt;주간식단&lt;/a&gt;
   &lt;a href=&quot;#today&quot; data-go=&quot;today&quot; role=&quot;tab&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-today&quot;/&gt;&lt;/svg&gt;오늘급식&lt;/a&gt;
   &lt;a href=&quot;#news&quot; data-go=&quot;news&quot; role=&quot;tab&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-news&quot;/&gt;&lt;/svg&gt;이슈피드&lt;/a&gt;
+  &lt;a href=&quot;#guide&quot; data-go=&quot;guide&quot; role=&quot;tab&quot; hidden&gt;&lt;svg&gt;&lt;use href=&quot;#i-guide&quot;/&gt;&lt;/svg&gt;앱 안내&lt;/a&gt;
 &lt;/nav&gt;
 &lt;!-- 데스크톱 좌측 레일 (≥ 900px). 다섯 화면을 한 보드에 펼치고, 레일은 그 카드로 스크롤 + 스크롤 스파이 --&gt;
 &lt;aside class=&quot;rail&quot; aria-label=&quot;화면&quot;&gt;
@@ -1351,6 +1376,7 @@ systemctl status mealboard-api --no-pager</code></pre>
   &lt;a href=&quot;#week&quot; data-go=&quot;week&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-week&quot;/&gt;&lt;/svg&gt;주간식단&lt;/a&gt;
   &lt;a href=&quot;#today&quot; data-go=&quot;today&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-today&quot;/&gt;&lt;/svg&gt;오늘급식&lt;/a&gt;
   &lt;a href=&quot;#news&quot; data-go=&quot;news&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-news&quot;/&gt;&lt;/svg&gt;이슈피드&lt;/a&gt;
+  &lt;a href=&quot;#guide&quot; data-go=&quot;guide&quot; hidden&gt;&lt;svg&gt;&lt;use href=&quot;#i-guide&quot;/&gt;&lt;/svg&gt;앱 안내&lt;/a&gt;
 &lt;/aside&gt;
 
 &lt;!-- 안내 띠(09-04, 09-11 개정) — 급식 수집 창(3학년 점심·1·2학년 점심·석식) 밖이면 '급식 시간이 아닙니다'(카메라는 창 밖에 아무것도 쓰지 않는다), 스테이징 mock 이면 '더미데이터'. /api/status feed 로 core.js 가 그린다 --&gt;
@@ -1652,7 +1678,51 @@ systemctl status mealboard-api --no-pager</code></pre>
       &lt;div class=&quot;note&quot; style=&quot;margin-top:10px&quot;&gt;오늘 실린 기사 제목·요약에 자주 나온 낱말 · 크기는 빈도 · &lt;span class=&quot;ck c&quot;&gt;기후&lt;/span&gt; &lt;span class=&quot;ck t&quot;&gt;기술&lt;/span&gt; &lt;span class=&quot;ck b&quot;&gt;둘 다&lt;/span&gt;&lt;/div&gt;
     &lt;/section&gt;
   &lt;/section&gt;
+
+  &lt;!-- ⑦ 앱 안내(10-18, 심사위원 구동 경로 N3) — 서버가 guide 를 줄 때만 탭이 붙는다(core.addGuide). 자동 시연(화면을 돌며 카드마다 설명)·시연 영상·원리 1장.
+       글은 js/guide.js 가 채운다(시연 대본과 같은 파일에 두어 한 곳에서 고친다) --&gt;
+  &lt;section class=&quot;view&quot; id=&quot;guide&quot; role=&quot;tabpanel&quot; aria-label=&quot;앱 안내&quot;&gt;
+    &lt;section class=&quot;card gcard&quot; id=&quot;guideintro&quot;&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;이 앱은&lt;/div&gt;
+      &lt;h2 class=&quot;gtitle&quot;&gt;카메라가 &lt;b&gt;숫자만&lt;/b&gt; 남기는 급식실 대기시간 안내&lt;/h2&gt;
+      &lt;p class=&quot;glead&quot; id=&quot;guidelead&quot;&gt;&lt;/p&gt;
+      &lt;div class=&quot;gfeat&quot; id=&quot;guidefeat&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;gactions&quot;&gt;
+        &lt;button type=&quot;button&quot; class=&quot;gbtn primary&quot; id=&quot;tourstart&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-guide&quot;/&gt;&lt;/svg&gt;자동 시연 시작 &lt;small&gt;약 2분 · 화면을 돌며 설명&lt;/small&gt;&lt;/button&gt;
+        &lt;button type=&quot;button&quot; class=&quot;gbtn&quot; id=&quot;videobtn&quot; hidden&gt;시연 영상 보기&lt;/button&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;note&quot; id=&quot;guidedemo&quot;&gt;&lt;/div&gt;
+    &lt;/section&gt;
+    &lt;section class=&quot;card gcard&quot; id=&quot;guidevideo&quot; hidden&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;시연 영상&lt;/div&gt;
+      &lt;video id=&quot;guideplayer&quot; controls playsinline preload=&quot;metadata&quot;&gt;&lt;/video&gt;
+      &lt;div class=&quot;note&quot; id=&quot;guidevideonote&quot;&gt;급식실 실사 화면은 넣지 않습니다 — 공개 화면·평면도·숫자만&lt;/div&gt;
+    &lt;/section&gt;
+    &lt;section class=&quot;card gcard&quot; id=&quot;guidehow&quot;&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;숫자는 이렇게 나옵니다&lt;/div&gt;
+      &lt;ol class=&quot;gsteps&quot; id=&quot;guidesteps&quot;&gt;&lt;/ol&gt;
+    &lt;/section&gt;
+    &lt;section class=&quot;card gcard&quot; id=&quot;guiderun&quot;&gt;
+      &lt;div class=&quot;eyebrow&quot;&gt;심사위원 · 처음 보는 분께&lt;/div&gt;
+      &lt;div class=&quot;grun&quot; id=&quot;guiderunbody&quot;&gt;&lt;/div&gt;
+    &lt;/section&gt;
+  &lt;/section&gt;
 &lt;/main&gt;
+&lt;!-- 자동 시연 오버레이(guide.js 가 채운다) — 카드 하나를 밝게 남기고 나머지를 어둡게, 말풍선에 설명. ESC·종료로 닫힌다 --&gt;
+&lt;div id=&quot;tour&quot; hidden aria-live=&quot;polite&quot;&gt;
+  &lt;div class=&quot;spot&quot; id=&quot;tourspot&quot;&gt;&lt;/div&gt;
+  &lt;div class=&quot;bubble&quot; id=&quot;tourbubble&quot;&gt;
+    &lt;div class=&quot;step&quot;&gt;&lt;span id=&quot;tourno&quot;&gt;&lt;/span&gt;&lt;i id=&quot;tourbar&quot;&gt;&lt;b&gt;&lt;/b&gt;&lt;/i&gt;&lt;/div&gt;
+    &lt;h3 id=&quot;tourtitle&quot;&gt;&lt;/h3&gt;
+    &lt;p id=&quot;tourtext&quot;&gt;&lt;/p&gt;
+    &lt;div class=&quot;ctl&quot;&gt;
+      &lt;button type=&quot;button&quot; id=&quot;tourprev&quot;&gt;이전&lt;/button&gt;
+      &lt;button type=&quot;button&quot; id=&quot;tourpause&quot;&gt;일시정지&lt;/button&gt;
+      &lt;button type=&quot;button&quot; id=&quot;tournext&quot; class=&quot;primary&quot;&gt;다음&lt;/button&gt;
+      &lt;button type=&quot;button&quot; id=&quot;tourstop&quot; class=&quot;x&quot; aria-label=&quot;시연 종료&quot;&gt;종료&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
 
 &lt;!-- js/core.js 가 화면 모듈(wait·room·stats·week·today·news)을 불러 등록하고 라우터·폴링을 돌린다 (빌드 도구 없음, ES 모듈) --&gt;
 &lt;script&gt;
@@ -1704,10 +1774,10 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v45&quot;;   // 10-17: 통계 차트 픽셀 좌표계(글자 찌그러짐 해소) + 데스크톱 1·2행 높이 통일
+const CACHE = &quot;mealboard-v46&quot;;   // 10-18: 심사 모드(가상 시계·앱 안내 탭·자동 시연)
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
-  &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/stats.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;];
+  &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/stats.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;, &quot;/js/guide.js&quot;];
 
 self.addEventListener(&quot;install&quot;, e =&gt;
   e.waitUntil(caches.open(CACHE).then(c =&gt; c.addAll(SHELL)).then(() =&gt; self.skipWaiting())));
@@ -2855,6 +2925,7 @@ def write_positions(ts, queue):
 <pre><code class="lang-python">import datetime as dt
 import json
 from fastapi import APIRouter
+from .. import clock
 from ..config import DATA, STALE_SEC    # status.py 와 같은 규칙: 이 시간 넘게 새 파일이 없으면 '데이터 없음'
 
 router = APIRouter()
@@ -2871,7 +2942,7 @@ def positions():
         p = json.loads(POSITIONS.read_text(encoding=&quot;utf-8&quot;))
     except ValueError:                       # 덮어쓰는 순간에 읽혔을 때 — 다음 폴링에서 정상
         return empty
-    age = (dt.datetime.now() - dt.datetime.fromisoformat(p[&quot;updated_at&quot;])).total_seconds()
+    age = (clock.now() - dt.datetime.fromisoformat(p[&quot;updated_at&quot;])).total_seconds()
     if age &gt; STALE_SEC:
         return {**empty, &quot;updated_at&quot;: p[&quot;updated_at&quot;], &quot;stale&quot;: True}
     return {&quot;state&quot;: &quot;ok&quot;, &quot;updated_at&quot;: p[&quot;updated_at&quot;], &quot;stale&quot;: False, &quot;n&quot;: p[&quot;n&quot;], &quot;points&quot;: p[&quot;points&quot;]}</code></pre>
@@ -2981,6 +3052,7 @@ ls data/positions.json*                                 # .tmp 가 남아 있지
 &quot;&quot;&quot;
 import datetime as dt
 from fastapi import APIRouter, Query
+from .. import clock
 from ..db import connect
 from ..lunch import BUCKET_MIN          # 5분 구간 — 집계(rollup)와 같은 눈금
 
@@ -3008,7 +3080,7 @@ def _rows(con, since, before, lo, hi, weekday):
 
 @router.get(&quot;/api/typical&quot;)
 def typical(minutes: int = Query(120, ge=10, le=1440), weeks: int = Query(2, ge=1, le=8)):
-    now = dt.datetime.now()
+    now = clock.now()
     lo, hi = window(now, minutes)
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
     before = today.isoformat(timespec=&quot;seconds&quot;)
@@ -4178,6 +4250,8 @@ import sqlite3
 import sys
 
 from app.config import DB_PATH, FEED_SOURCE, INSIGHTS_DB_PATH, ROLLUP_WINDOW
+
+from app import clock
 from app.insight_calc import CALC_VERSION, bin_zones, day_summary, median_or_none, normalize_menu, popularity
 from app.insights_db import connect_ro, meta
 from app.lunch import WINDOWS, agg_meals, seconds_of_day, weekday_of
@@ -4301,7 +4375,7 @@ def write_day(con, s, zone_rows, menu, source, meal_name):
                  s[&quot;insufficient_min&quot;], s[&quot;first_ts&quot;], s[&quot;last_ts&quot;], s[&quot;peak_wait&quot;], s[&quot;peak_wait_ts&quot;], s[&quot;peak_queue&quot;],
                  s[&quot;peak_queue_ts&quot;], s[&quot;avg_wait&quot;], s[&quot;served_est&quot;], s[&quot;typical_rate&quot;], s[&quot;rise_rate&quot;], s[&quot;golden_min&quot;],
                  s[&quot;bottleneck_min&quot;], json.dumps(dishes, ensure_ascii=False), dishes[0] if dishes else None,
-                 CALC_VERSION, dt.datetime.now().isoformat(timespec=&quot;seconds&quot;)))
+                 CALC_VERSION, clock.now().isoformat(timespec=&quot;seconds&quot;)))
     con.executemany(&quot;INSERT INTO lunch_bins VALUES (?,?,?,?,?,?,?,?,?,?,?,?)&quot;,
                     [(date, meal_name, weekday, b[&quot;bin&quot;], b[&quot;n&quot;], b[&quot;ok_n&quot;], b[&quot;insufficient_n&quot;], b[&quot;avg_queue&quot;], b[&quot;max_queue&quot;],
                       b[&quot;avg_rate&quot;], b[&quot;avg_wait&quot;], b[&quot;max_wait&quot;]) for b in s[&quot;bins&quot;]])
@@ -4354,7 +4428,7 @@ def pick_dates(a, qcon):
         return [a.date]
     if a.all:
         return list_dates(qcon)
-    today = dt.date.today()
+    today = clock.today()
     return [(today - dt.timedelta(days=i)).isoformat() for i in reversed(range(a.days))]
 
 
@@ -4385,8 +4459,8 @@ def main():
         print(&quot;집계할 날짜가 없다 (--all 인데 samples 가 비어 있다). 아무것도 하지 않는다&quot;)
         return 0
     meals = agg_meals(a.window)                  # [(meal, lo, hi)] — lunch 모드면 중식·석식 두 창(09-16)
-    today = dt.date.today().isoformat()
-    now_sec = seconds_of_day(dt.datetime.now())
+    today = clock.today().isoformat()
+    now_sec = seconds_of_day(clock.now())
 
     if a.dry_run:
         print(f&quot;[dry-run] window={a.window} {[(m, f'{lo}~{hi}분') for m, lo, hi in meals]} source={a.source} 날짜 {len(dates)}개 - 파일을 만들거나 바꾸지 않는다&quot;)
@@ -4407,7 +4481,7 @@ def main():
         migrate(con)
         check_meta(con, a.window, a.source)
         con.execute(&quot;INSERT INTO runs (started_at, args, dates) VALUES (?,?,?)&quot;,
-                    (dt.datetime.now().isoformat(timespec=&quot;seconds&quot;), &quot; &quot;.join(sys.argv[1:]), &quot;,&quot;.join(dates)))
+                    (clock.now().isoformat(timespec=&quot;seconds&quot;), &quot; &quot;.join(sys.argv[1:]), &quot;,&quot;.join(dates)))
         run_id = con.execute(&quot;SELECT last_insert_rowid()&quot;).fetchone()[0]
         con.commit()
         upsert_nutrition(con, read_meal())
@@ -4432,7 +4506,7 @@ def main():
     finally:
         if run_id is not None:
             con.execute(&quot;UPDATE runs SET finished_at=?, n_days=?, ok=?, error=? WHERE id=?&quot;,
-                        (dt.datetime.now().isoformat(timespec=&quot;seconds&quot;), n_days, int(err is None), err, run_id))
+                        (clock.now().isoformat(timespec=&quot;seconds&quot;), n_days, int(err is None), err, run_id))
             con.commit()
         con.close()
     return 0
@@ -4530,6 +4604,7 @@ from contextlib import closing
 
 from fastapi import APIRouter, Query
 
+from .. import clock
 from ..config import DB_PATH, FEED_SOURCE, ROLLUP_WINDOW, ZONES_JSON
 from ..insight_calc import GOLDEN_WAIT, band_stats, day_summary, density, golden_bins, hex_clusters, median_or_none
 from ..insights_db import connect_reports_ro, connect_ro, meta
@@ -4567,15 +4642,15 @@ def _no(reason, **extra):
 
 
 def _today():
-    return dt.date.today().isoformat()
+    return clock.today().isoformat()
 
 
 def _iso(date):
-    return (date or dt.date.today()).isoformat()
+    return (date or clock.today()).isoformat()
 
 
 def _since(weeks):
-    return (dt.date.today() - dt.timedelta(weeks=weeks)).isoformat()
+    return (clock.today() - dt.timedelta(weeks=weeks)).isoformat()
 
 
 def _window(meal):
@@ -4633,7 +4708,7 @@ def _stored_day(date, meal):
 
 def _live_day(date, meal):
     &quot;&quot;&quot;오늘 최근 LIVE_MIN 분(그 끼니 창 안)을 queue.db 에서 한 번 읽어 day_summary — 표본·커버리지가 같은 창을 본다&quot;&quot;&quot;
-    now = dt.datetime.now()
+    now = clock.now()
     nmin = minute_of_day(now)
     wlo, whi = _bounds(meal)
     lo, hi = max(wlo, nmin - LIVE_MIN), min(whi, nmin + 1)
@@ -4652,7 +4727,7 @@ def _live_day(date, meal):
 def _day(date, meal):
     &quot;&quot;&quot;(basis, summary) — 오늘이고 그 끼니 창이 아직 안 끝났으면 live, 아니면 집계 행, 오늘인데 행이 없으면 live, 그 밖엔 None&quot;&quot;&quot;
     today = date == _today()
-    if today and minute_of_day(dt.datetime.now()) &lt; _bounds(meal)[1]:
+    if today and minute_of_day(clock.now()) &lt; _bounds(meal)[1]:
         return &quot;live&quot;, _live_day(date, meal)
     stored = _stored_day(date, meal)
     if stored is not None:
@@ -4756,7 +4831,7 @@ def _typical_curve(con, date, weeks, sm):
     &quot;&quot;&quot;같은 요일 최근 N주 → 모자라면 최근 7일(요일 무관). 예보 대상 날 자신은 뺀다(비교 대상이 자기 자신이 되면 안 된다).
     같은 끼니의 집계만 본다. (basis, [{minute_of_day, wait}])&quot;&quot;&quot;
     plans = [(&quot;weekday&quot;, &quot;AND b.weekday = ? AND b.date &gt;= ?&quot;, (weekday_of(date), _since(weeks))),
-             (&quot;recent&quot;, &quot;AND b.date &gt;= ?&quot;, ((dt.date.today() - dt.timedelta(days=7)).isoformat(),))]
+             (&quot;recent&quot;, &quot;AND b.date &gt;= ?&quot;, ((clock.today() - dt.timedelta(days=7)).isoformat(),))]
     for basis, cond, args in plans:
         rows = con.execute(
             &quot;SELECT b.bin, AVG(b.avg_wait) w FROM lunch_bins b JOIN lunch_days l ON l.date = b.date AND l.meal = b.meal &quot;
@@ -4784,7 +4859,7 @@ def _menu_factor(con, dishes, sm):
 def forecast(date: dt.date | None = Query(None), weeks: int = Query(4, ge=1, le=12), meal: str = MealQ()):
     sm = _stored(meal)
     if date is None:                                          # 그 끼니가 끝난 뒤면 내일, 아니면 오늘
-        now = dt.datetime.now()
+        now = clock.now()
         date = now.date() if minute_of_day(now) &lt; _bounds(meal)[1] else now.date() + dt.timedelta(days=1)
     if date.weekday() &gt;= 5:
         return {&quot;state&quot;: &quot;no_meal&quot;, &quot;date&quot;: date.isoformat(), &quot;meal&quot;: meal, &quot;reason&quot;: &quot;주말에는 급식이 없다&quot;, &quot;curve&quot;: [], &quot;golden&quot;: []}
@@ -4917,7 +4992,7 @@ def zones(weeks: int = Query(4, ge=1, le=12), date: dt.date | None = Query(None)
 def density_now(minutes: int = Query(30, ge=5, le=180)):
     &quot;&quot;&quot;오늘 최근 minutes 분의 격자 셀별 평균 인원(히트맵)과 구역별 점유율. 집계 파일이 아니라 queue.db 를 읽기 전용으로 즉석 계산 —
     셀·구역 인원수는 mock/vision 이 표본마다 남긴 숫자이고 개별 좌표는 어디에도 없다. 표본이 없으면 no_data&quot;&quot;&quot;
-    since = (dt.datetime.now() - dt.timedelta(minutes=minutes)).isoformat(timespec=&quot;seconds&quot;)
+    since = (clock.now() - dt.timedelta(minutes=minutes)).isoformat(timespec=&quot;seconds&quot;)
     con = connect_ro(DB_PATH, &quot;cell_samples&quot;)
     if con is None:
         return _no(&quot;셀 표본이 아직 없다 — mock/vision 이 cell_samples 를 쓴다&quot;, minutes=minutes, cells=[], zones=[])
@@ -4954,7 +5029,7 @@ def density_typical(days: int = Query(7, ge=1, le=28), meal: str = MealQ()):
 
 def _density_typical(days, meal):
     lo, hi = _bounds(meal)
-    since = (dt.date.today() - dt.timedelta(days=days)).isoformat()
+    since = (clock.today() - dt.timedelta(days=days)).isoformat()
     con = connect_ro(DB_PATH, &quot;cell_samples&quot;)
     if con is None:
         return _no(&quot;셀 표본이 아직 없다&quot;, days=days, meal=meal, cells=[], zones=[], clusters=[])
@@ -5704,7 +5779,13 @@ export const hm = ts =&gt; ts ? ts.slice(11, 16) : &quot;&quot;;                
 export const WD = &quot;일월화수목금토&quot;;
 /* 끼니 토글(09-16 중식/석식 분리) — 인사이트 카드 오른쪽 위 세그먼트. 데이터는 카드 쪽이 캐시하고 여기서는 선택만 다룬다 */
 export const MEAL_KO = { lunch: &quot;중식&quot;, dinner: &quot;석식&quot; };
-export const defaultMeal = () =&gt; { const h = new Date().getHours(); return h &gt;= 14 &amp;&amp; h &lt; 21 ? &quot;dinner&quot; : &quot;lunch&quot;; };   // 14시 이후엔 다음 끼니
+/* 앱의 '지금'(10-18) — 서버 시계 기준. /api/status 의 now 와 이 기기 시계의 차이(skew)를 기억해 두고, 화면의 날짜·요일·'지금' 판정은 전부 now() 로.
+   평소엔 skew ≈ 0 이지만 심사 모드(가상 시계 DEMO_CLOCK)에서는 서버가 '수요일 12:38' 을 살고 있다 — 화면도 그 시각을 살아야 히트맵 오늘 행·도착 시각이 맞는다.
+   캐시 만료·폴링 간격 같은 '경과 시간' 은 여전히 Date.now() 를 쓴다(그건 실제 시간이어야 한다) */
+let skew = 0;
+export const now = () =&gt; new Date(Date.now() + skew);
+export function syncClock(st) { if (st &amp;&amp; st.now) { const t = new Date(st.now).getTime(); if (!isNaN(t)) skew = t - Date.now(); } }
+export const defaultMeal = () =&gt; { const h = now().getHours(); return h &gt;= 14 &amp;&amp; h &lt; 21 ? &quot;dinner&quot; : &quot;lunch&quot;; };   // 14시 이후엔 다음 끼니
 export function mealSeg(el, initial, onPick) {
   el.innerHTML = [&quot;lunch&quot;, &quot;dinner&quot;].map(m =&gt;
     `&lt;button type=&quot;button&quot; data-meal=&quot;${m}&quot; aria-pressed=&quot;${m === initial}&quot;&gt;${MEAL_KO[m]}&lt;/button&gt;`).join(&quot;&quot;);
@@ -5720,7 +5801,7 @@ export const why = r =&gt; !r || /reports\.db/.test(r) ? null : /insights\.db/.t
 const DESK_MQ = matchMedia(&quot;(min-width: 900px)&quot;);
 export const desktop = () =&gt; DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = &quot;v45&quot;;                       // 10-17: 통계 차트 픽셀 좌표계                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = &quot;v46&quot;;                       // 10-18: 심사 모드(가상 시계·앱 안내 탭·자동 시연)    // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
@@ -5765,9 +5846,16 @@ export const S = { last: null, lastPos: null, meal: null, typ: null };
 /* 안내 띠(09-04, 09-11 개정) — /api/status 의 feed 로 그린다. live(카메라 노드 + 수집 창 안 + 표본 이어짐)면 숨긴다.
    카메라(vision): 창 밖은 &quot;지금은 급식 시간이 아닙니다&quot; + 다음 창(창 밖에는 아무 표본도 없다), 창 안인데 표본이 끊기면 &quot;카메라 표본이 끊겼습니다&quot;.
    스테이징 mock: 값이 더미라는 것을 창 안팎 모두 적는다. 어느 화면에 있든 같은 띠 — 대기시간 화면은 30초 status 로, 나머지는 60초 feedTick 으로 */
-export function renderFeed(f) {
+let DEMO = null;                                       // /api/status 의 demo(가상 시계 심사 모드) — 안내 띠 문구가 바뀐다
+export function renderFeed(f, demo) {
   const bar = $(&quot;#feedbar&quot;);
   if (!bar || !f) return;
+  if (demo !== undefined) DEMO = demo;
+  if (DEMO) {                                          // 심사 모드(10-18): 더미 경고 대신 '시연 모드 · 가상 시계' 한 줄 — 값이 모의라는 것을 숨기지 않는다
+    const t = now(), win = f.now ? ` · &lt;b&gt;${esc(f.now.label)}&lt;/b&gt; ${mm(f.now.lo)}~${mm(f.now.hi)}` : &quot;&quot;;
+    bar.innerHTML = `${esc(DEMO.label || &quot;시연 모드 · 모의 데이터&quot;)} &lt;b&gt;${t.getMonth() + 1}/${t.getDate()} (${WD[t.getDay()]}) ${hhmm(t)}&lt;/b&gt;${win}`;
+    bar.hidden = false; return;
+  }
   if (f.live) { bar.hidden = true; return; }
   // 다음 급식(09-11): 서버가 급식 있는 날(주말·공휴일 제외, NEIS 캐시 기준)을 준다. 날짜를 못 정하면 '급식 시간이 아닙니다' 만 남긴다
   const n = f.next, when = !n ? &quot;&quot; : n.days === 0 ? &quot;&quot; : n.days === 1 ? &quot; (내일)&quot; : n.weekday ? ` (${esc(n.weekday)}요일)` : ` (${n.days}일 뒤)`;
@@ -5790,12 +5878,26 @@ function autoSwitch(f) {
   if (inWin &amp;&amp; !wasInWindow &amp;&amp; !userNav &amp;&amp; active === &quot;news&quot;) go(&quot;wait&quot;, { push: false, anim: true });
   wasInWindow = inWin;
 }
-async function feedTick() { if (document.hidden) return; try { const f = (await j(&quot;/api/status&quot;)).feed; renderFeed(f); autoSwitch(f); } catch (e) { console.error(&quot;feed&quot;, e); } }
+async function feedTick() { if (document.hidden) return; try { const st = await j(&quot;/api/status&quot;); syncClock(st); renderFeed(st.feed, st.demo); autoSwitch(st.feed); } catch (e) { console.error(&quot;feed&quot;, e); } }
 
 /* ---------------- 화면 등록 · 라우터 ---------------- */
-const ORDER = [&quot;wait&quot;, &quot;room&quot;, &quot;stats&quot;, &quot;week&quot;, &quot;today&quot;, &quot;news&quot;];        // 10-13: 통계(이력 차트) 화면 추가 — 실시간뷰 다음
-const NAMES = { wait: &quot;대기시간&quot;, room: &quot;실시간뷰&quot;, stats: &quot;통계&quot;, week: &quot;주간식단&quot;, today: &quot;오늘급식&quot;, news: &quot;이슈피드&quot; };
+const ORDER = [&quot;wait&quot;, &quot;room&quot;, &quot;stats&quot;, &quot;week&quot;, &quot;today&quot;, &quot;news&quot;];        // 10-13: 통계(이력 차트) 화면 추가 — 실시간뷰 다음. 10-18: 서버가 guide 를 주면 '앱 안내' 가 뒤에 붙는다(addGuide)
+const NAMES = { wait: &quot;대기시간&quot;, room: &quot;실시간뷰&quot;, stats: &quot;통계&quot;, week: &quot;주간식단&quot;, today: &quot;오늘급식&quot;, news: &quot;이슈피드&quot;, guide: &quot;앱 안내&quot; };
 const SCREENS = { wait: wait.screen, room: room.screen, stats: stats.screen, week: week.screen, today: today.screen, news: news.screen };
+/* '앱 안내' 탭(10-18, 심사위원 구동 경로 N3) — 서버 .env SHOW_GUIDE(가상 시계면 기본 on)일 때만 붙는다. 모듈은 그때 동적으로 읽는다(학생 화면엔 짐이 아니다) */
+let guideAdded = false;
+async function addGuide() {
+  if (guideAdded) return;
+  guideAdded = true;
+  try {
+    const m = await import(`/js/guide.js?v=${UI_VERSION}`);
+    SCREENS.guide = m.screen; ORDER.push(&quot;guide&quot;);
+    $$('[data-go=&quot;guide&quot;]').forEach(a =&gt; { a.hidden = false; a.addEventListener(&quot;click&quot;, e =&gt; { e.preventDefault(); userNav = true; go(&quot;guide&quot;); }); });
+    m.screen.mount?.();
+    mark(active || &quot;wait&quot;, false);
+    if (wanted === &quot;guide&quot;) go(&quot;guide&quot;, { push: false });
+  } catch (e) { console.error(&quot;guide&quot;, e); guideAdded = false; }
+}
 const lastPoll = {}, lastSlow = {};                    // name → 마지막 폴링 시각 (라이브 / 느린 인사이트)
 const scrollYs = {};                                   // 화면별 세로 스크롤 위치 — 돌아오면 그 자리
 let active = null;
@@ -5875,13 +5977,12 @@ ORDER.forEach(n =&gt; SCREENS[n].mount?.());              // 캔버스 관찰 �
 // 시작 화면(09-11): 해시가 있으면 그대로, 없으면 status 를 먼저 보고 급식 창 밖이면 이슈피드·안이면 대기시간. status 가 늦어도 대기시간으로 시작한다
 async function boot() {
   let start = ORDER.includes(wanted) ? wanted : null;
-  let f = null;
-  if (!start) {
-    try { f = (await Promise.race([j(&quot;/api/status&quot;), new Promise((_, rej) =&gt; setTimeout(rej, 1500))])).feed; } catch {}
-    start = f &amp;&amp; !mealLive(f) ? &quot;news&quot; : &quot;wait&quot;;       // 창 밖 또는 급식 없는 날(주말·방학) → 이슈피드에서 시작
-  }
+  let f = null, st = null;
+  try { st = await Promise.race([j(&quot;/api/status&quot;), new Promise((_, rej) =&gt; setTimeout(rej, 1500))]); f = st.feed; syncClock(st); } catch {}
+  if (st &amp;&amp; st.guide) addGuide();                      // 심사 모드·안내 탭(10-18) — 등록이 끝나면 #guide 로 들어온 요청도 그 화면으로
+  if (!start) start = f &amp;&amp; !mealLive(f) ? &quot;news&quot; : &quot;wait&quot;;       // 창 밖 또는 급식 없는 날(주말·방학) → 이슈피드에서 시작(#guide 는 탭이 붙은 뒤 addGuide 가 넘겨 준다)
   go(start, { push: false });
-  if (f) { renderFeed(f); wasInWindow = mealLive(f); }
+  if (f) { renderFeed(f, st.demo); wasInWindow = mealLive(f); }
   setInterval(tick, 5000);                             // 화면별 every(기본 30초)가 가르므로 잦은 tick 자체는 요청을 늘리지 않는다
   feedTick(); setInterval(feedTick, 60000);            // 안내 띠·자동 전환은 화면과 무관하게 60초(status 응답은 200B 남짓)
 }
@@ -5894,7 +5995,7 @@ if (&quot;serviceWorker&quot; in navigator) {
   navigator.serviceWorker.addEventListener(&quot;controllerchange&quot;, () =&gt; { if (hadController &amp;&amp; !window.__mbReloaded) { window.__mbReloaded = true; location.reload(); } });
 }
 /* 관리 origin 에서만 관리 뷰를 붙인다 — 호스트명이 아니라 서버가 답하는지로 판단. 공개 origin 에서는 세션당 404 한 번 (PLAN §3.1, Phase 3) */
-window.MB = { S, go, poll, observe, ORDER, NAMES, screens: SCREENS, active: () =&gt; active, wanted };   // 콘솔·테스트·관리 모듈의 손잡이
+window.MB = { S, go, poll, observe, ORDER, NAMES, screens: SCREENS, active: () =&gt; active, wanted, now };   // 콘솔·테스트·관리 모듈의 손잡이
 try {
   // SSH 터널은 `/?key=…` 로 들어온다(서버가 그 응답에 쿠키를 준다) — 그때는 세션의 '없음' 기억을 무시하고 다시 묻는다
   const probe = sessionStorage.getItem(&quot;mb_admin_probe&quot;);
@@ -7401,6 +7502,8 @@ import sys
 import time
 
 from app.config import INSIGHTS_DB_PATH, REPORTS_DB_PATH, LLM_REPORT
+
+from app import clock
 from app.insight_calc import normalize_menu
 from app.insights_db import connect_ro
 from app.lunch import weekday_of
@@ -7539,7 +7642,7 @@ def connect_rw(path=REPORTS_DB_PATH):
 
 def write(con, kind, date, res, inp):
     con.execute(&quot;INSERT INTO reports (ts, kind, for_date, engine, model, ok, ms, headline, body, tone, input_json) VALUES (?,?,?,?,?,?,?,?,?,?,?)&quot;,
-                (dt.datetime.now().isoformat(timespec=&quot;seconds&quot;), kind, date, res[&quot;engine&quot;], res[&quot;model&quot;], int(res[&quot;ok&quot;]), res[&quot;ms&quot;],
+                (clock.now().isoformat(timespec=&quot;seconds&quot;), kind, date, res[&quot;engine&quot;], res[&quot;model&quot;], int(res[&quot;ok&quot;]), res[&quot;ms&quot;],
                  res[&quot;headline&quot;], res[&quot;body&quot;], res[&quot;tone&quot;], json.dumps(inp, ensure_ascii=False)))
     con.commit()
 
@@ -7578,11 +7681,11 @@ def run(kind, date, insights=INSIGHTS_DB_PATH, reports=REPORTS_DB_PATH, meal=Non
 def main():
     ap = argparse.ArgumentParser(description=&quot;리포트 생성 → reports.db&quot;)
     ap.add_argument(&quot;--kind&quot;, choices=KINDS + (&quot;auto&quot;,), default=&quot;auto&quot;)
-    ap.add_argument(&quot;--date&quot;, type=lambda s: dt.date.fromisoformat(s).isoformat(), default=dt.date.today().isoformat())
+    ap.add_argument(&quot;--date&quot;, type=lambda s: dt.date.fromisoformat(s).isoformat(), default=clock.today().isoformat())
     ap.add_argument(&quot;--dry-run&quot;, action=&quot;store_true&quot;, help=&quot;계산만, 아무것도 쓰지 않는다&quot;)
     ap.add_argument(&quot;--template&quot;, action=&quot;store_true&quot;, help=&quot;LLM 을 건너뛰고 규칙 문장만&quot;)
     a = ap.parse_args()
-    kind = a.kind if a.kind != &quot;auto&quot; else (&quot;preview&quot; if dt.datetime.now().hour &lt; 12 else &quot;recap&quot;)
+    kind = a.kind if a.kind != &quot;auto&quot; else (&quot;preview&quot; if clock.now().hour &lt; 12 else &quot;recap&quot;)
     res, inp = run(kind, a.date, dry_run=a.dry_run, template_only=a.template)
     if res is None:
         print(f&quot;건너뜀: {inp}&quot;)

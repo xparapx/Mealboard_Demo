@@ -8,6 +8,7 @@
 """
 import datetime as dt
 from fastapi import APIRouter, Query
+from .. import clock
 from ..db import connect
 from ..lunch import BUCKET_MIN          # 5분 구간 — 집계(rollup)와 같은 눈금
 
@@ -35,7 +36,7 @@ def _rows(con, since, before, lo, hi, weekday):
 
 @router.get("/api/typical")
 def typical(minutes: int = Query(120, ge=10, le=1440), weeks: int = Query(2, ge=1, le=8)):
-    now = dt.datetime.now()
+    now = clock.now()
     lo, hi = window(now, minutes)
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
     before = today.isoformat(timespec="seconds")

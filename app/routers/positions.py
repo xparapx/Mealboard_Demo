@@ -1,6 +1,7 @@
 import datetime as dt
 import json
 from fastapi import APIRouter
+from .. import clock
 from ..config import DATA, STALE_SEC    # status.py 와 같은 규칙: 이 시간 넘게 새 파일이 없으면 '데이터 없음'
 
 router = APIRouter()
@@ -17,7 +18,7 @@ def positions():
         p = json.loads(POSITIONS.read_text(encoding="utf-8"))
     except ValueError:                       # 덮어쓰는 순간에 읽혔을 때 — 다음 폴링에서 정상
         return empty
-    age = (dt.datetime.now() - dt.datetime.fromisoformat(p["updated_at"])).total_seconds()
+    age = (clock.now() - dt.datetime.fromisoformat(p["updated_at"])).total_seconds()
     if age > STALE_SEC:
         return {**empty, "updated_at": p["updated_at"], "stale": True}
     return {"state": "ok", "updated_at": p["updated_at"], "stale": False, "n": p["n"], "points": p["points"]}

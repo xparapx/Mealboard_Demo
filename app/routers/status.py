@@ -1,6 +1,7 @@
 import datetime as dt
 from fastapi import APIRouter
-from ..config import FEED_SOURCE, STALE_SEC, WAIT_FLOOR_MIN   # STALE_SEC: 이 시간 넘게 새 행이 없으면 '데이터 없음'으로 본다
+from .. import clock
+from ..config import DEMO_CLOCK, FEED_SOURCE, SHOW_GUIDE, STALE_SEC, WAIT_FLOOR_MIN   # STALE_SEC: 이 시간 넘게 새 행이 없으면 '데이터 없음'으로 본다
 from ..db import connect
 from ..lunch import describe, first_meal, meal_next, meal_now, next_meal_day
 from ..mealjson import read_meal
@@ -63,16 +64,24 @@ def wait_range(con, now, win):
     return {"lo": round(row["lo"], 1), "hi": round(row["hi"], 1), "n": row["n"]}
 
 
+def common(now):
+    """모든 status 응답에 붙는 것(10-18): 서버 시계 now(화면이 자기 시계와의 차이를 맞춘다 — 가상 시계 심사 모드),
+    demo(가상 시계 기준·안내 띠 문구, 아니면 None), guide('앱 안내' 탭을 붙일지)"""
+    return {"now": now.isoformat(timespec="seconds"),
+            "demo": {"clock": DEMO_CLOCK, "label": "시연 모드 · 모의 데이터 · 가상 시계"} if clock.active() else None,
+            "guide": SHOW_GUIDE}
+
+
 @router.get("/api/status")
 def status():
-    now = dt.datetime.now()
+    now = clock.now()
     con = connect()
     row = con.execute("SELECT * FROM samples ORDER BY ts DESC LIMIT 1").fetchone()
     rng = wait_range(con, now, meal_now(now))
     con.close()
     if row is None:
         return {"state": "no_data", "updated_at": None,
-                "queue_len": None, "rate_per_min": None, "wait_min": None, "feed": feed(now, "no_data")}
+                "queue_len": None, "rate_per_min": None, "wait_min": None, "feed": feed(now, "no_data"), **common(now)}
     age = (now - dt.datetime.fromisoformat(row["ts"])).total_seconds()
     state = "no_data" if age > STALE_SEC else row["state"]
     return {"state": state, "updated_at": row["ts"], "stale": age > STALE_SEC,
@@ -80,4 +89,4 @@ def status():
             "wait_min": row["wait_min"],
             "wait_raw_min": row["wait_raw_min"], "measured_wait_min": row["measured_wait_min"], "calib": row["calib"],
             "floor_min": WAIT_FLOOR_MIN or None,        # 수동 실측 하한(10-15) — 화면 각주가 드러낸다
-            "wait_range": rng, "feed": feed(now, state)}
+            "wait_range": rng, "feed": feed(now, state), **common(now)}

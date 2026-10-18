@@ -12,6 +12,7 @@ from contextlib import closing
 
 from fastapi import APIRouter, Query
 
+from .. import clock
 from ..config import DB_PATH, FEED_SOURCE, ROLLUP_WINDOW, ZONES_JSON
 from ..insight_calc import GOLDEN_WAIT, band_stats, day_summary, density, golden_bins, hex_clusters, median_or_none
 from ..insights_db import connect_reports_ro, connect_ro, meta
@@ -49,15 +50,15 @@ def _no(reason, **extra):
 
 
 def _today():
-    return dt.date.today().isoformat()
+    return clock.today().isoformat()
 
 
 def _iso(date):
-    return (date or dt.date.today()).isoformat()
+    return (date or clock.today()).isoformat()
 
 
 def _since(weeks):
-    return (dt.date.today() - dt.timedelta(weeks=weeks)).isoformat()
+    return (clock.today() - dt.timedelta(weeks=weeks)).isoformat()
 
 
 def _window(meal):
@@ -115,7 +116,7 @@ def _stored_day(date, meal):
 
 def _live_day(date, meal):
     """오늘 최근 LIVE_MIN 분(그 끼니 창 안)을 queue.db 에서 한 번 읽어 day_summary — 표본·커버리지가 같은 창을 본다"""
-    now = dt.datetime.now()
+    now = clock.now()
     nmin = minute_of_day(now)
     wlo, whi = _bounds(meal)
     lo, hi = max(wlo, nmin - LIVE_MIN), min(whi, nmin + 1)
@@ -134,7 +135,7 @@ def _live_day(date, meal):
 def _day(date, meal):
     """(basis, summary) — 오늘이고 그 끼니 창이 아직 안 끝났으면 live, 아니면 집계 행, 오늘인데 행이 없으면 live, 그 밖엔 None"""
     today = date == _today()
-    if today and minute_of_day(dt.datetime.now()) < _bounds(meal)[1]:
+    if today and minute_of_day(clock.now()) < _bounds(meal)[1]:
         return "live", _live_day(date, meal)
     stored = _stored_day(date, meal)
     if stored is not None:
@@ -238,7 +239,7 @@ def _typical_curve(con, date, weeks, sm):
     """같은 요일 최근 N주 → 모자라면 최근 7일(요일 무관). 예보 대상 날 자신은 뺀다(비교 대상이 자기 자신이 되면 안 된다).
     같은 끼니의 집계만 본다. (basis, [{minute_of_day, wait}])"""
     plans = [("weekday", "AND b.weekday = ? AND b.date >= ?", (weekday_of(date), _since(weeks))),
-             ("recent", "AND b.date >= ?", ((dt.date.today() - dt.timedelta(days=7)).isoformat(),))]
+             ("recent", "AND b.date >= ?", ((clock.today() - dt.timedelta(days=7)).isoformat(),))]
     for basis, cond, args in plans:
         rows = con.execute(
             "SELECT b.bin, AVG(b.avg_wait) w FROM lunch_bins b JOIN lunch_days l ON l.date = b.date AND l.meal = b.meal "
@@ -266,7 +267,7 @@ def _menu_factor(con, dishes, sm):
 def forecast(date: dt.date | None = Query(None), weeks: int = Query(4, ge=1, le=12), meal: str = MealQ()):
     sm = _stored(meal)
     if date is None:                                          # 그 끼니가 끝난 뒤면 내일, 아니면 오늘
-        now = dt.datetime.now()
+        now = clock.now()
         date = now.date() if minute_of_day(now) < _bounds(meal)[1] else now.date() + dt.timedelta(days=1)
     if date.weekday() >= 5:
         return {"state": "no_meal", "date": date.isoformat(), "meal": meal, "reason": "주말에는 급식이 없다", "curve": [], "golden": []}
@@ -399,7 +400,7 @@ def zones(weeks: int = Query(4, ge=1, le=12), date: dt.date | None = Query(None)
 def density_now(minutes: int = Query(30, ge=5, le=180)):
     """오늘 최근 minutes 분의 격자 셀별 평균 인원(히트맵)과 구역별 점유율. 집계 파일이 아니라 queue.db 를 읽기 전용으로 즉석 계산 —
     셀·구역 인원수는 mock/vision 이 표본마다 남긴 숫자이고 개별 좌표는 어디에도 없다. 표본이 없으면 no_data"""
-    since = (dt.datetime.now() - dt.timedelta(minutes=minutes)).isoformat(timespec="seconds")
+    since = (clock.now() - dt.timedelta(minutes=minutes)).isoformat(timespec="seconds")
     con = connect_ro(DB_PATH, "cell_samples")
     if con is None:
         return _no("셀 표본이 아직 없다 — mock/vision 이 cell_samples 를 쓴다", minutes=minutes, cells=[], zones=[])
@@ -436,7 +437,7 @@ def density_typical(days: int = Query(7, ge=1, le=28), meal: str = MealQ()):
 
 def _density_typical(days, meal):
     lo, hi = _bounds(meal)
-    since = (dt.date.today() - dt.timedelta(days=days)).isoformat()
+    since = (clock.today() - dt.timedelta(days=days)).isoformat()
     con = connect_ro(DB_PATH, "cell_samples")
     if con is None:
         return _no("셀 표본이 아직 없다", days=days, meal=meal, cells=[], zones=[], clusters=[])

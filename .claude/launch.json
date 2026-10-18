@@ -6,6 +6,12 @@
       "runtimeExecutable": "uv",
       "runtimeArgs": ["run", "python", "-m", "uvicorn", "app.main:app", "--port", "8100"],
       "port": 8100
+    },
+    {
+      "name": "mealboard-judge",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "python", "-X", "utf8", "-m", "jobs.demo", "--no-browser", "--with-admin"],
+      "port": 8800
     }
   ]
 }

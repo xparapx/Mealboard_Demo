@@ -7,6 +7,7 @@ import datetime as dt
 
 from fastapi import APIRouter, Query
 
+from .. import clock
 from ..db import connect
 
 router = APIRouter()
@@ -45,7 +46,7 @@ def _fold(rs):
 
 @router.get("/api/history")
 def history(minutes: int = Query(120, ge=1, le=1440), step: int = Query(STEP_DEFAULT, ge=0, le=STEP_MAX)):
-    since = (dt.datetime.now() - dt.timedelta(minutes=minutes)).isoformat(timespec="seconds")
+    since = (clock.now() - dt.timedelta(minutes=minutes)).isoformat(timespec="seconds")
     con = connect()
     rows = con.execute(
         "SELECT ts, queue_len, rate_per_min, wait_min, state "

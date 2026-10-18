@@ -27,6 +27,8 @@
   <symbol id="i-news" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="3"/><path d="M7.5 9h9M7.5 12.5h9M7.5 16h5.5"/></symbol>
   <!-- 통계(10-13): 막대 셋 + 기준선 -->
   <symbol id="i-stats" viewBox="0 0 24 24"><path d="M4 20h16"/><rect class="fill" x="6" y="11" width="3.2" height="6.5" rx="1"/><rect class="fill" x="10.4" y="6" width="3.2" height="11.5" rx="1"/><rect class="fill" x="14.8" y="9" width="3.2" height="8.5" rx="1"/></symbol>
+  <!-- 앱 안내(10-18, 심사 모드): 둥근 재생 버튼 -->
+  <symbol id="i-guide" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path class="fill" d="M10 8.6v6.8l5.4-3.4z"/></symbol>
 </svg>
 
 <!-- 모바일 하단 dock (< 900px). 버튼은 앵커 — 해시가 곧 화면이고 뒤로가기가 화면 단위로 동작한다 -->
@@ -38,6 +40,7 @@
   <a href="#week" data-go="week" role="tab"><svg><use href="#i-week"/></svg>주간식단</a>
   <a href="#today" data-go="today" role="tab"><svg><use href="#i-today"/></svg>오늘급식</a>
   <a href="#news" data-go="news" role="tab"><svg><use href="#i-news"/></svg>이슈피드</a>
+  <a href="#guide" data-go="guide" role="tab" hidden><svg><use href="#i-guide"/></svg>앱 안내</a>
 </nav>
 <!-- 데스크톱 좌측 레일 (≥ 900px). 다섯 화면을 한 보드에 펼치고, 레일은 그 카드로 스크롤 + 스크롤 스파이 -->
 <aside class="rail" aria-label="화면">
@@ -47,6 +50,7 @@
   <a href="#week" data-go="week"><svg><use href="#i-week"/></svg>주간식단</a>
   <a href="#today" data-go="today"><svg><use href="#i-today"/></svg>오늘급식</a>
   <a href="#news" data-go="news"><svg><use href="#i-news"/></svg>이슈피드</a>
+  <a href="#guide" data-go="guide" hidden><svg><use href="#i-guide"/></svg>앱 안내</a>
 </aside>
 
 <!-- 안내 띠(09-04, 09-11 개정) — 급식 수집 창(3학년 점심·1·2학년 점심·석식) 밖이면 '급식 시간이 아닙니다'(카메라는 창 밖에 아무것도 쓰지 않는다), 스테이징 mock 이면 '더미데이터'. /api/status feed 로 core.js 가 그린다 -->
@@ -348,7 +352,51 @@
       <div class="note" style="margin-top:10px">오늘 실린 기사 제목·요약에 자주 나온 낱말 · 크기는 빈도 · <span class="ck c">기후</span> <span class="ck t">기술</span> <span class="ck b">둘 다</span></div>
     </section>
   </section>
+
+  <!-- ⑦ 앱 안내(10-18, 심사위원 구동 경로 N3) — 서버가 guide 를 줄 때만 탭이 붙는다(core.addGuide). 자동 시연(화면을 돌며 카드마다 설명)·시연 영상·원리 1장.
+       글은 js/guide.js 가 채운다(시연 대본과 같은 파일에 두어 한 곳에서 고친다) -->
+  <section class="view" id="guide" role="tabpanel" aria-label="앱 안내">
+    <section class="card gcard" id="guideintro">
+      <div class="eyebrow">이 앱은</div>
+      <h2 class="gtitle">카메라가 <b>숫자만</b> 남기는 급식실 대기시간 안내</h2>
+      <p class="glead" id="guidelead"></p>
+      <div class="gfeat" id="guidefeat"></div>
+      <div class="gactions">
+        <button type="button" class="gbtn primary" id="tourstart"><svg><use href="#i-guide"/></svg>자동 시연 시작 <small>약 2분 · 화면을 돌며 설명</small></button>
+        <button type="button" class="gbtn" id="videobtn" hidden>시연 영상 보기</button>
+      </div>
+      <div class="note" id="guidedemo"></div>
+    </section>
+    <section class="card gcard" id="guidevideo" hidden>
+      <div class="eyebrow">시연 영상</div>
+      <video id="guideplayer" controls playsinline preload="metadata"></video>
+      <div class="note" id="guidevideonote">급식실 실사 화면은 넣지 않습니다 — 공개 화면·평면도·숫자만</div>
+    </section>
+    <section class="card gcard" id="guidehow">
+      <div class="eyebrow">숫자는 이렇게 나옵니다</div>
+      <ol class="gsteps" id="guidesteps"></ol>
+    </section>
+    <section class="card gcard" id="guiderun">
+      <div class="eyebrow">심사위원 · 처음 보는 분께</div>
+      <div class="grun" id="guiderunbody"></div>
+    </section>
+  </section>
 </main>
+<!-- 자동 시연 오버레이(guide.js 가 채운다) — 카드 하나를 밝게 남기고 나머지를 어둡게, 말풍선에 설명. ESC·종료로 닫힌다 -->
+<div id="tour" hidden aria-live="polite">
+  <div class="spot" id="tourspot"></div>
+  <div class="bubble" id="tourbubble">
+    <div class="step"><span id="tourno"></span><i id="tourbar"><b></b></i></div>
+    <h3 id="tourtitle"></h3>
+    <p id="tourtext"></p>
+    <div class="ctl">
+      <button type="button" id="tourprev">이전</button>
+      <button type="button" id="tourpause">일시정지</button>
+      <button type="button" id="tournext" class="primary">다음</button>
+      <button type="button" id="tourstop" class="x" aria-label="시연 종료">종료</button>
+    </div>
+  </div>
+</div>
 
 <!-- js/core.js 가 화면 모듈(wait·room·stats·week·today·news)을 불러 등록하고 라우터·폴링을 돌린다 (빌드 도구 없음, ES 모듈) -->
 <script>

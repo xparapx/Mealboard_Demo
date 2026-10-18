@@ -19,6 +19,8 @@ import sys
 import time
 
 from app.config import INSIGHTS_DB_PATH, REPORTS_DB_PATH, LLM_REPORT
+
+from app import clock
 from app.insight_calc import normalize_menu
 from app.insights_db import connect_ro
 from app.lunch import weekday_of
@@ -157,7 +159,7 @@ def connect_rw(path=REPORTS_DB_PATH):
 
 def write(con, kind, date, res, inp):
     con.execute("INSERT INTO reports (ts, kind, for_date, engine, model, ok, ms, headline, body, tone, input_json) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                (dt.datetime.now().isoformat(timespec="seconds"), kind, date, res["engine"], res["model"], int(res["ok"]), res["ms"],
+                (clock.now().isoformat(timespec="seconds"), kind, date, res["engine"], res["model"], int(res["ok"]), res["ms"],
                  res["headline"], res["body"], res["tone"], json.dumps(inp, ensure_ascii=False)))
     con.commit()
 
@@ -196,11 +198,11 @@ def run(kind, date, insights=INSIGHTS_DB_PATH, reports=REPORTS_DB_PATH, meal=Non
 def main():
     ap = argparse.ArgumentParser(description="리포트 생성 → reports.db")
     ap.add_argument("--kind", choices=KINDS + ("auto",), default="auto")
-    ap.add_argument("--date", type=lambda s: dt.date.fromisoformat(s).isoformat(), default=dt.date.today().isoformat())
+    ap.add_argument("--date", type=lambda s: dt.date.fromisoformat(s).isoformat(), default=clock.today().isoformat())
     ap.add_argument("--dry-run", action="store_true", help="계산만, 아무것도 쓰지 않는다")
     ap.add_argument("--template", action="store_true", help="LLM 을 건너뛰고 규칙 문장만")
     a = ap.parse_args()
-    kind = a.kind if a.kind != "auto" else ("preview" if dt.datetime.now().hour < 12 else "recap")
+    kind = a.kind if a.kind != "auto" else ("preview" if clock.now().hour < 12 else "recap")
     res, inp = run(kind, a.date, dry_run=a.dry_run, template_only=a.template)
     if res is None:
         print(f"건너뜀: {inp}")

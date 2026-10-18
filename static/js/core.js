@@ -32,7 +32,13 @@ export const hm = ts => ts ? ts.slice(11, 16) : "";                             
 export const WD = "일월화수목금토";
 /* 끼니 토글(09-16 중식/석식 분리) — 인사이트 카드 오른쪽 위 세그먼트. 데이터는 카드 쪽이 캐시하고 여기서는 선택만 다룬다 */
 export const MEAL_KO = { lunch: "중식", dinner: "석식" };
-export const defaultMeal = () => { const h = new Date().getHours(); return h >= 14 && h < 21 ? "dinner" : "lunch"; };   // 14시 이후엔 다음 끼니
+/* 앱의 '지금'(10-18) — 서버 시계 기준. /api/status 의 now 와 이 기기 시계의 차이(skew)를 기억해 두고, 화면의 날짜·요일·'지금' 판정은 전부 now() 로.
+   평소엔 skew ≈ 0 이지만 심사 모드(가상 시계 DEMO_CLOCK)에서는 서버가 '수요일 12:38' 을 살고 있다 — 화면도 그 시각을 살아야 히트맵 오늘 행·도착 시각이 맞는다.
+   캐시 만료·폴링 간격 같은 '경과 시간' 은 여전히 Date.now() 를 쓴다(그건 실제 시간이어야 한다) */
+let skew = 0;
+export const now = () => new Date(Date.now() + skew);
+export function syncClock(st) { if (st && st.now) { const t = new Date(st.now).getTime(); if (!isNaN(t)) skew = t - Date.now(); } }
+export const defaultMeal = () => { const h = now().getHours(); return h >= 14 && h < 21 ? "dinner" : "lunch"; };   // 14시 이후엔 다음 끼니
 export function mealSeg(el, initial, onPick) {
   el.innerHTML = ["lunch", "dinner"].map(m =>
     `<button type="button" data-meal="${m}" aria-pressed="${m === initial}">${MEAL_KO[m]}</button>`).join("");
@@ -48,7 +54,7 @@ export const why = r => !r || /reports\.db/.test(r) ? null : /insights\.db/.test
 const DESK_MQ = matchMedia("(min-width: 900px)");
 export const desktop = () => DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = "v45";                       // 10-17: 통계 차트 픽셀 좌표계                       // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = "v46";                       // 10-18: 심사 모드(가상 시계·앱 안내 탭·자동 시연)    // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
@@ -93,9 +99,16 @@ export const S = { last: null, lastPos: null, meal: null, typ: null };
 /* 안내 띠(09-04, 09-11 개정) — /api/status 의 feed 로 그린다. live(카메라 노드 + 수집 창 안 + 표본 이어짐)면 숨긴다.
    카메라(vision): 창 밖은 "지금은 급식 시간이 아닙니다" + 다음 창(창 밖에는 아무 표본도 없다), 창 안인데 표본이 끊기면 "카메라 표본이 끊겼습니다".
    스테이징 mock: 값이 더미라는 것을 창 안팎 모두 적는다. 어느 화면에 있든 같은 띠 — 대기시간 화면은 30초 status 로, 나머지는 60초 feedTick 으로 */
-export function renderFeed(f) {
+let DEMO = null;                                       // /api/status 의 demo(가상 시계 심사 모드) — 안내 띠 문구가 바뀐다
+export function renderFeed(f, demo) {
   const bar = $("#feedbar");
   if (!bar || !f) return;
+  if (demo !== undefined) DEMO = demo;
+  if (DEMO) {                                          // 심사 모드(10-18): 더미 경고 대신 '시연 모드 · 가상 시계' 한 줄 — 값이 모의라는 것을 숨기지 않는다
+    const t = now(), win = f.now ? ` · <b>${esc(f.now.label)}</b> ${mm(f.now.lo)}~${mm(f.now.hi)}` : "";
+    bar.innerHTML = `${esc(DEMO.label || "시연 모드 · 모의 데이터")} <b>${t.getMonth() + 1}/${t.getDate()} (${WD[t.getDay()]}) ${hhmm(t)}</b>${win}`;
+    bar.hidden = false; return;
+  }
   if (f.live) { bar.hidden = true; return; }
   // 다음 급식(09-11): 서버가 급식 있는 날(주말·공휴일 제외, NEIS 캐시 기준)을 준다. 날짜를 못 정하면 '급식 시간이 아닙니다' 만 남긴다
   const n = f.next, when = !n ? "" : n.days === 0 ? "" : n.days === 1 ? " (내일)" : n.weekday ? ` (${esc(n.weekday)}요일)` : ` (${n.days}일 뒤)`;
@@ -118,12 +131,26 @@ function autoSwitch(f) {
   if (inWin && !wasInWindow && !userNav && active === "news") go("wait", { push: false, anim: true });
   wasInWindow = inWin;
 }
-async function feedTick() { if (document.hidden) return; try { const f = (await j("/api/status")).feed; renderFeed(f); autoSwitch(f); } catch (e) { console.error("feed", e); } }
+async function feedTick() { if (document.hidden) return; try { const st = await j("/api/status"); syncClock(st); renderFeed(st.feed, st.demo); autoSwitch(st.feed); } catch (e) { console.error("feed", e); } }
 
 /* ---------------- 화면 등록 · 라우터 ---------------- */
-const ORDER = ["wait", "room", "stats", "week", "today", "news"];        // 10-13: 통계(이력 차트) 화면 추가 — 실시간뷰 다음
-const NAMES = { wait: "대기시간", room: "실시간뷰", stats: "통계", week: "주간식단", today: "오늘급식", news: "이슈피드" };
+const ORDER = ["wait", "room", "stats", "week", "today", "news"];        // 10-13: 통계(이력 차트) 화면 추가 — 실시간뷰 다음. 10-18: 서버가 guide 를 주면 '앱 안내' 가 뒤에 붙는다(addGuide)
+const NAMES = { wait: "대기시간", room: "실시간뷰", stats: "통계", week: "주간식단", today: "오늘급식", news: "이슈피드", guide: "앱 안내" };
 const SCREENS = { wait: wait.screen, room: room.screen, stats: stats.screen, week: week.screen, today: today.screen, news: news.screen };
+/* '앱 안내' 탭(10-18, 심사위원 구동 경로 N3) — 서버 .env SHOW_GUIDE(가상 시계면 기본 on)일 때만 붙는다. 모듈은 그때 동적으로 읽는다(학생 화면엔 짐이 아니다) */
+let guideAdded = false;
+async function addGuide() {
+  if (guideAdded) return;
+  guideAdded = true;
+  try {
+    const m = await import(`/js/guide.js?v=${UI_VERSION}`);
+    SCREENS.guide = m.screen; ORDER.push("guide");
+    $$('[data-go="guide"]').forEach(a => { a.hidden = false; a.addEventListener("click", e => { e.preventDefault(); userNav = true; go("guide"); }); });
+    m.screen.mount?.();
+    mark(active || "wait", false);
+    if (wanted === "guide") go("guide", { push: false });
+  } catch (e) { console.error("guide", e); guideAdded = false; }
+}
 const lastPoll = {}, lastSlow = {};                    // name → 마지막 폴링 시각 (라이브 / 느린 인사이트)
 const scrollYs = {};                                   // 화면별 세로 스크롤 위치 — 돌아오면 그 자리
 let active = null;
@@ -203,13 +230,12 @@ ORDER.forEach(n => SCREENS[n].mount?.());              // 캔버스 관찰 등 �
 // 시작 화면(09-11): 해시가 있으면 그대로, 없으면 status 를 먼저 보고 급식 창 밖이면 이슈피드·안이면 대기시간. status 가 늦어도 대기시간으로 시작한다
 async function boot() {
   let start = ORDER.includes(wanted) ? wanted : null;
-  let f = null;
-  if (!start) {
-    try { f = (await Promise.race([j("/api/status"), new Promise((_, rej) => setTimeout(rej, 1500))])).feed; } catch {}
-    start = f && !mealLive(f) ? "news" : "wait";       // 창 밖 또는 급식 없는 날(주말·방학) → 이슈피드에서 시작
-  }
+  let f = null, st = null;
+  try { st = await Promise.race([j("/api/status"), new Promise((_, rej) => setTimeout(rej, 1500))]); f = st.feed; syncClock(st); } catch {}
+  if (st && st.guide) addGuide();                      // 심사 모드·안내 탭(10-18) — 등록이 끝나면 #guide 로 들어온 요청도 그 화면으로
+  if (!start) start = f && !mealLive(f) ? "news" : "wait";       // 창 밖 또는 급식 없는 날(주말·방학) → 이슈피드에서 시작(#guide 는 탭이 붙은 뒤 addGuide 가 넘겨 준다)
   go(start, { push: false });
-  if (f) { renderFeed(f); wasInWindow = mealLive(f); }
+  if (f) { renderFeed(f, st.demo); wasInWindow = mealLive(f); }
   setInterval(tick, 5000);                             // 화면별 every(기본 30초)가 가르므로 잦은 tick 자체는 요청을 늘리지 않는다
   feedTick(); setInterval(feedTick, 60000);            // 안내 띠·자동 전환은 화면과 무관하게 60초(status 응답은 200B 남짓)
 }
@@ -222,7 +248,7 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadController && !window.__mbReloaded) { window.__mbReloaded = true; location.reload(); } });
 }
 /* 관리 origin 에서만 관리 뷰를 붙인다 — 호스트명이 아니라 서버가 답하는지로 판단. 공개 origin 에서는 세션당 404 한 번 (PLAN §3.1, Phase 3) */
-window.MB = { S, go, poll, observe, ORDER, NAMES, screens: SCREENS, active: () => active, wanted };   // 콘솔·테스트·관리 모듈의 손잡이
+window.MB = { S, go, poll, observe, ORDER, NAMES, screens: SCREENS, active: () => active, wanted, now };   // 콘솔·테스트·관리 모듈의 손잡이
 try {
   // SSH 터널은 `/?key=…` 로 들어온다(서버가 그 응답에 쿠키를 준다) — 그때는 세션의 '없음' 기억을 무시하고 다시 묻는다
   const probe = sessionStorage.getItem("mb_admin_probe");

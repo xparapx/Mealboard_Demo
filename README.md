@@ -34,7 +34,14 @@ setup_pi.sh Pi 최초 설치·유닛 갱신 (멱등) · check_manual.py 매뉴�
 
 ## 셋업 요약
 
-- **개발 PC**: `uv venv && uv sync` → 창 1 `uv run python -m jobs.mock_feed --speed 60`, 창 2 `uv run uvicorn app.main:app --port 8100` → `http://localhost:8100/`. 테스트 `uv run pytest -q`.
+- **처음 보는 분 · 심사위원(Pi·카메라 없이 5분)**: Python 3.11+ 과 [uv](https://docs.astral.sh/uv/) 만 있으면 된다.
+  ```bash
+  uv sync && uv run python -m jobs.demo
+  ```
+  모의 데이터 8주치(가상 급식실 — 실측 아님)를 2초 만에 만들어 **`http://127.0.0.1:8800/`** 에 여섯 화면 전부를 띄우고 브라우저를 연다.
+  가상 시계가 **2026-10-14(수) 12:44, 1·2학년 점심 피크**에서 시작해 실제 시간이 흐르며, 화면의 **'앱 안내' 탭 → 자동 시연**이 2분 동안 화면을 돌며 설명한다.
+  데이터는 `data/demo/`(운영 데이터와 분리, git 제외)에만 쓰고 매번 새로 만든다. `--with-admin` 을 붙이면 관리 앱(보정 편집기)도 8801 에 뜬다(주소는 터미널에).
+- **개발 PC**: `uv venv && uv sync` → 창 1 `uv run python -m jobs.mock_feed --speed 60`, 창 2 `uv run python -m uvicorn app.main:app --port 8100` → `http://localhost:8100/`. 테스트 `uv run python -m pytest -q`.
 - **Pi**: `bash setup_pi.sh` (클론·venv·systemd 유닛). 이후 배포는 `/opt/mealboard` 에서 `git pull` → 해당 서비스 `systemctl restart`.
 - **외부 공개**: **Cloudflare Tunnel** — 공개 주소 **`https://kjhs-meal.com`**(도메인 `kjhs-meal.com` 은 Cloudflare Registrar 구매, 09-04). `deploy/mealboard-cloudflared.service` + `.env CF_TUNNEL_TOKEN`, 호스트 매핑은 Cloudflare 대시보드(`meal` → `127.0.0.1:8100`, 8101 금지). Tailscale Funnel(`https://rsp.taild5f11e.ts.net`)은 학교 망이 릴레이를 막아 휴대폰에서 끊기므로 예비. 자세한 절차는 매뉴얼 STEP 9.
 

@@ -6,8 +6,9 @@ from dotenv import load_dotenv
 BASE = Path(__file__).resolve().parent.parent      # 저장소 루트
 load_dotenv(BASE / ".env")
 
-DATA = BASE / "data"
-DATA.mkdir(exist_ok=True)
+# 데이터 폴더(10-18): 기본 data/. 심사위원 구동 경로(jobs/demo.py)는 DATA_DIR=data/demo 로 운영·개발 데이터와 완전히 분리된 폴더를 쓴다
+DATA = Path(os.getenv("DATA_DIR") or (BASE / "data")).resolve()
+DATA.mkdir(parents=True, exist_ok=True)
 DB_PATH = DATA / "queue.db"                 # 쓰기 주체: vision(또는 mock)
 INSIGHTS_DB_PATH = DATA / "insights.db"     # 쓰기 주체: jobs/rollup.py
 REPORTS_DB_PATH = DATA / "reports.db"       # 쓰기 주체: jobs/report.py
@@ -66,3 +67,7 @@ ADMIN_DB_PATH = DATA / "admin.db"                     # 쓰기 주체: 관리 �
 LLM_HEF = os.getenv("LLM_HEF", "")                    # 로컬 LLM(Hailo-10H GenAI) .hef 경로. 빈 값 = LLM 없음 → 모든 소비자가 규칙 템플릿·DeepL 로 폴백
 LLM_REPORT = os.getenv("LLM_REPORT", "0") == "1"      # 리포트(아침 예보·점심 결산)에도 LLM 을 쓸지. 09-04 스파이크: 1.5B 모델은 한국어 문장이 무너지고 영어로도 사실을 지어내
                                                       # 규칙 템플릿이 낫다 — 기본 0(템플릿). 한국어가 되는 모델이 오면 1
+# 심사위원 구동 경로(10-18, N3): DEMO_CLOCK 은 app/clock.py 가 읽는 가상 시계 기준('YYYY-MM-DDTHH:MM:SS', 비면 벽시계).
+# SHOW_GUIDE=1 이면 화면에 일곱 번째 탭 '앱 안내'(자동 시연·설명)가 붙는다 — 가상 시계가 켜져 있으면 기본 1, 운영(Pi)은 기본 0
+DEMO_CLOCK = os.getenv("DEMO_CLOCK", "").strip()
+SHOW_GUIDE = os.getenv("SHOW_GUIDE", "1" if DEMO_CLOCK else "0") == "1"

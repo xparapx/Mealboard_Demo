@@ -23,6 +23,8 @@ import sqlite3
 import sys
 
 from app.config import DB_PATH, FEED_SOURCE, INSIGHTS_DB_PATH, ROLLUP_WINDOW
+
+from app import clock
 from app.insight_calc import CALC_VERSION, bin_zones, day_summary, median_or_none, normalize_menu, popularity
 from app.insights_db import connect_ro, meta
 from app.lunch import WINDOWS, agg_meals, seconds_of_day, weekday_of
@@ -146,7 +148,7 @@ def write_day(con, s, zone_rows, menu, source, meal_name):
                  s["insufficient_min"], s["first_ts"], s["last_ts"], s["peak_wait"], s["peak_wait_ts"], s["peak_queue"],
                  s["peak_queue_ts"], s["avg_wait"], s["served_est"], s["typical_rate"], s["rise_rate"], s["golden_min"],
                  s["bottleneck_min"], json.dumps(dishes, ensure_ascii=False), dishes[0] if dishes else None,
-                 CALC_VERSION, dt.datetime.now().isoformat(timespec="seconds")))
+                 CALC_VERSION, clock.now().isoformat(timespec="seconds")))
     con.executemany("INSERT INTO lunch_bins VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                     [(date, meal_name, weekday, b["bin"], b["n"], b["ok_n"], b["insufficient_n"], b["avg_queue"], b["max_queue"],
                       b["avg_rate"], b["avg_wait"], b["max_wait"]) for b in s["bins"]])
@@ -199,7 +201,7 @@ def pick_dates(a, qcon):
         return [a.date]
     if a.all:
         return list_dates(qcon)
-    today = dt.date.today()
+    today = clock.today()
     return [(today - dt.timedelta(days=i)).isoformat() for i in reversed(range(a.days))]
 
 
@@ -230,8 +232,8 @@ def main():
         print("집계할 날짜가 없다 (--all 인데 samples 가 비어 있다). 아무것도 하지 않는다")
         return 0
     meals = agg_meals(a.window)                  # [(meal, lo, hi)] — lunch 모드면 중식·석식 두 창(09-16)
-    today = dt.date.today().isoformat()
-    now_sec = seconds_of_day(dt.datetime.now())
+    today = clock.today().isoformat()
+    now_sec = seconds_of_day(clock.now())
 
     if a.dry_run:
         print(f"[dry-run] window={a.window} {[(m, f'{lo}~{hi}분') for m, lo, hi in meals]} source={a.source} 날짜 {len(dates)}개 - 파일을 만들거나 바꾸지 않는다")
@@ -252,7 +254,7 @@ def main():
         migrate(con)
         check_meta(con, a.window, a.source)
         con.execute("INSERT INTO runs (started_at, args, dates) VALUES (?,?,?)",
-                    (dt.datetime.now().isoformat(timespec="seconds"), " ".join(sys.argv[1:]), ",".join(dates)))
+                    (clock.now().isoformat(timespec="seconds"), " ".join(sys.argv[1:]), ",".join(dates)))
         run_id = con.execute("SELECT last_insert_rowid()").fetchone()[0]
         con.commit()
         upsert_nutrition(con, read_meal())
@@ -277,7 +279,7 @@ def main():
     finally:
         if run_id is not None:
             con.execute("UPDATE runs SET finished_at=?, n_days=?, ok=?, error=? WHERE id=?",
-                        (dt.datetime.now().isoformat(timespec="seconds"), n_days, int(err is None), err, run_id))
+                        (clock.now().isoformat(timespec="seconds"), n_days, int(err is None), err, run_id))
             con.commit()
         con.close()
     return 0

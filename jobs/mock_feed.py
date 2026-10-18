@@ -21,6 +21,8 @@ import time
 from collections import deque
 
 from app.config import ZONES_JSON
+
+from app import clock
 from app.db import connect
 from app.lunch import meal_now, meals_for
 from vision.meta import MetaSender
@@ -150,11 +152,11 @@ def main():
         zones = []
     sim = Simulator(a.scenario)
     win = None                                                # 지금 열린 수집 창 — 바뀌는 순간 곡선을 처음부터
-    windows = ", ".join(f"{w.label} {hhmm(w.lo)}~{hhmm(w.hi)}" for w in meals_for(dt.datetime.now())) or "없음"
+    windows = ", ".join(f"{w.label} {hhmm(w.lo)}~{hhmm(w.hi)}" for w in meals_for(clock.now())) or "없음"
     print(f"mock_feed 시작  speed={a.speed}  scenario={a.scenario}  zones={[z['id'] for z in zones]}  수집 창: {windows}")
 
     while True:
-        cur = meal_now(dt.datetime.now())
+        cur = meal_now(clock.now())
         if cur != win:                                        # 창이 열리거나 닫힘 → 줄 0 명에서 다시(창 시작에 인파가 몰려드는 모양)
             win = cur
             sim.reset()
@@ -162,7 +164,7 @@ def main():
         r = sim.step()
         counts, live = {}, not r["gap"]
         if live:
-            ts = dt.datetime.now().isoformat(timespec="milliseconds")
+            ts = clock.now().isoformat(timespec="milliseconds")
             counts = write_sample(con, ts, r, zones)                  # vision/record.py — 카메라 노드와 같은 기록 함수
         zone_txt = " ".join(f"{z}={n}" for z, n in counts.items())
         tag = win.label if win else "더미"
@@ -176,7 +178,7 @@ def main():
         crossings = [{"id": 1000 + k, "dir": "out", "ts": ts} for k in range(r["served"])]
         for k in range(n):
             frame_id += 1
-            ev = frame_event(frame_id, dt.datetime.now().isoformat(timespec="milliseconds"), jitter(r["pts"]), zones,
+            ev = frame_event(frame_id, clock.now().isoformat(timespec="milliseconds"), jitter(r["pts"]), zones,
                              r["rate"], r["wait"], r["state"], crossings if k == 0 else ())
             sender.send(ev)
             time.sleep(pause / n)
