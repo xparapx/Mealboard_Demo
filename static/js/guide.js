@@ -114,7 +114,30 @@ let zoomTok = 0;
    단계 제목·본문을 읽고 끝나면 다음 단계로(읽기가 글자 수 공식보다 길면 그쪽에 맞춘다). 음성이 없거나 막히면 조용히 시간 공식으로 */
 const VOICE_KEY = "mb_tour_voice";
 let voiceOn = (() => { try { return localStorage.getItem(VOICE_KEY) !== "0"; } catch { return true; } })();
-let utter = null;
+let utter = null, audio = null, lastSpoken = null;
+/* 아나운서 대본(static/media/voice/narration.json, 10-19) — 카드 글을 그대로 읽지 않고 맥락을 풀어 설명한다. setup_voice.py 가 만든 <id>.mp3 가 있으면
+   그것을 재생(모든 브라우저에서 같은 음성), 없으면 브라우저 음성으로 같은 대본을 읽는다. id: intro0~3 · s0~s14 · outro */
+const NARR = {}, CLIP = {};                            // id → 대본 / id → mp3 있음(true)·없음(false)·미확인(undefined)
+async function loadNarration() {
+  try {
+    const d = await (await fetch("/media/voice/narration.json", { cache: "no-store" })).json();
+    for (const c of d.clips || []) NARR[c.id] = c.text;
+  } catch {}
+}
+async function clipReady(id) {
+  if (CLIP[id] !== undefined) return CLIP[id];
+  try { CLIP[id] = (await fetch(`/media/voice/${id}.mp3`, { method: "HEAD", cache: "no-store" })).ok; } catch { CLIP[id] = false; }
+  return CLIP[id];
+}
+function playClip(id, onend, onfail) {
+  const a = audio || (audio = new Audio());
+  a.onended = null; a.onerror = null;
+  a.src = `/media/voice/${id}.mp3`;
+  let done = false;
+  const fin = f => () => { if (!done) { done = true; f?.(); } };
+  a.onended = fin(onend); a.onerror = fin(onfail);
+  a.play().catch(fin(onfail));                        // 사용자 동작 없이 시작(?tour=auto)하면 막힌다 → 시간 공식으로
+}
 function pickVoice() {
   const vs = speechSynthesis.getVoices().filter(v => /^ko/i.test(v.lang));
   // 자연스러운 순: Edge 의 Natural(온라인) → Chrome 의 Google 한국어(온라인) → Windows 내장 SunHi → Heami. 10-19 지도교사 PC(Chrome)에서 Heami·Google 둘 확인
@@ -122,8 +145,16 @@ function pickVoice() {
   for (const ok of pref) { const v = vs.find(ok); if (v) return v; }
   return vs[0] || null;
 }
-function speak(text, onend, onfail) {
-  if (!voiceOn || !("speechSynthesis" in window)) return false;
+function speak(text, onend, onfail, id) {
+  if (!voiceOn) return false;
+  const script = (id && NARR[id]) || text;           // 대본이 있으면 대본을, 없으면 카드 글을
+  lastSpoken = { id, text: script, via: null };
+  if (id && CLIP[id]) { lastSpoken.via = "mp3"; playClip(id, onend, () => speakTTS(script, onend, onfail)); return true; }
+  return speakTTS(script, onend, onfail);
+}
+function speakTTS(text, onend, onfail) {
+  if (!("speechSynthesis" in window)) return false;
+  if (lastSpoken) lastSpoken.via = "tts";
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
@@ -138,7 +169,7 @@ function speak(text, onend, onfail) {
     return true;
   } catch { return false; }
 }
-function hush() { try { utter = null; speechSynthesis.cancel(); } catch {} }
+function hush() { try { utter = null; speechSynthesis.cancel(); } catch {} try { if (audio) { audio.pause(); audio.onended = audio.onerror = null; audio.removeAttribute("src"); } } catch {} }
 function setVoice(on) {
   voiceOn = on;
   try { localStorage.setItem(VOICE_KEY, on ? "1" : "0"); } catch {}
@@ -242,13 +273,18 @@ function bar(ms) {
   if (paused) return;
   void el.offsetWidth; el.style.transition = `width ${ms}ms linear`; el.style.width = "100%";
 }
-function arm(ms, next, text) {
-  /* text 를 읽을 수 있으면 읽기가 끝난 0.9초 뒤에 넘어간다(상한 30초 안전망). 아니면 ms 뒤에 */
+function arm(ms, next, text, id) {
+  /* 읽을 수 있으면(mp3 또는 브라우저 음성) 읽기가 끝난 0.9초 뒤에 넘어간다(상한 40초 안전망). 아니면 ms 뒤에 */
   clearTimeout(timer); t0 = Date.now(); left = ms;
   const fallback = () => { clearTimeout(timer); t0 = Date.now(); left = ms; timer = setTimeout(next, ms); bar(ms); };
-  const spoken = text ? speak(text, () => { if (paused) return; clearTimeout(timer); timer = setTimeout(next, 900); }, fallback) : false;
-  timer = setTimeout(next, spoken ? Math.max(ms, 30000) : ms);
-  bar(spoken ? Math.max(ms, Math.round(text.length * 160)) : ms);   // 진행 띠는 읽기 길이 추정(한국어 ≈ 160ms/자)
+  const go = () => {
+    const spoken = text ? speak(text, () => { if (paused) return; clearTimeout(timer); timer = setTimeout(next, 900); }, fallback, id) : false;
+    clearTimeout(timer); timer = setTimeout(next, spoken ? Math.max(ms, 40000) : ms);
+    const len = (lastSpoken && lastSpoken.text || text || "").length;
+    bar(spoken ? Math.max(ms, Math.round(len * 150)) : ms);        // 진행 띠는 읽기 길이 추정(한국어 ≈ 150ms/자)
+  };
+  timer = setTimeout(next, ms);                        // mp3 확인(HEAD) 동안의 안전망
+  if (id) clipReady(id).then(go); else go();
 }
 
 /* 인트로·엔드카드 — 전면 차콜 카드(#tourcard). 인트로는 2.8초 뒤(또는 클릭) 1단계로, 엔드는 머문다 */
@@ -269,7 +305,7 @@ function showIntro(k) {
   introIdx = k; i = -0.5;
   const d = INTRO[k];
   showCard("intro", d, k);
-  if (!paused) arm(d.ms, () => showIntro(k + 1), `${d.title}. ${d.text}`);
+  if (!paused) arm(d.ms, () => showIntro(k + 1), `${d.title}. ${d.text}`, `intro${k}`);
 }
 function hideCard() { $("#tourcard").hidden = true; $("#tourbubble").hidden = false; }
 
@@ -303,7 +339,7 @@ async function show(k) {
   const t1 = performance.now() + (motion() ? T_ZOOM + 40 : 0);
   const follow = () => { if (my !== seq) return; place(side); if (performance.now() < t1) requestAnimationFrame(follow); };
   requestAnimationFrame(follow);
-  if (!paused) arm(dwell(st), () => show(i + 1), `${title}. ${st.text}`);
+  if (!paused) arm(dwell(st), () => show(i + 1), `${title}. ${st.text}`, `s${i}`);
   else hush();
 }
 
@@ -311,7 +347,7 @@ function outro() {
   if (zoomed) unzoom(zoomed);
   i = STEPS.length;
   showCard("outro", OUTRO);
-  speak(`${OUTRO.title}. ${OUTRO.text}`);
+  clipReady("outro").then(() => speak(`${OUTRO.title}. ${OUTRO.text}`, null, null, "outro"));
   $("#tourno").textContent = `${STEPS.length} / ${STEPS.length}`;
   clearTimeout(timer);
   $("#tourbar b").style.width = "100%";
@@ -345,8 +381,8 @@ function pause() {
   if (i < 0 || i >= STEPS.length) return;
   paused = !paused;
   $("#tourpause").textContent = paused ? "계속" : "일시정지";
-  if (paused) { clearTimeout(timer); left = Math.max(1500, left - (Date.now() - t0)); const el = $("#tourbar b"); const w = getComputedStyle(el).width; el.style.transition = "none"; el.style.width = w; try { speechSynthesis.pause(); } catch {} }
-  else { try { if (speechSynthesis.paused) speechSynthesis.resume(); } catch {} arm(left, () => show(i + 1)); }
+  if (paused) { clearTimeout(timer); left = Math.max(1500, left - (Date.now() - t0)); const el = $("#tourbar b"); const w = getComputedStyle(el).width; el.style.transition = "none"; el.style.width = w; try { speechSynthesis.pause(); } catch {} try { audio && audio.pause(); } catch {} }
+  else { try { if (speechSynthesis.paused) speechSynthesis.resume(); } catch {} try { if (audio && audio.src && audio.paused && audio.currentTime > 0 && !audio.ended) audio.play(); } catch {} arm(left, () => show(i + 1)); }
 }
 function keys(e) {
   if (i < 0) return;
@@ -359,7 +395,8 @@ function keys(e) {
 export const screen = {
   mount() {
     fillIntro(); fillDemoNote(); probeVideo();
-    window.MB.tour = { start, stop, show, step: () => i };          // 콘솔·미리보기 검증용 손잡이
+    window.MB.tour = { start, stop, show, step: () => i, spoken: () => lastSpoken };   // 콘솔·미리보기 검증용 손잡이
+    loadNarration();
     // ?tour=N 또는 ?tour=auto — 페이지를 열자마자 시연(녹화·헤드리스 검증용). N 은 0부터의 단계 번호, auto 는 인트로부터
     const qs = new URLSearchParams(location.search), q = qs.get("tour");
     if (q !== null) setTimeout(() => start(q === "auto" || q === "" ? null : q === "outro" ? "outro" : Math.max(0, Math.min(STEPS.length - 1, +q || 0)), qs.has("hold")), 1200);
