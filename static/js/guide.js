@@ -83,7 +83,7 @@ async function probeVideo() {                          // /media/demo.mp4 가 �
 let i = -1, timer = null, tick = null, paused = false, t0 = 0, left = 0, zoomed = null, seq = 0, curSide = "below";
 const tour = () => $("#tour");
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const motion = () => !REDUCE;                          // 축소 모션: 줌·피벗 없이 컷 + 정적 링
+const motion = () => true;                             // 시연은 OS 축소 모션 설정과 무관하게 움직인다(screens.css 의 예외와 짝) — 사용자가 직접 켜는 발표 모드
 
 function cardOf(el) {                                  // 줌인은 카드 단위(히어로는 .waitcard 안 overflow:hidden 이라 상자째 키운다)
   return el.closest(".card, .waitcard") || el;
@@ -122,14 +122,13 @@ function zoomTo(card) {
   let s;
   if (desktop()) s = Math.min(ZOOM_MAX, (A.w - 48) / rect.width, (A.h - 48) / rect.height);
   else s = Math.max(ZOOM_MIN_MOBILE, Math.min(ZOOM_MAX_MOBILE, (A.w - 24) / rect.width, (A.h - 24) / rect.height));
-  if (!motion()) s = 1;
   const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
   let tx = A.x + A.w / 2 - cx, ty = A.y + A.h / 2 - cy;
   if (rect.height * s > A.h) ty = A.y + rect.height * s / 2 - cy;            // 자유 영역보다 긴 카드는 위를 맞춘다(모바일 평면도)
   zoomTok++;
   card.classList.add("tz");
-  card.style.transition = motion() ? `transform ${T_ZOOM}ms var(--ease)` : "none";
-  card.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${s.toFixed(3)})`;
+  card.style.transition = `transform ${T_ZOOM}ms var(--ease)`;
+  card.style.setProperty("--tz", `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${s.toFixed(3)})`);   // .tz { transform: var(--tz) }
   card.dataset.zs = s.toFixed(3); card.dataset.zx = tx.toFixed(1); card.dataset.zy = ty.toFixed(1);
   lastZoom = { vw: innerWidth, vh: innerHeight, desk: desktop(), rect: [rect.left, rect.top, rect.width, rect.height].map(Math.round), A, s: +s.toFixed(3), tx: Math.round(tx), ty: Math.round(ty), sy: Math.round(scrollY) };
   zoomed = card;
@@ -138,8 +137,8 @@ function zoomTo(card) {
 function unzoom(card, ms = T_UNZOOM) {
   if (!card) return;
   const tok = ++zoomTok;
-  card.style.transition = motion() ? `transform ${ms}ms ease-in` : "none";
-  card.style.transform = "";
+  card.style.transition = `transform ${ms}ms ease-in`;
+  card.style.removeProperty("--tz");
   delete card.dataset.zs; delete card.dataset.zx; delete card.dataset.zy;
   const done = () => { if (zoomTok !== tok) return; card.classList.remove("tz"); card.style.transition = ""; };   // 그새 다시 줌됐으면 손대지 않는다
   motion() ? setTimeout(done, ms + 20) : done();

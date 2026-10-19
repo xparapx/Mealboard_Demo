@@ -288,7 +288,7 @@ details > summary::-webkit-details-marker { display: none; }
 #tour .spot.veil { box-shadow: 0 0 0 9999px rgba(51,49,45,.62); transition: none; }
 #tour .spot.veil::after { display: none; }
 /* 줌인한 카드(10-19): 실제 DOM 을 transform 으로 키운다 — 그리드 형제 위로, hover 의 translateY·.18s transition 이 가로채지 않게 */
-.tz { position: relative; z-index: 3; transform-origin: center center; will-change: transform; }
+.tz { position: relative; z-index: 3; transform-origin: center center; will-change: transform; transform: var(--tz, none); transition: transform .45s var(--ease); }   /* 값은 guide.js 가 --tz 로 준다 */
 body.touring .card, body.touring .waitcard { transition: none; }
 body.touring .card:hover { box-shadow: var(--e1); }     /* 줌 transform 은 인라인이라 hover 규칙보다 우선한다 — 그림자만 고정 */
 /* 인트로·엔드카드 — 전면 차콜, 가운데 글 */
@@ -445,5 +445,7 @@ main.views.tour-in.back { animation-name: tour-in-b; }
   .news li a:hover { color: var(--teal-ink); }
 }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { transition: none !important; animation: none !important; transform: none !important; }
+  /* 자동 시연(body.touring) 중에는 예외 — 사용자가 직접 켜는 발표 모드라 OS 의 '애니메이션 효과 끄기' 를 따르지 않는다
+     (10-19: 지도교사 PC 가 이 설정이라 줌·화면 전환·점멸이 전부 transform:none !important 에 눌려 죽어 있었다). ESC·종료로 즉시 끝낼 수 있다 */
+  body:not(.touring) *, body:not(.touring) *::before, body:not(.touring) *::after { transition: none !important; animation: none !important; transform: none !important; }
 }
