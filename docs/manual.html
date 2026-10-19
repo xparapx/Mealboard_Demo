@@ -1692,22 +1692,24 @@ systemctl status mealboard-api --no-pager</code></pre>
       &lt;div class=&quot;gfeat&quot; id=&quot;guidefeat&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;gactions&quot;&gt;
         &lt;button type=&quot;button&quot; class=&quot;gbtn primary&quot; id=&quot;tourstart&quot;&gt;&lt;svg&gt;&lt;use href=&quot;#i-guide&quot;/&gt;&lt;/svg&gt;자동 시연 시작 &lt;small&gt;약 2분 · 화면을 돌며 설명&lt;/small&gt;&lt;/button&gt;
+        &lt;a class=&quot;gbtn live&quot; id=&quot;guidelive&quot; href=&quot;https://kjhs-meal.com&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot; hidden&gt;실제 운영 화면 열기 ↗ &lt;small&gt;kjhs-meal.com · 급식 시간에 실측&lt;/small&gt;&lt;/a&gt;
         &lt;button type=&quot;button&quot; class=&quot;gbtn&quot; id=&quot;videobtn&quot; hidden&gt;시연 영상 보기&lt;/button&gt;
       &lt;/div&gt;
       &lt;div class=&quot;note&quot; id=&quot;guidedemo&quot;&gt;&lt;/div&gt;
+      &lt;!-- 10-19 사용자 요청: 안내 화면은 카드 하나 — 원리 5단계·심사위원 안내는 접힌 절로(자동 시연 15단계가 #guidehow 를 열어 보여 준다) --&gt;
+      &lt;details class=&quot;gmore&quot; id=&quot;guidehow&quot;&gt;
+        &lt;summary&gt;숫자는 이렇게 나옵니다 &lt;small&gt;다섯 단계&lt;/small&gt;&lt;/summary&gt;
+        &lt;ol class=&quot;gsteps&quot; id=&quot;guidesteps&quot;&gt;&lt;/ol&gt;
+      &lt;/details&gt;
+      &lt;details class=&quot;gmore&quot; id=&quot;guiderun&quot;&gt;
+        &lt;summary&gt;심사위원 · 처음 보는 분께 &lt;small&gt;구동 · 핵심 흐름 · 실제 운영&lt;/small&gt;&lt;/summary&gt;
+        &lt;div class=&quot;grun&quot; id=&quot;guiderunbody&quot;&gt;&lt;/div&gt;
+      &lt;/details&gt;
     &lt;/section&gt;
     &lt;section class=&quot;card gcard&quot; id=&quot;guidevideo&quot; hidden&gt;
       &lt;div class=&quot;eyebrow&quot;&gt;시연 영상&lt;/div&gt;
       &lt;video id=&quot;guideplayer&quot; controls playsinline preload=&quot;metadata&quot;&gt;&lt;/video&gt;
       &lt;div class=&quot;note&quot; id=&quot;guidevideonote&quot;&gt;급식실 실사 화면은 넣지 않습니다 — 공개 화면·평면도·숫자만&lt;/div&gt;
-    &lt;/section&gt;
-    &lt;section class=&quot;card gcard&quot; id=&quot;guidehow&quot;&gt;
-      &lt;div class=&quot;eyebrow&quot;&gt;숫자는 이렇게 나옵니다&lt;/div&gt;
-      &lt;ol class=&quot;gsteps&quot; id=&quot;guidesteps&quot;&gt;&lt;/ol&gt;
-    &lt;/section&gt;
-    &lt;section class=&quot;card gcard&quot; id=&quot;guiderun&quot;&gt;
-      &lt;div class=&quot;eyebrow&quot;&gt;심사위원 · 처음 보는 분께&lt;/div&gt;
-      &lt;div class=&quot;grun&quot; id=&quot;guiderunbody&quot;&gt;&lt;/div&gt;
     &lt;/section&gt;
   &lt;/section&gt;
 &lt;/main&gt;
@@ -1724,7 +1726,7 @@ systemctl status mealboard-api --no-pager</code></pre>
     &lt;div class=&quot;ctl&quot; id=&quot;tourcardctl&quot; hidden&gt;
       &lt;button type=&quot;button&quot; id=&quot;tourreplay&quot; class=&quot;primary&quot;&gt;다시 보기&lt;/button&gt;
       &lt;button type=&quot;button&quot; id=&quot;tourbrowse&quot;&gt;둘러보기&lt;/button&gt;
-      &lt;a class=&quot;lnk&quot; href=&quot;https://kjhs-meal.com&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;운영 화면 열기 ↗&lt;/a&gt;
+      &lt;a class=&quot;lnk&quot; href=&quot;https://kjhs-meal.com&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;실제 운영 화면 보기 ↗&lt;/a&gt;
     &lt;/div&gt;
   &lt;/div&gt;
   &lt;div class=&quot;bubble&quot; id=&quot;tourbubble&quot;&gt;
@@ -1791,7 +1793,7 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v55&quot;;   // 10-19: 시연 180° 플립 전환·줌 카드 hover 떨림 수정·대본 숫자 읽기
+const CACHE = &quot;mealboard-v56&quot;;   // 10-19: 앱 안내 카드 하나 + 실제 운영 화면 단추(안내 카드·엔드카드)
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/stats.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;, &quot;/js/guide.js&quot;];
@@ -5818,7 +5820,7 @@ export const why = r =&gt; !r || /reports\.db/.test(r) ? null : /insights\.db/.t
 const DESK_MQ = matchMedia(&quot;(min-width: 900px)&quot;);
 export const desktop = () =&gt; DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = &quot;v55&quot;;                       // 10-19: 자동 시연 — 피벗 전환·카드 줌인·점멸 할로·인트로/엔드카드           // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = &quot;v56&quot;;                       // 10-19: 자동 시연 — 피벗 전환·카드 줌인·점멸 할로·인트로/엔드카드           // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {

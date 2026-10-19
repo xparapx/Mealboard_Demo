@@ -363,22 +363,24 @@
       <div class="gfeat" id="guidefeat"></div>
       <div class="gactions">
         <button type="button" class="gbtn primary" id="tourstart"><svg><use href="#i-guide"/></svg>자동 시연 시작 <small>약 2분 · 화면을 돌며 설명</small></button>
+        <a class="gbtn live" id="guidelive" href="https://kjhs-meal.com" target="_blank" rel="noopener" hidden>실제 운영 화면 열기 ↗ <small>kjhs-meal.com · 급식 시간에 실측</small></a>
         <button type="button" class="gbtn" id="videobtn" hidden>시연 영상 보기</button>
       </div>
       <div class="note" id="guidedemo"></div>
+      <!-- 10-19 사용자 요청: 안내 화면은 카드 하나 — 원리 5단계·심사위원 안내는 접힌 절로(자동 시연 15단계가 #guidehow 를 열어 보여 준다) -->
+      <details class="gmore" id="guidehow">
+        <summary>숫자는 이렇게 나옵니다 <small>다섯 단계</small></summary>
+        <ol class="gsteps" id="guidesteps"></ol>
+      </details>
+      <details class="gmore" id="guiderun">
+        <summary>심사위원 · 처음 보는 분께 <small>구동 · 핵심 흐름 · 실제 운영</small></summary>
+        <div class="grun" id="guiderunbody"></div>
+      </details>
     </section>
     <section class="card gcard" id="guidevideo" hidden>
       <div class="eyebrow">시연 영상</div>
       <video id="guideplayer" controls playsinline preload="metadata"></video>
       <div class="note" id="guidevideonote">급식실 실사 화면은 넣지 않습니다 — 공개 화면·평면도·숫자만</div>
-    </section>
-    <section class="card gcard" id="guidehow">
-      <div class="eyebrow">숫자는 이렇게 나옵니다</div>
-      <ol class="gsteps" id="guidesteps"></ol>
-    </section>
-    <section class="card gcard" id="guiderun">
-      <div class="eyebrow">심사위원 · 처음 보는 분께</div>
-      <div class="grun" id="guiderunbody"></div>
     </section>
   </section>
 </main>
@@ -395,7 +397,7 @@
     <div class="ctl" id="tourcardctl" hidden>
       <button type="button" id="tourreplay" class="primary">다시 보기</button>
       <button type="button" id="tourbrowse">둘러보기</button>
-      <a class="lnk" href="https://kjhs-meal.com" target="_blank" rel="noopener">운영 화면 열기 ↗</a>
+      <a class="lnk" href="https://kjhs-meal.com" target="_blank" rel="noopener">실제 운영 화면 보기 ↗</a>
     </div>
   </div>
   <div class="bubble" id="tourbubble">

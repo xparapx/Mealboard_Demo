@@ -67,6 +67,7 @@ function fillIntro() {
 }
 function fillDemoNote() {
   const el = $("#guidedemo");
+  const live = $("#guidelive"); if (live) live.hidden = !DEMO;        // 운영 화면에서는 자기 자신이라 숨긴다
   if (!DEMO) { el.textContent = "지금 보시는 값은 실제 운영 데이터입니다."; return; }
   const t = now();
   el.innerHTML = `지금 보시는 값은 <b>모의 데이터</b>입니다 — 8주치 가상 급식 기록을 같은 규칙으로 만들어 실제 집계·리포트 코드가 그대로 처리했습니다. `
@@ -333,6 +334,7 @@ async function show(k) {
   }
   if (my !== seq) return;
   const el = document.querySelector(st.sel) || document.getElementById(st.screen);
+  if (el && el.tagName === "DETAILS" && !el.open) { el.open = true; await sleep(60); }   // 접힌 절(원리 5단계)은 펼쳐 보인다(10-19 카드 하나)
   const card = cardOf(el);
   // 스크롤하지 않는다(10-19 사용자: 줌에 '중간 단계' 가 보였다 — 스크롤 점프 뒤 줌이 두 동작으로 읽혔다). translate 가 어디서든 중앙으로 끌어온다
   const side = curSide = zoomTo(card);
