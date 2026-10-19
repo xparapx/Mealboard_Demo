@@ -241,6 +241,7 @@ function outro() {
 }
 
 export function start(at = null, hold = false) {
+  if (at !== null && typeof at !== "number" && at !== "outro") at = null;   // 클릭 핸들러가 이벤트 객체를 넘겨도 처음부터(10-19 사고: 버튼이 안 먹었다)
   if (i >= 0) return;
   paused = !!hold; seq++;                              // hold: 자동 진행 없이 그 단계에 머문다(정지 화면 검증·캡처용)
   document.body.classList.toggle("tourhold", paused);  // 정지 캡처(헤드리스)에서는 등장 애니메이션·전환을 0 으로 — 끝 상태만 찍힌다
@@ -285,7 +286,7 @@ export const screen = {
     // ?tour=N 또는 ?tour=auto — 페이지를 열자마자 시연(녹화·헤드리스 검증용). N 은 0부터의 단계 번호, auto 는 인트로부터
     const qs = new URLSearchParams(location.search), q = qs.get("tour");
     if (q !== null) setTimeout(() => start(q === "auto" || q === "" ? null : q === "outro" ? "outro" : Math.max(0, Math.min(STEPS.length - 1, +q || 0)), qs.has("hold")), 1200);
-    $("#tourstart").addEventListener("click", start);
+    $("#tourstart").addEventListener("click", () => start());
     $("#tourstop").addEventListener("click", stop);
     $("#tournext").addEventListener("click", () => show(Math.floor(i) + 1));
     $("#tourprev").addEventListener("click", () => show(Math.floor(i) - 1));
