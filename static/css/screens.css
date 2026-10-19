@@ -302,6 +302,17 @@ body.touring .card:hover { box-shadow: var(--e1); }     /* 줌 transform 은 인
 #tour .cardx .ctl button { font: inherit; font-weight: 800; font-size: 14px; padding: 11px 20px; border: 1.5px solid rgba(245,242,233,.3); border-radius: 999px; background: transparent; color: #fff; cursor: pointer; }
 #tour .cardx .ctl button.primary { background: var(--teal); border-color: var(--teal); }
 #tour .cardx .ctl .lnk { align-self: center; font-weight: 700; color: var(--aqua); padding: 0 8px; }
+#tour .cardx.in h2, #tour .cardx.in p { animation: tourcardtext .5s var(--ease) both; }
+#tour .cardx.in p { animation-delay: .12s; }
+@keyframes tourcardtext { from { transform: translateY(10px); opacity: .001; } }
+#tour .cardx .dots { display: flex; gap: 8px; margin-top: 14px; }
+#tour .cardx .dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(245,242,233,.3); }
+#tour .cardx .dots i.on { background: var(--aqua); width: 22px; border-radius: 4px; }
+#tour .cardx .ctl2 { display: flex; gap: 10px; margin-top: 14px; }
+#tour .cardx .ctl2 button { font: inherit; font-weight: 700; font-size: 13px; padding: 8px 14px; border: 1.5px solid rgba(245,242,233,.25); border-radius: 999px; background: transparent; color: rgba(245,242,233,.85); cursor: pointer; }
+#tour .cardx .ctl2 button[aria-pressed="true"] { border-color: var(--teal); color: #fff; }
+#tour .ctl button.v { font-weight: 700; border-color: rgba(245,242,233,.22); }
+#tour .ctl button.v[aria-pressed="true"] { border-color: var(--teal); color: #fff; }
 /* 말풍선 교체 180ms */
 #tour .bubble.in { animation: tourbubble .18s ease; }
 @keyframes tourbubble { from { transform: translateY(8px); } }          /* opacity 는 넣지 않는다 — 캡처·백그라운드 탭에서 애니메이션이 얼면 투명하게 남는다 */
@@ -335,14 +346,15 @@ body.touring .card:hover { box-shadow: var(--e1); }     /* 줌 transform 은 인
 #tour .ctl button:disabled { opacity: .35; cursor: default; }
 /* 화면 피벗 전환(10-19, CSS 키프레임 — View Transition 은 브라우저·체감이 들쭉날쭉해 폐기): 보드가 −18° 로 돌며 축소·페이드로 빠지고(320ms),
    새 화면이 +16° 에서 들어온다(420ms). 뒤로 갈 때(.back)는 반대 방향. 축소 모션 설정은 끝의 전역 규칙이 animation 을 끈다(컷) */
-main.views.tour-out { animation: tour-out .32s cubic-bezier(.4,0,1,1) both; transform-origin: 50% 50%; }
-main.views.tour-in { animation: tour-in .42s var(--ease) both; transform-origin: 50% 50%; }
+main.views.tour-out { animation: tour-out .38s cubic-bezier(.4,0,1,1) both; transform-origin: 50% 50%; will-change: transform, opacity; }
+main.views.tour-in { animation: tour-in .48s var(--ease) both; transform-origin: 50% 50%; will-change: transform, opacity; }
 main.views.tour-out.back { animation-name: tour-out-b; }
 main.views.tour-in.back { animation-name: tour-in-b; }
-@keyframes tour-out { to { transform: perspective(1400px) rotateY(-18deg) translateX(-10%) scale(.96); opacity: 0; } }
-@keyframes tour-in { from { transform: perspective(1400px) rotateY(16deg) translateX(10%) scale(.96); opacity: 0; } }
-@keyframes tour-out-b { to { transform: perspective(1400px) rotateY(18deg) translateX(10%) scale(.96); opacity: 0; } }
-@keyframes tour-in-b { from { transform: perspective(1400px) rotateY(-16deg) translateX(-10%) scale(.96); opacity: 0; } }
+/* 10-19 사용자: 회전이 안 보인다 → 각도 ±32°, 이동 18%, 축소 .9, 380+480ms */
+@keyframes tour-out { to { transform: perspective(1200px) rotateY(-32deg) translateX(-18%) scale(.9); opacity: 0; } }
+@keyframes tour-in { from { transform: perspective(1200px) rotateY(28deg) translateX(18%) scale(.9); opacity: 0; } }
+@keyframes tour-out-b { to { transform: perspective(1200px) rotateY(32deg) translateX(18%) scale(.9); opacity: 0; } }
+@keyframes tour-in-b { from { transform: perspective(1200px) rotateY(-28deg) translateX(-18%) scale(.9); opacity: 0; } }
 
 /* 데스크톱 — 화면마다 12컬럼 그리드(1920×1080 기준, 09-03 개정). 왼쪽 5컬럼은 라이브 카드(대기시간·평면도)가 두 행을 차지하고
    오른쪽 7컬럼에 인사이트 카드가 두 열로 놓인다. 카드가 하나뿐인 화면(오늘급식·이슈피드)은 가운데 8컬럼 */

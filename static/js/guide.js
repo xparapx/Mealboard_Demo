@@ -41,11 +41,17 @@ const STEPS = [
   { screen: "today", sel: "#mealcard", title: "영양 · 알레르기 · 탄소", text: "에너지 충족률·적정비율·미량영양소 세 지표, 내 알레르기 경고(기기에만 저장), 다 남기면 나오는 탄소." },
   { screen: "guide", sel: "#guidehow", title: "다섯 단계로 나옵니다", text: "세기만 한다 → W = L ÷ λ → 스스로 보정 → 보수적 판정 → 하루 집계." },
 ];
-const INTRO = { title: "급식실 줄, 몇 분 기다릴까요?", text: "카메라는 숫자만 남깁니다.", ms: 2800 };
+/* 인트로 서사(10-19 사용자 요청: 필요성 → 동기 → 핵심 기능 → 시연 진입). 음성 안내가 켜져 있으면 읽기가 끝날 때 넘어가고, 아니면 ms */
+const INTRO = [
+  { title: "급식실 줄, 몇 분 기다릴까요?", text: "점심시간은 50분. 줄에서 10분을 보내면 밥 먹을 시간은 그만큼 사라집니다. 학생은 언제 가야 할지, 급식실은 어디가 막히는지 아무도 몰랐습니다.", ms: 6500 },
+  { title: "그래서 세어 보기로 했습니다", text: "라즈베리파이 한 대와 카메라 하나가 줄 선 사람 수와 배식 속도를 셉니다. 영상은 어디에도 남기지 않습니다 — 숫자만 남깁니다.", ms: 6500 },
+  { title: "핵심은 셋입니다", text: "예상 대기시간, 급식실 밀집도, 그리고 영양·탄소·운영 리포트. 학생은 언제 갈지, 영양교사는 무엇을 바꿀지 알게 됩니다.", ms: 6500 },
+  { title: "지금부터 화면을 돌며 보여 드립니다", text: "약 2분입니다. 언제든 ESC 나 종료로 멈출 수 있고, 다음·이전으로 건너뛸 수 있습니다.", ms: 4500 },
+];
 const OUTRO = { title: "지금 운영 중 · kjhs-meal.com", text: "저장 프레임 0 · Pi 한 대 + NEIS(전국 공통) · 평면도 보정만 바꾸면 다른 학교에도." };
 const dwell = st => st.ms || Math.min(11000, Math.max(4500, 1500 + 100 * (st.text || "").length + 600));
 const ZOOM_MAX = 1.25, ZOOM_MIN_MOBILE = 0.88, ZOOM_MAX_MOBILE = 1.06, PAD = 8;
-const T_ZOOM = 450, T_UNZOOM = 260, T_OUT = 320, T_IN = 420;
+const T_ZOOM = 450, T_UNZOOM = 450, T_OUT = 380, T_IN = 480;
 
 /* ---------------- 화면 글 ---------------- */
 let DEMO = null;
@@ -104,6 +110,39 @@ function freeArea() {
   return { x: 32, y: 32, w: vw - 64, h: vh - 64 };
 }
 let zoomTok = 0;
+/* 음성 안내(10-19 사용자 요청) — 브라우저 내장 Web Speech API(Windows·Chrome 의 한국어 음성, 서버·파일 없음). 기본 켬, 브라우저에 기억.
+   단계 제목·본문을 읽고 끝나면 다음 단계로(읽기가 글자 수 공식보다 길면 그쪽에 맞춘다). 음성이 없거나 막히면 조용히 시간 공식으로 */
+const VOICE_KEY = "mb_tour_voice";
+let voiceOn = (() => { try { return localStorage.getItem(VOICE_KEY) !== "0"; } catch { return true; } })();
+let utter = null;
+function pickVoice() {
+  const vs = speechSynthesis.getVoices().filter(v => /^ko/i.test(v.lang));
+  const pref = ["SunHi", "Heami", "Google 한국어", "Yuna", "Natural"];
+  return vs.find(v => pref.some(k => v.name.includes(k))) || vs[0] || null;
+}
+function speak(text, onend, onfail) {
+  if (!voiceOn || !("speechSynthesis" in window)) return false;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "ko-KR"; u.rate = 1.0; u.pitch = 1.0;
+    const v = pickVoice(); if (v) u.voice = v;
+    let done = false;
+    const t0 = Date.now();
+    u.onend = () => { if (!done) { done = true; (Date.now() - t0 < 400 ? onfail : onend)?.(); } };      // 0.4초 안에 끝났으면 읽은 게 아니다(막힘·빈 음성)
+    u.onerror = () => { if (!done) { done = true; onfail?.(); } };                                      // 사용자 동작 없이 시작(?tour=auto) 등 — 시간 공식으로
+    utter = u;
+    speechSynthesis.speak(u);
+    return true;
+  } catch { return false; }
+}
+function hush() { try { utter = null; speechSynthesis.cancel(); } catch {} }
+function setVoice(on) {
+  voiceOn = on;
+  try { localStorage.setItem(VOICE_KEY, on ? "1" : "0"); } catch {}
+  $$("#tourvoice, #tourcardvoice").forEach(b => { b.setAttribute("aria-pressed", on); b.textContent = on ? "🔊 음성 켬" : "🔇 음성 끔"; });
+  if (!on) hush();
+}
 const DEBUG = new URLSearchParams(location.search).has("tourdebug");   // ?tourdebug — 줌 계산값을 말풍선에 적는다(헤드리스 정지 캡처로 읽기 위해)
 let lastZoom = null;
 function naturalRect(card) {
@@ -137,7 +176,7 @@ function zoomTo(card) {
 function unzoom(card, ms = T_UNZOOM) {
   if (!card) return;
   const tok = ++zoomTok;
-  card.style.transition = `transform ${ms}ms ease-in`;
+  card.style.transition = `transform ${ms}ms var(--ease)`;      // 새 카드의 줌과 같은 길이·이징 → 둘이 겹쳐 한 동작(카메라 팬)
   card.style.removeProperty("--tz");
   delete card.dataset.zs; delete card.dataset.zx; delete card.dataset.zy;
   const done = () => { if (zoomTok !== tok) return; card.classList.remove("tz"); card.style.transition = ""; };   // 그새 다시 줌됐으면 손대지 않는다
@@ -201,21 +240,34 @@ function bar(ms) {
   if (paused) return;
   void el.offsetWidth; el.style.transition = `width ${ms}ms linear`; el.style.width = "100%";
 }
-function arm(ms, next) {
+function arm(ms, next, text) {
+  /* text 를 읽을 수 있으면 읽기가 끝난 0.9초 뒤에 넘어간다(상한 30초 안전망). 아니면 ms 뒤에 */
   clearTimeout(timer); t0 = Date.now(); left = ms;
-  timer = setTimeout(next, ms);
-  bar(ms);
+  const fallback = () => { clearTimeout(timer); t0 = Date.now(); left = ms; timer = setTimeout(next, ms); bar(ms); };
+  const spoken = text ? speak(text, () => { if (paused) return; clearTimeout(timer); timer = setTimeout(next, 900); }, fallback) : false;
+  timer = setTimeout(next, spoken ? Math.max(ms, 30000) : ms);
+  bar(spoken ? Math.max(ms, Math.round(text.length * 160)) : ms);   // 진행 띠는 읽기 길이 추정(한국어 ≈ 160ms/자)
 }
 
 /* 인트로·엔드카드 — 전면 차콜 카드(#tourcard). 인트로는 2.8초 뒤(또는 클릭) 1단계로, 엔드는 머문다 */
-function showCard(kind) {
+function showCard(kind, d, idx = -1) {
   const c = $("#tourcard");
   c.dataset.kind = kind; c.hidden = false;
-  const d = kind === "intro" ? INTRO : OUTRO;
+  c.classList.remove("in"); void c.offsetWidth; c.classList.add("in");
   $("#tourcardtitle").textContent = d.title; $("#tourcardtext").textContent = d.text;
   $("#tourcardctl").hidden = kind !== "outro";
+  $("#tourdots").innerHTML = kind === "intro" ? INTRO.map((_, k) => `<i${k === idx ? ' class="on"' : ""}></i>`).join("") : "";
+  $("#tourcardskip").hidden = kind !== "intro";
   $("#tourbubble").hidden = true;
   veil();
+}
+let introIdx = -1;
+function showIntro(k) {
+  if (k >= INTRO.length) { introIdx = -1; show(0); return; }
+  introIdx = k; i = -0.5;
+  const d = INTRO[k];
+  showCard("intro", d, k);
+  if (!paused) arm(d.ms, () => showIntro(k + 1), `${d.title}. ${d.text}`);
 }
 function hideCard() { $("#tourcard").hidden = true; $("#tourbubble").hidden = false; }
 
@@ -237,24 +289,27 @@ async function show(k) {
     await switchScreen(st.screen, k - prev);
     if (my !== seq) return;
     await sleep(360);                                  // 카드 등장(.enter 240ms)·첫 폴링이 자리를 잡은 뒤에
-  } else await sleep(motion() ? 120 : 0);
+  }
   if (my !== seq) return;
   const el = document.querySelector(st.sel) || document.getElementById(st.screen);
   const card = cardOf(el);
-  if (card !== zoomed) { el.scrollIntoView({ behavior: "auto", block: desktop() ? "center" : "start" }); await sleep(30); }   // 측정 전 1회, 즉시(같은 카드면 스크롤도 그대로)
+  // 스크롤하지 않는다(10-19 사용자: 줌에 '중간 단계' 가 보였다 — 스크롤 점프 뒤 줌이 두 동작으로 읽혔다). translate 가 어디서든 중앙으로 끌어온다
   const side = curSide = zoomTo(card);
-  setBubble(st.title.replace("{wait}", liveWait()), DEBUG ? JSON.stringify(lastZoom) : st.text);
+  const title = st.title.replace("{wait}", liveWait());
+  setBubble(title, DEBUG ? JSON.stringify(lastZoom) : st.text);
   // 줌 전환 중엔 rAF 로 링을 따라가고, 끝나면 400ms 틱(카드 내용이 뒤늦게 차오를 때)
   const t1 = performance.now() + (motion() ? T_ZOOM + 40 : 0);
   const follow = () => { if (my !== seq) return; place(side); if (performance.now() < t1) requestAnimationFrame(follow); };
   requestAnimationFrame(follow);
-  if (!paused) arm(dwell(st), () => show(i + 1));
+  if (!paused) arm(dwell(st), () => show(i + 1), `${title}. ${st.text}`);
+  else hush();
 }
 
 function outro() {
   if (zoomed) unzoom(zoomed);
   i = STEPS.length;
-  showCard("outro");
+  showCard("outro", OUTRO);
+  speak(`${OUTRO.title}. ${OUTRO.text}`);
   $("#tourno").textContent = `${STEPS.length} / ${STEPS.length}`;
   clearTimeout(timer);
   $("#tourbar b").style.width = "100%";
@@ -270,14 +325,14 @@ export function start(at = null, hold = false) {
   clearInterval(tick); tick = setInterval(() => { if (i >= 0 && i < STEPS.length && $("#tourcard").hidden) place(); }, 400);
   if (at === "outro") { i = STEPS.length - 1; outro(); return; }   // ?tour=outro — 엔드카드만(검증용)
   if (at !== null) { i = -0.5; show(at); return; }     // ?tour=N — 특정 단계에서 바로(녹화·검증용). 인트로 생략
-  i = -0.5;                                            // 인트로 중(단계 아님)
-  showCard("intro");
-  arm(INTRO.ms, () => show(0));
+  setVoice(voiceOn);                                   // 단추 상태 맞추기
+  showIntro(0);                                        // 인트로 서사 4장 → 1단계
 }
 export function stop() {
   clearTimeout(timer); clearInterval(tick); timer = tick = null; seq++;
   if (zoomed) unzoom(zoomed);
-  i = -1; paused = false;
+  hush();
+  i = -1; paused = false; introIdx = -1;
   hideCard();
   tour().hidden = true; document.body.classList.remove("touring", "tourhold");
   document.querySelector("main.views")?.classList.remove("tour-out", "tour-in", "back");
@@ -288,13 +343,13 @@ function pause() {
   if (i < 0 || i >= STEPS.length) return;
   paused = !paused;
   $("#tourpause").textContent = paused ? "계속" : "일시정지";
-  if (paused) { clearTimeout(timer); left = Math.max(1500, left - (Date.now() - t0)); const el = $("#tourbar b"); const w = getComputedStyle(el).width; el.style.transition = "none"; el.style.width = w; }
-  else arm(left, () => show(i + 1));
+  if (paused) { clearTimeout(timer); left = Math.max(1500, left - (Date.now() - t0)); const el = $("#tourbar b"); const w = getComputedStyle(el).width; el.style.transition = "none"; el.style.width = w; try { speechSynthesis.pause(); } catch {} }
+  else { try { if (speechSynthesis.paused) speechSynthesis.resume(); } catch {} arm(left, () => show(i + 1)); }
 }
 function keys(e) {
   if (i < 0) return;
   if (e.key === "Escape") stop();
-  else if (e.key === "ArrowRight") show(Math.floor(i) + 1);
+  else if (e.key === "ArrowRight") introIdx >= 0 ? showIntro(introIdx + 1) : show(Math.floor(i) + 1);
   else if (e.key === "ArrowLeft") show(Math.floor(i) - 1);
   else if (e.key === " ") { e.preventDefault(); pause(); }
 }
@@ -311,7 +366,10 @@ export const screen = {
     $("#tournext").addEventListener("click", () => show(Math.floor(i) + 1));
     $("#tourprev").addEventListener("click", () => show(Math.floor(i) - 1));
     $("#tourpause").addEventListener("click", pause);
-    $("#tourcard").addEventListener("click", e => { if ($("#tourcard").dataset.kind === "intro" && !e.target.closest("button")) show(0); });
+    $("#tourcard").addEventListener("click", e => { if ($("#tourcard").dataset.kind === "intro" && !e.target.closest("button, a")) showIntro(introIdx + 1); });
+    $("#tourcardskip").addEventListener("click", () => show(0));
+    $$("#tourvoice, #tourcardvoice").forEach(b => b.addEventListener("click", () => setVoice(!voiceOn)));
+    if ("speechSynthesis" in window) { try { speechSynthesis.getVoices(); } catch {} }   // 목록 적재 트리거(Chrome 은 첫 호출 뒤 voiceschanged 로 채운다)
     $("#tourreplay").addEventListener("click", () => { stop(); start(); });
     $("#tourbrowse").addEventListener("click", () => { stop(); window.MB.go("wait"); });
     addEventListener("keydown", keys);
