@@ -118,10 +118,12 @@ let utter = null, audio = null, lastSpoken = null;
 /* 아나운서 대본(static/media/voice/narration.json, 10-19) — 카드 글을 그대로 읽지 않고 맥락을 풀어 설명한다. setup_voice.py 가 만든 <id>.mp3 가 있으면
    그것을 재생(모든 브라우저에서 같은 음성), 없으면 브라우저 음성으로 같은 대본을 읽는다. id: intro0~3 · s0~s14 · outro */
 const NARR = {}, CLIP = {};                            // id → 대본 / id → mp3 있음(true)·없음(false)·미확인(undefined)
+let RATE = 1.25;                                       // 재생 배속(10-19 사용자: 기본 1.25) — narration.json 의 playback_rate 가 덮는다. 재생성 없이 숫자만 바꾸면 된다
 async function loadNarration() {
   try {
     const d = await (await fetch("/media/voice/narration.json", { cache: "no-store" })).json();
     for (const c of d.clips || []) NARR[c.id] = c.text;
+    if (d.playback_rate > 0) RATE = Math.min(2, Math.max(0.5, +d.playback_rate));
   } catch {}
 }
 async function clipReady(id) {
@@ -133,6 +135,7 @@ function playClip(id, onend, onfail) {
   const a = audio || (audio = new Audio());
   a.onended = null; a.onerror = null;
   a.src = `/media/voice/${id}.mp3`;
+  a.playbackRate = RATE; a.preservesPitch = true;       // 배속해도 음높이는 그대로(브라우저 기본이지만 명시)
   let done = false;
   const fin = f => () => { if (!done) { done = true; f?.(); } };
   a.onended = fin(onend); a.onerror = fin(onfail);
@@ -158,7 +161,7 @@ function speakTTS(text, onend, onfail) {
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = "ko-KR"; u.rate = 1.0; u.pitch = 1.0;
+    u.lang = "ko-KR"; u.rate = RATE; u.pitch = 1.0;   // mp3 와 같은 배속(10-19)
     const v = pickVoice(); if (v) u.voice = v;
     let done = false;
     const t0 = Date.now();
