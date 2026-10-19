@@ -8,6 +8,7 @@
 
 운영·개발 데이터(data/)와 **완전히 분리된 폴더**(기본 data/demo/, git 제외)에 queue.db·insights.db·reports.db·meal.json·news.json·
 positions.json·zones.local.json 을 만든다. 생성은 결정론적(날짜가 난수 씨앗)이라 누가 켜도 같은 화면이 나온다.
+마커·밀집도는 **카메라 가시 영역(CAMERA_VIEW, 배식대 오른쪽 구석 66° 렌즈 기준 — 운영 7일 맵과 같은 분포) 안에서만** 만든다(10-19).
 
 가상 시계(app/clock.py, .env DEMO_CLOCK): 기본 기준 **2026-10-14(수) 12:44** — 1·2학년 점심 피크 한가운데(인기 메뉴 날, 줄 60명·약 7분). 켠 순간부터 실제 시간이 흐르고,
 이 모듈의 피더 스레드가 그 시각의 표본을 10초마다 queue.db·positions.json 에 이어 쓴다(카메라 노드의 대역 — 기록 함수는 vision/record.py 와 같은 SQL).
@@ -46,6 +47,24 @@ PATH = [(0.08, 0.97), (0.05, 0.30), (0.10, 0.07), (0.55, 0.05)]      # 줄의 �
 TABLES1 = [(x, y) for x in (0.26, 0.49, 0.72) for y in (0.17, 0.28, 0.39, 0.50)]     # 1구역 좌석(배식대 가까운 쪽) 식탁 중심
 TABLES2 = [(x, y) for x in (0.26, 0.49, 0.72) for y in (0.62, 0.73, 0.84, 0.95)]
 SEATS = 280
+# 카메라 가시 영역(10-19 사용자 지적: 더미 마커가 맵 전체에 뿌려지는데 실제 운영 맵은 오른쪽 절반에만 찍힌다).
+# 실제 카메라는 배식대 오른쪽 구석(정규화 (0,0) 부근 — x=0 이 오른쪽, y=0 이 배식대)에 표준 66° 렌즈라 왼쪽 절반(출구쪽 통로·좌석 왼쪽 열)은 화각 밖이고
+# 먼 자리일수록 검출이 성글다. 운영 7일 평소 밀집도 맵의 분포를 그대로 다각형으로 옮겼다 — 모의 마커·셀·구역 인원도 이 안에서만 나온다.
+CAMERA = (0.0, 0.0)
+CAMERA_VIEW = [(0.0, 0.0), (0.62, 0.0), (0.62, 0.42), (0.45, 0.62), (0.30, 1.0), (0.0, 1.0)]
+
+
+def _visible_tables(tables):
+    """가시 영역 안의 식탁 중심과 가중치(카메라에서 멀수록 검출이 드물다 → 가중치 ↓). 결정론적"""
+    from vision.zones import point_in_polygon
+    out = []
+    for cx, cy in tables:
+        if point_in_polygon(cx, cy, CAMERA_VIEW):
+            out.append(((cx, cy), 1.0 / (0.35 + math.dist((cx, cy), CAMERA))))
+    return out
+
+
+VIS1, VIS2 = _visible_tables(TABLES1), _visible_tables(TABLES2)
 
 # 메뉴(알레르기 번호는 NEIS 표기) · kcal · 탄단지 에너지 비율 · 인기 계수(1.0 = 보통, 클수록 초반에 몰린다)
 MENUS = [
@@ -187,10 +206,17 @@ def _points(r, queue, seated):
         x = PATH[k][0] + (PATH[k + 1][0] - PATH[k][0]) * t + r.uniform(-0.02, 0.02)
         y = PATH[k][1] + (PATH[k + 1][1] - PATH[k][1]) * t + r.uniform(-0.02, 0.02)
         pts.append({"x": round(min(max(x, 0), 1), 3), "y": round(min(max(y, 0), 1), 3)})
+    from vision.zones import point_in_polygon
     for i in range(seated):
-        tables = TABLES1 if r.random() < 0.68 else TABLES2                      # 배식대 가까운 1구역을 더 좋아한다
-        cx, cy = r.choice(tables)
-        pts.append({"x": round(min(max(cx + r.uniform(-0.07, 0.07), 0), 1), 3), "y": round(min(max(cy + r.uniform(-0.035, 0.035), 0), 1), 3)})
+        vis = VIS1 if r.random() < 0.68 else VIS2                               # 배식대 가까운 1구역을 더 좋아한다
+        (cx, cy) = r.choices([t for t, _ in vis], weights=[w for _, w in vis])[0]   # 카메라 가시 영역 안 식탁만, 가까울수록 자주
+        for _ in range(6):                                                       # 흔들림이 가시 영역 밖으로 나가면 다시
+            x, y = cx + r.uniform(-0.07, 0.07), cy + r.uniform(-0.035, 0.035)
+            if point_in_polygon(x, y, CAMERA_VIEW):
+                break
+        else:
+            x, y = cx, cy
+        pts.append({"x": round(min(max(x, 0), 1), 3), "y": round(min(max(y, 0), 1), 3)})
     return pts
 
 

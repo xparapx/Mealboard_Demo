@@ -53,6 +53,9 @@ def test_위치는_정규화_좌표만():
     import random
     pts = demo._points(random.Random(1), 12, 30)
     assert len(pts) == 42 and all(set(p) == {"x", "y"} and 0 <= p["x"] <= 1 and 0 <= p["y"] <= 1 for p in pts)
+    from vision.zones import point_in_polygon
+    assert all(point_in_polygon(p["x"], p["y"], demo.CAMERA_VIEW) or p["x"] <= 0.12 for p in pts)   # 10-19: 카메라 가시 영역 안(줄은 오른쪽 통로)
+    assert not any(p["x"] > 0.65 for p in pts)                                                      # 왼쪽 열(0.72)·출구쪽은 화각 밖
 
 
 def test_생성은_운영_data_폴더를_거부한다():
