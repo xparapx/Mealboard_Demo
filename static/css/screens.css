@@ -277,9 +277,48 @@ details > summary::-webkit-details-marker { display: none; }
 /* 자동 시연 오버레이 — 전면 고정, 밝은 칸(spot)은 거대한 그림자로 나머지를 어둡게. 말풍선만 눌린다.
    10-18 사용자 지적: 말풍선이 카드와 똑같아 안내인지 UI 인지 구분이 안 됐다 → 화면의 어떤 카드도 쓰지 않는 조합(진한 차콜 바탕·크림 글자·틸 꼬리표),
    밝은 카드를 가리키는 꼬리(data-pos)와 틸 링으로 '지금 이 카드를 설명 중' 을 시선으로 잇는다. 모바일은 하단 시트(꼬리 없음) */
-#tour { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
-#tour .spot { position: fixed; border-radius: 26px; box-shadow: 0 0 0 9999px rgba(51,49,45,.62), 0 0 0 3px var(--teal), 0 0 0 9px rgba(18,151,147,.28);
-              transition: left .35s var(--ease), top .35s var(--ease), width .35s var(--ease), height .35s var(--ease); }
+#tour { position: fixed; inset: 0; z-index: 40; pointer-events: none; view-transition-name: tour; }   /* 피벗 전환에서 오버레이는 같이 돌지 않는다 */
+#tour .spot { position: fixed; border-radius: 26px; box-shadow: 0 0 0 9999px rgba(51,49,45,.62), 0 0 0 2px var(--teal);
+              transition: left .45s var(--ease), top .45s var(--ease), width .45s var(--ease), height .45s var(--ease); }
+/* 점멸 할로(10-19): 링 자체가 아니라 별도 ::after 의 opacity 만 — 컴포지터 전용(9999px 그림자를 애니메이션하면 매 프레임 전체 리페인트).
+   2.2초 주기(히트맵 '지금' 타일과 동위상), .25↔.70 으로 완전히 꺼지지 않는다 */
+#tour .spot::after { content: ""; position: absolute; inset: -9px; border-radius: 34px; box-shadow: 0 0 0 8px rgba(18,151,147,.9), 0 0 28px 10px rgba(18,151,147,.45);
+                     opacity: .45; will-change: opacity; animation: tourhalo 2.2s ease-in-out infinite; }
+@keyframes tourhalo { 0%, 100% { opacity: .25; } 50% { opacity: .70; } }
+#tour .spot.veil { box-shadow: 0 0 0 9999px rgba(51,49,45,.62); transition: none; }
+#tour .spot.veil::after { display: none; }
+/* 줌인한 카드(10-19): 실제 DOM 을 transform 으로 키운다 — 그리드 형제 위로, hover 의 translateY·.18s transition 이 가로채지 않게 */
+.tz { position: relative; z-index: 3; transform-origin: center center; will-change: transform; }
+body.touring .card, body.touring .waitcard { transition: none; }
+body.touring .card:hover { box-shadow: var(--e1); }     /* 줌 transform 은 인라인이라 hover 규칙보다 우선한다 — 그림자만 고정 */
+/* 인트로·엔드카드 — 전면 차콜, 가운데 글 */
+#tour .cardx { position: fixed; inset: 0; display: grid; place-items: center; align-content: center; gap: 10px; padding: 32px 24px; text-align: center;
+               background: rgba(51,49,45,.92); color: var(--ground); pointer-events: auto; animation: tourcard .5s var(--ease); }
+@keyframes tourcard { from { opacity: 0; } }
+#tour .cardx .tag { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; background: var(--teal); color: #fff; font-size: 11.5px; font-weight: 800; letter-spacing: .08em; }
+#tour .cardx h2 { margin: 6px 0 0; font-size: clamp(24px, 4.2vw, 44px); line-height: 1.2; letter-spacing: -.02em; color: #fff; max-width: 820px; }
+#tour .cardx p { margin: 0; font-size: clamp(15px, 1.6vw, 20px); line-height: 1.6; color: rgba(245,242,233,.85); max-width: 720px; }
+#tour .cardx .ctl { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 18px; }
+#tour .cardx .ctl button { font: inherit; font-weight: 800; font-size: 14px; padding: 11px 20px; border: 1.5px solid rgba(245,242,233,.3); border-radius: 999px; background: transparent; color: #fff; cursor: pointer; }
+#tour .cardx .ctl button.primary { background: var(--teal); border-color: var(--teal); }
+#tour .cardx .ctl .lnk { align-self: center; font-weight: 700; color: var(--aqua); padding: 0 8px; }
+/* 말풍선 교체 180ms */
+#tour .bubble.in { animation: tourbubble .18s ease; }
+@keyframes tourbubble { from { opacity: 0; transform: translateY(6px); } }
+/* 화면 피벗 전환(10-19): View Transition — 옛 화면이 −12° 로 돌며 왼쪽으로 빠지고(220ms), 새 화면이 +10° 에서 들어온다(320ms). 뒤로 갈 때는 반대 */
+::view-transition-old(root) { animation: tour-out .22s cubic-bezier(.4,0,1,1) both; }
+::view-transition-new(root) { animation: tour-in .32s var(--ease) both; animation-delay: .22s; }
+html[data-tourdir="back"]::view-transition-old(root) { animation-name: tour-out-b; }
+html[data-tourdir="back"]::view-transition-new(root) { animation-name: tour-in-b; }
+::view-transition-old(tour), ::view-transition-new(tour) { animation: none; mix-blend-mode: normal; }
+@keyframes tour-out { to { transform: perspective(1600px) rotateY(-12deg) translateX(-6%); opacity: 0; } }
+@keyframes tour-in { from { transform: perspective(1600px) rotateY(10deg) translateX(6%); opacity: 0; } }
+@keyframes tour-out-b { to { transform: perspective(1600px) rotateY(12deg) translateX(6%); opacity: 0; } }
+@keyframes tour-in-b { from { transform: perspective(1600px) rotateY(-10deg) translateX(-6%); opacity: 0; } }
+@media (max-width: 899px) {
+  ::view-transition-old(root) { animation-duration: .18s; }
+  ::view-transition-new(root) { animation-duration: .26s; animation-delay: .18s; }
+}
 #tour .bubble { position: fixed; left: 12px; right: 12px; bottom: calc(var(--dock-h) + env(safe-area-inset-bottom) + 12px); pointer-events: auto;
                 padding: 14px 18px 14px; border-radius: 22px; background: var(--ink); color: var(--ground); border: 1.5px solid rgba(18,151,147,.55);
                 box-shadow: 0 24px 60px rgba(51,49,45,.45), 0 0 0 1px rgba(255,252,246,.08) inset; }
@@ -308,6 +347,7 @@ details > summary::-webkit-details-marker { display: none; }
 #tour .ctl button.x { margin-left: auto; background: transparent; border-color: rgba(255,114,96,.6); color: #FFB3A6; }
 #tour .ctl button:disabled { opacity: .35; cursor: default; }
 body.touring { overflow-x: hidden; }
+body.tourhold .tz, body.tourhold #tour .spot, body.tourhold #tour .bubble, body.tourhold #tour .cardx { transition: none !important; animation-duration: 0s !important; }   /* ?tour=N&hold — 정지 캡처용 */
 
 /* 데스크톱 — 화면마다 12컬럼 그리드(1920×1080 기준, 09-03 개정). 왼쪽 5컬럼은 라이브 카드(대기시간·평면도)가 두 행을 차지하고
    오른쪽 7컬럼에 인사이트 카드가 두 열로 놓인다. 카드가 하나뿐인 화면(오늘급식·이슈피드)은 가운데 8컬럼 */

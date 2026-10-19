@@ -1714,6 +1714,17 @@ systemctl status mealboard-api --no-pager</code></pre>
 &lt;!-- 자동 시연 오버레이(guide.js 가 채운다) — 카드 하나를 밝게 남기고 나머지를 어둡게, 말풍선에 설명. ESC·종료로 닫힌다 --&gt;
 &lt;div id=&quot;tour&quot; hidden aria-live=&quot;polite&quot;&gt;
   &lt;div class=&quot;spot&quot; id=&quot;tourspot&quot;&gt;&lt;/div&gt;
+  &lt;!-- 인트로(2.8초, 클릭으로 건너뜀)·엔드카드(운영 중·저장 프레임 0·확산) — 전면 차콜 카드 --&gt;
+  &lt;div class=&quot;cardx&quot; id=&quot;tourcard&quot; hidden data-kind=&quot;intro&quot;&gt;
+    &lt;div class=&quot;tag&quot;&gt;자동 시연&lt;/div&gt;
+    &lt;h2 id=&quot;tourcardtitle&quot;&gt;&lt;/h2&gt;
+    &lt;p id=&quot;tourcardtext&quot;&gt;&lt;/p&gt;
+    &lt;div class=&quot;ctl&quot; id=&quot;tourcardctl&quot; hidden&gt;
+      &lt;button type=&quot;button&quot; id=&quot;tourreplay&quot; class=&quot;primary&quot;&gt;다시 보기&lt;/button&gt;
+      &lt;button type=&quot;button&quot; id=&quot;tourbrowse&quot;&gt;둘러보기&lt;/button&gt;
+      &lt;a class=&quot;lnk&quot; href=&quot;https://kjhs-meal.com&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;운영 화면 열기 ↗&lt;/a&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
   &lt;div class=&quot;bubble&quot; id=&quot;tourbubble&quot;&gt;
     &lt;div class=&quot;step&quot;&gt;&lt;span class=&quot;tag&quot;&gt;안내&lt;/span&gt;&lt;i id=&quot;tourbar&quot;&gt;&lt;b&gt;&lt;/b&gt;&lt;/i&gt;&lt;span id=&quot;tourno&quot;&gt;&lt;/span&gt;&lt;/div&gt;
     &lt;h3 id=&quot;tourtitle&quot;&gt;&lt;/h3&gt;
@@ -1777,7 +1788,7 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v47&quot;;   // 10-18: 심사 모드(가상 시계·앱 안내 탭·자동 시연) + 시연 말풍선 안내자 디자인
+const CACHE = &quot;mealboard-v48&quot;;   // 10-19: 자동 시연 — 피벗 전환·카드 줌인·점멸 할로·인트로/엔드카드
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/stats.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;, &quot;/js/guide.js&quot;];
@@ -5804,7 +5815,7 @@ export const why = r =&gt; !r || /reports\.db/.test(r) ? null : /insights\.db/.t
 const DESK_MQ = matchMedia(&quot;(min-width: 900px)&quot;);
 export const desktop = () =&gt; DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = &quot;v47&quot;;                       // 10-18: 심사 모드(가상 시계·앱 안내 탭·자동 시연) + 시연 말풍선 안내자 디자인    // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = &quot;v48&quot;;                       // 10-19: 자동 시연 — 피벗 전환·카드 줌인·점멸 할로·인트로/엔드카드           // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {

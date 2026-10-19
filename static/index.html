@@ -385,6 +385,17 @@
 <!-- 자동 시연 오버레이(guide.js 가 채운다) — 카드 하나를 밝게 남기고 나머지를 어둡게, 말풍선에 설명. ESC·종료로 닫힌다 -->
 <div id="tour" hidden aria-live="polite">
   <div class="spot" id="tourspot"></div>
+  <!-- 인트로(2.8초, 클릭으로 건너뜀)·엔드카드(운영 중·저장 프레임 0·확산) — 전면 차콜 카드 -->
+  <div class="cardx" id="tourcard" hidden data-kind="intro">
+    <div class="tag">자동 시연</div>
+    <h2 id="tourcardtitle"></h2>
+    <p id="tourcardtext"></p>
+    <div class="ctl" id="tourcardctl" hidden>
+      <button type="button" id="tourreplay" class="primary">다시 보기</button>
+      <button type="button" id="tourbrowse">둘러보기</button>
+      <a class="lnk" href="https://kjhs-meal.com" target="_blank" rel="noopener">운영 화면 열기 ↗</a>
+    </div>
+  </div>
   <div class="bubble" id="tourbubble">
     <div class="step"><span class="tag">안내</span><i id="tourbar"><b></b></i><span id="tourno"></span></div>
     <h3 id="tourtitle"></h3>
