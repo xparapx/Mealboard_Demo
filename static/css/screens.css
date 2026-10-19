@@ -290,7 +290,7 @@ details > summary::-webkit-details-marker { display: none; }
 /* 줌인한 카드(10-19): 실제 DOM 을 transform 으로 키운다 — 그리드 형제 위로, hover 의 translateY·.18s transition 이 가로채지 않게 */
 .tz { position: relative; z-index: 3; transform-origin: center center; will-change: transform; transform: var(--tz, none); transition: transform .45s var(--ease); }   /* 값은 guide.js 가 --tz 로 준다 */
 body.touring .card, body.touring .waitcard { transition: none; }
-body.touring .card:hover { box-shadow: var(--e1); }     /* 줌 transform 은 인라인이라 hover 규칙보다 우선한다 — 그림자만 고정 */
+body.touring .card:hover, body.touring .waitcard:hover { transform: var(--tz, none); box-shadow: var(--e1); }   /* 10-19: hover 의 translateY 가 .tz 의 줌을 가로채 카드가 떨렸다 — 시연 중엔 hover 가 transform 을 바꾸지 않는다 */
 /* 인트로·엔드카드 — 전면 차콜, 가운데 글 */
 #tour .cardx { position: fixed; inset: 0; display: grid; place-items: center; align-content: center; gap: 10px; padding: 32px 24px; text-align: center;
                background: rgba(51,49,45,.92); color: var(--ground); pointer-events: auto; animation: tourcard .5s var(--ease); }
@@ -346,15 +346,17 @@ body.touring .card:hover { box-shadow: var(--e1); }     /* 줌 transform 은 인
 #tour .ctl button:disabled { opacity: .35; cursor: default; }
 /* 화면 피벗 전환(10-19, CSS 키프레임 — View Transition 은 브라우저·체감이 들쭉날쭉해 폐기): 보드가 −18° 로 돌며 축소·페이드로 빠지고(320ms),
    새 화면이 +16° 에서 들어온다(420ms). 뒤로 갈 때(.back)는 반대 방향. 축소 모션 설정은 끝의 전역 규칙이 animation 을 끈다(컷) */
-main.views.tour-out { animation: tour-out .38s cubic-bezier(.4,0,1,1) both; transform-origin: 50% 50%; will-change: transform, opacity; }
-main.views.tour-in { animation: tour-in .48s var(--ease) both; transform-origin: 50% 50%; will-change: transform, opacity; }
+main.views.tour-out { animation: tour-out .42s cubic-bezier(.55,0,1,.45) both; transform-origin: 50% 50%; will-change: transform, opacity; backface-visibility: hidden; }
+main.views.tour-in { animation: tour-in .52s cubic-bezier(0,.55,.45,1) both; transform-origin: 50% 50%; will-change: transform, opacity; backface-visibility: hidden; }
 main.views.tour-out.back { animation-name: tour-out-b; }
 main.views.tour-in.back { animation-name: tour-in-b; }
 /* 10-19 사용자: 회전이 안 보인다 → 각도 ±32°, 이동 18%, 축소 .9, 380+480ms */
-@keyframes tour-out { to { transform: perspective(1200px) rotateY(-32deg) translateX(-18%) scale(.9); opacity: 0; } }
-@keyframes tour-in { from { transform: perspective(1200px) rotateY(28deg) translateX(18%) scale(.9); opacity: 0; } }
-@keyframes tour-out-b { to { transform: perspective(1200px) rotateY(32deg) translateX(18%) scale(.9); opacity: 0; } }
-@keyframes tour-in-b { from { transform: perspective(1200px) rotateY(-28deg) translateX(-18%) scale(.9); opacity: 0; } }
+/* 10-19: 화면 뒤집기 — 나가는 화면이 세로축으로 90° 까지 돌아 모서리만 남고(edge-on), 새 화면이 반대쪽 90° 에서 돌아 들어온다 = 합쳐 180° 플립.
+   가운데(90°)에서 면이 사라지므로 opacity 는 끝에서만 살짝. 뒤로 갈 때(.back)는 반대 방향 */
+@keyframes tour-out { 60% { opacity: 1; } to { transform: perspective(1400px) rotateY(-90deg) scale(.94); opacity: .35; } }
+@keyframes tour-in { from { transform: perspective(1400px) rotateY(90deg) scale(.94); opacity: .35; } 40% { opacity: 1; } }
+@keyframes tour-out-b { 60% { opacity: 1; } to { transform: perspective(1400px) rotateY(90deg) scale(.94); opacity: .35; } }
+@keyframes tour-in-b { from { transform: perspective(1400px) rotateY(-90deg) scale(.94); opacity: .35; } 40% { opacity: 1; } }
 
 /* 데스크톱 — 화면마다 12컬럼 그리드(1920×1080 기준, 09-03 개정). 왼쪽 5컬럼은 라이브 카드(대기시간·평면도)가 두 행을 차지하고
    오른쪽 7컬럼에 인사이트 카드가 두 열로 놓인다. 카드가 하나뿐인 화면(오늘급식·이슈피드)은 가운데 8컬럼 */

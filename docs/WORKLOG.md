@@ -11,6 +11,7 @@
 
 
 ### 2026-10
+- 10-19 **시연 후속 4건(사용자 지적)** — ① 대본 '점심시간 50분'→60분(자막도) ② TTS 가 '10분' 을 사람 수 '열 분' 으로 읽음 → 분 단위 숫자는 한글로(십 분·육십 분·삼십 분·삼 분·이 분, intro0·intro3·s1·s2·s7 재녹음) ③ **줌인 카드 위에 마우스를 두면 떨림**: `@media(hover) .card:hover{transform:translateY(-2px)}` 가 `.tz{transform:var(--tz)}` 보다 뒤에 있어 hover 때 줌이 풀렸다 켜졌다 반복(커서 아래서 카드가 움직이니 hover 도 들락날락) → `body.touring .card:hover{transform:var(--tz,none)}` 로 시연 중 hover 가 transform 을 못 바꾸게 ④ 화면 전환을 **180° 뒤집기**로: 나가는 화면 rotateY 0→−90°(.42s ease-in, perspective 1400)·새 화면 +90°→0(.52s ease-out), 면이 모서리만 남는 90° 에서 교체 — 이전 ±32° 피벗은 체감이 약했다. `setup_voice.py --doc` 이 `docs/NARRATION.md`(클립↔화면·카드·대본 매핑표)를 재생성(생성 뒤 자동). sw/UI v55.
 - 10-19 **음성 페르소나·배속 확정(사용자)** — 후보 4종(coral·shimmer·sage·marin, 같은 s0 대본·활기찬 진행자 지시)을 들려 드린 뒤 **marin**(자연스러움) 선택. `voice`=화자 페르소나, `instructions`=톤 — 둘은 별개. 20클립 재녹음(≈$0.03), 재생 배속은 `narration.json playback_rate` **1.2**(guide.js 가 mp3 `playbackRate`·브라우저 음성 `rate` 에 공통 적용 — 재생성 없이 숫자만). sw/UI v54.
 - 10-19 **아나운서 mp3 20클립 생성·배포(학교 PC)** — 사용자가 `setup_tts_key.ps1` 로 키를 `.env` 에 넣고(값은 채팅·로그에 없음), `setup_voice.py` 로 20클립 2,306자 → 5.2 MB(≈$0.03, gpt-4o-mini-tts·nova). mp3 는 git 에 커밋(심사위원·공개 데모 동일 음성). sw/UI v52. 테스트 224.
 - 10-19 **세션 인계(학교 PC → 다른 로컬 PC)** — 작업트리 clean, origin/main = `5ba11ef` 까지 push, Pi 도 같은 커밋(공개 데모 v51). **이어서 할 일(순서대로)**:
