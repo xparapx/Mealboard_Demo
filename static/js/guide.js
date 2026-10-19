@@ -1,8 +1,8 @@
 /* 앱 안내 화면(10-18, 심사위원 구동 경로 N3) — 서버가 /api/status.guide 를 줄 때만 core.addGuide 가 이 모듈을 읽어 일곱 번째 탭으로 붙인다.
    ① 이 앱은: 핵심 기능 셋(점검서 N8 — 대기시간 · 밀집도 · 영양·탄소·리포트) + '자동 시연 시작'
    ② 자동 시연(10-19 개정, 사용자 요청 + 모션·광고 전문가 자문): 인트로 → 15단계 → 엔드카드, 약 2분.
-      - 화면이 바뀔 때 Y축 피벗 전환(−12°/+10° + 가로 6% 슬라이드 + 페이드, View Transition API — 미지원·축소 모션이면 컷)
-      - 카드 하나를 설명할 때는 그 카드를 실제 DOM transform 으로 줌인(데스크톱 ≤1.25, 모바일은 화면에 맞춤 0.88~1.06), 나머지는 어둡게
+      - 화면이 바뀔 때 Y축 피벗 전환(−18°/+16° + 가로 10% 슬라이드 + 축소·페이드, CSS 키프레임 — 브라우저 무관, 축소 모션이면 컷)
+      - 카드 하나를 설명할 때는 그 카드를 실제 DOM transform 으로 **화면 정중앙에** 줌인(데스크톱 ≤1.25, 모바일은 시트 위 영역에 맞춤 0.88~1.06), 나머지는 어둡게
       - 줌인한 카드 둘레의 틸 링 할로가 2.2초 주기로 숨 쉬듯 점멸(완전히 꺼지지 않는다 — 네온 간판 회피), 말풍선은 차콜 '안내자'
       - 같은 화면 안 이동은 전환 없이 '카메라 팬'(이전 카드 260ms 복귀 ∥ 새 카드 450ms 줌)
       - 체류 시간 = 글자 수 기반 공식, 첫 단계 제목엔 실시간 대기 숫자. 시연 대본(STEPS)이 곧 제출 영상(N7)의 대본.
@@ -45,7 +45,7 @@ const INTRO = { title: "급식실 줄, 몇 분 기다릴까요?", text: "카메�
 const OUTRO = { title: "지금 운영 중 · kjhs-meal.com", text: "저장 프레임 0 · Pi 한 대 + NEIS(전국 공통) · 평면도 보정만 바꾸면 다른 학교에도." };
 const dwell = st => st.ms || Math.min(11000, Math.max(4500, 1500 + 100 * (st.text || "").length + 600));
 const ZOOM_MAX = 1.25, ZOOM_MIN_MOBILE = 0.88, ZOOM_MAX_MOBILE = 1.06, PAD = 8;
-const T_ZOOM = 450, T_UNZOOM = 260, T_OUT = 220, T_IN = 320;
+const T_ZOOM = 450, T_UNZOOM = 260, T_OUT = 320, T_IN = 420;
 
 /* ---------------- 화면 글 ---------------- */
 let DEMO = null;
@@ -93,21 +93,32 @@ function liveWait() {                                  // 첫 단계 제목의 �
   return n && n !== "—" ? `${n}${u}` : "몇 분?";
 }
 
-/* 줌 — 자유 영역(뷰포트에서 말풍선 자리를 뺀 곳)의 중앙으로 translate + scale. 스크롤은 즉시 1회만(측정 전), 그 뒤엔 transform 만 */
-function freeArea(card) {
+/* 줌 — 카드를 **화면 정중앙**으로 translate + scale(10-19 사용자 요청). 말풍선은 place() 가 남는 쪽(오른쪽→왼쪽→아래→위→모서리)에 붙인다.
+   스크롤은 즉시 1회만(측정 전), 그 뒤엔 transform 만. 모바일은 하단 시트 위 영역의 중앙 */
+function freeArea() {
   const vw = innerWidth, vh = innerHeight;
   if (!desktop()) {
     const sheet = $("#tourbubble").offsetHeight || 230, dock = 56;
-    return { x: 16, y: 12, w: vw - 32, h: vh - sheet - dock - 40, side: "sheet" };
+    return { x: 16, y: 12, w: vw - 32, h: vh - sheet - dock - 40 };
   }
-  const r = card.getBoundingClientRect(), bw = 380 + 22, bh = ($("#tourbubble").offsetHeight || 220) + 22;
-  const tall = r.height > r.width * 1.1;
-  if (tall) return { x: 24, y: 24, w: vw - bw - 48, h: vh - 48, side: "right" };
-  return { x: 24, y: 24, w: vw - 48, h: vh - bh - 48, side: "below" };
+  return { x: 32, y: 32, w: vw - 64, h: vh - 64 };
+}
+let zoomTok = 0;
+const DEBUG = new URLSearchParams(location.search).has("tourdebug");   // ?tourdebug — 줌 계산값을 말풍선에 적는다(헤드리스 정지 캡처로 읽기 위해)
+let lastZoom = null;
+function naturalRect(card) {
+  /* transform 이 걸린 카드의 '원래' 사각형 — 마지막 zoomTo 가 dataset 에 남긴 (tx, ty, s) 로 되돌려 계산한다(해제 전환을 기다리지 않아도 되게).
+     전환 중간에 재면 어긋나지만, 단계는 최소 4.5초 머물므로 실제로는 끝난 뒤다 */
+  const r = card.getBoundingClientRect();
+  if (!card.dataset.zs) return r;
+  const s0 = +card.dataset.zs, tx0 = +card.dataset.zx, ty0 = +card.dataset.zy;
+  const w = r.width / s0, h = r.height / s0;
+  const cx = r.left + r.width / 2 - tx0, cy = r.top + r.height / 2 - ty0;
+  return { left: cx - w / 2, top: cy - h / 2, width: w, height: h };
 }
 function zoomTo(card) {
-  const rect = card.getBoundingClientRect();           // transform 없는 자연 크기(unzoom 뒤에 부른다)
-  const A = freeArea(card);
+  const rect = naturalRect(card);
+  const A = freeArea();
   let s;
   if (desktop()) s = Math.min(ZOOM_MAX, (A.w - 48) / rect.width, (A.h - 48) / rect.height);
   else s = Math.max(ZOOM_MIN_MOBILE, Math.min(ZOOM_MAX_MOBILE, (A.w - 24) / rect.width, (A.h - 24) / rect.height));
@@ -115,17 +126,22 @@ function zoomTo(card) {
   const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
   let tx = A.x + A.w / 2 - cx, ty = A.y + A.h / 2 - cy;
   if (rect.height * s > A.h) ty = A.y + rect.height * s / 2 - cy;            // 자유 영역보다 긴 카드는 위를 맞춘다(모바일 평면도)
+  zoomTok++;
   card.classList.add("tz");
   card.style.transition = motion() ? `transform ${T_ZOOM}ms var(--ease)` : "none";
   card.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${s.toFixed(3)})`;
+  card.dataset.zs = s.toFixed(3); card.dataset.zx = tx.toFixed(1); card.dataset.zy = ty.toFixed(1);
+  lastZoom = { vw: innerWidth, vh: innerHeight, desk: desktop(), rect: [rect.left, rect.top, rect.width, rect.height].map(Math.round), A, s: +s.toFixed(3), tx: Math.round(tx), ty: Math.round(ty), sy: Math.round(scrollY) };
   zoomed = card;
-  return A.side;
+  return "auto";
 }
 function unzoom(card, ms = T_UNZOOM) {
   if (!card) return;
+  const tok = ++zoomTok;
   card.style.transition = motion() ? `transform ${ms}ms ease-in` : "none";
   card.style.transform = "";
-  const done = () => { card.classList.remove("tz"); card.style.transition = ""; };
+  delete card.dataset.zs; delete card.dataset.zx; delete card.dataset.zy;
+  const done = () => { if (zoomTok !== tok) return; card.classList.remove("tz"); card.style.transition = ""; };   // 그새 다시 줌됐으면 손대지 않는다
   motion() ? setTimeout(done, ms + 20) : done();
   if (zoomed === card) zoomed = null;
 }
@@ -147,27 +163,32 @@ function place(side = curSide) {
   const r = cardOf(el).getBoundingClientRect();        // 말풍선은 줌인한 카드 상자 밖에(히어로처럼 카드 일부가 대상이어도 카드를 가리지 않게), 링은 대상에
   const b = $("#tourbubble"), bw = b.offsetWidth, bh = b.offsetHeight, vw = innerWidth, vh = innerHeight, gap = 22;
   if (!desktop()) { b.style.left = ""; b.style.top = ""; b.removeAttribute("data-pos"); return; }
-  let pos = side || "below", top, leftPx;
-  if (pos === "right") { top = Math.max(16, Math.min(vh - bh - 16, r.top)); leftPx = Math.min(vw - bw - 16, r.right + PAD + gap); }
-  else { pos = "below"; top = r.bottom + PAD + gap; leftPx = Math.min(vw - bw - 16, Math.max(16, r.left)); }
-  if (pos === "below" && top + bh > vh - 16) { pos = "above"; top = r.top - PAD - bh - gap; }
-  if (top < 16) { pos = "right"; top = Math.max(16, Math.min(vh - bh - 16, r.top)); leftPx = Math.min(vw - bw - 16, r.right + PAD + gap); }
+  // 남는 쪽 고르기: 오른쪽 → 왼쪽 → 아래 → 위 → (다 안 맞으면) 오른쪽 아래 모서리. 카드는 화면 중앙에 그대로 둔다
+  let pos, top, leftPx;
+  const fitsR = r.right + PAD + gap + bw <= vw - 16, fitsL = r.left - PAD - gap - bw >= 16;
+  const fitsB = r.bottom + PAD + gap + bh <= vh - 16, fitsT = r.top - PAD - gap - bh >= 16;
+  if (fitsR) { pos = "right"; leftPx = r.right + PAD + gap; top = Math.max(16, Math.min(vh - bh - 16, r.top)); }
+  else if (fitsL) { pos = "left"; leftPx = r.left - PAD - gap - bw; top = Math.max(16, Math.min(vh - bh - 16, r.top)); }
+  else if (fitsB) { pos = "below"; top = r.bottom + PAD + gap; leftPx = Math.min(vw - bw - 16, Math.max(16, r.left)); }
+  else if (fitsT) { pos = "above"; top = r.top - PAD - gap - bh; leftPx = Math.min(vw - bw - 16, Math.max(16, r.left)); }
+  else { pos = "corner"; leftPx = vw - bw - 16; top = vh - bh - 16; }
   b.dataset.pos = pos;
   b.style.left = leftPx + "px"; b.style.top = top + "px";
 }
 
-/* 화면 피벗 전환 — View Transition API. 오버레이(#tour)는 view-transition-name 으로 분리돼 같이 돌지 않는다 */
+/* 화면 피벗 전환(10-19 개정) — View Transition API 가 아니라 CSS 키프레임으로(브라우저 무관·체감 확실): 보드(main.views)가 −18° 로 돌며 축소·페이드로
+   빠지고(T_OUT), 화면을 바꾼 뒤 +16° 에서 들어온다(T_IN). 뒤로 갈 땐 반대. 오버레이(#tour)·레일·dock 은 main 밖이라 함께 돌지 않는다. 축소 모션은 컷 */
 async function switchScreen(name, dir) {
   if (window.MB.active() === name) return;
-  if (!motion() || !document.startViewTransition) { window.MB.go(name, { push: false }); return; }
-  document.documentElement.dataset.tourdir = dir < 0 ? "back" : "fwd";
+  const v = document.querySelector("main.views");
+  if (!motion() || !v) { window.MB.go(name, { push: false }); return; }
   veil();
-  try {
-    const vt = document.startViewTransition(() => { window.MB.go(name, { push: false }); });
-    await Promise.race([vt.finished.catch(() => {}), sleep(T_OUT + T_IN + 400)]);   // 숨은 탭 등에서 finished 가 안 올 때를 대비한 상한
-  } catch {}
-  if (window.MB.active() !== name) window.MB.go(name, { push: false });              // 전환이 건너뛰어졌어도 화면은 반드시 바뀐다
-  delete document.documentElement.dataset.tourdir;
+  v.classList.remove("tour-in"); v.classList.toggle("back", dir < 0); v.classList.add("tour-out");
+  await sleep(T_OUT);
+  window.MB.go(name, { push: false });
+  v.classList.remove("tour-out"); void v.offsetWidth; v.classList.add("tour-in");
+  await sleep(T_IN);
+  v.classList.remove("tour-in", "back");
 }
 
 function setBubble(title, text) {
@@ -211,7 +232,8 @@ async function show(k) {
   $("#tourprev").disabled = i === 0;
   $("#tournext").textContent = i === STEPS.length - 1 ? "마치기" : "다음";
   const sameScreen = window.MB.active() === st.screen;
-  if (zoomed) unzoom(zoomed, sameScreen ? T_UNZOOM : 120);
+  const nextCard = sameScreen ? cardOf(document.querySelector(st.sel) || document.getElementById(st.screen)) : null;
+  if (zoomed && zoomed !== nextCard) unzoom(zoomed, sameScreen ? T_UNZOOM : 120);   // 같은 카드(히어로→추이)는 해제 없이 다시 계산 — 카메라 팬
   if (!sameScreen) {
     await switchScreen(st.screen, k - prev);
     if (my !== seq) return;
@@ -220,10 +242,9 @@ async function show(k) {
   if (my !== seq) return;
   const el = document.querySelector(st.sel) || document.getElementById(st.screen);
   const card = cardOf(el);
-  el.scrollIntoView({ behavior: "auto", block: desktop() ? "center" : "start" });   // 측정 전 1회, 즉시
-  await sleep(30);
+  if (card !== zoomed) { el.scrollIntoView({ behavior: "auto", block: desktop() ? "center" : "start" }); await sleep(30); }   // 측정 전 1회, 즉시(같은 카드면 스크롤도 그대로)
   const side = curSide = zoomTo(card);
-  setBubble(st.title.replace("{wait}", liveWait()), st.text);
+  setBubble(st.title.replace("{wait}", liveWait()), DEBUG ? JSON.stringify(lastZoom) : st.text);
   // 줌 전환 중엔 rAF 로 링을 따라가고, 끝나면 400ms 틱(카드 내용이 뒤늦게 차오를 때)
   const t1 = performance.now() + (motion() ? T_ZOOM + 40 : 0);
   const follow = () => { if (my !== seq) return; place(side); if (performance.now() < t1) requestAnimationFrame(follow); };
@@ -259,8 +280,8 @@ export function stop() {
   if (zoomed) unzoom(zoomed);
   i = -1; paused = false;
   hideCard();
-  tour().hidden = true; document.body.classList.remove("touring");
-  delete document.documentElement.dataset.tourdir;
+  tour().hidden = true; document.body.classList.remove("touring", "tourhold");
+  document.querySelector("main.views")?.classList.remove("tour-out", "tour-in", "back");
   $("#tourpause").textContent = "일시정지";
   scrollTo({ top: 0, behavior: "auto" });
 }
@@ -295,7 +316,7 @@ export const screen = {
     $("#tourreplay").addEventListener("click", () => { stop(); start(); });
     $("#tourbrowse").addEventListener("click", () => { stop(); window.MB.go("wait"); });
     addEventListener("keydown", keys);
-    addEventListener("resize", () => { if (i >= 0 && i < STEPS.length && zoomed) { const c = zoomed; unzoom(c, 0); zoomTo(c); place(); } });
+    addEventListener("resize", () => { if (i >= 0 && i < STEPS.length && zoomed) { zoomTo(zoomed); place(); } });
     addEventListener("scroll", () => { if (i >= 0 && i < STEPS.length) requestAnimationFrame(() => place()); }, { passive: true });
   },
   every: 60000,
