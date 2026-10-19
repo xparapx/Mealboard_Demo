@@ -10,7 +10,8 @@ GUIDE = (ROOT / "static/js/guide.js").read_text(encoding="utf-8")
 
 def test_클립_id_는_인트로_단계_엔드와_일대일():
     ids = [c["id"] for c in DOC["clips"]]
-    n_intro = GUIDE.count("{ title:", 0, GUIDE.index("const OUTRO")) - len(re.findall(r"\{ screen: ", GUIDE))
+    intro_block = GUIDE[GUIDE.index("const INTRO = ["):GUIDE.index("];", GUIDE.index("const INTRO = ["))]
+    n_intro = intro_block.count("{ title:")
     n_steps = len(re.findall(r"\{ screen: \"", GUIDE))
     assert n_steps == 15 and n_intro == 4
     assert ids == [f"intro{k}" for k in range(n_intro)] + [f"s{k}" for k in range(n_steps)] + ["outro"]

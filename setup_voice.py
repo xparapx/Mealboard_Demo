@@ -19,6 +19,9 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")       # Windows 콘솔(cp949)에서도 한글·기호가 깨지지 않게
+
 BASE = Path(__file__).resolve().parent
 VOICE_DIR = BASE / "static" / "media" / "voice"
 SCRIPT = VOICE_DIR / "narration.json"
