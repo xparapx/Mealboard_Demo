@@ -11,6 +11,7 @@
 
 
 ### 2026-10
+- 10-19 **아나운서 mp3 20클립 생성·배포(학교 PC)** — 사용자가 `setup_tts_key.ps1` 로 키를 `.env` 에 넣고(값은 채팅·로그에 없음), `setup_voice.py` 로 20클립 2,306자 → 5.2 MB(≈$0.03, gpt-4o-mini-tts·nova). mp3 는 git 에 커밋(심사위원·공개 데모 동일 음성). sw/UI v52. 테스트 224.
 - 10-19 **세션 인계(학교 PC → 다른 로컬 PC)** — 작업트리 clean, origin/main = `5ba11ef` 까지 push, Pi 도 같은 커밋(공개 데모 v51). **이어서 할 일(순서대로)**:
   ① 새 PC 저장소 루트에서 `& .\setup_tts_key.ps1`(OpenAI 키를 화면에 안 보이게 `.env` 에 — 그 PC 의 `.env` 가 없으면 `.env.example` 복사 후 NEIS 키 등은 비워도 데모·녹음엔 무관) → `uv run python setup_voice.py`(mp3 20개, ≈$0.03) → 들어 보고 `static/media/voice/*.mp3` 를 커밋·push → Pi `bash deploy/deploy_pi.sh`(공개 데모는 정적 파일이라 재시작 불필요, sw/UI 는 v52 로 올릴 것) → 실제 Chrome 으로 `https://demo.kjhs-meal.com/#guide` 에서 '자동 시연 시작' 눌러 mp3 재생 확인(`?tourdebug` 아님 — 콘솔 `MB.tour.spoken()` 의 via 가 'mp3').
   ② 음성이 마음에 안 들면 narration.json 의 `voice`(nova→shimmer/coral/sage) 또는 공급자(Azure Neural·Clova) 추가 — setup_voice.py 의 synth() 에 분기.
