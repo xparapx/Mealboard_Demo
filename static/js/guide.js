@@ -117,8 +117,10 @@ let voiceOn = (() => { try { return localStorage.getItem(VOICE_KEY) !== "0"; } c
 let utter = null;
 function pickVoice() {
   const vs = speechSynthesis.getVoices().filter(v => /^ko/i.test(v.lang));
-  const pref = ["SunHi", "Heami", "Google 한국어", "Yuna", "Natural"];
-  return vs.find(v => pref.some(k => v.name.includes(k))) || vs[0] || null;
+  // 자연스러운 순: Edge 의 Natural(온라인) → Chrome 의 Google 한국어(온라인) → Windows 내장 SunHi → Heami. 10-19 지도교사 PC(Chrome)에서 Heami·Google 둘 확인
+  const pref = [v => /Natural/i.test(v.name), v => /^Google/.test(v.name), v => /SunHi/.test(v.name), v => /Heami/.test(v.name)];
+  for (const ok of pref) { const v = vs.find(ok); if (v) return v; }
+  return vs[0] || null;
 }
 function speak(text, onend, onfail) {
   if (!voiceOn || !("speechSynthesis" in window)) return false;
