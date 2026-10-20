@@ -15,6 +15,7 @@ import os
 import re
 import time
 
+from app import llm_overlay
 from app.config import LLM_API_KEY, LLM_BACKEND, LLM_BASE_URL, LLM_HEF, LLM_MODEL
 
 HANGUL = re.compile(r"[가-힣]")
@@ -196,17 +197,23 @@ class LocalLLM:
     backend 인자는 테스트·스파이크용(complete 호출자 하나)."""
 
     def __init__(self, hef=None, backend=None, engine=None, base_url=None, model=None, api_key=None):
-        """engine: None 이면 .env(LLM_BACKEND) 로 정한다. hef 를 직접 주면(테스트·스파이크) hailo 로 본다"""
+        """engine: None 이면 .env(LLM_BACKEND) 위에 관리 앱 오버레이(data/llm.local.json)를 덮은 값으로 정한다. hef 를 직접 주면(테스트·스파이크) hailo 로 본다"""
+        eff = llm_overlay.effective() if (engine is None and hef is None and model is None) else None
         self.hef = LLM_HEF if hef is None else hef
-        self.base_url = LLM_BASE_URL if base_url is None else base_url
+        self.base_url = (eff["base_url"] if eff else LLM_BASE_URL) if base_url is None else base_url
         self.api_key = LLM_API_KEY if api_key is None else api_key
         self._backend = backend
         self._complete = self._close = None
         if engine is None:
-            engine = "hailo" if hef is not None else resolve_backend(model=LLM_MODEL if model is None else model)
+            if hef is not None:
+                engine = "hailo"
+            elif eff:
+                engine = resolve_backend(eff["backend"], self.hef, eff["model"])
+            else:
+                engine = resolve_backend(model=model)
         self.engine = engine                                          # hailo | openai | none — reports.db engine 열에 그대로
         if engine == "openai":
-            self.model = LLM_MODEL if model is None else model
+            self.model = (eff["model"] if eff else LLM_MODEL) if model is None else model
         else:
             self.model = os.path.splitext(os.path.basename(self.hef))[0] if self.hef else None
 
@@ -248,36 +255,51 @@ CHECK_REPORT = ("너는 학교 급식실 안내문 작성자다. 주어진 숫�
                 "오늘 중식 집계: 평균 대기 1.5분, 최고 대기 7.5분(12:40), 식수 약 720명, 병목 1회(12:41~12:44), 황금 구간 11:32~11:35.")
 
 
-def check(n=1, out=None):
-    """엔진 하나로 뉴스 요약(영어, 숫자 부분집합)·리포트 문장(한국어 JSON) 두 과제를 n 번 돌려 통과율·속도를 찍는다 — 모델 비교표의 재료.
-    출력은 화면에만(저장 없음). 급식 창 밖에서 돌린다"""
+def check_summary(n=1, log=None):
+    """엔진 하나로 뉴스 요약(영어, 숫자 부분집합)·리포트 문장(한국어 JSON) 두 과제를 n 번 돌려 통과율·속도를 잰다 — 모델 비교표의 재료.
+    → {ok, engine, model, base_url, at, news:{n,pass,ms,cps}, report:{...}, samples:[…짧은 출력…], error}. 저장은 호출자(관리 앱)가. 급식 창 밖에서 돌린다"""
+    import datetime as _dt
     import statistics
-    eng = resolve_backend()
-    print(f"백엔드 {eng}  모델 {LLM_MODEL or LLM_HEF or '-'}  주소 {LLM_BASE_URL if eng == 'openai' else '-'}")
+    log = log or (lambda s: None)
+    m = LocalLLM()
+    res = {"ok": False, "engine": m.engine, "model": m.model, "base_url": m.base_url if m.engine == "openai" else None,
+           "at": _dt.datetime.now().isoformat(timespec="seconds"), "news": {"n": 0, "pass": 0}, "report": {"n": 0, "pass": 0}, "samples": [], "error": None}
+    log(f"백엔드 {m.engine}  모델 {m.model or '-'}  주소 {res['base_url'] or '-'}")
     rows = []
     try:
-        with LocalLLM() as m:
+        with m:
             for k in range(n):
                 t = m.complete(*CHECK_NEWS, max_tokens=160)
                 ok1 = numbers_subset(CHECK_NEWS[1], t) and 2 <= t.count("\n") + 1 <= 6
                 rows.append(("news", ok1, m.last_ms, len(t)))
-                print(f"[news {k + 1}] {m.last_ms} ms  {'PASS' if ok1 else 'FAIL'}  {t[:140].replace(chr(10), ' / ')}")
+                res["samples"].append({"kind": "news", "ok": ok1, "ms": m.last_ms, "text": t[:200]})
+                log(f"[news {k + 1}] {m.last_ms} ms  {'PASS' if ok1 else 'FAIL'}  {t[:140].replace(chr(10), ' / ')}")
                 t2 = m.complete(*CHECK_REPORT, max_tokens=160)
                 obj = parse_json_object(t2) or {}
                 ok2 = bool(obj) and valid_korean(CHECK_REPORT[1], str(obj.get("headline", "")), max_len=40)[0] \
                     and valid_korean(CHECK_REPORT[1], str(obj.get("body", "")), max_len=120)[0]
                 rows.append(("report", ok2, m.last_ms, len(t2)))
-                print(f"[report {k + 1}] {m.last_ms} ms  {'PASS' if ok2 else 'FAIL'}  {t2[:140].replace(chr(10), ' / ')}")
+                res["samples"].append({"kind": "report", "ok": ok2, "ms": m.last_ms, "text": t2[:200]})
+                log(f"[report {k + 1}] {m.last_ms} ms  {'PASS' if ok2 else 'FAIL'}  {t2[:140].replace(chr(10), ' / ')}")
     except LLMUnavailable as e:
-        print(f"사용 불가: {e}")
-        return 1
+        res["error"] = str(e)[:300]
+        log(f"사용 불가: {e}")
+        return res
     for kind in ("news", "report"):
         rs = [r for r in rows if r[0] == kind]
         if rs:
             ms = statistics.median(r[2] for r in rs)
             chars = statistics.median(r[3] for r in rs)
-            print(f"{kind}: 통과 {sum(1 for r in rs if r[1])}/{len(rs)}  중앙값 {ms:.0f} ms  ≈{chars / max(1, ms / 1000):.1f} 자/초")
-    return 0
+            res[kind] = {"n": len(rs), "pass": sum(1 for r in rs if r[1]), "ms": round(ms), "cps": round(chars / max(1, ms / 1000), 1)}
+            log(f"{kind}: 통과 {res[kind]['pass']}/{len(rs)}  중앙값 {ms:.0f} ms  ≈{res[kind]['cps']} 자/초")
+    res["ok"] = res["news"]["pass"] > 0 or res["report"]["pass"] > 0
+    return res
+
+
+def check(n=1):
+    """CLI 용 — check_summary 를 화면에 찍고 0/1"""
+    res = check_summary(n, log=print)
+    return 0 if res["ok"] else 1
 
 
 if __name__ == "__main__":

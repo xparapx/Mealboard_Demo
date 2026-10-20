@@ -81,6 +81,18 @@ function build(MB) {
     <div class="jobs" id="adminjobs">${JOBS.map(([k, l]) => `<button type="button" class="pill" data-job="${k}">${l}</button>`).join("")}</div>
     <div class="note foot">타이머를 기다리지 않고 지금 한 번 실행합니다 · 결과는 로그 테일에서</div>
   </section>
+  <section class="card" id="llmcard">
+    <div class="eyebrow">AI 모델(LLM) 선택</div>
+    <div class="llmnow" id="llmnow">—</div>
+    <div class="llmrow"><label>엔진</label><select id="llmbackend">
+      <option value="none">없음 — 규칙 문장만</option><option value="hailo">Hailo 칩(.hef)</option><option value="openai">OpenAI 호환 서버(Ollama 등)</option></select></div>
+    <div class="llmrow" id="llmmodelrow"><label>모델</label><select id="llmmodel"></select></div>
+    <div class="llmrow" id="llmurlrow"><label>주소</label><input id="llmurl" placeholder="http://127.0.0.1:11434/v1" spellcheck="false"></div>
+    <div class="jobs"><button type="button" class="pill" id="llmapply">적용</button><button type="button" class="pill ghost" id="llmcheck">점검 실행</button>
+      <button type="button" class="pill ghost" id="llmreset">.env 로 되돌리기</button></div>
+    <pre class="log llmresult" id="llmresult" hidden></pre>
+    <div class="note foot" id="llmfoot">바꾸면 다음 뉴스(06:10)·리포트(05:45·14:20) 작업부터 적용 · 키는 .env 에만 · 점검은 급식 시간 밖에서(모델을 올려 CPU·HAT 를 씁니다)</div>
+  </section>
   <section class="card" id="crosscard">
     <div class="eyebrow">통과 이벤트</div>
     <ul class="cross" id="admincross"><li><small>메타 스트림을 켜면 배식대 통과(λ 선)가 여기 쌓입니다 · 최근 ${CROSS_MAX}건 · 화면에만</small></li></ul>
@@ -129,6 +141,10 @@ function build(MB) {
     d.addEventListener("toggle", () => { try { localStorage.setItem("mb_" + id, d.open ? "1" : "0"); } catch {} if (d.open) load(); });
   }
   $("#adminfollow").addEventListener("click", e => { const on = e.target.getAttribute("aria-pressed") !== "true"; e.target.setAttribute("aria-pressed", on); if (on) loadLog(); });
+  $("#llmbackend").addEventListener("change", llmModels);
+  $("#llmapply").addEventListener("click", applyLLM);
+  $("#llmcheck").addEventListener("click", () => checkLLM(false));
+  $("#llmreset").addEventListener("click", resetLLM);
   $("#streamseg").addEventListener("click", e => { const b = e.target.closest("[data-mode]"); if (b) setMode(b.dataset.mode); });
   $("#streamview").addEventListener("click", e => { const b = e.target.closest("[data-view]"); if (b) setView(b.dataset.view); });
   $("#streamimg").addEventListener("error", () => {
@@ -143,6 +159,64 @@ function build(MB) {
 function toast(text, bad) {
   let t = $("#admintoast"); if (!t) { document.body.insertAdjacentHTML("beforeend", '<div id="admintoast" role="status"></div>'); t = $("#admintoast"); }
   t.textContent = text; t.classList.toggle("bad", !!bad); t.classList.add("on"); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove("on"), 3500);
+}
+
+/* ---------- AI 모델 선택(10-20) ---------- */
+let LLM = null;
+function llmFill() {
+  const d = LLM; if (!d) return;
+  const e = d.effective, src = d.local?.backend || d.local?.model ? `관리 화면에서 선택(${d.local.updated_by || "—"} · ${(d.local.updated_at || "").slice(5, 16).replace("T", " ")})` : ".env 그대로";
+  const engKo = { hailo: "Hailo 칩", openai: "OpenAI 호환 서버", none: "없음(규칙 문장)", auto: "자동" }[e.backend] || e.backend;
+  const resolved = e.backend === "auto" ? (d.env.hef ? "Hailo 칩" : e.model ? "OpenAI 호환 서버" : "없음(규칙 문장)") : engKo;
+  $("#llmnow").innerHTML = `지금 <b>${esc(resolved)}</b>${e.backend === "openai" || (e.backend === "auto" && !d.env.hef && e.model) ? ` · <b>${esc(e.model)}</b> <small>${esc(e.base_url)}</small>` : d.env.hef && e.backend !== "none" && e.backend !== "openai" ? ` · <b>${esc(d.env.hef.split("/").pop())}</b>` : ""} <small>— ${src}</small>`
+    + (d.last_check ? `<div class="llmlast">마지막 점검 ${esc((d.last_check.at || "").slice(5, 16).replace("T", " "))} · ${esc(d.last_check.model || d.last_check.engine)} · 뉴스 ${d.last_check.news.pass}/${d.last_check.news.n}${d.last_check.news.ms ? ` ${d.last_check.news.ms}ms` : ""} · 리포트 ${d.last_check.report.pass}/${d.last_check.report.n}${d.last_check.error ? ` · <em class="melon">${esc(d.last_check.error.slice(0, 80))}</em>` : ""}</div>` : "");
+  const sel = $("#llmbackend"); sel.value = e.backend === "auto" ? (d.env.hef ? "hailo" : e.model ? "openai" : "none") : e.backend;
+  llmModels();
+  $("#llmurl").value = e.base_url || "";
+}
+function llmModels() {
+  const d = LLM; if (!d) return;
+  const b = $("#llmbackend").value, ms = $("#llmmodel");
+  $("#llmmodelrow").hidden = b === "none"; $("#llmurlrow").hidden = b !== "openai";
+  const list = b === "hailo" ? d.candidates.hailo.map(c => ({ id: c.id, label: `${c.label} (${c.size_gb} GB)` }))
+    : b === "openai" ? d.candidates.server.models.map(c => ({ id: c.id, label: c.size_gb ? `${c.label} (${c.size_gb} GB)` : c.label })) : [];
+  const cur = b === "openai" ? d.effective.model : d.env.hef;
+  ms.innerHTML = list.map(c => `<option value="${esc(c.id)}">${esc(c.label)}</option>`).join("")
+    + (b === "openai" && !d.candidates.server.reachable ? `<option value="">(서버에 닿지 않음 — Ollama 가 떠 있나요?)</option>` : "")
+    + (list.length === 0 && b === "hailo" ? `<option value="">(.hef 파일 없음 — data/models/)</option>` : "");
+  if (cur && [...ms.options].some(o => o.value === cur)) ms.value = cur;
+}
+async function loadLLM() {
+  const r = await api("/llm", undefined, "GET");
+  if (!r.ok) { $("#llmnow").textContent = `읽지 못했습니다 (${r.status})`; return; }
+  LLM = r.j; llmFill();
+}
+async function applyLLM() {
+  const backend = $("#llmbackend").value, model = $("#llmmodel").value, base_url = $("#llmurl").value.trim();
+  if (backend === "hailo" && !model) return;
+  const body = backend === "hailo" ? { backend: "hailo", model: "", base_url: "" } : backend === "openai" ? { backend, model, base_url } : { backend: "none" };
+  const r = await api("/llm", body, "PUT");
+  if (!r.ok) { $("#llmresult").hidden = false; $("#llmresult").textContent = `저장 실패 ${r.status}: ${JSON.stringify(r.j?.detail || r.j)}`; return; }
+  LLM = r.j; llmFill(); $("#llmresult").hidden = false; $("#llmresult").textContent = "저장했습니다 — 다음 뉴스·리포트 작업부터 이 모델을 씁니다. '점검 실행' 으로 지금 바로 확인할 수 있습니다.";
+}
+async function checkLLM(force = false) {
+  const b = $("#llmcheck"); b.disabled = true; $("#llmresult").hidden = false; $("#llmresult").textContent = "점검 중… 모델을 올리는 데 10초~2분 걸릴 수 있습니다";
+  const r = await api("/llm/check", { n: 1, force });
+  b.disabled = false;
+  if (r.status === 409 && !force) {
+    if (await confirm({ title: "급식 시간입니다", body: "지금은 카메라가 세는 중이라 모델 점검이 추론을 느리게 할 수 있습니다. 그래도 실행할까요?", ok: "강행", danger: true })) return checkLLM(true);
+    $("#llmresult").textContent = "급식 창이 끝난 뒤 다시 실행하세요."; return;
+  }
+  if (!r.ok) { $("#llmresult").textContent = `점검 실패 ${r.status}: ${JSON.stringify(r.j?.detail || r.j)}`; return; }
+  const x = r.j.result;
+  $("#llmresult").textContent = `${x.engine} · ${x.model || "-"}${x.error ? `\n사용 불가: ${x.error}` : ""}\n뉴스 요약(영어·숫자 검사) ${x.news.pass}/${x.news.n}${x.news.ms ? ` · ${x.news.ms}ms · ${x.news.cps}자/초` : ""}\n리포트 문장(한국어 JSON) ${x.report.pass}/${x.report.n}${x.report.ms ? ` · ${x.report.ms}ms` : ""}\n`
+    + x.samples.map(s => `[${s.kind} ${s.ok ? "PASS" : "FAIL"} ${s.ms}ms] ${s.text.replace(/\n/g, " / ")}`).join("\n");
+  loadLLM();
+}
+async function resetLLM() {
+  if (!await confirm({ title: ".env 설정으로 되돌리기", body: "관리 화면에서 고른 모델을 지우고 .env 의 LLM_* 값으로 돌아갑니다(파일은 .bak 으로 남습니다).", ok: "되돌리기" })) return;
+  const r = await api("/llm", undefined, "DELETE");
+  if (r.ok) { LLM = r.j; llmFill(); $("#llmresult").hidden = false; $("#llmresult").textContent = ".env 설정으로 되돌렸습니다."; }
 }
 
 async function loadServices() {
@@ -328,7 +402,7 @@ export default function (MB) {
   MB.screens.admin = {
     every: 30000,
     async poll() { await Promise.all([loadServices(), loadStreamState()]); if ($("#adminfollow").getAttribute("aria-pressed") === "true") loadLog(); },
-    async slow() { if ($("#auditfold").open) loadAudit(); if ($("#logfold").open) loadLog(); loadZones(); zonesEditor.load(); },     // 편집 중(더티)이면 편집기는 다시 읽지 않는다
+    async slow() { if ($("#auditfold").open) loadAudit(); if ($("#logfold").open) loadLog(); loadZones(); zonesEditor.load(); loadLLM(); },     // 편집 중(더티)이면 편집기는 다시 읽지 않는다
     deactivate() { if (ST.mode !== "off") setMode("off", { keepFlag: true }); },   // 화면을 떠나면 클라이언트 쪽 스트림은 모두 끊는다(플래그는 타이머가)
     render(cardId, data) { if (cardId === "svccard") loadServices(); },
   };

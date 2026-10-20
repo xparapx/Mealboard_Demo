@@ -71,6 +71,8 @@ def create_app():
     app.include_router(system.router)
     app.include_router(stream_router.router)
     app.include_router(zones_router.router)
+    from .routers import llm as llm_router          # 10-20: AI 모델 선택
+    app.include_router(llm_router.router)
 
     @app.middleware("http")
     async def gate(request: Request, call_next):

@@ -100,8 +100,22 @@ ul.cross li small { color: var(--ink3); font-size: 11.5px; }
   #zoneeditcard { grid-column: 1 / 8; }
   #svccard { grid-column: 8 / 13; }
   #jobcard { grid-column: 8 / 13; }
+  #llmcard { grid-column: 8 / 13; }      /* 10-20: AI 모델 선택 — 오른쪽 열, 원샷 작업 아래 */
   #crosscard { grid-column: 8 / 13; }
   #logcard { grid-column: 1 / 8; }
   #auditcard { grid-column: 8 / 13; }
   #admintoast { bottom: 24px; }
 }
+
+/* AI 모델 선택(10-20) */
+.llmnow { margin-top: 8px; font-size: 13px; line-height: 1.5; color: var(--ink2); }
+.llmnow b { color: var(--ink); }
+.llmnow small { font-size: 11px; color: var(--ink3); }
+.llmlast { margin-top: 4px; font-size: 12px; color: var(--ink3); }
+.llmlast em { font-style: normal; }
+.llmlast em.melon { color: var(--melon-ink); }
+.llmrow { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.llmrow label { width: 40px; flex: none; font-size: 11.5px; font-weight: 700; color: var(--ink3); }
+.llmrow select, .llmrow input { flex: 1; min-width: 0; font: inherit; font-size: 13px; padding: 7px 10px; border-radius: 10px; border: 1px solid var(--hair); background: var(--surface); color: var(--ink); }
+#llmcard .jobs { margin-top: 12px; }
+.llmresult { max-height: 240px; overflow: auto; margin-top: 10px; white-space: pre-wrap; }

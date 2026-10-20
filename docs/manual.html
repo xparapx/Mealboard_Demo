@@ -353,6 +353,7 @@ LLM_BASE_URL=http://127.0.0.1:11434/v1
 LLM_MODEL=
 # openai 백엔드 키(Ollama 는 비워 둔다). 비면 OPENAI_API_KEY 를 쓴다
 LLM_API_KEY=
+# 관리 화면 'AI 모델 선택' 은 data/llm.local.json(미추적) 에 저장되어 위 LLM_BACKEND·LLM_MODEL·LLM_BASE_URL 을 덮는다(키는 제외). 되돌리기는 관리 화면 또는 파일 삭제
 # 로컬 LLM (Hailo-10H GenAI) .hef 경로. 빈 값이면 hailo 백엔드를 쓰지 않는다
 LLM_HEF=
 # 리포트(예보·결산)에도 LLM 을 쓸지 — 0 이면 규칙 템플릿(기본). 09-04 스파이크에서 1.5B 모델은 리포트 문장을 지어내 0 으로 둔다. 기사 요약은 이 값과 무관하게 LLM(영어) → DeepL
@@ -1809,7 +1810,7 @@ addEventListener(&quot;error&quot;, function (e) {
 // 예전 화면이 계속 뜬다 — v1 이 그랬고, v5 배포가 브라우저에 도달하지 않아 실제로 겪었다.
 // 모듈을 캐시 우선으로 두면 새 셸 + 옛 모듈이 짝이 어긋난다. 캐시는 오프라인 대비용일 뿐이다.
 // CACHE 이름은 화면이 크게 바뀔 때 올린다. activate 에서 옛 캐시를 지우므로 이름이 곧 무효화 스위치다.
-const CACHE = &quot;mealboard-v56&quot;;   // 10-19: 앱 안내 카드 하나 + 실제 운영 화면 단추(안내 카드·엔드카드)
+const CACHE = &quot;mealboard-v57&quot;;   // 10-19: 앱 안내 카드 하나 + 실제 운영 화면 단추(안내 카드·엔드카드)
 const SHELL = [&quot;/&quot;, &quot;/index.html&quot;, &quot;/manifest.json&quot;,
   &quot;/css/base.css&quot;, &quot;/css/screens.css&quot;, &quot;/css/insight.css&quot;,
   &quot;/js/core.js&quot;, &quot;/js/colors.js&quot;, &quot;/js/floor.js&quot;, &quot;/js/wait.js&quot;, &quot;/js/room.js&quot;, &quot;/js/stats.js&quot;, &quot;/js/week.js&quot;, &quot;/js/today.js&quot;, &quot;/js/news.js&quot;, &quot;/js/guide.js&quot;];
@@ -5836,7 +5837,7 @@ export const why = r =&gt; !r || /reports\.db/.test(r) ? null : /insights\.db/.t
 const DESK_MQ = matchMedia(&quot;(min-width: 900px)&quot;);
 export const desktop = () =&gt; DESK_MQ.matches;
 export const SLOW_EVERY = 30 * 60000;                  // 집계(14:10 하루 1회)에서 오는 카드는 30분마다면 충분하다
-export const UI_VERSION = &quot;v56&quot;;                       // 10-19: 자동 시연 — 피벗 전환·카드 줌인·점멸 할로·인트로/엔드카드           // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
+export const UI_VERSION = &quot;v57&quot;;                       // 10-19: 자동 시연 — 피벗 전환·카드 줌인·점멸 할로·인트로/엔드카드           // 관리 UI 모듈 캐시 무효화 꼬리표 — sw.js CACHE 번호와 같이 올린다(09-11)
 
 if (!CanvasRenderingContext2D.prototype.roundRect) {   // Safari 16 이전 대비. 모서리만 대신 그린다
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
@@ -6576,6 +6577,8 @@ def create_app():
     app.include_router(system.router)
     app.include_router(stream_router.router)
     app.include_router(zones_router.router)
+    from .routers import llm as llm_router          # 10-20: AI 모델 선택
+    app.include_router(llm_router.router)
 
     @app.middleware(&quot;http&quot;)
     async def gate(request: Request, call_next):
@@ -7206,6 +7209,7 @@ import os
 import re
 import time
 
+from app import llm_overlay
 from app.config import LLM_API_KEY, LLM_BACKEND, LLM_BASE_URL, LLM_HEF, LLM_MODEL
 
 HANGUL = re.compile(r&quot;[가-힣]&quot;)
@@ -7387,17 +7391,23 @@ class LocalLLM:
     backend 인자는 테스트·스파이크용(complete 호출자 하나).&quot;&quot;&quot;
 
     def __init__(self, hef=None, backend=None, engine=None, base_url=None, model=None, api_key=None):
-        &quot;&quot;&quot;engine: None 이면 .env(LLM_BACKEND) 로 정한다. hef 를 직접 주면(테스트·스파이크) hailo 로 본다&quot;&quot;&quot;
+        &quot;&quot;&quot;engine: None 이면 .env(LLM_BACKEND) 위에 관리 앱 오버레이(data/llm.local.json)를 덮은 값으로 정한다. hef 를 직접 주면(테스트·스파이크) hailo 로 본다&quot;&quot;&quot;
+        eff = llm_overlay.effective() if (engine is None and hef is None and model is None) else None
         self.hef = LLM_HEF if hef is None else hef
-        self.base_url = LLM_BASE_URL if base_url is None else base_url
+        self.base_url = (eff[&quot;base_url&quot;] if eff else LLM_BASE_URL) if base_url is None else base_url
         self.api_key = LLM_API_KEY if api_key is None else api_key
         self._backend = backend
         self._complete = self._close = None
         if engine is None:
-            engine = &quot;hailo&quot; if hef is not None else resolve_backend(model=LLM_MODEL if model is None else model)
+            if hef is not None:
+                engine = &quot;hailo&quot;
+            elif eff:
+                engine = resolve_backend(eff[&quot;backend&quot;], self.hef, eff[&quot;model&quot;])
+            else:
+                engine = resolve_backend(model=model)
         self.engine = engine                                          # hailo | openai | none — reports.db engine 열에 그대로
         if engine == &quot;openai&quot;:
-            self.model = LLM_MODEL if model is None else model
+            self.model = (eff[&quot;model&quot;] if eff else LLM_MODEL) if model is None else model
         else:
             self.model = os.path.splitext(os.path.basename(self.hef))[0] if self.hef else None
 
@@ -7439,36 +7449,51 @@ CHECK_REPORT = (&quot;너는 학교 급식실 안내문 작성자다. 주어진 
                 &quot;오늘 중식 집계: 평균 대기 1.5분, 최고 대기 7.5분(12:40), 식수 약 720명, 병목 1회(12:41~12:44), 황금 구간 11:32~11:35.&quot;)
 
 
-def check(n=1, out=None):
-    &quot;&quot;&quot;엔진 하나로 뉴스 요약(영어, 숫자 부분집합)·리포트 문장(한국어 JSON) 두 과제를 n 번 돌려 통과율·속도를 찍는다 — 모델 비교표의 재료.
-    출력은 화면에만(저장 없음). 급식 창 밖에서 돌린다&quot;&quot;&quot;
+def check_summary(n=1, log=None):
+    &quot;&quot;&quot;엔진 하나로 뉴스 요약(영어, 숫자 부분집합)·리포트 문장(한국어 JSON) 두 과제를 n 번 돌려 통과율·속도를 잰다 — 모델 비교표의 재료.
+    → {ok, engine, model, base_url, at, news:{n,pass,ms,cps}, report:{...}, samples:[…짧은 출력…], error}. 저장은 호출자(관리 앱)가. 급식 창 밖에서 돌린다&quot;&quot;&quot;
+    import datetime as _dt
     import statistics
-    eng = resolve_backend()
-    print(f&quot;백엔드 {eng}  모델 {LLM_MODEL or LLM_HEF or '-'}  주소 {LLM_BASE_URL if eng == 'openai' else '-'}&quot;)
+    log = log or (lambda s: None)
+    m = LocalLLM()
+    res = {&quot;ok&quot;: False, &quot;engine&quot;: m.engine, &quot;model&quot;: m.model, &quot;base_url&quot;: m.base_url if m.engine == &quot;openai&quot; else None,
+           &quot;at&quot;: _dt.datetime.now().isoformat(timespec=&quot;seconds&quot;), &quot;news&quot;: {&quot;n&quot;: 0, &quot;pass&quot;: 0}, &quot;report&quot;: {&quot;n&quot;: 0, &quot;pass&quot;: 0}, &quot;samples&quot;: [], &quot;error&quot;: None}
+    log(f&quot;백엔드 {m.engine}  모델 {m.model or '-'}  주소 {res['base_url'] or '-'}&quot;)
     rows = []
     try:
-        with LocalLLM() as m:
+        with m:
             for k in range(n):
                 t = m.complete(*CHECK_NEWS, max_tokens=160)
                 ok1 = numbers_subset(CHECK_NEWS[1], t) and 2 &lt;= t.count(&quot;\n&quot;) + 1 &lt;= 6
                 rows.append((&quot;news&quot;, ok1, m.last_ms, len(t)))
-                print(f&quot;[news {k + 1}] {m.last_ms} ms  {'PASS' if ok1 else 'FAIL'}  {t[:140].replace(chr(10), ' / ')}&quot;)
+                res[&quot;samples&quot;].append({&quot;kind&quot;: &quot;news&quot;, &quot;ok&quot;: ok1, &quot;ms&quot;: m.last_ms, &quot;text&quot;: t[:200]})
+                log(f&quot;[news {k + 1}] {m.last_ms} ms  {'PASS' if ok1 else 'FAIL'}  {t[:140].replace(chr(10), ' / ')}&quot;)
                 t2 = m.complete(*CHECK_REPORT, max_tokens=160)
                 obj = parse_json_object(t2) or {}
                 ok2 = bool(obj) and valid_korean(CHECK_REPORT[1], str(obj.get(&quot;headline&quot;, &quot;&quot;)), max_len=40)[0] \
                     and valid_korean(CHECK_REPORT[1], str(obj.get(&quot;body&quot;, &quot;&quot;)), max_len=120)[0]
                 rows.append((&quot;report&quot;, ok2, m.last_ms, len(t2)))
-                print(f&quot;[report {k + 1}] {m.last_ms} ms  {'PASS' if ok2 else 'FAIL'}  {t2[:140].replace(chr(10), ' / ')}&quot;)
+                res[&quot;samples&quot;].append({&quot;kind&quot;: &quot;report&quot;, &quot;ok&quot;: ok2, &quot;ms&quot;: m.last_ms, &quot;text&quot;: t2[:200]})
+                log(f&quot;[report {k + 1}] {m.last_ms} ms  {'PASS' if ok2 else 'FAIL'}  {t2[:140].replace(chr(10), ' / ')}&quot;)
     except LLMUnavailable as e:
-        print(f&quot;사용 불가: {e}&quot;)
-        return 1
+        res[&quot;error&quot;] = str(e)[:300]
+        log(f&quot;사용 불가: {e}&quot;)
+        return res
     for kind in (&quot;news&quot;, &quot;report&quot;):
         rs = [r for r in rows if r[0] == kind]
         if rs:
             ms = statistics.median(r[2] for r in rs)
             chars = statistics.median(r[3] for r in rs)
-            print(f&quot;{kind}: 통과 {sum(1 for r in rs if r[1])}/{len(rs)}  중앙값 {ms:.0f} ms  ≈{chars / max(1, ms / 1000):.1f} 자/초&quot;)
-    return 0
+            res[kind] = {&quot;n&quot;: len(rs), &quot;pass&quot;: sum(1 for r in rs if r[1]), &quot;ms&quot;: round(ms), &quot;cps&quot;: round(chars / max(1, ms / 1000), 1)}
+            log(f&quot;{kind}: 통과 {res[kind]['pass']}/{len(rs)}  중앙값 {ms:.0f} ms  ≈{res[kind]['cps']} 자/초&quot;)
+    res[&quot;ok&quot;] = res[&quot;news&quot;][&quot;pass&quot;] &gt; 0 or res[&quot;report&quot;][&quot;pass&quot;] &gt; 0
+    return res
+
+
+def check(n=1):
+    &quot;&quot;&quot;CLI 용 — check_summary 를 화면에 찍고 0/1&quot;&quot;&quot;
+    res = check_summary(n, log=print)
+    return 0 if res[&quot;ok&quot;] else 1
 
 
 if __name__ == &quot;__main__&quot;:
