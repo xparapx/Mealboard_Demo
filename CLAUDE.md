@@ -92,6 +92,7 @@
   **집 PC(jh-home)의 Claude Desktop 은 ProxyCommand 를 실행하지 못해** cloudflared 로컬 터널 `127.0.0.1:2222`(로그인 시 자동 예약 작업, PS 별칭 `mbtunnel` 로 재시작)로 붙는다(09-12). 현장 Wi‑Fi 진단 절차·상세 경위는 docs/WORKLOG.md 09-11 항목.
 - **하드웨어 사실(09-09~11)**: 보드 Pi 5 16 GB(리비전 `e04171`). 카메라 케이블은 전원 끄고 탈착(Pi 5 는 poweroff 뒤 전원 버튼으로 켠다). Wide 는 커널이 `imx708_wide` 로 보고해야 정품 — 화각 실측(1 m 에서 가로 1.3 m=66° / 2.4 m=102°)으로 판별. 지금 급식실 모듈은 표준판(66°).
 - **작업 스타일(09-04 사용자 결정)**: Pi 반영(pull·restart)도 Claude 가 ssh 로 직접 한다 — 코드 조각을 사용자에게 써 달라고 하지 않는다(설명만).
+- **Ollama on Pi(10-20)**: `ollama` systemd 서비스 enabled(설치 스크립트, CPU 전용, `127.0.0.1:11434` 만 수신). 모델 `gemma4:e2b`(4.6 GB)·`ingu627/exaone4.0:1.2b`. `jobs/llm.py` 의 openai 백엔드는 서버가 Ollama 면(`/api/version`) 네이티브 `/api/chat` + `think=false` 로 부른다(Gemma 4·EXAONE 4 생각 모드 대책). **실측 비교표는 `docs/LLM-BACKENDS.md`** — Gemma 4 E2B 가 두 과제 4/4·자연스러운 한국어·Hailo 보다 빠름(모델이 올라 있을 때), 운영 전환은 사용자 결정. 급식 창 안에는 어떤 LLM 도 부르지 않는다(CPU 4코어·4.6 GB).
 - **hailo-ollama(09-04 밤)**: 유닛 `deploy/hailo-ollama.service` 는 **enable 하지 않는다** — 필요할 때 start, 끝나면 stop(뉴스·리포트 타이머와 HAT 경합). `OLLAMA_HOST=127.0.0.1:8000` 고정(0.0.0.0 은 학교 LAN 에 열린다). 파이프라인은 여전히 `jobs/llm.py` 직접 호출. 미결: Plant 규칙 개정 ⓑ — §0·§2 금지 규칙은 아직 유효.
 - **로드맵 ④ vision 프로토타입 가동(09-04 아침, `d2debda`)**: `vision/counter.py`(YOLO yolo11n CPU + ByteTrack 사람만, ROI 안 L·λ선 통과 λ·W=L/λ 10초 표본, 메타 소켓, zones mtime 리로드)
   + `source.py`(picamera|webcam:N|file:) + `counting.py`(라인크로싱·5분 이동합, 순수) + `debug_stream.py`(8102 MJPEG, 플래그 503) + `record.py`(mock 과 공용 기록). Pi 는 **mock disable → `mealboard-vision` enable**(업무 공간 카메라 imx708, 약 3fps).
