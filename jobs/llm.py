@@ -271,7 +271,8 @@ CHECK_NEWS = ("Summarize the article in exactly 4 short English lines. Use only 
               "stores only numbers, never video. On Tuesday the longest wait was 7.5 minutes at 12:40, and the average was 1.5 minutes. "
               "Staff said two serving lines could cut the peak to 4 minutes.")
 CHECK_REPORT = ("너는 학교 급식실 안내문 작성자다. 주어진 숫자만 써서 JSON 하나만 출력한다: "
-                "{\"headline\": 40자 이내 한국어, \"body\": 120자 이내 한국어, \"tone\": \"calm\"}. 입력에 없는 숫자는 절대 쓰지 않는다.",
+                "{\"headline\": 40자 이내 한국어, \"body\": 120자 이내 한국어, \"tone\": \"calm\"}. 입력에 없는 숫자는 절대 쓰지 않는다. "
+                "코드 펜스·마크다운·설명 없이 JSON 만. body 는 두 문장 이내로 짧게.",
                 "오늘 중식 집계: 평균 대기 1.5분, 최고 대기 7.5분(12:40), 식수 약 720명, 병목 1회(12:41~12:44), 황금 구간 11:32~11:35.")
 
 
@@ -294,7 +295,7 @@ def check_summary(n=1, log=None):
                 rows.append(("news", ok1, m.last_ms, len(t)))
                 res["samples"].append({"kind": "news", "ok": ok1, "ms": m.last_ms, "text": t[:200]})
                 log(f"[news {k + 1}] {m.last_ms} ms  {'PASS' if ok1 else 'FAIL'}  {t[:140].replace(chr(10), ' / ')}")
-                t2 = m.complete(*CHECK_REPORT, max_tokens=220)
+                t2 = m.complete(*CHECK_REPORT, max_tokens=320)
                 obj = parse_json_object(t2) or {}
                 ok2 = bool(obj) and valid_korean(CHECK_REPORT[1], str(obj.get("headline", "")), max_len=40)[0] \
                     and valid_korean(CHECK_REPORT[1], str(obj.get("body", "")), max_len=120)[0]
