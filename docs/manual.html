@@ -345,7 +345,15 @@ QUEUE_SOURCE=tracks
 YOLO_WEIGHTS=data/models/yolo11n.pt
 # 메타데이터 소켓 디렉터리. Pi 는 systemd RuntimeDirectory(/run/mealboard), 개발 PC 는 data/run
 RUN_DIR=/run/mealboard
-# 로컬 LLM (Hailo-10H GenAI) .hef 경로. 빈 값이면 LLM 없이 규칙 템플릿·DeepL 만 쓴다
+# LLM 엔진(10-20 모델 비종속): auto | hailo | openai | none. auto = LLM_HEF 있으면 hailo, 없고 LLM_MODEL 있으면 openai, 아니면 none
+LLM_BACKEND=auto
+# openai 백엔드(OpenAI 호환 chat/completions): Pi 의 Ollama 는 http://127.0.0.1:11434/v1, hailo-ollama 는 http://127.0.0.1:8000/v1, OpenAI 는 https://api.openai.com/v1
+LLM_BASE_URL=http://127.0.0.1:11434/v1
+# openai 백엔드 모델 이름(예: gemma4:e2b · exaone4.0:1.2b · gpt-4o-mini). 비면 openai 백엔드를 쓰지 않는다
+LLM_MODEL=
+# openai 백엔드 키(Ollama 는 비워 둔다). 비면 OPENAI_API_KEY 를 쓴다
+LLM_API_KEY=
+# 로컬 LLM (Hailo-10H GenAI) .hef 경로. 빈 값이면 hailo 백엔드를 쓰지 않는다
 LLM_HEF=
 # 리포트(예보·결산)에도 LLM 을 쓸지 — 0 이면 규칙 템플릿(기본). 09-04 스파이크에서 1.5B 모델은 리포트 문장을 지어내 0 으로 둔다. 기사 요약은 이 값과 무관하게 LLM(영어) → DeepL
 LLM_REPORT=0
@@ -770,6 +778,14 @@ META_UDP_PORT = 8103                                  # AF_UNIX 가 없는 개�
 DEBUG_FLAG = Path(&quot;/tmp/debug_on&quot;) if os.name != &quot;nt&quot; else RUN_DIR / &quot;debug_on&quot;   # MJPEG 켜짐 계약 파일 (vision 과 공유, PrivateTmp 금지)
 ADMIN_DB_PATH = DATA / &quot;admin.db&quot;                     # 쓰기 주체: 관리 앱 (감사 로그)
 LLM_HEF = os.getenv(&quot;LLM_HEF&quot;, &quot;&quot;)                    # 로컬 LLM(Hailo-10H GenAI) .hef 경로. 빈 값 = LLM 없음 → 모든 소비자가 규칙 템플릿·DeepL 로 폴백
+# 모델 비종속(10-20, 공모전 공통 개발 규칙 — 특정 LLM 에 묶이지 않는 교체 구조): LLM_BACKEND 로 엔진을 고른다.
+#   auto   = LLM_HEF 가 있으면 hailo, 없고 LLM_MODEL 이 있으면 openai, 둘 다 없으면 none(규칙 템플릿·DeepL)
+#   hailo  = Hailo-10H GenAI(.hef, LLM_HEF)            openai = OpenAI 호환 HTTP(chat/completions) — Pi 의 Ollama(127.0.0.1:11434/v1)·hailo-ollama(8000/v1)·
+#   none   = LLM 없음                                     정부 공통기반 게이트웨이·OpenAI 모두 같은 모양. LLM_BASE_URL·LLM_MODEL·LLM_API_KEY(없으면 OPENAI_API_KEY)
+LLM_BACKEND = _choice(&quot;LLM_BACKEND&quot;, &quot;auto&quot;, (&quot;auto&quot;, &quot;hailo&quot;, &quot;openai&quot;, &quot;none&quot;))
+LLM_BASE_URL = os.getenv(&quot;LLM_BASE_URL&quot;, &quot;http://127.0.0.1:11434/v1&quot;).rstrip(&quot;/&quot;)
+LLM_MODEL = os.getenv(&quot;LLM_MODEL&quot;, &quot;&quot;).strip()
+LLM_API_KEY = (os.getenv(&quot;LLM_API_KEY&quot;) or os.getenv(&quot;OPENAI_API_KEY&quot;) or &quot;&quot;).strip()
 LLM_REPORT = os.getenv(&quot;LLM_REPORT&quot;, &quot;0&quot;) == &quot;1&quot;      # 리포트(아침 예보·점심 결산)에도 LLM 을 쓸지. 09-04 스파이크: 1.5B 모델은 한국어 문장이 무너지고 영어로도 사실을 지어내
                                                       # 규칙 템플릿이 낫다 — 기본 0(템플릿). 한국어가 되는 모델이 오면 1
 # 심사위원 구동 경로(10-18, N3): DEMO_CLOCK 은 app/clock.py 가 읽는 가상 시계 기준('YYYY-MM-DDTHH:MM:SS', 비면 벽시계).
@@ -6146,7 +6162,7 @@ function renderReport(d) {
   if (!setState(&quot;reportcard&quot;, d.state === &quot;ok&quot; &amp;&amp; !!item, d.reason)) return;
   $(&quot;#reporthead&quot;).textContent = item.headline || &quot;&quot;;
   $(&quot;#reportbody&quot;).textContent = item.body || &quot;&quot;;
-  $(&quot;#reportchips&quot;).innerHTML = `&lt;em class=&quot;teal&quot;&gt;${item.engine === &quot;hailo&quot; ? &quot;AI 작성&quot; : &quot;규칙 문장&quot;}${item.model ? &quot; · &quot; + esc(item.model) : &quot;&quot;}&lt;/em&gt;`
+  $(&quot;#reportchips&quot;).innerHTML = `&lt;em class=&quot;teal&quot;&gt;${item.engine &amp;&amp; item.engine !== &quot;template&quot; ? &quot;AI 작성&quot; : &quot;규칙 문장&quot;}${item.model ? &quot; · &quot; + esc(item.model) : &quot;&quot;}&lt;/em&gt;`
     + `&lt;small&gt;${item.kind === &quot;preview&quot; ? &quot;아침 예보&quot; : &quot;점심 결산&quot;} · ${(item.created_at || &quot;&quot;).slice(5, 16).replace(&quot;T&quot;, &quot; &quot;)}&lt;/small&gt;`;
 }
 
@@ -7190,7 +7206,7 @@ import os
 import re
 import time
 
-from app.config import LLM_HEF
+from app.config import LLM_API_KEY, LLM_BACKEND, LLM_BASE_URL, LLM_HEF, LLM_MODEL
 
 HANGUL = re.compile(r&quot;[가-힣]&quot;)
 LETTER = re.compile(r&quot;[A-Za-z가-힣]&quot;)
@@ -7261,7 +7277,62 @@ def parse_json_object(text):
     return v if isinstance(v, dict) else None
 
 
+THINK = re.compile(r&quot;&lt;think&gt;.*?&lt;/think&gt;\s*&quot;, re.S)
+
+
+def strip_think(text):
+    &quot;&quot;&quot;추론 모드 모델(Qwen3·EXAONE 4·Gemma 4 thinking)이 앞에 붙이는 &lt;think&gt;…&lt;/think&gt; 를 떼어 낸다. 닫히지 않은 think 는 통째로 버린다&quot;&quot;&quot;
+    if not isinstance(text, str):
+        return text
+    out = THINK.sub(&quot;&quot;, text)
+    if &quot;&lt;think&gt;&quot; in out:
+        out = out.split(&quot;&lt;think&gt;&quot;)[0]
+    return out.strip()
+
+
+def resolve_backend(backend=LLM_BACKEND, hef=LLM_HEF, model=LLM_MODEL):
+    &quot;&quot;&quot;.env 의 LLM_BACKEND 를 실제 엔진 이름으로: auto → hailo(.hef 있음) | openai(모델 이름 있음) | none&quot;&quot;&quot;
+    if backend == &quot;auto&quot;:
+        return &quot;hailo&quot; if hef else (&quot;openai&quot; if model else &quot;none&quot;)
+    return backend
+
+
 # ---------------- 장치 ----------------
+def _openai_backend(base_url, model, key=&quot;&quot;, session_timeout=None):
+    &quot;&quot;&quot;OpenAI 호환 chat/completions 백엔드(10-20) — 표준 라이브러리만. Ollama(/v1)·hailo-ollama·공통기반 게이트웨이·OpenAI 가 같은 요청 모양이다.
+    → (complete(system, user, max_tokens, temperature, timeout_s) -&gt; str, close()). 연결 거부·404 는 LLMUnavailable, 429·503 은 LLMBusy&quot;&quot;&quot;
+    import urllib.error
+    import urllib.request
+    if not model:
+        raise LLMUnavailable(&quot;LLM_MODEL 이 비어 있다(openai 백엔드는 모델 이름이 필요)&quot;)
+    url = base_url.rstrip(&quot;/&quot;) + &quot;/chat/completions&quot;
+    headers = {&quot;Content-Type&quot;: &quot;application/json&quot;}
+    if key:
+        headers[&quot;Authorization&quot;] = f&quot;Bearer {key}&quot;
+
+    def complete(system, user, max_tokens, temperature, timeout_s):
+        body = {&quot;model&quot;: model, &quot;messages&quot;: [{&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: system}, {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: user}],
+                &quot;max_tokens&quot;: int(max_tokens), &quot;temperature&quot;: float(temperature), &quot;stream&quot;: False}
+        req = urllib.request.Request(url, data=json.dumps(body).encode(&quot;utf-8&quot;), headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=timeout_s) as r:
+                doc = json.loads(r.read().decode(&quot;utf-8&quot;))
+        except urllib.error.HTTPError as e:
+            msg = e.read().decode(&quot;utf-8&quot;, &quot;replace&quot;)[:200]
+            if e.code in (429, 503):
+                raise LLMBusy(f&quot;{model}: HTTP {e.code} {msg}&quot;)
+            raise LLMUnavailable(f&quot;{model}: HTTP {e.code} {msg}&quot;)
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            raise LLMUnavailable(f&quot;{url}: {e}&quot;)
+        try:
+            text = doc[&quot;choices&quot;][0][&quot;message&quot;][&quot;content&quot;]
+        except (KeyError, IndexError, TypeError):
+            raise LLMUnavailable(f&quot;{model}: 응답 모양이 다르다 {str(doc)[:120]}&quot;)
+        return strip_think(text or &quot;&quot;)
+
+    return complete, (lambda: None)
+
+
 def _hailo_backend(hef):
     &quot;&quot;&quot;→ (complete(system, user, max_tokens, temperature, timeout_s) -&gt; str, close()). 모양이 다르면 LLMUnavailable&quot;&quot;&quot;
     try:
@@ -7315,15 +7386,29 @@ class LocalLLM:
     &quot;&quot;&quot;컨텍스트 매니저. `with LocalLLM() as m: m.complete(system, user)`. 없으면 __enter__ 가 LLMUnavailable.
     backend 인자는 테스트·스파이크용(complete 호출자 하나).&quot;&quot;&quot;
 
-    def __init__(self, hef=None, backend=None):
+    def __init__(self, hef=None, backend=None, engine=None, base_url=None, model=None, api_key=None):
+        &quot;&quot;&quot;engine: None 이면 .env(LLM_BACKEND) 로 정한다. hef 를 직접 주면(테스트·스파이크) hailo 로 본다&quot;&quot;&quot;
         self.hef = LLM_HEF if hef is None else hef
-        self.model = os.path.splitext(os.path.basename(self.hef))[0] if self.hef else None
+        self.base_url = LLM_BASE_URL if base_url is None else base_url
+        self.api_key = LLM_API_KEY if api_key is None else api_key
         self._backend = backend
         self._complete = self._close = None
+        if engine is None:
+            engine = &quot;hailo&quot; if hef is not None else resolve_backend(model=LLM_MODEL if model is None else model)
+        self.engine = engine                                          # hailo | openai | none — reports.db engine 열에 그대로
+        if engine == &quot;openai&quot;:
+            self.model = LLM_MODEL if model is None else model
+        else:
+            self.model = os.path.splitext(os.path.basename(self.hef))[0] if self.hef else None
 
     def __enter__(self):
         if self._backend is not None:
             self._complete, self._close = self._backend, (lambda: None)
+            return self
+        if self.engine == &quot;none&quot;:
+            raise LLMUnavailable(&quot;LLM_BACKEND=none(또는 LLM_HEF·LLM_MODEL 둘 다 비어 있다)&quot;)
+        if self.engine == &quot;openai&quot;:
+            self._complete, self._close = _openai_backend(self.base_url, self.model, self.api_key)
             return self
         if not self.hef:
             raise LLMUnavailable(&quot;LLM_HEF 가 비어 있다&quot;)
@@ -7341,7 +7426,59 @@ class LocalLLM:
         t0 = time.monotonic()
         out = self._complete(system, user, max_tokens, temperature, timeout_s)
         self.last_ms = round((time.monotonic() - t0) * 1000)
-        return out</code></pre>
+        return out
+
+
+# ---------------- 점검 CLI(10-20) ----------------
+CHECK_NEWS = (&quot;Summarize the article in exactly 4 short English lines. Use only numbers that appear in the article.&quot;,
+              &quot;The school cafeteria serves 720 students in 70 minutes at lunch. A Raspberry Pi 5 counts the queue with a camera and &quot;
+              &quot;stores only numbers, never video. On Tuesday the longest wait was 7.5 minutes at 12:40, and the average was 1.5 minutes. &quot;
+              &quot;Staff said two serving lines could cut the peak to 4 minutes.&quot;)
+CHECK_REPORT = (&quot;너는 학교 급식실 안내문 작성자다. 주어진 숫자만 써서 JSON 하나만 출력한다: &quot;
+                &quot;{\&quot;headline\&quot;: 40자 이내 한국어, \&quot;body\&quot;: 120자 이내 한국어, \&quot;tone\&quot;: \&quot;calm\&quot;}. 입력에 없는 숫자는 절대 쓰지 않는다.&quot;,
+                &quot;오늘 중식 집계: 평균 대기 1.5분, 최고 대기 7.5분(12:40), 식수 약 720명, 병목 1회(12:41~12:44), 황금 구간 11:32~11:35.&quot;)
+
+
+def check(n=1, out=None):
+    &quot;&quot;&quot;엔진 하나로 뉴스 요약(영어, 숫자 부분집합)·리포트 문장(한국어 JSON) 두 과제를 n 번 돌려 통과율·속도를 찍는다 — 모델 비교표의 재료.
+    출력은 화면에만(저장 없음). 급식 창 밖에서 돌린다&quot;&quot;&quot;
+    import statistics
+    eng = resolve_backend()
+    print(f&quot;백엔드 {eng}  모델 {LLM_MODEL or LLM_HEF or '-'}  주소 {LLM_BASE_URL if eng == 'openai' else '-'}&quot;)
+    rows = []
+    try:
+        with LocalLLM() as m:
+            for k in range(n):
+                t = m.complete(*CHECK_NEWS, max_tokens=160)
+                ok1 = numbers_subset(CHECK_NEWS[1], t) and 2 &lt;= t.count(&quot;\n&quot;) + 1 &lt;= 6
+                rows.append((&quot;news&quot;, ok1, m.last_ms, len(t)))
+                print(f&quot;[news {k + 1}] {m.last_ms} ms  {'PASS' if ok1 else 'FAIL'}  {t[:140].replace(chr(10), ' / ')}&quot;)
+                t2 = m.complete(*CHECK_REPORT, max_tokens=160)
+                obj = parse_json_object(t2) or {}
+                ok2 = bool(obj) and valid_korean(CHECK_REPORT[1], str(obj.get(&quot;headline&quot;, &quot;&quot;)), max_len=40)[0] \
+                    and valid_korean(CHECK_REPORT[1], str(obj.get(&quot;body&quot;, &quot;&quot;)), max_len=120)[0]
+                rows.append((&quot;report&quot;, ok2, m.last_ms, len(t2)))
+                print(f&quot;[report {k + 1}] {m.last_ms} ms  {'PASS' if ok2 else 'FAIL'}  {t2[:140].replace(chr(10), ' / ')}&quot;)
+    except LLMUnavailable as e:
+        print(f&quot;사용 불가: {e}&quot;)
+        return 1
+    for kind in (&quot;news&quot;, &quot;report&quot;):
+        rs = [r for r in rows if r[0] == kind]
+        if rs:
+            ms = statistics.median(r[2] for r in rs)
+            chars = statistics.median(r[3] for r in rs)
+            print(f&quot;{kind}: 통과 {sum(1 for r in rs if r[1])}/{len(rs)}  중앙값 {ms:.0f} ms  ≈{chars / max(1, ms / 1000):.1f} 자/초&quot;)
+    return 0
+
+
+if __name__ == &quot;__main__&quot;:
+    import argparse
+    import sys
+    ap = argparse.ArgumentParser(description=&quot;LLM 백엔드 점검 — .env 의 LLM_BACKEND·LLM_MODEL·LLM_HEF 로 두 과제를 돌린다&quot;)
+    ap.add_argument(&quot;--check&quot;, action=&quot;store_true&quot;)
+    ap.add_argument(&quot;-n&quot;, type=int, default=1)
+    a = ap.parse_args()
+    sys.exit(check(a.n) if a.check else 0)</code></pre>
 </figure>
 
 <p>스파이크 스크립트는 저장소 루트의 <code>check_llm.py</code>(검증 도구 접두어 규칙) 입니다. <code>.hef</code> 를 받으면 학교 Pi 에서 <code>uv run python check_llm.py --hef …/model.hef --yolo /usr/share/hailo-models/yolov11m_h10.hef</code> 로 돌리고, 요약표의 tok/s·품질·공존·컨텍스트 상한을 README 작업 로그에 적습니다. 5개 중 4개 이상 PASS 면 <code>.env</code> 에 <code>LLM_HEF=</code> 와 권장 <code>LLM_CONTEXT_CHARS=</code> 를 넣습니다.</p>
@@ -7630,7 +7767,7 @@ def compose(kind, inp, llm_factory=None, busy_wait_s=BUSY_WAIT_S, log=print):
                 out = parse_json_object(raw)
                 ok, why = validate_output(inp, out)
                 if ok:
-                    return {&quot;engine&quot;: &quot;hailo&quot;, &quot;model&quot;: m.model, &quot;ok&quot;: True, &quot;ms&quot;: getattr(m, &quot;last_ms&quot;, None), **out, &quot;reason&quot;: &quot;ok&quot;}
+                    return {&quot;engine&quot;: getattr(m, &quot;engine&quot;, &quot;hailo&quot;), &quot;model&quot;: m.model, &quot;ok&quot;: True, &quot;ms&quot;: getattr(m, &quot;last_ms&quot;, None), **out, &quot;reason&quot;: &quot;ok&quot;}
                 log(f&quot;LLM 출력 거부({why}) → 템플릿&quot;)
                 reason = f&quot;llm_rejected:{why}&quot;
                 break

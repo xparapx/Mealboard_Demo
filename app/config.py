@@ -65,6 +65,14 @@ META_UDP_PORT = 8103                                  # AF_UNIX 가 없는 개�
 DEBUG_FLAG = Path("/tmp/debug_on") if os.name != "nt" else RUN_DIR / "debug_on"   # MJPEG 켜짐 계약 파일 (vision 과 공유, PrivateTmp 금지)
 ADMIN_DB_PATH = DATA / "admin.db"                     # 쓰기 주체: 관리 앱 (감사 로그)
 LLM_HEF = os.getenv("LLM_HEF", "")                    # 로컬 LLM(Hailo-10H GenAI) .hef 경로. 빈 값 = LLM 없음 → 모든 소비자가 규칙 템플릿·DeepL 로 폴백
+# 모델 비종속(10-20, 공모전 공통 개발 규칙 — 특정 LLM 에 묶이지 않는 교체 구조): LLM_BACKEND 로 엔진을 고른다.
+#   auto   = LLM_HEF 가 있으면 hailo, 없고 LLM_MODEL 이 있으면 openai, 둘 다 없으면 none(규칙 템플릿·DeepL)
+#   hailo  = Hailo-10H GenAI(.hef, LLM_HEF)            openai = OpenAI 호환 HTTP(chat/completions) — Pi 의 Ollama(127.0.0.1:11434/v1)·hailo-ollama(8000/v1)·
+#   none   = LLM 없음                                     정부 공통기반 게이트웨이·OpenAI 모두 같은 모양. LLM_BASE_URL·LLM_MODEL·LLM_API_KEY(없으면 OPENAI_API_KEY)
+LLM_BACKEND = _choice("LLM_BACKEND", "auto", ("auto", "hailo", "openai", "none"))
+LLM_BASE_URL = os.getenv("LLM_BASE_URL", "http://127.0.0.1:11434/v1").rstrip("/")
+LLM_MODEL = os.getenv("LLM_MODEL", "").strip()
+LLM_API_KEY = (os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or "").strip()
 LLM_REPORT = os.getenv("LLM_REPORT", "0") == "1"      # 리포트(아침 예보·점심 결산)에도 LLM 을 쓸지. 09-04 스파이크: 1.5B 모델은 한국어 문장이 무너지고 영어로도 사실을 지어내
                                                       # 규칙 템플릿이 낫다 — 기본 0(템플릿). 한국어가 되는 모델이 오면 1
 # 심사위원 구동 경로(10-18, N3): DEMO_CLOCK 은 app/clock.py 가 읽는 가상 시계 기준('YYYY-MM-DDTHH:MM:SS', 비면 벽시계).

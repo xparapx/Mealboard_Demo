@@ -15,7 +15,7 @@ import os
 import re
 import time
 
-from app.config import LLM_HEF
+from app.config import LLM_API_KEY, LLM_BACKEND, LLM_BASE_URL, LLM_HEF, LLM_MODEL
 
 HANGUL = re.compile(r"[가-힣]")
 LETTER = re.compile(r"[A-Za-z가-힣]")
@@ -86,7 +86,62 @@ def parse_json_object(text):
     return v if isinstance(v, dict) else None
 
 
+THINK = re.compile(r"<think>.*?</think>\s*", re.S)
+
+
+def strip_think(text):
+    """추론 모드 모델(Qwen3·EXAONE 4·Gemma 4 thinking)이 앞에 붙이는 <think>…</think> 를 떼어 낸다. 닫히지 않은 think 는 통째로 버린다"""
+    if not isinstance(text, str):
+        return text
+    out = THINK.sub("", text)
+    if "<think>" in out:
+        out = out.split("<think>")[0]
+    return out.strip()
+
+
+def resolve_backend(backend=LLM_BACKEND, hef=LLM_HEF, model=LLM_MODEL):
+    """.env 의 LLM_BACKEND 를 실제 엔진 이름으로: auto → hailo(.hef 있음) | openai(모델 이름 있음) | none"""
+    if backend == "auto":
+        return "hailo" if hef else ("openai" if model else "none")
+    return backend
+
+
 # ---------------- 장치 ----------------
+def _openai_backend(base_url, model, key="", session_timeout=None):
+    """OpenAI 호환 chat/completions 백엔드(10-20) — 표준 라이브러리만. Ollama(/v1)·hailo-ollama·공통기반 게이트웨이·OpenAI 가 같은 요청 모양이다.
+    → (complete(system, user, max_tokens, temperature, timeout_s) -> str, close()). 연결 거부·404 는 LLMUnavailable, 429·503 은 LLMBusy"""
+    import urllib.error
+    import urllib.request
+    if not model:
+        raise LLMUnavailable("LLM_MODEL 이 비어 있다(openai 백엔드는 모델 이름이 필요)")
+    url = base_url.rstrip("/") + "/chat/completions"
+    headers = {"Content-Type": "application/json"}
+    if key:
+        headers["Authorization"] = f"Bearer {key}"
+
+    def complete(system, user, max_tokens, temperature, timeout_s):
+        body = {"model": model, "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+                "max_tokens": int(max_tokens), "temperature": float(temperature), "stream": False}
+        req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=timeout_s) as r:
+                doc = json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            msg = e.read().decode("utf-8", "replace")[:200]
+            if e.code in (429, 503):
+                raise LLMBusy(f"{model}: HTTP {e.code} {msg}")
+            raise LLMUnavailable(f"{model}: HTTP {e.code} {msg}")
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            raise LLMUnavailable(f"{url}: {e}")
+        try:
+            text = doc["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError):
+            raise LLMUnavailable(f"{model}: 응답 모양이 다르다 {str(doc)[:120]}")
+        return strip_think(text or "")
+
+    return complete, (lambda: None)
+
+
 def _hailo_backend(hef):
     """→ (complete(system, user, max_tokens, temperature, timeout_s) -> str, close()). 모양이 다르면 LLMUnavailable"""
     try:
@@ -140,15 +195,29 @@ class LocalLLM:
     """컨텍스트 매니저. `with LocalLLM() as m: m.complete(system, user)`. 없으면 __enter__ 가 LLMUnavailable.
     backend 인자는 테스트·스파이크용(complete 호출자 하나)."""
 
-    def __init__(self, hef=None, backend=None):
+    def __init__(self, hef=None, backend=None, engine=None, base_url=None, model=None, api_key=None):
+        """engine: None 이면 .env(LLM_BACKEND) 로 정한다. hef 를 직접 주면(테스트·스파이크) hailo 로 본다"""
         self.hef = LLM_HEF if hef is None else hef
-        self.model = os.path.splitext(os.path.basename(self.hef))[0] if self.hef else None
+        self.base_url = LLM_BASE_URL if base_url is None else base_url
+        self.api_key = LLM_API_KEY if api_key is None else api_key
         self._backend = backend
         self._complete = self._close = None
+        if engine is None:
+            engine = "hailo" if hef is not None else resolve_backend(model=LLM_MODEL if model is None else model)
+        self.engine = engine                                          # hailo | openai | none — reports.db engine 열에 그대로
+        if engine == "openai":
+            self.model = LLM_MODEL if model is None else model
+        else:
+            self.model = os.path.splitext(os.path.basename(self.hef))[0] if self.hef else None
 
     def __enter__(self):
         if self._backend is not None:
             self._complete, self._close = self._backend, (lambda: None)
+            return self
+        if self.engine == "none":
+            raise LLMUnavailable("LLM_BACKEND=none(또는 LLM_HEF·LLM_MODEL 둘 다 비어 있다)")
+        if self.engine == "openai":
+            self._complete, self._close = _openai_backend(self.base_url, self.model, self.api_key)
             return self
         if not self.hef:
             raise LLMUnavailable("LLM_HEF 가 비어 있다")
@@ -167,3 +236,55 @@ class LocalLLM:
         out = self._complete(system, user, max_tokens, temperature, timeout_s)
         self.last_ms = round((time.monotonic() - t0) * 1000)
         return out
+
+
+# ---------------- 점검 CLI(10-20) ----------------
+CHECK_NEWS = ("Summarize the article in exactly 4 short English lines. Use only numbers that appear in the article.",
+              "The school cafeteria serves 720 students in 70 minutes at lunch. A Raspberry Pi 5 counts the queue with a camera and "
+              "stores only numbers, never video. On Tuesday the longest wait was 7.5 minutes at 12:40, and the average was 1.5 minutes. "
+              "Staff said two serving lines could cut the peak to 4 minutes.")
+CHECK_REPORT = ("너는 학교 급식실 안내문 작성자다. 주어진 숫자만 써서 JSON 하나만 출력한다: "
+                "{\"headline\": 40자 이내 한국어, \"body\": 120자 이내 한국어, \"tone\": \"calm\"}. 입력에 없는 숫자는 절대 쓰지 않는다.",
+                "오늘 중식 집계: 평균 대기 1.5분, 최고 대기 7.5분(12:40), 식수 약 720명, 병목 1회(12:41~12:44), 황금 구간 11:32~11:35.")
+
+
+def check(n=1, out=None):
+    """엔진 하나로 뉴스 요약(영어, 숫자 부분집합)·리포트 문장(한국어 JSON) 두 과제를 n 번 돌려 통과율·속도를 찍는다 — 모델 비교표의 재료.
+    출력은 화면에만(저장 없음). 급식 창 밖에서 돌린다"""
+    import statistics
+    eng = resolve_backend()
+    print(f"백엔드 {eng}  모델 {LLM_MODEL or LLM_HEF or '-'}  주소 {LLM_BASE_URL if eng == 'openai' else '-'}")
+    rows = []
+    try:
+        with LocalLLM() as m:
+            for k in range(n):
+                t = m.complete(*CHECK_NEWS, max_tokens=160)
+                ok1 = numbers_subset(CHECK_NEWS[1], t) and 2 <= t.count("\n") + 1 <= 6
+                rows.append(("news", ok1, m.last_ms, len(t)))
+                print(f"[news {k + 1}] {m.last_ms} ms  {'PASS' if ok1 else 'FAIL'}  {t[:140].replace(chr(10), ' / ')}")
+                t2 = m.complete(*CHECK_REPORT, max_tokens=160)
+                obj = parse_json_object(t2) or {}
+                ok2 = bool(obj) and valid_korean(CHECK_REPORT[1], str(obj.get("headline", "")), max_len=40)[0] \
+                    and valid_korean(CHECK_REPORT[1], str(obj.get("body", "")), max_len=120)[0]
+                rows.append(("report", ok2, m.last_ms, len(t2)))
+                print(f"[report {k + 1}] {m.last_ms} ms  {'PASS' if ok2 else 'FAIL'}  {t2[:140].replace(chr(10), ' / ')}")
+    except LLMUnavailable as e:
+        print(f"사용 불가: {e}")
+        return 1
+    for kind in ("news", "report"):
+        rs = [r for r in rows if r[0] == kind]
+        if rs:
+            ms = statistics.median(r[2] for r in rs)
+            chars = statistics.median(r[3] for r in rs)
+            print(f"{kind}: 통과 {sum(1 for r in rs if r[1])}/{len(rs)}  중앙값 {ms:.0f} ms  ≈{chars / max(1, ms / 1000):.1f} 자/초")
+    return 0
+
+
+if __name__ == "__main__":
+    import argparse
+    import sys
+    ap = argparse.ArgumentParser(description="LLM 백엔드 점검 — .env 의 LLM_BACKEND·LLM_MODEL·LLM_HEF 로 두 과제를 돌린다")
+    ap.add_argument("--check", action="store_true")
+    ap.add_argument("-n", type=int, default=1)
+    a = ap.parse_args()
+    sys.exit(check(a.n) if a.check else 0)

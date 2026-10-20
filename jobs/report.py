@@ -128,7 +128,7 @@ def compose(kind, inp, llm_factory=None, busy_wait_s=BUSY_WAIT_S, log=print):
                 out = parse_json_object(raw)
                 ok, why = validate_output(inp, out)
                 if ok:
-                    return {"engine": "hailo", "model": m.model, "ok": True, "ms": getattr(m, "last_ms", None), **out, "reason": "ok"}
+                    return {"engine": getattr(m, "engine", "hailo"), "model": m.model, "ok": True, "ms": getattr(m, "last_ms", None), **out, "reason": "ok"}
                 log(f"LLM 출력 거부({why}) → 템플릿")
                 reason = f"llm_rejected:{why}"
                 break

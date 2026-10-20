@@ -110,7 +110,7 @@ function renderReport(d) {
   if (!setState("reportcard", d.state === "ok" && !!item, d.reason)) return;
   $("#reporthead").textContent = item.headline || "";
   $("#reportbody").textContent = item.body || "";
-  $("#reportchips").innerHTML = `<em class="teal">${item.engine === "hailo" ? "AI 작성" : "규칙 문장"}${item.model ? " · " + esc(item.model) : ""}</em>`
+  $("#reportchips").innerHTML = `<em class="teal">${item.engine && item.engine !== "template" ? "AI 작성" : "규칙 문장"}${item.model ? " · " + esc(item.model) : ""}</em>`
     + `<small>${item.kind === "preview" ? "아침 예보" : "점심 결산"} · ${(item.created_at || "").slice(5, 16).replace("T", " ")}</small>`;
 }
 
