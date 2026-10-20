@@ -115,14 +115,23 @@ def _openai_backend(base_url, model, key="", session_timeout=None):
     import urllib.request
     if not model:
         raise LLMUnavailable("LLM_MODEL 이 비어 있다(openai 백엔드는 모델 이름이 필요)")
-    url = base_url.rstrip("/") + "/chat/completions"
+    base = base_url.rstrip("/")
     headers = {"Content-Type": "application/json"}
     if key:
         headers["Authorization"] = f"Bearer {key}"
+    # Ollama 면 네이티브 /api/chat 로(10-20 Pi 실측: Gemma 4·EXAONE 4 는 '생각 모드' 가 기본이라 OpenAI 호환 경로에선 본문이 비거나 생각이 본문에
+    # 쏟아졌다 — 네이티브 API 의 think=false 로 끈다). 그 밖(OpenAI·공통기반 게이트웨이)은 /v1/chat/completions 그대로
+    root = base[:-3] if base.endswith("/v1") else base
+    ollama = _is_ollama(root, headers)
+    url = (root + "/api/chat") if ollama else (base + "/chat/completions")
 
     def complete(system, user, max_tokens, temperature, timeout_s):
-        body = {"model": model, "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
-                "max_tokens": int(max_tokens), "temperature": float(temperature), "stream": False}
+        msgs = [{"role": "system", "content": system}, {"role": "user", "content": user}]
+        if ollama:
+            body = {"model": model, "messages": msgs, "stream": False, "think": False,
+                    "options": {"num_predict": int(max_tokens), "temperature": float(temperature)}}
+        else:
+            body = {"model": model, "messages": msgs, "max_tokens": int(max_tokens), "temperature": float(temperature), "stream": False}
         req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers=headers)
         try:
             with urllib.request.urlopen(req, timeout=timeout_s) as r:
@@ -135,12 +144,23 @@ def _openai_backend(base_url, model, key="", session_timeout=None):
         except (urllib.error.URLError, TimeoutError, OSError) as e:
             raise LLMUnavailable(f"{url}: {e}")
         try:
-            text = doc["choices"][0]["message"]["content"]
+            text = doc["message"]["content"] if ollama else doc["choices"][0]["message"]["content"]
         except (KeyError, IndexError, TypeError):
             raise LLMUnavailable(f"{model}: 응답 모양이 다르다 {str(doc)[:120]}")
         return strip_think(text or "")
 
     return complete, (lambda: None)
+
+
+def _is_ollama(root, headers, timeout=2.0):
+    """base_url 의 서버가 Ollama 인가 — /api/version 이 200 이면 참(네이티브 chat API 를 쓴다). 닿지 않거나 다른 서버면 거짓"""
+    import urllib.error
+    import urllib.request
+    try:
+        with urllib.request.urlopen(urllib.request.Request(root + "/api/version", headers=headers), timeout=timeout) as r:
+            return "version" in json.loads(r.read().decode("utf-8", "replace"))      # 200 이 아니면 urlopen 이 HTTPError 를 던진다
+    except (urllib.error.URLError, OSError, ValueError, TimeoutError):
+        return False
 
 
 def _hailo_backend(hef):
@@ -269,12 +289,12 @@ def check_summary(n=1, log=None):
     try:
         with m:
             for k in range(n):
-                t = m.complete(*CHECK_NEWS, max_tokens=160)
+                t = m.complete(*CHECK_NEWS, max_tokens=220)
                 ok1 = numbers_subset(CHECK_NEWS[1], t) and 2 <= t.count("\n") + 1 <= 6
                 rows.append(("news", ok1, m.last_ms, len(t)))
                 res["samples"].append({"kind": "news", "ok": ok1, "ms": m.last_ms, "text": t[:200]})
                 log(f"[news {k + 1}] {m.last_ms} ms  {'PASS' if ok1 else 'FAIL'}  {t[:140].replace(chr(10), ' / ')}")
-                t2 = m.complete(*CHECK_REPORT, max_tokens=160)
+                t2 = m.complete(*CHECK_REPORT, max_tokens=220)
                 obj = parse_json_object(t2) or {}
                 ok2 = bool(obj) and valid_korean(CHECK_REPORT[1], str(obj.get("headline", "")), max_len=40)[0] \
                     and valid_korean(CHECK_REPORT[1], str(obj.get("body", "")), max_len=120)[0]

@@ -34,6 +34,8 @@ def test_openai_backend_request_and_parse(monkeypatch):
     seen = {}
 
     def fake_urlopen(req, timeout=None):
+        if req.full_url.endswith("/api/version"):
+            raise urllib.error.URLError("not ollama")
         seen["url"] = req.full_url
         seen["headers"] = dict(req.header_items())
         seen["body"] = json.loads(req.data.decode("utf-8"))
@@ -56,6 +58,8 @@ def test_openai_backend_request_and_parse(monkeypatch):
 
 def test_openai_backend_errors(monkeypatch):
     import urllib.request
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda req, timeout=None: (_ for _ in ()).throw(urllib.error.URLError("x")))
 
     def http_err(code):
         def f(req, timeout=None):
@@ -88,3 +92,20 @@ def test_local_llm_engine_selection(monkeypatch):
     assert fake.engine == "hailo" and fake.model == "fake-model"
     with fake as f:
         assert f.complete("s", "u") == "ok"
+
+
+def test_ollama_native_path(monkeypatch):
+    """Ollama 서버(/api/version 200)면 네이티브 /api/chat + think=false 로 — 생각 모드 모델(Gemma 4·EXAONE 4)의 빈 본문·생각 누출 방지(10-20 Pi 실측)"""
+    import urllib.request
+    seen = {}
+
+    def fake(req, timeout=None):
+        if req.full_url.endswith("/api/version"):
+            return _Resp(json.dumps({"version": "0.40.6"}).encode())
+        seen["url"] = req.full_url; seen["body"] = json.loads(req.data.decode("utf-8"))
+        return _Resp(json.dumps({"message": {"role": "assistant", "content": "본문", "thinking": "생각"}}).encode())
+    monkeypatch.setattr(urllib.request, "urlopen", fake)
+    complete, _ = _openai_backend("http://127.0.0.1:11434/v1", "gemma4:e2b")
+    assert complete("s", "u", 50, 0.0, 10) == "본문"
+    assert seen["url"] == "http://127.0.0.1:11434/api/chat" and seen["body"]["think"] is False
+    assert seen["body"]["options"] == {"num_predict": 50, "temperature": 0.0} and seen["body"]["stream"] is False
