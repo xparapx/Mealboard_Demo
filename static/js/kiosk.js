@@ -259,7 +259,11 @@ const SLIDES = [
     html() {
       const week = D.meal.week.filter(d => d.menu?.length).slice(0, 5), t = now();
       const today = `${t.getFullYear()}${String(t.getMonth() + 1).padStart(2, "0")}${String(t.getDate()).padStart(2, "0")}`;
-      const row = (label, mmx) => mmx?.menu?.length ? `<div class="row"><i>${label}</i><div class="m">${esc(splitAllergy(mmx.menu[0])[0])}</div><div class="k">외 ${mmx.menu.length - 1}가지${mmx.kcal ? ` · ${Math.round(mmx.kcal)} kcal` : ""}</div></div>` : `<div class="row"><i>${label}</i><div class="k">없음</div></div>`;
+      const row = (label, mmx) => {                       // 첫 메뉴는 굵게, 다음 둘은 작게 — 세로 여백을 쓰고 칸을 넘지 않게(11-02)
+        if (!mmx?.menu?.length) return `<div class="row"><i>${label}</i><div class="k">없음</div></div>`;
+        const names = mmx.menu.map(x => splitAllergy(x)[0]);
+        return `<div class="row"><i>${label}</i><div class="m">${esc(names[0])}</div>${names.length > 1 ? `<div class="sub">${esc(names.slice(1, 3).join(" · "))}</div>` : ""}<div class="k">${names.length > 3 ? `외 ${names.length - 3}가지` : ""}${mmx.kcal ? `${names.length > 3 ? " · " : ""}${Math.round(mmx.kcal)} kcal` : ""}</div></div>`;
+      };
       return `<div class="card" style="--i:0"><div class="wk">${week.map((d, j) => { const dd = new Date(+d.date.slice(0, 4), +d.date.slice(4, 6) - 1, +d.date.slice(6, 8)); return `<div class="wd${dd.getDay()}" style="--j:${j}"${d.date === today ? " data-today" : ""}><div class="d">${WD[dd.getDay()]}<span>${dd.getMonth() + 1}/${dd.getDate()}</span></div>${row("중식", d)}${row("석식", d.dinner)}</div>`; }).join("")}</div></div>`;
     } },
 ];
