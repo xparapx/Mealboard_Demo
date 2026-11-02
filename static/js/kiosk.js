@@ -217,7 +217,7 @@ const SLIDES = [
     key: () => { const a = D.meal?.today?.assess; return a?.energy_pct != null ? `에너지 충족 <b>${a.energy_pct}%</b>` : ""; },
     html() {
       const t = D.meal.today, dn = t.dinner, a = t.assess || {};
-      const list = (items, n = 7) => `<ul class="menu">${(items || []).slice(0, n).map((x, j) => { const [name, al] = splitAllergy(x); return `<li style="--j:${j}"><span>${esc(name)}</span>${al ? `<small>${esc(al)}</small>` : ""}</li>`; }).join("")}${items && items.length > n ? `<li class="more">외 ${items.length - n}가지</li>` : ""}</ul>`;
+      const list = (items, n = 6) => `<ul class="menu">${(items || []).slice(0, n).map((x, j) => { const [name, al] = splitAllergy(x); return `<li style="--j:${j}"><span>${esc(name)}</span>${al ? `<small>${esc(al)}</small>` : ""}</li>`; }).join("")}${items && items.length > n ? `<li class="more">외 ${items.length - n}가지</li>` : ""}</ul>`;
       const kcal = v => v ? `<span class="kcal">${Math.round(v)} kcal</span>` : "";
       return `<div class="card" style="--i:0"><div class="eyebrow">중식${kcal(t.kcal)}</div>${t.menu?.length ? list(t.menu) : '<div class="empty">오늘 중식 식단이 없습니다</div>'}</div>
         <div class="card" style="--i:1"><div class="eyebrow">석식${dn ? kcal(dn.kcal) : ""}</div>${dn?.menu?.length ? list(dn.menu) : '<div class="empty">석식 없음</div>'}</div>
