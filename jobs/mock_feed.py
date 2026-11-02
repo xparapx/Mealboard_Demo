@@ -24,7 +24,7 @@ from app.config import ZONES_JSON
 
 from app import clock
 from app.db import connect
-from app.lunch import meal_now, meals_for
+from app.lunch import is_meal_day, meal_now, meals_for
 from vision.meta import MetaSender
 from vision.record import write_sample
 from vision.waittime import estimate_wait
@@ -156,7 +156,7 @@ def main():
     print(f"mock_feed 시작  speed={a.speed}  scenario={a.scenario}  zones={[z['id'] for z in zones]}  수집 창: {windows}")
 
     while True:
-        cur = meal_now(clock.now())
+        cur = meal_now(clock.now()) if is_meal_day(clock.now()) else None   # 11-02: 급식 없는 날은 더미도 창을 열지 않는다
         if cur != win:                                        # 창이 열리거나 닫힘 → 줄 0 명에서 다시(창 시작에 인파가 몰려드는 모양)
             win = cur
             sim.reset()

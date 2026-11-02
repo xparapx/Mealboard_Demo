@@ -853,7 +853,7 @@ from fastapi import APIRouter
 from .. import clock
 from ..config import DEMO_CLOCK, FEED_SOURCE, SHOW_GUIDE, STALE_SEC, WAIT_FLOOR_MIN   # STALE_SEC: 이 시간 넘게 새 행이 없으면 '데이터 없음'으로 본다
 from ..db import connect
-from ..lunch import describe, first_meal, meal_next, meal_now, next_meal_day
+from ..lunch import describe, first_meal, is_meal_day, meal_next, meal_now, next_meal_day
 from ..mealjson import read_meal
 
 router = APIRouter()
@@ -893,9 +893,8 @@ def feed(now, state, source=FEED_SOURCE):
     &quot;&quot;&quot;'지금 값이 실측인가' — 화면 맨 위 안내 띠가 읽는다(09-04). live 는 셋이 모두 맞을 때만:
     출처가 vision(카메라 노드) · 지금이 수집 창(3학년 점심·1·2학년 점심·석식) 안 · 표본이 끊기지 않음. now 는 열린 창, next 는 다음 창(며칠 뒤 days), meal_day 는 오늘이 급식 있는 날인지(NEIS 캐시 기준 — 시작 화면·자동 전환이 본다).
     창 밖에는 카메라 노드가 아무 행도 쓰지 않으므로(09-11) state 는 120초 뒤 no_data 가 된다 — 화면은 source·now 로 '급식 시간이 아닙니다' 와 '표본 끊김' 을 가른다&quot;&quot;&quot;
-    w = meal_now(now)
-    ymd = now.strftime(&quot;%Y%m%d&quot;)
-    meal_day = any(d.get(&quot;date&quot;) == ymd and d.get(&quot;menu&quot;) for d in (read_meal().get(&quot;week&quot;) or []))
+    meal_day = is_meal_day(now)                            # 11-02: 캐시 범위 밖(방학 등)은 평일 규칙 — next_meal_day 와 같은 판정
+    w = meal_now(now) if meal_day else None                # 급식 없는 날은 창이 '열린' 것으로 보지 않는다(카메라도 기록하지 않는다)
     return {&quot;source&quot;: source, &quot;live&quot;: source == &quot;vision&quot; and w is not None and state != &quot;no_data&quot;,
             &quot;now&quot;: describe(w), &quot;next&quot;: next_with_day(now), &quot;meal_day&quot;: meal_day}
 
@@ -1132,7 +1131,7 @@ from app.config import ZONES_JSON
 
 from app import clock
 from app.db import connect
-from app.lunch import meal_now, meals_for
+from app.lunch import is_meal_day, meal_now, meals_for
 from vision.meta import MetaSender
 from vision.record import write_sample
 from vision.waittime import estimate_wait
@@ -1264,7 +1263,7 @@ def main():
     print(f&quot;mock_feed 시작  speed={a.speed}  scenario={a.scenario}  zones={[z['id'] for z in zones]}  수집 창: {windows}&quot;)
 
     while True:
-        cur = meal_now(clock.now())
+        cur = meal_now(clock.now()) if is_meal_day(clock.now()) else None   # 11-02: 급식 없는 날은 더미도 창을 열지 않는다
         if cur != win:                                        # 창이 열리거나 닫힘 → 줄 0 명에서 다시(창 시작에 인파가 몰려드는 모양)
             win = cur
             sim.reset()
@@ -3336,6 +3335,25 @@ def meals_for(t):
     _MEALS_CACHE.clear()
     _MEALS_CACHE[d] = (time.monotonic() + _MEALS_TTL, ws)
     return ws
+
+
+_DAY_CACHE = {}                             # {date: (expires, bool)} — is_meal_day 도 meal.json 을 10분마다만
+
+
+def is_meal_day(t):
+    &quot;&quot;&quot;오늘이 급식 있는 날인가(11-02 사용자 결정: 주말·공휴일·방학엔 카메라가 빈 급식실을 세지 않는다).
+    NEIS 캐시(meal.json week[] 중 menu 있는 날) 범위 안이면 캐시가 진실, 범위 밖이면 평일만 — next_meal_day 와 같은 규칙&quot;&quot;&quot;
+    d = _as_date(t)
+    hit = _DAY_CACHE.get(d)
+    if hit and hit[0] &gt; time.monotonic():
+        return hit[1]
+    from .mealjson import read_meal                      # 지연 import(순환)
+    dates = [x.get(&quot;date&quot;, &quot;&quot;) for x in (read_meal().get(&quot;week&quot;) or []) if x.get(&quot;menu&quot;)]
+    nd = next_meal_day(dt.datetime.combine(d, dt.time(0, 0)), dates)
+    ok = bool(nd and nd[1] == 0)
+    _DAY_CACHE.clear()
+    _DAY_CACHE[d] = (time.monotonic() + _MEALS_TTL, ok)
+    return ok
 
 
 def first_meal(t):
@@ -7327,8 +7345,9 @@ def _openai_backend(base_url, model, key=&quot;&quot;, session_timeout=None):
         else:
             body = {&quot;model&quot;: model, &quot;messages&quot;: msgs, &quot;max_tokens&quot;: int(max_tokens), &quot;temperature&quot;: float(temperature), &quot;stream&quot;: False}
         req = urllib.request.Request(url, data=json.dumps(body).encode(&quot;utf-8&quot;), headers=headers)
+        # Ollama 는 첫 호출에 모델을 디스크에서 올린다(Pi SD 카드에서 4.6 GB ≈ 1~2분, 11-02 실측 60초 초과) — 서버 쪽은 한도를 넉넉히
         try:
-            with urllib.request.urlopen(req, timeout=timeout_s) as r:
+            with urllib.request.urlopen(req, timeout=max(timeout_s, 180) if ollama else timeout_s) as r:
                 doc = json.loads(r.read().decode(&quot;utf-8&quot;))
         except urllib.error.HTTPError as e:
             msg = e.read().decode(&quot;utf-8&quot;, &quot;replace&quot;)[:200]

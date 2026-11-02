@@ -124,3 +124,21 @@ def test_meal_now_은_그날의_창을_쓴다(monkeypatch):
     assert lunch.meal_now(dt.datetime(2026, 10, 16, 18, 20)) is None                    # 금 18:00 에 닫힘
     nxt = lunch.meal_next(dt.datetime(2026, 10, 15, 19, 0))                             # 목 밤 → 금 첫 창(3학년 점심)
     assert nxt[1] == 1 and nxt[0].label == "3학년 점심"
+
+
+def test_급식_없는_날은_창이_열리지_않는다(monkeypatch):
+    """11-02 사용자 결정: 주말·공휴일·방학엔 카메라가 빈 급식실을 세지 않는다 — is_meal_day 가 창(meal_now)·feed.now 앞에 선다"""
+    from app import lunch
+    import app.mealjson as mj
+    monkeypatch.setattr(lunch, "_DAY_CACHE", {})
+    monkeypatch.setattr(mj, "read_meal", lambda: {"week": [{"date": "20261102", "menu": ["x"]}, {"date": "20261104", "menu": ["x"]}]})
+    assert lunch.is_meal_day(dt.datetime(2026, 11, 2, 12, 0)) is True            # 월, 캐시에 있음
+    assert lunch.is_meal_day(dt.datetime(2026, 11, 3, 12, 0)) is False           # 화, 캐시 범위 안인데 급식 없음(공휴일 가정)
+    assert lunch.is_meal_day(dt.datetime(2026, 10, 31, 12, 0)) is False          # 토(캐시 밖) → 주말
+    monkeypatch.setattr(lunch, "_DAY_CACHE", {})
+    assert lunch.is_meal_day(dt.datetime(2026, 11, 10, 12, 0)) is True           # 화(캐시 밖) → 평일
+    from app.routers import status
+    monkeypatch.setattr(status, "read_meal", lambda: {"week": []})
+    monkeypatch.setattr(lunch, "_DAY_CACHE", {})
+    f = status.feed(dt.datetime(2026, 10, 31, 12, 0), "ok", source="vision")     # 토요일 점심 시각
+    assert f["now"] is None and f["live"] is False and f["meal_day"] is False

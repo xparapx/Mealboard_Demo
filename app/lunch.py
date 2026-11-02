@@ -131,6 +131,25 @@ def meals_for(t):
     return ws
 
 
+_DAY_CACHE = {}                             # {date: (expires, bool)} — is_meal_day 도 meal.json 을 10분마다만
+
+
+def is_meal_day(t):
+    """오늘이 급식 있는 날인가(11-02 사용자 결정: 주말·공휴일·방학엔 카메라가 빈 급식실을 세지 않는다).
+    NEIS 캐시(meal.json week[] 중 menu 있는 날) 범위 안이면 캐시가 진실, 범위 밖이면 평일만 — next_meal_day 와 같은 규칙"""
+    d = _as_date(t)
+    hit = _DAY_CACHE.get(d)
+    if hit and hit[0] > time.monotonic():
+        return hit[1]
+    from .mealjson import read_meal                      # 지연 import(순환)
+    dates = [x.get("date", "") for x in (read_meal().get("week") or []) if x.get("menu")]
+    nd = next_meal_day(dt.datetime.combine(d, dt.time(0, 0)), dates)
+    ok = bool(nd and nd[1] == 0)
+    _DAY_CACHE.clear()
+    _DAY_CACHE[d] = (time.monotonic() + _MEALS_TTL, ok)
+    return ok
+
+
 def first_meal(t):
     """그날의 첫 창 또는 None"""
     ws = meals_for(t)

@@ -22,7 +22,7 @@ import time
 from app.config import (DEBUG_FLAG, DEBUG_PORT, DWELL_BIAS, FEED_SOURCE, QUEUE_SOURCE, RATE_WINDOW_SEC, VIDEO_SOURCE, VISION_CONF, VISION_FPS, WAIT_FLOOR_MIN,
                         VISION_IMGSZ, VISION_SIZE, YOLO_WEIGHTS, ZONES_JSON)
 from app.db import connect
-from app.lunch import meal_now
+from app.lunch import is_meal_day, meal_now
 from vision.counting import DwellTracker, FifoEstimator, LineCounter, MedianWindow, RateWindow, foot_of_bbox
 from vision.debug_stream import DebugStream, annotate
 from vision.meta import MetaSender
@@ -137,7 +137,7 @@ def main():
     while True:
         t0 = time.monotonic()
         now = dt.datetime.now()
-        cur = meal_now(now)
+        cur = meal_now(now) if is_meal_day(now) else None       # 11-02: 급식 없는 날(주말·공휴일·방학)은 창이 열려도 세지 않는다
         if cur != win:                                            # 창이 열리거나 닫힘
             win = cur
             rate.reset()

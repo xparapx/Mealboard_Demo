@@ -133,8 +133,9 @@ def _openai_backend(base_url, model, key="", session_timeout=None):
         else:
             body = {"model": model, "messages": msgs, "max_tokens": int(max_tokens), "temperature": float(temperature), "stream": False}
         req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers=headers)
+        # Ollama 는 첫 호출에 모델을 디스크에서 올린다(Pi SD 카드에서 4.6 GB ≈ 1~2분, 11-02 실측 60초 초과) — 서버 쪽은 한도를 넉넉히
         try:
-            with urllib.request.urlopen(req, timeout=timeout_s) as r:
+            with urllib.request.urlopen(req, timeout=max(timeout_s, 180) if ollama else timeout_s) as r:
                 doc = json.loads(r.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             msg = e.read().decode("utf-8", "replace")[:200]
