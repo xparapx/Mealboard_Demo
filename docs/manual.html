@@ -1018,6 +1018,7 @@ def meal():
 <figcaption><span class="path">app/main.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
 <pre><code class="lang-python">import mimetypes
 
+from fastapi.responses import FileResponse
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from .config import BASE
@@ -1039,7 +1040,7 @@ app.include_router(insight.router)      # /api/insight/* — insights.db·report
 # 배포가 브라우저에 도달하지 못한다 — v5 에서 서비스워커를 고치고도 같은 증상이 남았던 이유.
 # no-cache 는 '캐시 금지'가 아니라 '쓰기 전 검사'다. ETag 가 같으면 304 라 비용은 거의 없다.
 # 화면이 부르는 모듈(/js/)·스타일(/css/)도 같다 — 셸은 새것인데 모듈은 옛것이면 짝이 어긋난다.
-REVALIDATE = (&quot;/&quot;, &quot;/index.html&quot;, &quot;/sw.js&quot;, &quot;/manifest.json&quot;)
+REVALIDATE = (&quot;/&quot;, &quot;/index.html&quot;, &quot;/sw.js&quot;, &quot;/manifest.json&quot;, &quot;/kiosk&quot;, &quot;/kiosk.html&quot;)
 REVALIDATE_PREFIX = (&quot;/js/&quot;, &quot;/css/&quot;)
 
 
@@ -1050,6 +1051,23 @@ async def revalidate_shell(request: Request, call_next):
     if path in REVALIDATE or path.startswith(REVALIDATE_PREFIX):
         res.headers[&quot;Cache-Control&quot;] = &quot;no-cache&quot;
     return res
+
+
+# 송출 화면(11-02, 제안서 P9): /kiosk 와 kiosk.* 호스트의 &quot;/&quot; 가 static/kiosk.html 을 낸다 — 통행로 모니터는 kiosk.kjhs-meal.com 한 주소만 외우면 된다
+# (Cloudflare '게시된 애플리케이션' kiosk.kjhs-meal.com → HTTP 127.0.0.1:8100, 공개 데모 8800 도 /kiosk 가 같이 뜬다). 서비스워커 없음 — 6시간마다 스스로 새로 읽는다
+KIOSK_HTML = BASE / &quot;static&quot; / &quot;kiosk.html&quot;
+
+
+@app.get(&quot;/kiosk&quot;, include_in_schema=False)
+def kiosk():
+    return FileResponse(KIOSK_HTML, media_type=&quot;text/html&quot;, headers={&quot;Cache-Control&quot;: &quot;no-cache&quot;})
+
+
+@app.middleware(&quot;http&quot;)
+async def kiosk_host(request: Request, call_next):
+    if request.url.path == &quot;/&quot; and request.headers.get(&quot;host&quot;, &quot;&quot;).split(&quot;:&quot;)[0].startswith(&quot;kiosk.&quot;):
+        return FileResponse(KIOSK_HTML, media_type=&quot;text/html&quot;, headers={&quot;Cache-Control&quot;: &quot;no-cache&quot;})
+    return await call_next(request)
 
 
 # 정적 파일은 마지막에 mount — /api/* 가 먼저 잡히도록
@@ -2987,6 +3005,7 @@ def positions():
 <figcaption><span class="path">app/main.py</span><span class="lang">python</span><button class="copy" type="button">복사</button></figcaption>
 <pre><code class="lang-python">import mimetypes
 
+from fastapi.responses import FileResponse
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from .config import BASE
@@ -3008,7 +3027,7 @@ app.include_router(insight.router)      # /api/insight/* — insights.db·report
 # 배포가 브라우저에 도달하지 못한다 — v5 에서 서비스워커를 고치고도 같은 증상이 남았던 이유.
 # no-cache 는 '캐시 금지'가 아니라 '쓰기 전 검사'다. ETag 가 같으면 304 라 비용은 거의 없다.
 # 화면이 부르는 모듈(/js/)·스타일(/css/)도 같다 — 셸은 새것인데 모듈은 옛것이면 짝이 어긋난다.
-REVALIDATE = (&quot;/&quot;, &quot;/index.html&quot;, &quot;/sw.js&quot;, &quot;/manifest.json&quot;)
+REVALIDATE = (&quot;/&quot;, &quot;/index.html&quot;, &quot;/sw.js&quot;, &quot;/manifest.json&quot;, &quot;/kiosk&quot;, &quot;/kiosk.html&quot;)
 REVALIDATE_PREFIX = (&quot;/js/&quot;, &quot;/css/&quot;)
 
 
@@ -3019,6 +3038,23 @@ async def revalidate_shell(request: Request, call_next):
     if path in REVALIDATE or path.startswith(REVALIDATE_PREFIX):
         res.headers[&quot;Cache-Control&quot;] = &quot;no-cache&quot;
     return res
+
+
+# 송출 화면(11-02, 제안서 P9): /kiosk 와 kiosk.* 호스트의 &quot;/&quot; 가 static/kiosk.html 을 낸다 — 통행로 모니터는 kiosk.kjhs-meal.com 한 주소만 외우면 된다
+# (Cloudflare '게시된 애플리케이션' kiosk.kjhs-meal.com → HTTP 127.0.0.1:8100, 공개 데모 8800 도 /kiosk 가 같이 뜬다). 서비스워커 없음 — 6시간마다 스스로 새로 읽는다
+KIOSK_HTML = BASE / &quot;static&quot; / &quot;kiosk.html&quot;
+
+
+@app.get(&quot;/kiosk&quot;, include_in_schema=False)
+def kiosk():
+    return FileResponse(KIOSK_HTML, media_type=&quot;text/html&quot;, headers={&quot;Cache-Control&quot;: &quot;no-cache&quot;})
+
+
+@app.middleware(&quot;http&quot;)
+async def kiosk_host(request: Request, call_next):
+    if request.url.path == &quot;/&quot; and request.headers.get(&quot;host&quot;, &quot;&quot;).split(&quot;:&quot;)[0].startswith(&quot;kiosk.&quot;):
+        return FileResponse(KIOSK_HTML, media_type=&quot;text/html&quot;, headers={&quot;Cache-Control&quot;: &quot;no-cache&quot;})
+    return await call_next(request)
 
 
 # 정적 파일은 마지막에 mount — /api/* 가 먼저 잡히도록

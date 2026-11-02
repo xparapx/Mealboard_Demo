@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ko" class="kiosk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1F1E1B">
+<title>급식실 대기 안내 — 송출 화면</title>
+<!-- 통행로 42인치 모니터용 송출 화면(11-02, 제안서 P9). 고정 1920×1080 무대를 화면에 맞춰 축소하고 10초마다 슬라이드를 돌린다.
+     주소: https://kiosk.kjhs-meal.com (Cloudflare 경로 → 8100) 또는 https://kjhs-meal.com/kiosk · 공개 데모는 /kiosk 가 자동으로 같이 뜬다.
+     쿼리: ?interval=10(초) &slides=wait,room,forecast,today,heat,report,week &hold(현재 슬라이드 고정) &fit=0(축소 안 함) -->
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="stylesheet" href="/css/kiosk.css">
+</head>
+<body>
+<div id="k-root" class="lv-off">
+  <aside id="k-side">
+    <div class="k-brand">급식실 대기 안내<small>공주고등학교 · 카메라는 숫자만 남깁니다</small></div>
+    <div class="k-clock" id="k-clock">--:--</div>
+    <div class="k-date" id="k-date">—</div>
+    <div class="k-live" id="k-live">
+      <div class="k-lvtag"><i></i><span id="k-lvlabel">—</span></div>
+      <div class="k-lvnum"><b id="k-lvmin">—</b><em id="k-lvunit">분</em></div>
+      <div class="k-lvsub" id="k-lvsub">지금 줄을 서면</div>
+    </div>
+    <div class="k-next" id="k-next">—</div>
+    <div class="k-spacer"></div>
+    <div class="k-qr" id="k-qr" hidden><img id="k-qrimg" alt="접속 QR"><span>휴대폰으로 보기<br><b>kjhs-meal.com</b></span></div>
+    <div class="k-fresh" id="k-fresh"><i></i><span>연결 확인 중</span></div>
+  </aside>
+  <main id="k-main">
+    <header id="k-title"><h1 id="k-h1">—</h1><div class="k-key" id="k-key"></div></header>
+    <section id="k-stage" aria-live="polite"></section>
+    <footer id="k-foot"><div class="k-dots" id="k-dots"></div><div class="k-bar"><i id="k-prog"></i></div><div class="k-foot-note" id="k-footnote"></div></footer>
+  </main>
+  <div class="k-bg" aria-hidden="true"><span></span><span></span><span></span></div>
+</div>
+<script type="module" src="/js/kiosk.js"></script>
+</body>
+</html>

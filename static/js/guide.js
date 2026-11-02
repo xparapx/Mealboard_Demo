@@ -64,6 +64,7 @@ function fillIntro() {
     `<p><b>구동</b> 저장소 루트에서 <code>uv sync</code> 뒤 <code>uv run python -m jobs.demo</code> 한 줄 — 모의 데이터 8주치를 만들고 이 화면을 띄웁니다(포트 8800, 운영 데이터와 분리된 <code>data/demo/</code>).</p>`
     + `<p><b>핵심 흐름 셋</b> ① 대기시간(히어로·추이·히트맵·예보·병목·품질) → ② 실시간뷰·통계(밀집도·분포·메뉴별 대기) → ③ 오늘급식·리포트(영양·알레르기·탄소·결산).</p>`
     + `<p><b>실제 운영</b> <a href="https://kjhs-meal.com" target="_blank" rel="noopener">kjhs-meal.com</a> — 급식 시간(11:20~13:40 · 석식)에만 카메라 실측이 흐르고, 창 밖에는 '급식 시간이 아닙니다' 를 띄웁니다.</p>`
+    + `<p><b>통행로 송출 화면</b> <a href="/kiosk" target="_blank" rel="noopener">/kiosk</a> — 42인치 모니터용 1920×1080 화면이 10초마다 대기시간·밀집도·예보·오늘 급식·평소 대기·리포트·주간 식단을 돌며 보여 줍니다(운영 주소 <a href="https://kiosk.kjhs-meal.com" target="_blank" rel="noopener">kiosk.kjhs-meal.com</a>). 휴대폰이 없는 학생에게도 같은 정보가 닿습니다.</p>`
     + `<p><b>AI 모델 교체</b> 리포트·기사 요약을 쓰는 언어 모델은 특정 모델에 묶이지 않습니다 — <code>.env LLM_BACKEND</code> 한 줄 또는 관리 화면의 'AI 모델 선택' 으로 Hailo 칩(.hef) · OpenAI 호환 서버(라즈베리파이 CPU 의 Ollama: Gemma 4, EXAONE 4.0 등 공통기반 모델) · 규칙 문장만 사이를 오갑니다. 어느 모델이든 출력은 같은 검증기(입력에 없는 숫자 금지·한글 비율·길이)를 지나야 저장됩니다.</p>`;
 }
 function fillDemoNote() {
