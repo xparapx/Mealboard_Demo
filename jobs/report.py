@@ -26,7 +26,7 @@ from app.insights_db import connect_ro
 from app.lunch import weekday_of
 from app.mealjson import menu_on, read_meal
 from jobs import report_templates as tpl
-from jobs.llm import LLMBusy, LLMUnavailable, LocalLLM, parse_json_object, valid_korean
+from jobs.llm import LLMBusy, LLMUnavailable, LocalLLM, numbers, parse_json_object, valid_korean
 
 KINDS = ("preview", "recap")
 TONES = ("calm", "busy", "info")
@@ -41,7 +41,11 @@ CREATE INDEX IF NOT EXISTS idx_reports_date ON reports (for_date, kind);
 """
 SYSTEM = ("너는 학교 급식실 안내판의 짧은 글을 쓰는 작성자다. 입력 JSON 의 숫자와 메뉴명만 사용하고 입력에 없는 사실·숫자는 절대 만들지 않는다. "
           "학생에게 말하듯 존댓말로, 한국어로만 쓴다. 출력은 JSON 하나뿐: {\"headline\": 40자 이하 한 줄, \"body\": 120자 이하 두세 문장, "
-          "\"tone\": \"calm\"|\"busy\"|\"info\"}. 다른 말·코드펜스·개행 없이 JSON 만 출력한다.")
+          "\"tone\": \"calm\"|\"busy\"|\"info\"}. 다른 말·코드펜스·개행 없이 JSON 만 출력한다. "
+          "글의 주제는 '대기시간' 이다 — 결산(recap)은 평균 대기(avg_wait)·최고 대기(peak_wait, 시각 peak_wait_hm)·식수(served_est) 중 둘 이상을 숫자로 꼭 쓰고, "
+          "예보(preview)는 붐비는 시각(peak_minute)과 그때 예상 대기(peak_wait)를 쓴다. 메뉴는 한 번만 짧게 언급한다. 메뉴만 나열하는 글은 안 된다.")
+# 11-02: Gemma 4 로 바꾼 첫 결산이 '오늘의 메뉴 안내' 만 쓰고 숫자를 하나도 안 써서 숫자 부분집합 검사를 '통과' 했다 — 핵심 숫자 포함 의무를 검증기에도 둔다
+KEY_NUMBERS = {"recap": (("avg_wait", "peak_wait", "served_est"), 2), "preview": (("peak_wait", "peak_minute"), 1)}
 
 
 # ---------------- 입력 만들기 (읽기 전용) ----------------
@@ -112,6 +116,13 @@ def validate_output(inp, out):
         ok, why = valid_korean(src, out[key], max_len=n)
         if not ok:
             return False, f"{key}:{why}"
+    keys, need = KEY_NUMBERS.get(inp.get("kind"), ((), 0))
+    want = {k: inp.get(k) for k in keys if inp.get(k) is not None}
+    if want:                                                     # 입력에 핵심 숫자가 있으면(집계가 있는 날) 글에도 그 숫자가 있어야 한다
+        said = numbers(out["headline"] + " " + out["body"])
+        hit = sum(1 for v in want.values() if numbers(str(v)) & said)
+        if hit < min(need, len(want)):
+            return False, "body:key_numbers"
     return True, "ok"
 
 

@@ -116,6 +116,14 @@ def test_LLM_출력은_검증을_통과해야_hailo_행(dbs):
     english = '{"headline": "Kimchi day", "body": "380 students passed.", "tone": "calm"}'
     assert report.compose("recap", {"served_est": 380, "menu": []}, fake_llm(english), log=lambda *a: None)["reason"] == "llm_rejected:headline:hangul"
     assert report.compose("recap", {"menu": []}, fake_llm("not json"), log=lambda *a: None)["reason"] == "llm_rejected:schema"
+    # 11-02: 숫자를 하나도 안 쓰면 숫자 검사를 통과하던 허점 — 결산은 평균·최고 대기·식수 중 둘 이상을 써야 한다
+    menu_only = '{"headline": "오늘의 급식 메뉴 안내입니다!", "body": "오늘의 메뉴는 삼선자장면과 탕수육입니다. 맛있게 드세요.", "tone": "info"}'
+    inp = {"kind": "recap", "menu": ["삼선자장면", "탕수육"], "avg_wait": 0.6, "peak_wait": 6.0, "peak_wait_hm": "12:30", "served_est": 504}
+    assert report.compose("recap", inp, fake_llm(menu_only), log=lambda *a: None)["reason"] == "llm_rejected:body:key_numbers"
+    one_num = '{"headline": "삼선자장면 날", "body": "오늘 504명이 지났습니다.", "tone": "calm"}'
+    assert report.compose("recap", inp, fake_llm(one_num), log=lambda *a: None)["reason"] == "llm_rejected:body:key_numbers"
+    two_num = '{"headline": "삼선자장면 날, 최고 6.0분", "body": "오늘 504명이 지났고 평균 0.6분 기다렸습니다.", "tone": "calm"}'
+    assert report.compose("recap", inp, fake_llm(two_num), log=lambda *a: None)["reason"] == "ok"
 
 
 def test_busy_는_재시도_뒤_템플릿(dbs):
