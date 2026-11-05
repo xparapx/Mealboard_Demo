@@ -10,6 +10,8 @@ import re
 import urllib.parse
 import urllib.request
 
+from app import net
+
 from dotenv import load_dotenv
 from app.config import BASE, DATA, MEAL_JSON
 
@@ -98,7 +100,7 @@ def fetch(from_ymd, to_ymd, meal_code=MEAL_LUNCH):
         "SD_SCHUL_CODE": os.environ["NEIS_SCHOOL_CODE"],
         "MMEAL_SC_CODE": meal_code,
         "MLSV_FROM_YMD": from_ymd, "MLSV_TO_YMD": to_ymd})
-    with urllib.request.urlopen(URL + "?" + q, timeout=20) as r:
+    with net.urlopen(URL + "?" + q, timeout=20) as r:
         data = json.load(r)
     if "mealServiceDietInfo" not in data:                     # INFO-200(급식 없음) 등
         return [], data.get("RESULT", {}).get("CODE", "?")

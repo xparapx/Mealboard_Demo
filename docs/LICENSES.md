@@ -1,6 +1,6 @@
 # 제3자 구성요소 라이선스 목록 (공모전 N2 — 재배포 제한 구성요소 명시)
 
-> 2026-11-05 기준, `uv.lock` 의 고정 버전. 이 저장소 자체 코드는 MIT(`LICENSE`).
+> 2026-11-05 기준, `uv.lock` 의 고정 버전(같은 날 `uv lock --upgrade` 로 전부 최신 — 공공 GitLab 의 취약 의존성 검사 OSV·Trivy 통과용). 이 저장소 자체 코드는 MIT(`LICENSE`).
 > 「2026 공공 AI 대전환 챌린지」 안내서의 "오픈소스 라이선스 준수 책임은 참가팀, 재배포가 제한되는 구성요소는 구동안내서에 명시" 조항에 대한 답이다.
 
 ## 1. 한눈에 — 재배포 제한이 있는 것
@@ -25,24 +25,25 @@
 
 | 패키지 | 버전 | 라이선스 |
 |---|---|---|
-| fastapi | 0.141.1 | MIT |
-| starlette | 1.6.0 | BSD-3-Clause |
-| pydantic | 2.13.4 | MIT |
-| uvicorn[standard] | 0.52.4 | BSD-3-Clause |
+| fastapi | 0.162.0 | MIT |
+| starlette | 1.10.0 | BSD-3-Clause |
+| pydantic | 2.14.2 | MIT |
+| uvicorn[standard] | 0.54.0 | BSD-3-Clause |
 | h11 | 0.16.0 | MIT |
-| httptools | 0.8.0 | MIT |
-| websockets | 17.1 | BSD-3-Clause |
-| uvloop | 0.22.1 | MIT / Apache-2.0 |
-| watchfiles | 1.2.0 | MIT |
-| anyio | 4.14.2 | MIT |
+| httptools | 0.9.0 | MIT |
+| websockets | 17.4 | BSD-3-Clause |
+| uvloop | 0.23.0 | MIT / Apache-2.0 |
+| watchfiles | 1.3.0 | MIT |
+| anyio | 4.16.0 | MIT |
 | click | 8.5.0 | BSD-3-Clause |
-| idna | 3.19 | BSD-3-Clause |
+| idna | 3.20 | BSD-3-Clause |
 | typing-extensions | 4.16.0 | PSF-2.0 |
-| python-dotenv | 1.2.3 | BSD-3-Clause |
-| PyJWT[crypto] | 2.13.0 | MIT |
-| cryptography | 50.0.1 | Apache-2.0 / BSD-3-Clause |
+| python-dotenv | 1.2.4 | BSD-3-Clause |
+| PyJWT[crypto] | 2.15.1 | MIT |
+| cryptography | 50.0.2 | Apache-2.0 / BSD-3-Clause |
 | cffi · pycparser | 2.1.1 · 3.0 | MIT · BSD-3-Clause |
 | PyYAML | 6.0.3 | MIT |
+| defusedxml | 0.7.1 | PSF-2.0 |
 | pytest(개발) | 9.1.1 | MIT |
 | iniconfig · pluggy · packaging · pygments(개발) | 2.3.0 · 1.6.0 · 26.3 · 2.21.0 | MIT · MIT · Apache-2.0/BSD · BSD-2-Clause |
 
@@ -50,20 +51,20 @@
 
 | 패키지 | 버전 | 라이선스 |
 |---|---|---|
-| **ultralytics** | 8.4.147 | **AGPL-3.0** |
-| ultralytics-thop | 2.1.6 | AGPL-3.0 |
-| torch | 2.14.0 | BSD-3-Clause |
-| torchvision | 0.29.0 | BSD-3-Clause |
+| **ultralytics** | 8.4.202 | **AGPL-3.0** |
+| ultralytics-thop | 2.2.5 | AGPL-3.0 |
+| torch | 2.15.0 | BSD-3-Clause |
+| torchvision | 0.29.2 | BSD-3-Clause |
 | opencv-python | 5.0.0.93 | Apache-2.0 |
-| numpy | 2.4.6 / 2.5.3 | BSD-3-Clause |
-| pillow | 12.3.0 | MIT-CMU |
+| numpy | 2.5.4 | BSD-3-Clause |
+| pillow | 13.0.0 | MIT-CMU |
 | scipy | (torch 의존) | BSD-3-Clause |
 | matplotlib · contourpy · cycler · fonttools · kiwisolver · pyparsing · python-dateutil · six | 3.11.1 등 | PSF 계열 · BSD-3 · BSD-3 · MIT · BSD-3 · MIT · BSD/Apache · MIT |
 | pandas · polars | (ultralytics 의존) | BSD-3-Clause · MIT |
 | requests · urllib3 · certifi · charset-normalizer | 2.34.2 · 2.7.0 · 2026.7.22 · 3.5.1 | Apache-2.0 · MIT · MPL-2.0 · MIT |
 | psutil | 7.2.2 | BSD-3-Clause |
 | tqdm | (ultralytics 의존) | MIT / MPL-2.0 |
-| filelock · fsspec · sympy · mpmath · networkx · jinja2 · markupsafe | 3.32.6 · 2026.7.0 · 1.14.0 · 1.3.0 · 3.6.1 · 3.1.6 · 3.0.3 | Unlicense · BSD-3 · BSD-3 · BSD-3 · BSD-3 · BSD-3 · BSD-3 |
+| filelock · fsspec · sympy · mpmath · networkx · jinja2 · markupsafe | 4.2.9 · 2026.9.0 · 1.14.0 · 1.3.0 · 3.7 · 3.1.6 · 3.0.4 | Unlicense · BSD-3 · BSD-3 · BSD-3 · BSD-3 · BSD-3 · BSD-3 |
 | hailort(휠, Pi 전용) | 5.3.0 | Hailo 라이선스(HailoRT 라이브러리 소스는 MIT, 펌웨어·드라이버는 Hailo 약관) |
 | picamera2(시스템 apt, Pi 전용) | Debian 13 | BSD-2-Clause |
 

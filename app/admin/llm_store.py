@@ -6,6 +6,8 @@ import os
 import urllib.error
 import urllib.request
 
+from .. import net
+
 from ..config import DATA
 from .. import llm_overlay
 
@@ -112,7 +114,7 @@ def hef_candidates(models_dir=None):
 
 
 def _get_json(url, timeout):
-    with urllib.request.urlopen(urllib.request.Request(url), timeout=timeout) as r:
+    with net.urlopen(urllib.request.Request(url), timeout=timeout) as r:
         return json.loads(r.read().decode("utf-8"))
 
 

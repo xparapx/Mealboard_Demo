@@ -15,6 +15,8 @@ import sys
 import time
 import urllib.error
 import urllib.request
+
+from app import net
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -43,7 +45,7 @@ def synth(key, cfg, text, out):
                                  headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
     for attempt in range(3):
         try:
-            with urllib.request.urlopen(req, timeout=120) as r:
+            with net.urlopen(req, timeout=120) as r:
                 data = r.read()
             out.write_bytes(data)
             return len(data)

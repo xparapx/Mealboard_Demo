@@ -8,6 +8,8 @@ import os
 import urllib.error
 import urllib.request
 
+from app import net
+
 from jobs.llm import LLMUnavailable, LocalLLM, valid_korean
 
 DEEPL = {True: "https://api-free.deepl.com/v2/translate", False: "https://api.deepl.com/v2/translate"}
@@ -31,7 +33,7 @@ def deepl_texts(texts, key=None, timeout=20, log=print):
     req = urllib.request.Request(DEEPL[key.endswith(":fx")], data=body, method="POST",
                                  headers={"Authorization": f"DeepL-Auth-Key {key}", "Content-Type": "application/json", "User-Agent": "Mealboard/0.1"})
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
+        with net.urlopen(req, timeout=timeout) as r:
             out = json.load(r)["translations"]
         if len(out) != len(texts):                        # 개수가 어긋나면 짝이 밀린다 — 통째로 포기
             raise ValueError(f"{len(out)}개 회신, {len(texts)}개 요청")

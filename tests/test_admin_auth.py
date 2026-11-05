@@ -4,7 +4,7 @@ import pytest
 from app.admin.auth import identify, parse_users
 
 USERS = parse_users("Teacher@Example.com, dev@example.com")
-KEY = "0123456789abcdef"
+KEY = "testkey-testkey"  # 가짜 값. 엔트로피 낮게 — 공공 GitLab 비밀값 검사(11-05)
 
 
 def test_허용목록은_소문자로_비교():

@@ -15,7 +15,7 @@ import os
 import re
 import time
 
-from app import llm_overlay
+from app import llm_overlay, net
 from app.config import LLM_API_KEY, LLM_BACKEND, LLM_BASE_URL, LLM_HEF, LLM_MODEL
 
 HANGUL = re.compile(r"[가-힣]")
@@ -135,7 +135,7 @@ def _openai_backend(base_url, model, key="", session_timeout=None):
         req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers=headers)
         # Ollama 는 첫 호출에 모델을 디스크에서 올린다(Pi SD 카드에서 4.6 GB ≈ 1~2분, 11-02 실측 60초 초과) — 서버 쪽은 한도를 넉넉히
         try:
-            with urllib.request.urlopen(req, timeout=max(timeout_s, 180) if ollama else timeout_s) as r:
+            with net.urlopen(req, timeout=max(timeout_s, 180) if ollama else timeout_s) as r:
                 doc = json.loads(r.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             msg = e.read().decode("utf-8", "replace")[:200]
@@ -158,7 +158,7 @@ def _is_ollama(root, headers, timeout=2.0):
     import urllib.error
     import urllib.request
     try:
-        with urllib.request.urlopen(urllib.request.Request(root + "/api/version", headers=headers), timeout=timeout) as r:
+        with net.urlopen(urllib.request.Request(root + "/api/version", headers=headers), timeout=timeout) as r:
             return "version" in json.loads(r.read().decode("utf-8", "replace"))      # 200 이 아니면 urlopen 이 HTTPError 를 던진다
     except (urllib.error.URLError, OSError, ValueError, TimeoutError):
         return False

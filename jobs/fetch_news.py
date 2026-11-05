@@ -14,7 +14,9 @@ import json
 import os
 import re
 import urllib.request
-import xml.etree.ElementTree as ET
+
+from app import net
+import defusedxml.ElementTree as ET  # 외부 RSS — XXE·엔티티 폭탄 방어(11-05)
 from email.utils import parsedate_to_datetime
 
 from app.config import DATA
@@ -206,7 +208,7 @@ def digest_all(items, bodies, llm_factory=None, log=print, translate_fn=None):
 # ---------------- 수집 ----------------
 def fetch(url):
     req = urllib.request.Request(url, headers={"User-Agent": "Mealboard/0.1"})
-    with urllib.request.urlopen(req, timeout=20) as r:
+    with net.urlopen(req, timeout=20) as r:
         return ET.fromstring(r.read())
 
 

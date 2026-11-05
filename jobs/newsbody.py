@@ -14,6 +14,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from app import net
+
 MAX_CHARS = 6000
 TIMEOUT = 30
 UA = "Mealboard/0.1 (+school cafeteria dashboard; non-commercial summary)"
@@ -58,7 +60,7 @@ def join_capped(paras, cap=MAX_CHARS):
 
 def _get(url, timeout=TIMEOUT):
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "text/html,application/json;q=0.9,*/*;q=0.5"})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with net.urlopen(req, timeout=timeout) as r:
         return r.read().decode(r.headers.get_content_charset() or "utf-8", errors="replace")
 
 

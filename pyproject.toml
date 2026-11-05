@@ -8,6 +8,7 @@ dependencies = [
     "uvicorn[standard]",
     "python-dotenv",
     "pyjwt[crypto]>=2.13.0",
+    "defusedxml>=0.7.1",
 ]
 
 # vision(카메라 카운팅 노드) 의존성 — 선언하지 않으면 `uv sync` 가 venv 에서 지운다(09-11 실증: 관리 앱 pyjwt 추가 sync 뒤 ultralytics 가 사라져 석식 창에 vision 이 죽었다).
