@@ -517,6 +517,11 @@ def serve(data, anchor, port, admin_port, open_browser, loop_min=0):
 
 
 def main(argv=None):
+    # 한국어 Windows 에서 출력이 파이프·IDE 로 가면 stdout 이 cp949 라 안내문(—·화살표)이 깨지며 죽는다(11-05 심사위원 경로 점검) — UTF-8 로 고정
+    for s in (sys.stdout, sys.stderr):
+        if hasattr(s, "reconfigure"):
+            try: s.reconfigure(encoding="utf-8", errors="replace")
+            except Exception: pass
     ap = argparse.ArgumentParser(description="심사위원 구동 경로 — 모의 데이터 + 가상 시계로 전체 화면을 한 줄로")
     ap.add_argument("--port", type=int, default=8800)
     ap.add_argument("--data", default="data/demo", help="데모 데이터 폴더(운영 data/ 와 분리)")

@@ -12,6 +12,19 @@ NEIS 급식 API 의 메뉴·알레르기·영양 지표(에너지 충족률·적
 
 Claude Code 작업 규칙: [CLAUDE.md](CLAUDE.md)
 
+## 🏁 2026 공공 AI 대전환 챌린지(세션 1) 제출 안내 — 심사위원께
+
+| 항목 | 내용 |
+|---|---|
+| 접속 주소 | 실제 운영 **https://kjhs-meal.com** (공주고 급식실 Pi, 급식 시간 11:20~13:40·석식에만 실측) · 상시 시연 **https://demo.kjhs-meal.com** (모의 데이터·가상 시계 12:44 피크, 설치 없이 전 기능) · 통행로 송출 **https://kiosk.kjhs-meal.com** |
+| 실행·작동 방법 | Pi·카메라 없이 **`uv sync && uv run python -m jobs.demo`** 한 줄 → `http://127.0.0.1:8800/` (아래 '셋업 요약'). 화면의 **'앱 안내' 탭 → 자동 시연**이 음성과 함께 2분간 설명한다. 구동안내서(양식 2)와 같은 절차 |
+| 주요 기능 | ① 카메라 계수 → Little's law + FIFO 누적곡선으로 **예상 대기시간**(실측 보정 K·수동 실측 하한) ② 평면도 밀집도·익명 위치 마커(영상 미저장, 숫자만) ③ NEIS 식단·알레르기·영양 지표 3종·잔반 탄소 ④ 요일×시각 히트맵·황금 시간대·병목·통계(밴드·요일·메뉴) ⑤ 로컬 LLM 리포트·기후 이슈 요약 ⑥ 관리 앱(4점 보정·ROI·λ선, Access 보호)·통행로 키오스크·PWA |
+| 사용 모델 · 교체 가능 | 검출 YOLO11n(CPU 또는 Hailo-10H HEF) · 해석 LLM **Gemma 4 E2B**(Ollama, Pi CPU) ⇄ Qwen3-1.7B(Hailo HEF) ⇄ OpenAI 호환 서버 ⇄ 규칙 템플릿 — `.env LLM_BACKEND` 또는 관리 화면 'AI 모델 선택' 으로 교체, 실측 비교는 [docs/LLM-BACKENDS.md](docs/LLM-BACKENDS.md) |
+| 라이선스 | 자체 코드 **MIT**([LICENSE](LICENSE)). 제3자 구성요소와 **재배포 제한**(ultralytics·YOLO11 가중치 AGPL-3.0, Hailo·Gemma 약관)은 [docs/LICENSES.md](docs/LICENSES.md) — 심사위원 구동 경로와 공개 웹 앱은 AGPL 구성요소를 쓰지 않는다 |
+| 데이터·개인정보 | 프레임은 저장·전송하지 않고 10초 표본 숫자만 SQLite 에 남긴다. 모의 데이터 생성기 `jobs/demo.py`(결정론적) 동봉, 수동 실측 기록 `data/ground_truth.csv` |
+| 출처·크레딧 | 개발 이력은 git 로그·[docs/WORKLOG.md](docs/WORKLOG.md)(2026-08~). 참고한 공개 연구·시스템(Newell 누적곡선, Kim & Whitt, Canon 큐 특허, OpenDataCam 등)은 [docs/PROPOSAL-2026-11-challenge.md](docs/PROPOSAL-2026-11-challenge.md) §7 |
+| 제출 저장소 | 공공 GitLab `https://gitlab.aigov.go.kr/kongju-hs/mealboard`(제출본, 태그 `v2026.11-submit` 뒤 동결) · 개발 저장소 GitHub `https://github.com/xparapx/Mealboard_Demo`(계속 갱신) |
+
 ## 구조
 
 ```
