@@ -16,3 +16,5 @@ static/icons/qr.png
 __pycache__/
 *.db
 *.db-*
+# 공모전 제출 서류(개인정보 포함 가능) — 커밋하지 않는다
+submission/
