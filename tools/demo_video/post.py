@@ -17,8 +17,13 @@ SEG.mkdir(exist_ok=True)
 RATE = json.load(open(VOICE / "narration.json", encoding="utf-8")).get("playback_rate", 1.2)
 XF = 0.5                                         # 전환 길이(초)
 KEEP = ["intro0", "intro1", "intro2", "s0", "s2", "s3", "s6", "s7", "s9", "s13"]        # 시연 중 영상에 넣는 단계(5분 예산)
-SCENE_LEN = {"term": 14.0, "app": 17.0, "admin": 10.0, "live": 24.0, "kiosk": 17.0}
-CARD_LEN = {"title": 4.5, "three": 6.0, "llm": 9.0, "ending": 7.0}
+SCENE_LEN = {"term": 13.0, "app": 14.0, "admin": 14.0, "live": 20.0, "kiosk": 14.0}
+CARD_LEN = {"title": 4.5, "three": 6.0, "llm": 9.0, "ending": 7.0, "stamp": 2.0}
+# 장면 뒤 전환(없으면 컷). 인앱 구간은 인앱의 플립·카드 팬이 곧 전환이라 컷으로 두고, 챕터 경계만 서로 다른 전환 + 2초 스탬프
+TRANS = {"title": ("fade", 1.0), "intro2": ("smoothleft", 0.7), "three": ("zoomin", 0.8), "s13": ("circleclose", 0.7),
+         "stamp2": ("circleopen", 0.7), "term": ("slideleft", 0.6), "app": ("fadeblack", 0.6), "stamp3": ("radial", 0.8),
+         "admin": ("smoothup", 0.6), "llm": ("fadeblack", 0.6), "stamp4": ("zoomin", 0.8), "live": ("slideleft", 0.6),
+         "kiosk": ("fadeblack", 0.8), "outro": ("dissolve", 0.8)}
 
 
 def run(args, quiet=True):
@@ -118,9 +123,14 @@ for sid in KEEP:
     add(sid, out); print(f"  {sid}: {dur:.1f}s (음성 +{delay:.2f}s)")
 
 for sc in ("term", "app", "admin", "live", "kiosk"):
+    if sc == "term": card_video(CARDS / "stamp2.png", CARD_LEN["stamp"], SEG / "c_stamp2.mp4"); add("stamp2", SEG / "c_stamp2.mp4")
+    if sc == "admin": card_video(CARDS / "stamp3.png", CARD_LEN["stamp"], SEG / "c_stamp3.mp4"); add("stamp3", SEG / "c_stamp3.mp4")
+    if sc == "live": card_video(CARDS / "stamp4.png", CARD_LEN["stamp"], SEG / "c_stamp4.mp4"); add("stamp4", SEG / "c_stamp4.mp4")
     src = O / f"{sc}.webm"
     if not src.exists(): print("녹화 없음:", sc); continue
     start = {"term": 0.6, "kiosk": 5.2}.get(sc, 0.3)        # 키오스크는 첫 슬라이드가 약 5초 뒤에 뜬다(공개 데모 응답 대기)
+    if sc == "admin" and (O / "admin.json").exists():       # 관리 장면은 녹화 스크립트가 적은 '관리 화면이 뜬 시각' 부터
+        start = json.load(open(O / "admin.json"))["start"]
     avail = duration(src) - start - 0.2
     x = extra(sc); want = SCENE_LEN[sc]
     xl = duration(x) / RATE if x else 0.0                  # 인앱과 같은 배속으로 재생한 길이
@@ -135,17 +145,34 @@ if "outro" in spans:
     seg_video(O / "tour.webm", a, b - a, SEG / "t_outro.mp4", VOICE / "outro.mp3", delay); add("outro", SEG / "t_outro.mp4")
 card_video(CARDS / "ending.png", CARD_LEN["ending"], SEG / "c_ending.mp4", extra("ending")); add("ending", SEG / "c_ending.mp4")
 
-# ---------- 2. xfade(slideleft) + acrossfade 로 한 편
-durs = [duration(p) for _, p in order]
-total = sum(durs) - XF * (len(order) - 1)
-print("장면", len(order), "합계", round(sum(durs), 1), "s → 전환 뒤", round(total, 1), "s =", f"{int(total//60)}:{total%60:04.1f}")
-inputs = []; [inputs.extend(["-i", str(p)]) for _, p in order]
+# ---------- 2-A. 컷으로 이어지는 장면은 먼저 하나로 붙인다(concat) → 그룹 사이만 전환
+groups, cur, trans = [], [], []
+for name, path in order:
+    cur.append((name, path))
+    if name in TRANS:
+        groups.append(cur); trans.append(TRANS[name]); cur = []
+if cur: groups.append(cur)
+gpaths = []
+for gi, g in enumerate(groups):
+    if len(g) == 1: gpaths.append(g[0][1]); continue
+    lst = SEG / f"g{gi}.txt"
+    lst.write_text("".join(f"file '{Path(p).resolve().as_posix()}'\n" for _, p in g), encoding="utf-8")
+    out = SEG / f"g{gi}.mp4"
+    run(["-f", "concat", "-safe", "0", "-i", str(lst), *ENC, str(out)])
+    gpaths.append(out); print(f"  그룹 {gi}: {' + '.join(n for n, _ in g)} → {duration(out):.1f}s")
+
+# ---------- 2-B. 그룹 사이 xfade(종류·길이는 TRANS) + acrossfade
+durs = [duration(p) for p in gpaths]
+total = sum(durs) - sum(d for _, d in trans)
+print("장면", len(order), "그룹", len(gpaths), "합계", round(sum(durs), 1), "s → 전환 뒤", round(total, 1), "s =", f"{int(total//60)}:{total%60:04.1f}")
+inputs = []; [inputs.extend(["-i", str(p)]) for p in gpaths]
 fc = []; vprev, aprev = "[0:v]", "[0:a]"; offset = 0.0
-for k in range(1, len(order)):
-    offset += durs[k - 1] - XF
+for k in range(1, len(gpaths)):
+    kind, xf = trans[k - 1]
+    offset += durs[k - 1] - xf
     vo, ao = f"[v{k}]", f"[a{k}]"
-    fc.append(f"{vprev}[{k}:v]xfade=transition=slideleft:duration={XF}:offset={offset:.3f}{vo}")
-    fc.append(f"{aprev}[{k}:a]acrossfade=d={XF}:c1=tri:c2=tri{ao}")
+    fc.append(f"{vprev}[{k}:v]xfade=transition={kind}:duration={xf}:offset={offset:.3f}{vo}")
+    fc.append(f"{aprev}[{k}:a]acrossfade=d={xf}:c1=tri:c2=tri{ao}")
     vprev, aprev = vo, ao
 run([*inputs, "-filter_complex", ";".join(fc), "-map", vprev, "-map", aprev, *ENC, "-t", f"{total:.3f}", str(OUTV)], quiet=False)
 print("완료:", OUTV, f"{OUTV.stat().st_size/1e6:.1f} MB", f"{duration(OUTV):.1f}s")

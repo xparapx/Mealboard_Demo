@@ -106,13 +106,32 @@ def scene_app(b):
 def scene_admin(b):
     url = os.environ.get("ADMIN_URL")
     if not url: print("ADMIN_URL 없음 — admin 장면 생략"); return
-    ctx, pg = new_ctx(b, "admin")
+    ctx, pg = new_ctx(b, "admin"); t_ctx = time.time()
     pg.goto(url, wait_until="load"); time.sleep(3.5)          # whoami → admin.js 동적 import → '관리' 탭 등록
+    # 지난 녹화에서 '적용' 한 선택이 남아 있으면 처음부터 openai 로 보인다 → .env 상태로 되돌리고 다시 연다(데모 데이터 폴더의 llm.local.json 만; 게이트가 JSON Content-Type 을 요구)
+    print("reset:", pg.evaluate("async () => (await fetch('/api/admin/llm', {method: 'DELETE', cache: 'no-store', headers: {'Content-Type': 'application/json'}})).status"))
+    pg.reload(wait_until="load"); time.sleep(3.5)
     pg.evaluate("MB.go('admin')"); time.sleep(1.8)
     found = pg.evaluate("() => { const c = document.querySelector('#llmcard'); if (!c) return false; c.scrollIntoView({block:'center'}); return true; }")
     print("llmcard:", found); time.sleep(0.6)
-    caption(pg, "관리 화면 'AI 모델 선택' — 모델을 바꾸고 점검 → 되돌리기", "LLM_BACKEND: hailo(HEF) · openai(Ollama·공통기반 게이트웨이·OpenAI 호환) · none(규칙 템플릿) — .env 한 줄과 같은 효과")
-    time.sleep(9.0)
+    (OUT / "admin.json").write_text(json.dumps({"start": round(time.time() - t_ctx - 0.4, 2)}), encoding="utf-8")   # 조립은 여기부터(앞의 로딩·되돌리기 장면 제외)
+    # 카드를 눈에 띄게(시연의 스포트라이트와 같은 틸 테두리) + 드롭다운 실제 조작: 엔진 → OpenAI 호환 서버(Ollama), 모델 → gemma4:e2b, 적용
+    # 카드가 1080p 에서 작아 글자가 안 읽힌다 → 시연의 줌처럼 1.5배 확대(오른쪽 열이라 왼쪽으로 당김) + 틸 테두리
+    pg.evaluate("""() => { const c = document.querySelector('#llmcard'); c.style.position = 'relative'; c.style.zIndex = '20'; c.style.transformOrigin = 'center';
+      c.style.transition = 'transform .5s cubic-bezier(.2,.8,.2,1)'; c.style.outline = '4px solid #1F8A85'; c.style.outlineOffset = '6px'; c.style.boxShadow = '0 24px 60px rgba(0,0,0,.25)';
+      requestAnimationFrame(() => { c.style.transform = 'translateX(-140px) scale(1.5)'; }); }""")
+    caption(pg, "관리 화면 'AI 모델(LLM) 선택' — 드롭다운으로 엔진 · 모델을 고릅니다", "엔진: Hailo 칩(.hef) · OpenAI 호환 서버(Ollama·공통기반 게이트웨이) · 없음(규칙 문장)")
+    time.sleep(2.2)
+    pg.select_option("#llmbackend", "openai"); time.sleep(1.6)
+    try:
+        pg.select_option("#llmmodel", "gemma4:e2b")
+    except Exception as e:
+        print("모델 선택 실패:", e)
+    caption(pg, "엔진 ▾ OpenAI 호환 서버 → 모델 ▾ gemma4:e2b → 적용", "다음 뉴스·리포트 작업부터 이 모델이 씁니다 · 키는 .env 에만 · '.env 로 되돌리기' 한 번이면 원복")
+    time.sleep(1.8)
+    pg.click("#llmapply"); time.sleep(3.2)
+    pg.evaluate("document.querySelector('#llmresult')?.scrollIntoView({block:'center'})")
+    time.sleep(4.2)
     finish(ctx, pg, "admin")
 
 

@@ -99,4 +99,18 @@ def ending(d, im):
     text(d, (1690, 880), "공주고등학교 · 2026 공공 AI 대전환 챌린지 세션 1", 26, fill=MUTE, anchor="ra")
 
 
+def stamp(n, head, sub):
+    def f(d, im):
+        d.rectangle((0, 0, 1920, 1080), fill="#26262A")
+        d.rounded_rectangle((120, 440, 136, 640), radius=8, fill=TEAL)
+        d.text((190, 420), n, font=font(96, True), fill=TEAL)
+        d.text((400, 440), head, font=font(84, True), fill="#FFFCF6")
+        d.text((404, 560), sub, font=font(40), fill="#CFE7E4")
+        d.text((1800, 980), "Mealboard · 밀보드", font=font(28), fill="#8A8A90", anchor="ra")
+    return f
+
+
 card("title", title); card("three", three); card("llm", llm); card("ending", ending)
+card("stamp2", stamp("02", "심사위원 구동", "Pi · 카메라 없이, 노트북 한 대에서 한 줄"), bg="#26262A")
+card("stamp3", stamp("03", "LLM 교체", "모델 비종속 — 드롭다운 한 번, .env 한 줄"), bg="#26262A")
+card("stamp4", stamp("04", "실제 운영 화면", "2026년 9월 11일부터 공주고 급식실에서"), bg="#26262A")
