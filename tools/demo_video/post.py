@@ -73,9 +73,9 @@ def seg_video(src, start, dur, out, audio=None, adelay=0.0, tempo=None):
 
 
 def card_video(png, dur, out, audio=None, adelay=0.6):
-    if audio:
-        dur = max(dur, duration(audio) + adelay + 0.8)
-        af = f"[1:a]adelay={int(adelay*1000)}|{int(adelay*1000)},apad,atrim=0:{dur:.3f},asetpts=PTS-STARTPTS[a]"
+    if audio:                                              # 추가 장면 내레이션도 인앱과 같은 배속(RATE)으로
+        dur = max(dur, duration(audio) / RATE + adelay + 0.8)
+        af = f"[1:a]atempo={RATE},adelay={int(adelay*1000)}|{int(adelay*1000)},apad,atrim=0:{dur:.3f},asetpts=PTS-STARTPTS[a]"
         run(["-loop", "1", "-framerate", "30", "-t", f"{dur:.3f}", "-i", str(png), "-i", str(audio), "-filter_complex", f"[0:v]{VF}[v];{af}",
              "-map", "[v]", "-map", "[a]", "-t", f"{dur:.3f}", *ENC, str(out)])
         return
@@ -123,10 +123,11 @@ for sc in ("term", "app", "admin", "live", "kiosk"):
     start = {"term": 0.6, "kiosk": 5.2}.get(sc, 0.3)        # 키오스크는 첫 슬라이드가 약 5초 뒤에 뜬다(공개 데모 응답 대기)
     avail = duration(src) - start - 0.2
     x = extra(sc); want = SCENE_LEN[sc]
-    if x: want = max(want, duration(x) + 1.4)             # 내레이션이 길면 장면을 그만큼(녹화 범위 안에서) 늘린다
+    xl = duration(x) / RATE if x else 0.0                  # 인앱과 같은 배속으로 재생한 길이
+    if x: want = max(want, xl + 1.4)                       # 내레이션이 길면 장면을 그만큼(녹화 범위 안에서) 늘린다
     d = min(want, avail)
-    if x and duration(x) + 0.6 > d: print(f"  주의: {sc} 내레이션 {duration(x):.1f}s > 장면 {d:.1f}s")
-    seg_video(src, start, d, SEG / f"s_{sc}.mp4", x, 0.5 if x else 0.0, 1.0); add(sc, SEG / f"s_{sc}.mp4")
+    if x and xl + 0.6 > d: print(f"  주의: {sc} 내레이션 {xl:.1f}s > 장면 {d:.1f}s")
+    seg_video(src, start, d, SEG / f"s_{sc}.mp4", x, 0.5 if x else 0.0); add(sc, SEG / f"s_{sc}.mp4")
     if sc == "admin":
         card_video(CARDS / "llm.png", CARD_LEN["llm"], SEG / "c_llm.mp4", extra("llm")); add("llm", SEG / "c_llm.mp4")
 if "outro" in spans:
