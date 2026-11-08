@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>심사위원 구동 — 한 줄</title>
+<style>
+  html,body{margin:0;height:100%;background:#F5F2E9;font-family:'Malgun Gothic','맑은 고딕',sans-serif}
+  .wrap{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px}
+  h1{margin:0;font-size:44px;color:#26262A;letter-spacing:-.01em}
+  h1 small{display:block;font-size:26px;font-weight:400;color:#6B6B70;margin-top:10px}
+  .term{width:1500px;height:620px;border-radius:22px;background:#1E1E22;box-shadow:0 30px 80px rgba(0,0,0,.25);padding:0;overflow:hidden;position:relative}
+  .bar{height:48px;background:#2A2A30;display:flex;align-items:center;padding:0 20px;gap:10px;color:#A8A8B0;font-size:20px}
+  .bar i{width:14px;height:14px;border-radius:50%;display:inline-block}
+  pre{margin:0;padding:26px 34px;font:28px/1.5 Consolas,'D2Coding',monospace;color:#E6E6EA;white-space:pre-wrap}
+  .p{color:#8ED3CC}.c{color:#FFFFFF}.o{color:#C8C8CF}.k{color:#F2B544}.cur{display:inline-block;width:14px;height:30px;background:#E6E6EA;vertical-align:-4px;animation:b 1s steps(1) infinite}
+  @keyframes b{50%{opacity:0}}
+  .cap{font-size:28px;color:#26262A;background:#FFFCF6;border-radius:14px;padding:14px 28px;box-shadow:0 8px 30px rgba(0,0,0,.08)}
+</style></head><body>
+<div class="wrap">
+  <h1>심사위원 구동 — Pi · 카메라 없이 한 줄<small>Windows / macOS / Linux · Python 3.11+ 와 uv 만 있으면 됩니다</small></h1>
+  <div class="term"><div class="bar"><i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i>&nbsp; PowerShell — mealboard</div>
+  <pre id="t"></pre></div>
+  <div class="cap" id="cap">공공 GitLab 에서 받은 폴더에서</div>
+</div>
+<script>
+const lines = [
+  ["p", "PS C:\\mealboard> ", 0],
+  ["c", "uv sync && uv run python -m jobs.demo", 55, true],
+  ["o", "Resolved 42 packages · Installed 24 packages in 2.1s", 300],
+  ["o", "모의 데이터 생성 중 — 기준 2026-10-14 12:44, 8주치", 350],
+  ["o", "  queue.db  35일 · 표본 16,504행", 220],
+  ["o", "  insights.db  35일 집계 · 메뉴 80개", 220],
+  ["o", "  reports.db  예보 「수요일 등심돈가스·친환경쌀밥, 평소 12:50 전후가 가장 붐빕니다」 · 결산 「소불고기·친환경쌀밥, 최대 대기 9.3분 (12:30)」", 260],
+  ["o", "  생성 1.9초 → data\\demo", 200],
+  ["k", "공개 앱  http://127.0.0.1:8800/   (브라우저가 자동으로 열립니다)", 500],
+  ["o", "INFO:     Uvicorn running on http://127.0.0.1:8800 (Press CTRL+C to quit)", 300],
+];
+const t = document.getElementById("t"), cap = document.getElementById("cap");
+let html = "";
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+async function run(){
+  for (const [cls, s, wait, type] of lines) {
+    await new Promise(r => setTimeout(r, wait));
+    if (type) { for (const ch of s) { html += `<span class="${cls}">${esc(ch)}</span>`; t.innerHTML = html + '<span class="cur"></span>'; await new Promise(r => setTimeout(r, 42)); }
+                await new Promise(r => setTimeout(r, 500)); html += "\n"; cap.textContent = "의존성 설치(최초 1~2분) → 모의 데이터 생성 → 서버 → 브라우저"; }
+    else { html += `<span class="${cls}">${esc(s)}</span>` + (cls === "p" ? "" : "\n"); }
+    t.innerHTML = html + '<span class="cur"></span>';
+  }
+  cap.textContent = "같은 절차가 구동안내서 2절 · README 에 그대로 적혀 있습니다";
+}
+setTimeout(run, 900);
+</script>
+</body></html>
