@@ -8,7 +8,7 @@
 > 지난 세션의 상세 경위·작업 이력은 **docs/WORKLOG.md** (09-12 개정: README 는 소개 전용, 여기는 규칙·현재 상태만).
 
 
-- **서비스 이름 '헤아림'(Hearim, 11-09 사용자 결정)** — 사람에게 보이는 자리(README 제목·앱 `<title>`·manifest·영상 카드·제출 서류·GitLab 제목)만 한글 이름, 한 줄 뜻 "수를 헤아려, 기다림을 헤아립니다"(헤아리다 = 수를 세다 + 마음을 살피다). 코드·저장소·유닛·포트·도메인(`mealboard`·`kjhs-meal.com`)은 코드명 그대로 — 바꾸지 않는다. 제출 서류는 사용자가 한글에서 다시 저장한 hwpx 를 입력으로 `revise_forms.py`(scratch) 가 본문 셀만 교체(글자 1pt 확대·핵심만, 구동안내서 3쪽·신청서 2쪽). **hwpx 를 코드로 만들 때 `<hp:linesegarray>` 는 넣지 않는다** — 한 줄짜리 캐시를 넣으면 COM 으로 연 한글이 재배치 없이 찍어 여러 줄 문단이 겹친다(11-09).
+- **서비스 이름 '헤아림'(Hearim, 11-09 사용자 결정)** — 사람에게 보이는 자리(README 제목·앱 `<title>`·manifest·영상 카드·제출 서류·GitLab 제목)만 한글 이름, 공식 과제명 **"헤아림(Hearim) — 급식실 대기시간 예측·급식 정보 안내 서비스"**(11-09 A안, 서류·README·영상 공통), 한 줄 뜻 "수를 헤아려, 기다림을 헤아립니다"(헤아리다 = 수를 세다 + 마음을 살피다). 코드·저장소·유닛·포트·도메인(`mealboard`·`kjhs-meal.com`)은 코드명 그대로 — 바꾸지 않는다. 제출 서류는 사용자가 한글에서 다시 저장한 hwpx 를 입력으로 `revise_forms.py`(scratch) 가 본문 셀만 교체(글자 1pt 확대·핵심만, 구동안내서 3쪽·신청서 2쪽). **hwpx 를 코드로 만들 때 `<hp:linesegarray>` 는 넣지 않는다** — 한 줄짜리 캐시를 넣으면 COM 으로 연 한글이 재배치 없이 찍어 여러 줄 문단이 겹친다(11-09).
 - **홈 Pi 5(64bit, Debian 13 Trixie, 시스템 Python 3.13) = 스테이징.** 학교 Pi도 같은 OS·Python이어야 uv.lock이 그대로 맞는다. 카메라 없음 → `mealboard-vision` 미설치, `mealboard-mock`이 대역.
   로드맵 ④는 개발 PC 웹캠·동영상 파일로 진행. ⑤ 중 uv 셋업·systemd·외부 공개는 홈 Pi 완료, calibrate만 학교 Pi 이전 시.
 - **외부 공개 = Cloudflare Tunnel, 공개 주소 `https://kjhs-meal.com`(09-04 저녁)**. 도메인 `kjhs-meal.com` 은 사용자가 Cloudflare Registrar 에서 구매(NS carioca·roman). 학교 망이 Tailscale 도쿄·싱가포르 릴레이와 Funnel 입구를 막아

@@ -31,7 +31,7 @@ def title(d, im):
     d.rounded_rectangle((160, 150, 1760, 930), radius=36, fill=CARD)
     d.ellipse((230, 230, 330, 330), fill=TEAL); d.ellipse((252, 252, 308, 308), fill="#FFFCF6"); d.ellipse((268, 268, 292, 292), fill="#F2B544")
     text(d, (370, 236), "헤아림 · Hearim", 56, bold=True)
-    text(d, (370, 312), "학교 급식실 대기시간과 오늘 급식을 미리 알려 주는 앱", 40, fill=MUTE)
+    text(d, (370, 312), "급식실 대기시간 예측 · 급식 정보 안내 서비스", 40, fill=MUTE)
     text(d, (230, 440), "급식실 카메라가 영상 없이 줄 선 인원만 세어", 46)
     text(d, (230, 506), "예상 대기시간 · 밀집도 · 영양 · 운영 리포트를 한 화면에", 46)
     pill(d, (230, 620), "2026 공공 AI 대전환 챌린지 · 세션 1 자유주제"); pill(d, (870, 620), "공주고등학교", bg=CHAR)
