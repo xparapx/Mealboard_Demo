@@ -238,16 +238,17 @@ function place(side = curSide) {
   spot.classList.remove("veil");
   spot.style.cssText = `left:${r0.left - PAD}px;top:${r0.top - PAD}px;width:${Math.max(40, r0.width + PAD * 2)}px;height:${Math.max(40, r0.height + PAD * 2)}px`;
   const r = cardOf(el).getBoundingClientRect();        // 말풍선은 줌인한 카드 상자 밖에(히어로처럼 카드 일부가 대상이어도 카드를 가리지 않게), 링은 대상에
+  // 11-09: 세로(좌우 배치)·가로(상하 배치) 정렬은 카드가 아니라 대상(r0)에 맞춘다 — 카드 아래쪽 절(#trend)을 설명할 때 말풍선이 카드 위쪽에 남아 있던 문제
   const b = $("#tourbubble"), bw = b.offsetWidth, bh = b.offsetHeight, vw = innerWidth, vh = innerHeight, gap = 22;
   if (!desktop()) { b.style.left = ""; b.style.top = ""; b.removeAttribute("data-pos"); return; }
   // 남는 쪽 고르기: 오른쪽 → 왼쪽 → 아래 → 위 → (다 안 맞으면) 오른쪽 아래 모서리. 카드는 화면 중앙에 그대로 둔다
   let pos, top, leftPx;
   const fitsR = r.right + PAD + gap + bw <= vw - 16, fitsL = r.left - PAD - gap - bw >= 16;
   const fitsB = r.bottom + PAD + gap + bh <= vh - 16, fitsT = r.top - PAD - gap - bh >= 16;
-  if (fitsR) { pos = "right"; leftPx = r.right + PAD + gap; top = Math.max(16, Math.min(vh - bh - 16, r.top)); }
-  else if (fitsL) { pos = "left"; leftPx = r.left - PAD - gap - bw; top = Math.max(16, Math.min(vh - bh - 16, r.top)); }
-  else if (fitsB) { pos = "below"; top = r.bottom + PAD + gap; leftPx = Math.min(vw - bw - 16, Math.max(16, r.left)); }
-  else if (fitsT) { pos = "above"; top = r.top - PAD - gap - bh; leftPx = Math.min(vw - bw - 16, Math.max(16, r.left)); }
+  if (fitsR) { pos = "right"; leftPx = r.right + PAD + gap; top = Math.max(16, Math.min(vh - bh - 16, r0.top - PAD)); }
+  else if (fitsL) { pos = "left"; leftPx = r.left - PAD - gap - bw; top = Math.max(16, Math.min(vh - bh - 16, r0.top - PAD)); }
+  else if (fitsB) { pos = "below"; top = r.bottom + PAD + gap; leftPx = Math.min(vw - bw - 16, Math.max(16, r0.left - PAD)); }
+  else if (fitsT) { pos = "above"; top = r.top - PAD - gap - bh; leftPx = Math.min(vw - bw - 16, Math.max(16, r0.left - PAD)); }
   else { pos = "corner"; leftPx = vw - bw - 16; top = vh - bh - 16; }
   b.dataset.pos = pos;
   b.style.left = leftPx + "px"; b.style.top = top + "px";
