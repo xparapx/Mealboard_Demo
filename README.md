@@ -53,6 +53,9 @@ setup_pi.sh Pi 최초 설치·유닛 갱신 (멱등) · check_manual.py 매뉴�
 - **설치 없이 보기 — 공개 데모 `https://demo.kjhs-meal.com`**: 급식실 Pi 가 상시 띄우는 시연 화면(모의 데이터 · 가상 시계, 30분마다 피크 12:44 로 되감김). 실제 운영 화면은 `https://kjhs-meal.com`.
 - **처음 보는 분 · 심사위원(Pi·카메라 없이 5분)**: Python 3.11+ 과 [uv](https://docs.astral.sh/uv/) 만 있으면 된다.
   ```bash
+  cd ~                                   # 관리자 PowerShell 은 system32 에서 시작한다 — 쓰기 가능한 내 폴더로
+  git clone https://gitlab.aigov.go.kr/kongju-hs/mealboard.git   # 또는 GitHub xparapx/Mealboard_Demo
+  cd mealboard
   uv sync
   uv run python -m jobs.demo          # 한 줄로 쓰려면 `uv sync; uv run python -m jobs.demo` (PowerShell 5.1 은 && 미지원)
   ```
