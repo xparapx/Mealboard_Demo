@@ -1,4 +1,4 @@
-# setup_tts_key.ps1 — OpenAI API 키를 화면에 보이지 않게 입력받아 로컬 .env 에만 저장한다 (10-19, 시연 음성 녹음용).
+﻿# setup_tts_key.ps1 — OpenAI API 키를 화면에 보이지 않게 입력받아 로컬 .env 에만 저장한다 (10-19, 시연 음성 녹음용).
 # 실행:  & .\setup_tts_key.ps1   (저장소 루트). 키는 채팅·로그·커밋 어디에도 남지 않는다 — .env 는 git 제외.
 $ErrorActionPreference = "Stop"
 $envPath = Join-Path $PSScriptRoot ".env"

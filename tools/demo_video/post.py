@@ -54,10 +54,17 @@ ENC = ["-c:v", "libx264", "-preset", "medium", "-crf", "19", "-pix_fmt", "yuv420
 VF = "scale=1920:1080:flags=lanczos,setsar=1,format=yuv420p"
 
 
-def seg_video(src, start, dur, out, audio=None, adelay=0.0):
-    """webm 구간 → mp4. audio 가 있으면 그 mp3(배속 RATE)를 adelay 뒤에 깔고, 없으면 무음"""
+NARR = REC / "narr"                                # 추가 장면 내레이션 x_<id>.mp3(narrate.py, OpenAI TTS marin) — 있으면 깐다
+def extra(name):
+    p = NARR / f"x_{name}.mp3"
+    return p if p.exists() else None
+
+
+def seg_video(src, start, dur, out, audio=None, adelay=0.0, tempo=None):
+    """webm 구간 → mp4. audio 가 있으면 그 mp3(배속 tempo, 기본 인앱 RATE)를 adelay 뒤에 깔고, 없으면 무음"""
+    tempo = RATE if tempo is None else tempo
     if audio:
-        af = f"[1:a]atempo={RATE},adelay={int(adelay*1000)}|{int(adelay*1000)},apad,atrim=0:{dur:.3f},asetpts=PTS-STARTPTS[a]"
+        af = f"[1:a]atempo={tempo},adelay={int(adelay*1000)}|{int(adelay*1000)},apad,atrim=0:{dur:.3f},asetpts=PTS-STARTPTS[a]"
         run(["-ss", f"{start:.3f}", "-t", f"{dur:.3f}", "-i", str(src), "-i", str(audio), "-filter_complex", f"[0:v]{VF}[v];{af}",
              "-map", "[v]", "-map", "[a]", "-t", f"{dur:.3f}", *ENC, str(out)])
     else:
@@ -65,7 +72,13 @@ def seg_video(src, start, dur, out, audio=None, adelay=0.0):
              "-filter_complex", f"[0:v]{VF}[v]", "-map", "[v]", "-map", "1:a", "-t", f"{dur:.3f}", *ENC, str(out)])
 
 
-def card_video(png, dur, out):
+def card_video(png, dur, out, audio=None, adelay=0.6):
+    if audio:
+        dur = max(dur, duration(audio) + adelay + 0.8)
+        af = f"[1:a]adelay={int(adelay*1000)}|{int(adelay*1000)},apad,atrim=0:{dur:.3f},asetpts=PTS-STARTPTS[a]"
+        run(["-loop", "1", "-framerate", "30", "-t", f"{dur:.3f}", "-i", str(png), "-i", str(audio), "-filter_complex", f"[0:v]{VF}[v];{af}",
+             "-map", "[v]", "-map", "[a]", "-t", f"{dur:.3f}", *ENC, str(out)])
+        return
     run(["-loop", "1", "-framerate", "30", "-t", f"{dur:.3f}", "-i", str(png), "-f", "lavfi", "-t", f"{dur:.3f}", "-i", "anullsrc=r=48000:cl=stereo",
          "-filter_complex", f"[0:v]{VF}[v]", "-map", "[v]", "-map", "1:a", "-t", f"{dur:.3f}", *ENC, str(out)])
 
@@ -97,7 +110,7 @@ card_video(CARDS / "title.png", CARD_LEN["title"], SEG / "c_title.mp4"); add("ti
 for sid in KEEP:
     if sid not in spans: print("없음:", sid); continue
     if sid == "s0":
-        card_video(CARDS / "three.png", CARD_LEN["three"], SEG / "c_three.mp4"); add("three", SEG / "c_three.mp4")
+        card_video(CARDS / "three.png", CARD_LEN["three"], SEG / "c_three.mp4", extra("three")); add("three", SEG / "c_three.mp4")
     a, b = spans[sid]; dur = b - a
     delay = max(0.0, vt(clips[sid]) - a) if sid in clips else 0.0
     out = SEG / f"t_{sid}.mp4"
@@ -108,14 +121,18 @@ for sc in ("term", "app", "admin", "live", "kiosk"):
     src = O / f"{sc}.webm"
     if not src.exists(): print("녹화 없음:", sc); continue
     start = {"term": 0.6, "kiosk": 5.2}.get(sc, 0.3)        # 키오스크는 첫 슬라이드가 약 5초 뒤에 뜬다(공개 데모 응답 대기)
-    d = min(SCENE_LEN[sc], duration(src) - start - 0.2)
-    seg_video(src, start, d, SEG / f"s_{sc}.mp4"); add(sc, SEG / f"s_{sc}.mp4")
+    avail = duration(src) - start - 0.2
+    x = extra(sc); want = SCENE_LEN[sc]
+    if x: want = max(want, duration(x) + 1.4)             # 내레이션이 길면 장면을 그만큼(녹화 범위 안에서) 늘린다
+    d = min(want, avail)
+    if x and duration(x) + 0.6 > d: print(f"  주의: {sc} 내레이션 {duration(x):.1f}s > 장면 {d:.1f}s")
+    seg_video(src, start, d, SEG / f"s_{sc}.mp4", x, 0.5 if x else 0.0, 1.0); add(sc, SEG / f"s_{sc}.mp4")
     if sc == "admin":
-        card_video(CARDS / "llm.png", CARD_LEN["llm"], SEG / "c_llm.mp4"); add("llm", SEG / "c_llm.mp4")
+        card_video(CARDS / "llm.png", CARD_LEN["llm"], SEG / "c_llm.mp4", extra("llm")); add("llm", SEG / "c_llm.mp4")
 if "outro" in spans:
     a, b = spans["outro"]; delay = max(0.0, vt(clips["outro"]) - a)
     seg_video(O / "tour.webm", a, b - a, SEG / "t_outro.mp4", VOICE / "outro.mp3", delay); add("outro", SEG / "t_outro.mp4")
-card_video(CARDS / "ending.png", CARD_LEN["ending"], SEG / "c_ending.mp4"); add("ending", SEG / "c_ending.mp4")
+card_video(CARDS / "ending.png", CARD_LEN["ending"], SEG / "c_ending.mp4", extra("ending")); add("ending", SEG / "c_ending.mp4")
 
 # ---------- 2. xfade(slideleft) + acrossfade 로 한 편
 durs = [duration(p) for _, p in order]
