@@ -107,8 +107,8 @@ for sid in KEEP:
 for sc in ("term", "app", "admin", "live", "kiosk"):
     src = O / f"{sc}.webm"
     if not src.exists(): print("녹화 없음:", sc); continue
-    d = min(SCENE_LEN[sc], duration(src) - 0.3)
-    start = {"term": 0.6, "kiosk": 1.4}.get(sc, 0.3)        # 키오스크는 첫 1초가 로딩 빈 화면
+    start = {"term": 0.6, "kiosk": 5.2}.get(sc, 0.3)        # 키오스크는 첫 슬라이드가 약 5초 뒤에 뜬다(공개 데모 응답 대기)
+    d = min(SCENE_LEN[sc], duration(src) - start - 0.2)
     seg_video(src, start, d, SEG / f"s_{sc}.mp4"); add(sc, SEG / f"s_{sc}.mp4")
     if sc == "admin":
         card_video(CARDS / "llm.png", CARD_LEN["llm"], SEG / "c_llm.mp4"); add("llm", SEG / "c_llm.mp4")
