@@ -104,7 +104,7 @@ NEWS = {                        # 이슈피드 샘플 — 공개 참고 자료(�
     ],
     "tech": [
         {"source": "Raspberry Pi", "date": "참고 자료", "link": "https://www.raspberrypi.com/products/raspberry-pi-5/", "title": "Raspberry Pi 5 — 이 대시보드가 도는 손바닥 컴퓨터",
-         "summary": "Mealboard 의 카메라 노드·웹 서버·집계가 전부 이 보드 한 대에서 돈다. 영상은 메모리에서만 처리되고 숫자만 남는다."},
+         "summary": "헤아림의 카메라 노드·웹 서버·집계가 전부 이 보드 한 대에서 돈다. 영상은 메모리에서만 처리되고 숫자만 남는다."},
         {"source": "Ultralytics", "date": "참고 자료", "link": "https://docs.ultralytics.com/models/yolo11/", "title": "YOLO11 — 사람을 세는 실시간 객체 검출 모델",
          "summary": "급식실 카메라 프레임에서 '사람' 상자를 찾아 ByteTrack 으로 이어 붙인다. 대기 인원 L 과 배식대 통과(λ)가 여기서 나온다."},
         {"source": "FastAPI", "date": "참고 자료", "link": "https://fastapi.tiangolo.com/", "title": "FastAPI — 공개 API 와 관리 앱의 뼈대",
@@ -503,7 +503,7 @@ def serve(data, anchor, port, admin_port, open_browser, loop_min=0):
         threading.Thread(target=uvicorn.Server(cfg).run, daemon=True, name="demo-admin").start()
         admin_url = f"http://127.0.0.1:{admin_port}/?key={os.environ['ADMIN_LOCAL_KEY']}"
     print("\n" + "=" * 72)
-    print(f"  Mealboard 시연 모드 — 공개 화면  {url}   (가상 시계 {anchor:%Y-%m-%d %a %H:%M} 부터{f', {loop_min}분마다 되감기' if loop_min else ''})")
+    print(f"  헤아림(Mealboard) 시연 모드 — 공개 화면  {url}   (가상 시계 {anchor:%Y-%m-%d %a %H:%M} 부터{f', {loop_min}분마다 되감기' if loop_min else ''})")
     if admin_url:
         print(f"  관리 앱(보정 편집기·시스템)      {admin_url}")
     print("  화면 아래(또는 왼쪽) '앱 안내' 탭 → '자동 시연 시작' 을 누르면 여섯 화면을 돌며 설명합니다. 끝내려면 Ctrl+C")

@@ -8,7 +8,7 @@ from .routers import status, history, meal, positions, news, typical, insight
 
 mimetypes.add_type("text/javascript", ".js")    # Windows 개발 PC 의 레지스트리가 .js 를 text/plain 으로 주면 모듈 로드가 막힌다
 
-app = FastAPI(title="Mealboard")
+app = FastAPI(title="헤아림 (Mealboard)")
 app.include_router(status.router)
 app.include_router(history.router)
 app.include_router(meal.router)

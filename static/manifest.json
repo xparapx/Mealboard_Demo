@@ -1,6 +1,6 @@
 {
-  "name": "급식실 대기 안내",
-  "short_name": "급식대기",
+  "name": "헤아림 · 급식실 대기 안내",
+  "short_name": "헤아림",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F5F2E9",

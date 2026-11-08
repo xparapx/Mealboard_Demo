@@ -30,14 +30,15 @@ def pill(d, xy, s, sz=26, fg="#fff", bg=TEAL):
 def title(d, im):
     d.rounded_rectangle((160, 150, 1760, 930), radius=36, fill=CARD)
     d.ellipse((230, 230, 330, 330), fill=TEAL); d.ellipse((252, 252, 308, 308), fill="#FFFCF6"); d.ellipse((268, 268, 292, 292), fill="#F2B544")
-    text(d, (370, 236), "Mealboard · 밀보드", 56, bold=True)
-    text(d, (370, 312), "학교 급식실 대기시간 · 영양 대시보드", 40, fill=MUTE)
+    text(d, (370, 236), "헤아림 · Hearim", 56, bold=True)
+    text(d, (370, 312), "학교 급식실 대기시간과 오늘 급식을 미리 알려 주는 앱", 40, fill=MUTE)
     text(d, (230, 440), "급식실 카메라가 영상 없이 줄 선 인원만 세어", 46)
     text(d, (230, 506), "예상 대기시간 · 밀집도 · 영양 · 운영 리포트를 한 화면에", 46)
     pill(d, (230, 620), "2026 공공 AI 대전환 챌린지 · 세션 1 자유주제"); pill(d, (870, 620), "공주고등학교", bg=CHAR)
+    text(d, (230, 692), "수를 헤아려, 기다림을 헤아립니다", 34, fill=TEAL, bold=True)
     text(d, (230, 760), "실운영 https://kjhs-meal.com      상시 시연 https://demo.kjhs-meal.com", 32, fill=MUTE)
     text(d, (230, 812), "공공 GitLab https://gitlab.aigov.go.kr/kongju-hs/mealboard      자체 코드 MIT", 32, fill=MUTE)
-    text(d, (1690, 880), "시연영상 · 약 5분", 26, fill=MUTE, anchor="ra")
+    text(d, (1690, 880), "코드명 Mealboard  ·  시연영상 약 5분", 26, fill=MUTE, anchor="ra")
 
 
 def three(d, im):
@@ -88,6 +89,7 @@ def llm(d, im):
 def ending(d, im):
     d.rounded_rectangle((160, 150, 1760, 930), radius=36, fill=CARD)
     text(d, (230, 220), "생활 공간의 작은 불편 하나를 끝까지 숫자로 따라가면, 공공의 가치가 됩니다.", 40, bold=True)
+    text(d, (1690, 170), "헤아림 · Hearim", 30, fill=TEAL, bold=True, anchor="ra")
     text(d, (230, 300), "발견 → 공익 → 측정 → 진단 → 해결", 36, fill=TEAL, bold=True)
     lines = [("저장되는 영상", "0장"), ("필요한 장비", "Raspberry Pi 5 + 카메라 1대 (약 20~30만 원)"), ("급식 정보", "전국 공통 NEIS Open API"),
              ("다른 학교 이식", "평면도 보정 · 영양 기준 · 학교 설정 — 설정 파일 3개"), ("심사위원 구동", "uv sync && uv run python -m jobs.demo  (Pi · 카메라 없이 5분)"),
@@ -106,7 +108,7 @@ def stamp(n, head, sub):
         d.text((190, 420), n, font=font(96, True), fill=TEAL)
         d.text((400, 440), head, font=font(84, True), fill="#FFFCF6")
         d.text((404, 560), sub, font=font(40), fill="#CFE7E4")
-        d.text((1800, 980), "Mealboard · 밀보드", font=font(28), fill="#8A8A90", anchor="ra")
+        d.text((1800, 980), "헤아림 · Hearim", font=font(28), fill="#8A8A90", anchor="ra")
     return f
 
 
