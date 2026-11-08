@@ -41,8 +41,20 @@ def stamp_video(name, out):
     if not src.exists():
         card_video(CARDS / f"{name}.png", CARD_LEN["stamp"], out); return
     wh = whoosh(SEG / "whoosh.wav")
-    run(["-ss", "0.4", "-t", f"{STAMP_LEN:.3f}", "-i", str(src), "-i", str(wh), "-filter_complex",
+    lead = dark_lead(src)      # 페이지가 뜨기 전 흰 프레임을 잘라 낸다(고정 0.4초로 잘랐더니 11-09 재녹화에서는 로드가 늦어 흰 화면이 남고 애니메이션이 잘렸다)
+    print(f"스탬프 {name}: 흰 머리 {lead:.2f}s")
+    run(["-ss", f"{lead:.3f}", "-t", f"{STAMP_LEN:.3f}", "-i", str(src), "-i", str(wh), "-filter_complex",
          f"[0:v]{VF}[v];[1:a]apad,atrim=0:{STAMP_LEN:.3f},asetpts=PTS-STARTPTS[a]", "-map", "[v]", "-map", "[a]", "-t", f"{STAMP_LEN:.3f}", *ENC, str(out)])
+
+
+def dark_lead(webm):
+    """녹화 머리의 흰 프레임(페이지 로드 전) 길이 — 첫 어두운 프레임(평균 밝기 < 100)의 시각(초)"""
+    raw = subprocess.run([FF, "-hide_banner", "-loglevel", "error", "-t", "4", "-i", str(webm), "-vf", "fps=25,scale=8:8", "-pix_fmt", "gray", "-f", "rawvideo", "-"],
+                         capture_output=True).stdout
+    for k in range(len(raw) // 64):
+        if sum(raw[k * 64:(k + 1) * 64]) / 64 < 100:
+            return k / 25
+    return 0.4
 
 
 def run(args, quiet=True):
