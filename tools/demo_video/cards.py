@@ -92,7 +92,7 @@ def ending(d, im):
     text(d, (1690, 170), "헤아림 · Hearim", 30, fill=TEAL, bold=True, anchor="ra")
     text(d, (230, 300), "발견 → 공익 → 측정 → 진단 → 해결", 36, fill=TEAL, bold=True)
     lines = [("저장되는 영상", "0장"), ("필요한 장비", "Raspberry Pi 5 + 카메라 1대 (약 20~30만 원)"), ("급식 정보", "전국 공통 NEIS Open API"),
-             ("다른 학교 이식", "평면도 보정 · 영양 기준 · 학교 설정 — 설정 파일 3개"), ("심사위원 구동", "uv sync && uv run python -m jobs.demo  (Pi · 카메라 없이 5분)"),
+             ("다른 학교 이식", "평면도 보정 · 영양 기준 · 학교 설정 — 설정 파일 3개"), ("심사위원 구동", "uv sync  →  uv run python -m jobs.demo  (Pi · 카메라 없이 5분)"),
              ("소스 · 라이선스", "MIT · 테스트 238건 · 작업 이력 전부 공개")]
     y = 400
     for k, v in lines:

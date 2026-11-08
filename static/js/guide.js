@@ -61,7 +61,7 @@ function fillIntro() {
   $("#guidefeat").innerHTML = FEATURES.map(f => `<div><em>${f.n}</em><b>${esc(f.t)}</b><span>${esc(f.d)}</span></div>`).join("");
   $("#guidesteps").innerHTML = HOW.map(([t, d]) => `<li><b>${esc(t)}</b><span>${esc(d)}</span></li>`).join("");
   $("#guiderunbody").innerHTML =
-    `<p><b>구동</b> 저장소 루트에서 <code>uv sync</code> 뒤 <code>uv run python -m jobs.demo</code> 한 줄 — 모의 데이터 8주치를 만들고 이 화면을 띄웁니다(포트 8800, 운영 데이터와 분리된 <code>data/demo/</code>).</p>`
+    `<p><b>구동</b> 저장소 루트에서 <code>uv sync</code> 뒤 <code>uv run python -m jobs.demo</code> 두 명령(PowerShell 5.1 은 && 미지원) — 모의 데이터 8주치를 만들고 이 화면을 띄웁니다(포트 8800, 운영 데이터와 분리된 <code>data/demo/</code>).</p>`
     + `<p><b>핵심 흐름 셋</b> ① 대기시간(히어로·추이·히트맵·예보·병목·품질) → ② 실시간뷰·통계(밀집도·분포·메뉴별 대기) → ③ 오늘급식·리포트(영양·알레르기·탄소·결산).</p>`
     + `<p><b>실제 운영</b> <a href="https://kjhs-meal.com" target="_blank" rel="noopener">kjhs-meal.com</a> — 급식 시간(11:20~13:40 · 석식)에만 카메라 실측이 흐르고, 창 밖에는 '급식 시간이 아닙니다' 를 띄웁니다.</p>`
     + `<p><b>통행로 송출 화면</b> <a href="/kiosk" target="_blank" rel="noopener">/kiosk</a> — 42인치 모니터용 1920×1080 화면이 10초마다 대기시간·밀집도·예보·오늘 급식·평소 대기·리포트·주간 식단을 돌며 보여 줍니다(운영 주소 <a href="https://kiosk.kjhs-meal.com" target="_blank" rel="noopener">kiosk.kjhs-meal.com</a>). 휴대폰이 없는 학생에게도 같은 정보가 닿습니다.</p>`

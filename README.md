@@ -19,7 +19,7 @@ Claude Code 작업 규칙: [CLAUDE.md](CLAUDE.md)
 | 항목 | 내용 |
 |---|---|
 | 접속 주소 | 실제 운영 **https://kjhs-meal.com** (공주고 급식실 Pi, 급식 시간 11:20~13:40·석식에만 실측) · 상시 시연 **https://demo.kjhs-meal.com** (모의 데이터·가상 시계 12:44 피크, 설치 없이 전 기능) · 통행로 송출 **https://kiosk.kjhs-meal.com** |
-| 실행·작동 방법 | Pi·카메라 없이 **`uv sync && uv run python -m jobs.demo`** 한 줄 → `http://127.0.0.1:8800/` (아래 '셋업 요약'). 화면의 **'앱 안내' 탭 → 자동 시연**이 음성과 함께 2분간 설명한다. 구동안내서(양식 2)와 같은 절차 |
+| 실행·작동 방법 | Pi·카메라 없이 **`uv sync`** 뒤 **`uv run python -m jobs.demo`** (한 줄에 쓰려면 `;` — Windows PowerShell 5.1 은 `&&` 미지원) → `http://127.0.0.1:8800/` (아래 '셋업 요약'). 화면의 **'앱 안내' 탭 → 자동 시연**이 음성과 함께 2분간 설명한다. 구동안내서(양식 2)와 같은 절차 |
 | 주요 기능 | ① 카메라 계수 → Little's law + FIFO 누적곡선으로 **예상 대기시간**(실측 보정 K·수동 실측 하한) ② 평면도 밀집도·익명 위치 마커(영상 미저장, 숫자만) ③ NEIS 식단·알레르기·영양 지표 3종·잔반 탄소 ④ 요일×시각 히트맵·황금 시간대·병목·통계(밴드·요일·메뉴) ⑤ 로컬 LLM 리포트·기후 이슈 요약 ⑥ 관리 앱(4점 보정·ROI·λ선, Access 보호)·통행로 키오스크·PWA |
 | 사용 모델 · 교체 가능 | 검출 YOLO11n(CPU 또는 Hailo-10H HEF) · 해석 LLM **Gemma 4 E2B**(Ollama, Pi CPU) ⇄ Qwen3-1.7B(Hailo HEF) ⇄ OpenAI 호환 서버 ⇄ 규칙 템플릿 — `.env LLM_BACKEND` 또는 관리 화면 'AI 모델 선택' 으로 교체, 실측 비교는 [docs/LLM-BACKENDS.md](docs/LLM-BACKENDS.md) |
 | 라이선스 | 자체 코드 **MIT**([LICENSE](LICENSE)). 제3자 구성요소와 **재배포 제한**(ultralytics·YOLO11 가중치 AGPL-3.0, Hailo·Gemma 약관)은 [docs/LICENSES.md](docs/LICENSES.md) — 심사위원 구동 경로와 공개 웹 앱은 AGPL 구성요소를 쓰지 않는다 |
@@ -53,7 +53,8 @@ setup_pi.sh Pi 최초 설치·유닛 갱신 (멱등) · check_manual.py 매뉴�
 - **설치 없이 보기 — 공개 데모 `https://demo.kjhs-meal.com`**: 급식실 Pi 가 상시 띄우는 시연 화면(모의 데이터 · 가상 시계, 30분마다 피크 12:44 로 되감김). 실제 운영 화면은 `https://kjhs-meal.com`.
 - **처음 보는 분 · 심사위원(Pi·카메라 없이 5분)**: Python 3.11+ 과 [uv](https://docs.astral.sh/uv/) 만 있으면 된다.
   ```bash
-  uv sync && uv run python -m jobs.demo
+  uv sync
+  uv run python -m jobs.demo          # 한 줄로 쓰려면 `uv sync; uv run python -m jobs.demo` (PowerShell 5.1 은 && 미지원)
   ```
   모의 데이터 8주치(가상 급식실 — 실측 아님. 위치 마커·밀집도는 실제 카메라 가시 영역(배식대 오른쪽 구석, 표준 렌즈) 안에서만 나오게 해 운영 맵의 분포를 닮게 했다)를 2초 만에 만들어 **`http://127.0.0.1:8800/`** 에 여섯 화면 전부를 띄우고 브라우저를 연다.
   가상 시계가 **2026-10-14(수) 12:44, 1·2학년 점심 피크**에서 시작해 실제 시간이 흐르며, 화면의 **'앱 안내' 탭 → 자동 시연**이 2분 동안 화면을 돌며 설명한다.

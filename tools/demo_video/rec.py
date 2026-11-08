@@ -65,7 +65,7 @@ def scene_tour(b):
     pg.goto(f"{LOCAL}/#wait", wait_until="load")
     # 영상 모드: 시연 오버레이의 조작 UI(음성 켬·인트로 건너뛰기·점 표시·이전/일시정지/다음/종료·"n / 15" 카운터·진행 띠·엔드카드 단추)는 숨긴다 —
     # 심사위원이 조작할 수 없는 영상 콘텐츠이고, 15단계 중 일부만 넣으므로 카운터가 건너뛰는 것도 보이면 안 된다
-    pg.add_style_tag(content="#tourcard .ctl2, #tourcardctl, #tourdots, #tourbubble .ctl, #tourno, #tourbar { display: none !important }"
+    pg.add_style_tag(content="#tourcard .ctl2, #tourcard .tag, #tourcardctl, #tourdots, #tourbubble .ctl, #tourno, #tourbar { display: none !important }"
                               "#tourbubble .step { margin-bottom: 6px }")
     time.sleep(3.0)                                   # 첫 폴링·카드 등장
     t_mk = marker(pg)
