@@ -63,6 +63,10 @@ def finish(ctx, pg, name):
 def scene_tour(b):
     ctx, pg = new_ctx(b, "tour")
     pg.goto(f"{LOCAL}/#wait", wait_until="load")
+    # 영상 모드: 시연 오버레이의 조작 UI(음성 켬·인트로 건너뛰기·점 표시·이전/일시정지/다음/종료·"n / 15" 카운터·진행 띠·엔드카드 단추)는 숨긴다 —
+    # 심사위원이 조작할 수 없는 영상 콘텐츠이고, 15단계 중 일부만 넣으므로 카운터가 건너뛰는 것도 보이면 안 된다
+    pg.add_style_tag(content="#tourcard .ctl2, #tourcardctl, #tourdots, #tourbubble .ctl, #tourno, #tourbar { display: none !important }"
+                              "#tourbubble .step { margin-bottom: 6px }")
     time.sleep(3.0)                                   # 첫 폴링·카드 등장
     t_mk = marker(pg)
     time.sleep(1.0)
@@ -154,6 +158,21 @@ def scene_kiosk(b):
     finish(ctx, pg, "kiosk")
 
 
+STAMPS = {"stamp2": ("02", "심사위원 구동", "Pi · 카메라 없이, 노트북 한 대에서 한 줄"),
+          "stamp3": ("03", "LLM 교체", "모델 비종속 — 드롭다운 한 번, .env 한 줄"),
+          "stamp4": ("04", "실제 운영 화면", "2026년 9월 11일부터 공주고 급식실에서")}
+
+
+def scene_stamps(b):
+    from urllib.parse import urlencode
+    base = (Path(__file__).parent / "stamp.html").resolve().as_uri()
+    for name, (n, t, s) in STAMPS.items():
+        ctx, pg = new_ctx(b, name)
+        pg.goto(f"{base}?{urlencode({'n': n, 't': t, 's': s})}", wait_until="load")
+        time.sleep(3.6)
+        finish(ctx, pg, name)
+
+
 def scene_term(b):
     ctx, pg = new_ctx(b, "term")
     pg.goto((Path(__file__).parent / "term.html").resolve().as_uri(), wait_until="load")
@@ -162,7 +181,16 @@ def scene_term(b):
 
 
 with sync_playwright() as p:
-    b = p.chromium.launch(channel="msedge", headless=False, args=["--autoplay-policy=no-user-gesture-required", "--window-position=0,0", "--hide-scrollbars", "--mute-audio" if os.environ.get("MUTE") else "--disable-features=none"])
+    # 머리 있는 창은 화면 크기를 넘지 못한다(원격 접속으로 화면이 작아지면 1920×1080 뷰포트가 안 나와 영상 왼쪽 위에 작게 찍힌다, 11-08 사고)
+    # → 창 크기를 명시하고, 시작 때 실제 뷰포트를 검사해 모자라면 중단한다. HEADLESS=1 이면 창 없이(화면 크기 무관) 찍는다.
+    headless = bool(os.environ.get("HEADLESS"))
+    b = p.chromium.launch(channel="msedge", headless=headless, args=["--autoplay-policy=no-user-gesture-required", "--window-position=0,0", f"--window-size={W + 16},{H + 120}",
+                                                                      "--hide-scrollbars", "--mute-audio" if os.environ.get("MUTE") else "--disable-features=none"])
+    ctx0, pg0 = new_ctx(b, "_probe"); pg0.goto("about:blank")
+    vw, vh = pg0.evaluate("[innerWidth, innerHeight]"); ctx0.close()
+    print(f"viewport {vw}x{vh} headless={headless}", flush=True)
+    if (vw, vh) != (W, H):
+        raise SystemExit(f"뷰포트가 {W}x{H} 가 아니다({vw}x{vh}) — 화면이 작다. HEADLESS=1 로 다시 실행")
     for sc in SCENES:
         print("==", sc, flush=True)
         globals()[f"scene_{sc}"](b)

@@ -17,13 +17,32 @@ SEG.mkdir(exist_ok=True)
 RATE = json.load(open(VOICE / "narration.json", encoding="utf-8")).get("playback_rate", 1.2)
 XF = 0.5                                         # 전환 길이(초)
 KEEP = ["intro0", "intro1", "intro2", "s0", "s2", "s3", "s6", "s7", "s9", "s13"]        # 시연 중 영상에 넣는 단계(5분 예산)
-SCENE_LEN = {"term": 13.0, "app": 14.0, "admin": 14.0, "live": 20.0, "kiosk": 14.0}
+SCENE_LEN = {"term": 13.0, "app": 14.0, "admin": 14.0, "live": 19.5, "kiosk": 13.0}      # 합계 5:00 안쪽으로
 CARD_LEN = {"title": 4.5, "three": 6.0, "llm": 9.0, "ending": 7.0, "stamp": 2.0}
 # 장면 뒤 전환(없으면 컷). 인앱 구간은 인앱의 플립·카드 팬이 곧 전환이라 컷으로 두고, 챕터 경계만 서로 다른 전환 + 2초 스탬프
-TRANS = {"title": ("fade", 1.0), "intro2": ("smoothleft", 0.7), "three": ("zoomin", 0.8), "s13": ("circleclose", 0.7),
-         "stamp2": ("circleopen", 0.7), "term": ("slideleft", 0.6), "app": ("fadeblack", 0.6), "stamp3": ("radial", 0.8),
-         "admin": ("smoothup", 0.6), "llm": ("fadeblack", 0.6), "stamp4": ("zoomin", 0.8), "live": ("slideleft", 0.6),
-         "kiosk": ("fadeblack", 0.8), "outro": ("dissolve", 0.8)}
+TRANS = {"title": ("fade", 1.0), "intro2": ("smoothleft", 0.7), "three": ("zoomin", 0.8), "s13": ("fadeblack", 0.5),
+         "stamp2": ("circleopen", 0.9), "term": ("slideleft", 0.6), "app": ("fadeblack", 0.5), "stamp3": ("radial", 0.9),
+         "admin": ("smoothup", 0.6), "llm": ("fadeblack", 0.5), "stamp4": ("zoomin", 0.9), "live": ("slideleft", 0.6),
+         "kiosk": ("fadeblack", 0.8), "outro": ("dissolve", 1.0)}
+STAMP_LEN = 2.6                                   # 움직이는 스탬프(stamp.html 녹화) — 0.4초 뒤부터 2.6초
+
+
+def whoosh(out):
+    """챕터 스탬프용 스우시(합성 — 외부 음원 없음): 분홍 잡음에 띠통과 + 짧은 페이드, 낮은 음량"""
+    if out.exists(): return out
+    run(["-f", "lavfi", "-i", "anoisesrc=color=pink:d=1.1:r=48000:a=0.6", "-af",
+         "bandpass=f=900:w=700,volume=30dB,afade=t=in:st=0:d=0.25,afade=t=out:st=0.45:d=0.65,aformat=channel_layouts=stereo,alimiter=limit=0.5", str(out)])   # 평균 ≈ −27 dB(내레이션 −24 보다 작게)
+    return out
+
+
+def stamp_video(name, out):
+    """스탬프 webm(있으면) → mp4 + 스우시; 없으면 정지 카드"""
+    src = O / f"{name}.webm"
+    if not src.exists():
+        card_video(CARDS / f"{name}.png", CARD_LEN["stamp"], out); return
+    wh = whoosh(SEG / "whoosh.wav")
+    run(["-ss", "0.4", "-t", f"{STAMP_LEN:.3f}", "-i", str(src), "-i", str(wh), "-filter_complex",
+         f"[0:v]{VF}[v];[1:a]apad,atrim=0:{STAMP_LEN:.3f},asetpts=PTS-STARTPTS[a]", "-map", "[v]", "-map", "[a]", "-t", f"{STAMP_LEN:.3f}", *ENC, str(out)])
 
 
 def run(args, quiet=True):
@@ -78,8 +97,8 @@ def seg_video(src, start, dur, out, audio=None, adelay=0.0, tempo=None):
 
 
 def card_video(png, dur, out, audio=None, adelay=0.6):
-    if audio:                                              # 추가 장면 내레이션도 인앱과 같은 배속(RATE)으로
-        dur = max(dur, duration(audio) / RATE + adelay + 0.8)
+    if audio:                                              # 추가 장면 내레이션도 인앱과 같은 배속(RATE)으로; 꼬리 1.2초는 비워 둔다(전환 때 잘려도 말이 안 깎이게)
+        dur = max(dur, duration(audio) / RATE + adelay + 1.2)
         af = f"[1:a]atempo={RATE},adelay={int(adelay*1000)}|{int(adelay*1000)},apad,atrim=0:{dur:.3f},asetpts=PTS-STARTPTS[a]"
         run(["-loop", "1", "-framerate", "30", "-t", f"{dur:.3f}", "-i", str(png), "-i", str(audio), "-filter_complex", f"[0:v]{VF}[v];{af}",
              "-map", "[v]", "-map", "[a]", "-t", f"{dur:.3f}", *ENC, str(out)])
@@ -123,9 +142,9 @@ for sid in KEEP:
     add(sid, out); print(f"  {sid}: {dur:.1f}s (음성 +{delay:.2f}s)")
 
 for sc in ("term", "app", "admin", "live", "kiosk"):
-    if sc == "term": card_video(CARDS / "stamp2.png", CARD_LEN["stamp"], SEG / "c_stamp2.mp4"); add("stamp2", SEG / "c_stamp2.mp4")
-    if sc == "admin": card_video(CARDS / "stamp3.png", CARD_LEN["stamp"], SEG / "c_stamp3.mp4"); add("stamp3", SEG / "c_stamp3.mp4")
-    if sc == "live": card_video(CARDS / "stamp4.png", CARD_LEN["stamp"], SEG / "c_stamp4.mp4"); add("stamp4", SEG / "c_stamp4.mp4")
+    if sc == "term": stamp_video("stamp2", SEG / "c_stamp2.mp4"); add("stamp2", SEG / "c_stamp2.mp4")
+    if sc == "admin": stamp_video("stamp3", SEG / "c_stamp3.mp4"); add("stamp3", SEG / "c_stamp3.mp4")
+    if sc == "live": stamp_video("stamp4", SEG / "c_stamp4.mp4"); add("stamp4", SEG / "c_stamp4.mp4")
     src = O / f"{sc}.webm"
     if not src.exists(): print("녹화 없음:", sc); continue
     start = {"term": 0.6, "kiosk": 5.2}.get(sc, 0.3)        # 키오스크는 첫 슬라이드가 약 5초 뒤에 뜬다(공개 데모 응답 대기)
@@ -161,18 +180,24 @@ for gi, g in enumerate(groups):
     run(["-f", "concat", "-safe", "0", "-i", str(lst), *ENC, str(out)])
     gpaths.append(out); print(f"  그룹 {gi}: {' + '.join(n for n, _ in g)} → {duration(out):.1f}s")
 
-# ---------- 2-B. 그룹 사이 xfade(종류·길이는 TRANS) + acrossfade
+# ---------- 2-B. 그룹 사이 영상은 xfade(종류·길이는 TRANS), 소리는 겹치지 않고 이어 붙인다
+# (acrossfade 는 다음 장면 첫 0.5~1초를 페이드인으로 깎아 말머리가 먹혔다 — 앞 장면 소리 꼬리를 전환 길이만큼 잘라 타임라인만 맞춘다.
+#  다음 장면 소리는 전환이 '시작' 하는 순간부터 원래 음량으로 나간다)
 durs = [duration(p) for p in gpaths]
 total = sum(durs) - sum(d for _, d in trans)
 print("장면", len(order), "그룹", len(gpaths), "합계", round(sum(durs), 1), "s → 전환 뒤", round(total, 1), "s =", f"{int(total//60)}:{total%60:04.1f}")
 inputs = []; [inputs.extend(["-i", str(p)]) for p in gpaths]
-fc = []; vprev, aprev = "[0:v]", "[0:a]"; offset = 0.0
+fc = []; vprev = "[0:v]"; offset = 0.0
 for k in range(1, len(gpaths)):
     kind, xf = trans[k - 1]
     offset += durs[k - 1] - xf
-    vo, ao = f"[v{k}]", f"[a{k}]"
+    vo = f"[v{k}]"
     fc.append(f"{vprev}[{k}:v]xfade=transition={kind}:duration={xf}:offset={offset:.3f}{vo}")
-    fc.append(f"{aprev}[{k}:a]acrossfade=d={xf}:c1=tri:c2=tri{ao}")
-    vprev, aprev = vo, ao
-run([*inputs, "-filter_complex", ";".join(fc), "-map", vprev, "-map", aprev, *ENC, "-t", f"{total:.3f}", str(OUTV)], quiet=False)
+    vprev = vo
+alabels = []
+for k in range(len(gpaths)):
+    cut = durs[k] - (trans[k][1] if k < len(trans) else 0.0)
+    fc.append(f"[{k}:a]atrim=0:{cut:.3f},asetpts=PTS-STARTPTS[ac{k}]"); alabels.append(f"[ac{k}]")
+fc.append("".join(alabels) + f"concat=n={len(gpaths)}:v=0:a=1[aout]")
+run([*inputs, "-filter_complex", ";".join(fc), "-map", vprev, "-map", "[aout]", *ENC, "-t", f"{total:.3f}", str(OUTV)], quiet=False)
 print("완료:", OUTV, f"{OUTV.stat().st_size/1e6:.1f} MB", f"{duration(OUTV):.1f}s")
