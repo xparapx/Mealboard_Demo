@@ -23,6 +23,10 @@ RUNNER="${BIN}/mealboard-kiosk.sh"
 
 say() { printf '\n== %s\n' "$*"; }
 
+# sudo 단계(1·2·5·6)는 비밀번호를 칠 수 있는 터미널이거나 NOPASSWD 일 때만. `ssh kiosk bash -s < setup_kiosk_pi.sh` 처럼
+# 파이프로 돌리면 사용자 영역(0·3·4 — 런너·유닛·훅)만 재적용된다(원격 갱신 경로, sudo 없음).
+if sudo -n true 2>/dev/null || [ -t 1 ]; then SUDO_OK=1; else SUDO_OK=0; echo "   (sudo 불가 환경 — 1·2·5·6 단계는 건너뛰고 사용자 영역만 적용)"; fi
+
 say "0/6 운영 PC 공개키 등록 (deploy/kiosk_authorized_keys — 공개키만, sudo 없음)"
 KEYS_URL="https://raw.githubusercontent.com/xparapx/Mealboard_Demo/main/deploy/kiosk_authorized_keys"
 mkdir -p "${HOME_DIR}/.ssh" && chmod 700 "${HOME_DIR}/.ssh"
@@ -41,7 +45,9 @@ done <<< "${KEYS}"
 echo "   추가 ${ADDED}개 · 전체 $(grep -c . "${HOME_DIR}/.ssh/authorized_keys")개"
 
 say "1/6 데스크톱 자동 로그인 · 화면 꺼짐 금지 (sudo)"
-if command -v raspi-config >/dev/null; then
+if [ "${SUDO_OK}" != 1 ]; then
+  echo "   건너뜀(sudo 불가)"
+elif command -v raspi-config >/dev/null; then
   sudo raspi-config nonint do_boot_behaviour B4      # B4 = Desktop, 자동 로그인
   sudo raspi-config nonint do_blanking 1             # 1 = 화면 꺼짐(blanking) 비활성
 else
@@ -50,12 +56,44 @@ fi
 
 say "2/6 Chromium 설치 확인 (sudo)"
 CHROMIUM="$(command -v chromium || command -v chromium-browser || true)"
-if [ -z "${CHROMIUM}" ]; then
+if [ -z "${CHROMIUM}" ] && [ "${SUDO_OK}" != 1 ]; then
+  echo "   Chromium 없음 + sudo 불가 — 터미널에서 다시 실행해 설치할 것"; exit 1
+elif [ -z "${CHROMIUM}" ]; then
   sudo apt-get update -qq
   sudo apt-get install -y -qq chromium || sudo apt-get install -y -qq chromium-browser
   CHROMIUM="$(command -v chromium || command -v chromium-browser)"
 fi
 echo "   ${CHROMIUM}"
+
+say "2a/6 Chromium 관리 정책 — 번역 말풍선·비밀번호 저장 제안·기본 브라우저 안내 끄기 (sudo; 플래그 --disable-features=Translate 로는 안 꺼진다, 11-09 실측)"
+if [ "${SUDO_OK}" = 1 ]; then
+  sudo mkdir -p /etc/chromium/policies/managed
+  printf '%s\n' '{' \
+    '  "TranslateEnabled": false,' \
+    '  "PasswordManagerEnabled": false,' \
+    '  "DefaultBrowserSettingEnabled": false,' \
+    '  "BrowserSignin": 0,' \
+    '  "MetricsReportingEnabled": false,' \
+    '  "AutofillAddressEnabled": false,' \
+    '  "AutofillCreditCardEnabled": false' \
+    '}' | sudo tee /etc/chromium/policies/managed/mealboard-kiosk.json >/dev/null
+  echo "   /etc/chromium/policies/managed/mealboard-kiosk.json"
+else
+  echo "   건너뜀(sudo 불가) — 번역 말풍선이 뜨면 터미널에서 다시 실행"
+fi
+
+say "2b/6 한글 폰트 (없으면 화면의 한글이 전부 네모 — 11-09 실측: Raspberry Pi OS 기본엔 한글 폰트가 없다)"
+if [ "$(fc-list :lang=ko 2>/dev/null | wc -l)" -gt 0 ]; then
+  echo "   있음: $(fc-match 'sans-serif:lang=ko')"
+elif [ "${SUDO_OK}" = 1 ]; then
+  sudo apt-get install -y -qq fonts-noto-cjk && echo "   fonts-noto-cjk 설치"
+else
+  # sudo 없이: 사용자 폰트 폴더에 Noto Sans KR(가변, OFL) 한 파일 — CSS 폴백 목록(Pretendard → Noto Sans KR → sans-serif)에 바로 맞는다.
+  FONT_DIR="${HOME_DIR}/.local/share/fonts"; mkdir -p "${FONT_DIR}"
+  curl -fsSL --max-time 120 -o "${FONT_DIR}/NotoSansKR[wght].ttf" "https://github.com/google/fonts/raw/main/ofl/notosanskr/NotoSansKR%5Bwght%5D.ttf" \
+    && fc-cache -f >/dev/null && echo "   사용자 폰트 설치: $(fc-match 'sans-serif:lang=ko')" \
+    || echo "   폰트 내려받기 실패 — 터미널에서 sudo apt install fonts-noto-cjk"
+fi
 
 say "3/6 감시 루프 스크립트 ${RUNNER}"
 mkdir -p "${BIN}" "${AUTOSTART}"
@@ -68,6 +106,9 @@ URL="https://kiosk.kjhs-meal.com"
 [ -r "${URL_FILE}" ] && URL="$(head -n1 "${URL_FILE}")"
 CHROMIUM="$(command -v chromium || command -v chromium-browser)"
 PROFILE="${HOME}/.config/mealboard-kiosk-profile"
+
+# 표시 플랫폼: Wayland 세션이면 명시(hint=auto 는 XDG_SESSION_TYPE 이 없으면 X11 로 가서 죽는다 — 11-09 실측), 아니면 Xwayland :0.
+if [ -n "${WAYLAND_DISPLAY:-}" ]; then PLATFORM="--ozone-platform=wayland"; else PLATFORM="--ozone-platform=x11"; export DISPLAY="${DISPLAY:-:0}"; fi
 
 # 한 세션에 하나만(systemd 유닛과 autostart 폴백이 겹쳐도 두 번째는 조용히 끝난다).
 exec 9>"${HOME}/.config/mealboard-kiosk.lock"
@@ -82,10 +123,11 @@ done
 while true; do
   "${CHROMIUM}" \
     --kiosk --start-fullscreen --noerrdialogs --disable-infobars --no-first-run \
-    --disable-session-crashed-bubble --disable-features=TranslateUI \
+    --disable-session-crashed-bubble --disable-features=Translate,TranslateUI --lang=ko-KR \
     --check-for-update-interval=31536000 --autoplay-policy=no-user-gesture-required \
-    --ozone-platform-hint=auto --user-data-dir="${PROFILE}" \
+    --password-store=basic "${PLATFORM}" --user-data-dir="${PROFILE}" \
     "${URL}" || true
+  # --password-store=basic: 없으면 Chromium 이 GNOME 키링 '새 키링 비밀번호' 대화상자를 띄우고 그 뒤에서 흰 화면으로 멈춘다(11-09 실측).
   sleep 5
 done
 EOF
@@ -142,13 +184,20 @@ echo "   유닛 ${UNIT_DIR}/mealboard-kiosk.service · 훅 ${AUTOSTART}/mealboar
 say "5/6 Wi‑Fi 절전 끄기 (2.4G 끊김 방지, sudo)"
 CON="$(nmcli -t -f NAME,TYPE con show --active 2>/dev/null | awk -F: '$2 ~ /wireless/ {print $1; exit}')"
 if [ -n "${CON}" ]; then
-  sudo nmcli con modify "${CON}" wifi.powersave 2 && echo "   ${CON}: powersave=disable"
+  # 데스크톱 사용자는 netdev 그룹이라 보통 sudo 없이 된다(polkit); 안 되면 sudo.
+  if nmcli con modify "${CON}" wifi.powersave 2 2>/dev/null || { [ "${SUDO_OK}" = 1 ] && sudo nmcli con modify "${CON}" wifi.powersave 2; }; then
+    echo "   ${CON}: powersave=disable"
+  else
+    echo "   ${CON}: 절전 설정 실패(권한) — 터미널에서 다시 실행"
+  fi
 else
   echo "   활성 Wi‑Fi 연결 없음 — 건너뜀"
 fi
 
 say "6/6 Tailscale (학교 Wi‑Fi 는 클라이언트 격리라 LAN 접속이 막힌다 — tailnet 으로 ssh, sudo)"
-if [ "${WITH_TAILSCALE:-1}" = "1" ]; then
+if [ "${WITH_TAILSCALE:-1}" = "1" ] && [ "${SUDO_OK}" != 1 ] && ! tailscale status >/dev/null 2>&1; then
+  echo "   건너뜀(sudo 불가) — 터미널에서 다시 실행"
+elif [ "${WITH_TAILSCALE:-1}" = "1" ]; then
   if ! command -v tailscale >/dev/null; then
     curl -fsSL https://tailscale.com/install.sh | sh
   fi
