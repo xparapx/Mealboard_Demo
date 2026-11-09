@@ -49,7 +49,7 @@ setup_pi.sh Pi 최초 설치·유닛 갱신 (멱등) · check_manual.py 매뉴�
 
 ## 셋업 요약
 
-- **통행로 송출 화면 `https://kiosk.kjhs-meal.com`**(11-02): 42인치 모니터용 1920×1080 화면 — 10초마다 대기시간·밀집도·예보·오늘 급식·평소 대기·리포트·주간 식단 7장을 돌린다. 어느 주소에서나 `/kiosk` 로도 열린다(공개 데모 `demo.kjhs-meal.com/kiosk` 포함). 쿼리 `?interval=초&slides=wait,room,…&hold&noanim`. 송출 기기는 별도 라즈베리파이(브라우저만) — `deploy/setup_kiosk_pi.sh` 한 번이면 전원 인가 → 자동 로그인 → systemd 유닛이 Chromium 전체화면으로 띄운다.
+- **통행로 송출 화면 `https://kiosk.kjhs-meal.com`**(11-02): 42인치 모니터용 1920×1080 화면 — 10초마다 대기시간·밀집도·예보·오늘 급식·평소 대기·리포트·주간 식단 7장을 돌린다. 어느 주소에서나 `/kiosk` 로도 열린다(공개 데모 `demo.kjhs-meal.com/kiosk` 포함). 쿼리 `?interval=초&slides=wait,room,…&hold&noanim`. 송출 기기는 별도 라즈베리파이(브라우저만) — `deploy/setup_kiosk_pi.sh` 한 번이면 전원 인가 → 자동 로그인 → systemd 유닛이 Chromium 전체화면으로 띄운다. 급식 시간에만 TV 입력을 이 Pi 로 가져오고 그 밖엔 다른 입력으로 돌려주는 HDMI‑CEC 자동 전환(1분 타이머)도 함께 설치된다(TV 가 CEC 를 지원할 때, 설정 `MODE`).
 - **설치 없이 보기 — 공개 데모 `https://demo.kjhs-meal.com`**: 급식실 Pi 가 상시 띄우는 시연 화면(모의 데이터 · 가상 시계, 30분마다 피크 12:44 로 되감김). 실제 운영 화면은 `https://kjhs-meal.com`.
 - **처음 보는 분 · 심사위원(Pi·카메라 없이 5분)**: Python 3.11+ 과 [uv](https://docs.astral.sh/uv/) 만 있으면 된다.
   ```bash

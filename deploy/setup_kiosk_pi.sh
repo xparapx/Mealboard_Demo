@@ -6,12 +6,12 @@
 # 하는 일: 운영 PC 공개키 등록(deploy/kiosk_authorized_keys) · 데스크톱 자동 로그인 · 화면 꺼짐 금지 · Chromium 설치 ·
 # 전원 인가 → 자동 로그인 → **systemd user 유닛 `mealboard-kiosk.service`(Restart=always)** 가 전체화면 키오스크로 송출 화면을 열고
 # 죽으면 다시 띄운다(세션 시작 훅 = XDG autostart + labwc autostart, 유닛을 못 올리는 세션이면 직접 실행 폴백, 이중 실행은 flock) ·
-# Wi‑Fi 절전 끄기 · Tailscale(원격 ssh 경로, WITH_TAILSCALE=0 으로 끔).
+# Wi‑Fi 절전 끄기 · Tailscale(원격 ssh 경로, WITH_TAILSCALE=0 으로 끔) · HDMI 입력 자동 전환(급식 창 안에만 이 Pi 를 TV 에 보이게 — CEC, 1분 타이머).
 # 이 Pi 는 급식실 Pi(카운팅·API)와 별개다 — 코드·DB 없이 브라우저만 돈다(42인치 모니터 전용).
-# 관리: systemctl --user status|restart mealboard-kiosk · journalctl --user -u mealboard-kiosk -n 50 · URL 은 ~/.config/mealboard-kiosk.url
+# 관리: systemctl --user status|restart mealboard-kiosk · journalctl --user -u mealboard-kiosk -n 50 · URL 은 ~/.config/mealboard-kiosk.url · HDMI 전환은 ~/.config/mealboard-kiosk-hdmi.conf(MODE cec|blank|off)
 #
 # sudo 가 필요한 단계(초기 1회, 사람 또는 NOPASSWD 등록 뒤 원격):
-#   ① raspi-config 자동 로그인(B4)·화면 꺼짐 금지   ② apt install chromium   ③ nmcli 절전 설정   ④ tailscale 설치·up
+#   ① raspi-config 자동 로그인(B4)·화면 꺼짐 금지   ② apt install chromium(+정책 파일·폰트)   ③ nmcli 절전 설정   ④ tailscale 설치·up   ⑤ apt install v4l-utils wlr-randr(CEC — RPi OS 데스크톱엔 보통 이미 있음)
 # 그 밖(스크립트·autostart 파일)은 전부 홈 디렉터리 안이라 sudo 없이 된다.
 set -euo pipefail
 
@@ -23,11 +23,11 @@ RUNNER="${BIN}/mealboard-kiosk.sh"
 
 say() { printf '\n== %s\n' "$*"; }
 
-# sudo 단계(1·2·5·6)는 비밀번호를 칠 수 있는 터미널이거나 NOPASSWD 일 때만. `ssh kiosk bash -s < setup_kiosk_pi.sh` 처럼
+# sudo 단계(1·2·5·6·7의 apt)는 비밀번호를 칠 수 있는 터미널이거나 NOPASSWD 일 때만. `ssh kiosk bash -s < setup_kiosk_pi.sh` 처럼
 # 파이프로 돌리면 사용자 영역(0·3·4 — 런너·유닛·훅)만 재적용된다(원격 갱신 경로, sudo 없음).
-if sudo -n true 2>/dev/null || [ -t 1 ]; then SUDO_OK=1; else SUDO_OK=0; echo "   (sudo 불가 환경 — 1·2·5·6 단계는 건너뛰고 사용자 영역만 적용)"; fi
+if sudo -n true 2>/dev/null || [ -t 1 ]; then SUDO_OK=1; else SUDO_OK=0; echo "   (sudo 불가 환경 — 1·2·5·6 단계와 7 의 apt 는 건너뛰고 사용자 영역만 적용)"; fi
 
-say "0/6 운영 PC 공개키 등록 (deploy/kiosk_authorized_keys — 공개키만, sudo 없음)"
+say "0/7 운영 PC 공개키 등록 (deploy/kiosk_authorized_keys — 공개키만, sudo 없음)"
 KEYS_URL="https://raw.githubusercontent.com/xparapx/Mealboard_Demo/main/deploy/kiosk_authorized_keys"
 mkdir -p "${HOME_DIR}/.ssh" && chmod 700 "${HOME_DIR}/.ssh"
 touch "${HOME_DIR}/.ssh/authorized_keys" && chmod 600 "${HOME_DIR}/.ssh/authorized_keys"
@@ -44,7 +44,7 @@ while IFS= read -r k; do
 done <<< "${KEYS}"
 echo "   추가 ${ADDED}개 · 전체 $(grep -c . "${HOME_DIR}/.ssh/authorized_keys")개"
 
-say "1/6 데스크톱 자동 로그인 · 화면 꺼짐 금지 (sudo)"
+say "1/7 데스크톱 자동 로그인 · 화면 꺼짐 금지 (sudo)"
 if [ "${SUDO_OK}" != 1 ]; then
   echo "   건너뜀(sudo 불가)"
 elif command -v raspi-config >/dev/null; then
@@ -54,7 +54,7 @@ else
   echo "   raspi-config 없음 — 자동 로그인·화면 꺼짐은 수동 설정 필요"
 fi
 
-say "2/6 Chromium 설치 확인 (sudo)"
+say "2/7 Chromium 설치 확인 (sudo)"
 CHROMIUM="$(command -v chromium || command -v chromium-browser || true)"
 if [ -z "${CHROMIUM}" ] && [ "${SUDO_OK}" != 1 ]; then
   echo "   Chromium 없음 + sudo 불가 — 터미널에서 다시 실행해 설치할 것"; exit 1
@@ -65,7 +65,7 @@ elif [ -z "${CHROMIUM}" ]; then
 fi
 echo "   ${CHROMIUM}"
 
-say "2a/6 Chromium 관리 정책 — 번역 말풍선·비밀번호 저장 제안·기본 브라우저 안내 끄기 (sudo; 플래그 --disable-features=Translate 로는 안 꺼진다, 11-09 실측)"
+say "2a/7 Chromium 관리 정책 — 번역 말풍선·비밀번호 저장 제안·기본 브라우저 안내 끄기 (sudo; 플래그 --disable-features=Translate 로는 안 꺼진다, 11-09 실측)"
 if [ "${SUDO_OK}" = 1 ]; then
   sudo mkdir -p /etc/chromium/policies/managed
   printf '%s\n' '{' \
@@ -82,7 +82,7 @@ else
   echo "   건너뜀(sudo 불가) — 번역 말풍선이 뜨면 터미널에서 다시 실행"
 fi
 
-say "2b/6 한글 폰트 (없으면 화면의 한글이 전부 네모 — 11-09 실측: Raspberry Pi OS 기본엔 한글 폰트가 없다)"
+say "2b/7 한글 폰트 (없으면 화면의 한글이 전부 네모 — 11-09 실측: Raspberry Pi OS 기본엔 한글 폰트가 없다)"
 if [ "$(fc-list :lang=ko 2>/dev/null | wc -l)" -gt 0 ]; then
   echo "   있음: $(fc-match 'sans-serif:lang=ko')"
 elif [ "${SUDO_OK}" = 1 ]; then
@@ -95,7 +95,7 @@ else
     || echo "   폰트 내려받기 실패 — 터미널에서 sudo apt install fonts-noto-cjk"
 fi
 
-say "3/6 감시 루프 스크립트 ${RUNNER}"
+say "3/7 감시 루프 스크립트 ${RUNNER}"
 mkdir -p "${BIN}" "${AUTOSTART}"
 cat > "${RUNNER}" <<'EOF'
 #!/usr/bin/env bash
@@ -134,7 +134,7 @@ EOF
 chmod +x "${RUNNER}"
 printf '%s\n' "${URL}" > "${HOME_DIR}/.config/mealboard-kiosk.url"
 
-say "4/6 systemd user 유닛 mealboard-kiosk.service + 세션 시작 훅 (전원 인가 → 자동 로그인 → 유닛 기동)"
+say "4/7 systemd user 유닛 mealboard-kiosk.service + 세션 시작 훅 (전원 인가 → 자동 로그인 → 유닛 기동)"
 UNIT_DIR="${HOME_DIR}/.config/systemd/user"
 LAUNCH="${BIN}/mealboard-kiosk-launch.sh"
 mkdir -p "${UNIT_DIR}"
@@ -181,7 +181,7 @@ touch "${LABWC}"
 grep -qF "${LAUNCH}" "${LABWC}" || printf '%s &\n' "${LAUNCH}" >> "${LABWC}"
 echo "   유닛 ${UNIT_DIR}/mealboard-kiosk.service · 훅 ${AUTOSTART}/mealboard-kiosk.desktop, ${LABWC}"
 
-say "5/6 Wi‑Fi 절전 끄기 (2.4G 끊김 방지, sudo)"
+say "5/7 Wi‑Fi 절전 끄기 (2.4G 끊김 방지, sudo)"
 CON="$(nmcli -t -f NAME,TYPE con show --active 2>/dev/null | awk -F: '$2 ~ /wireless/ {print $1; exit}')"
 if [ -n "${CON}" ]; then
   # 데스크톱 사용자는 netdev 그룹이라 보통 sudo 없이 된다(polkit); 안 되면 sudo.
@@ -194,7 +194,7 @@ else
   echo "   활성 Wi‑Fi 연결 없음 — 건너뜀"
 fi
 
-say "6/6 Tailscale (학교 Wi‑Fi 는 클라이언트 격리라 LAN 접속이 막힌다 — tailnet 으로 ssh, sudo)"
+say "6/7 Tailscale (학교 Wi‑Fi 는 클라이언트 격리라 LAN 접속이 막힌다 — tailnet 으로 ssh, sudo)"
 if [ "${WITH_TAILSCALE:-1}" = "1" ] && [ "${SUDO_OK}" != 1 ] && ! tailscale status >/dev/null 2>&1; then
   echo "   건너뜀(sudo 불가) — 터미널에서 다시 실행"
 elif [ "${WITH_TAILSCALE:-1}" = "1" ]; then
@@ -211,6 +211,119 @@ else
   echo "   WITH_TAILSCALE=0 — 건너뜀"
 fi
 
+say "7/7 HDMI 입력 자동 전환 — 급식 창 안에는 이 Pi, 밖에는 다른 입력 (CEC, 1분 타이머)"
+# 42인치를 급식 시간에만 쓰고 그 밖엔 다른 장치의 화면을 내보내려는 요구(11-09 사용자). 판정은 송출 주소의 /api/status feed.now
+# (급식 창 안에서만 값, 급식 없는 날·창 밖은 null) — 시간표·휴일 규칙을 여기에 다시 적지 않는다. 수단은 ~/.config/mealboard-kiosk-hdmi.conf 의 MODE:
+#   cec(기본) TV 에 HDMI‑CEC 로 '나를 보여라'(Image View On + Active Source) / '끝났다'(Inactive Source, OTHER 가 있으면 그 입력으로 Set Stream Path).
+#             TV 가 CEC 를 모르거나 꺼져 있으면 아무 일도 안 일어난다(화면은 그대로 Pi) — 켜 둬도 해롭지 않다. TV 메뉴에서 CEC(Anynet+·Simplink 류)를 켤 것.
+#   blank     자동 전환 HDMI 스위치용 — 창 밖에는 Pi 의 HDMI 출력 자체를 끈다(wlr-randr) + cec. 스위치가 남은 입력으로 넘어간다. 스위치 없이 켜면 창 밖이 '신호 없음'.
+#   off       아무것도 안 함.
+# 전이(off→on, on→off)에만 명령을 보낸다 — 매분 쏘지 않는다(사람이 리모컨으로 돌려 둔 것과 싸우지 않게). 첫 실행은 상태만 기록(TV 를 건드리지 않음). 망 단절 시 상태 유지.
+if [ "${SUDO_OK}" = 1 ]; then
+  command -v cec-ctl >/dev/null || sudo apt-get install -y -qq v4l-utils
+  command -v wlr-randr >/dev/null || sudo apt-get install -y -qq wlr-randr
+fi
+command -v cec-ctl >/dev/null || echo "   cec-ctl 없음(v4l-utils) — sudo 가능한 터미널에서 다시 실행하면 설치된다. 그때까지 CEC 전환은 건너뛴다"
+HDMI_SH="${BIN}/mealboard-kiosk-hdmi.sh"
+HDMI_CONF="${HOME_DIR}/.config/mealboard-kiosk-hdmi.conf"
+cat > "${HDMI_SH}" <<'EOF'
+#!/usr/bin/env bash
+# HDMI 입력 자동 전환(setup_kiosk_pi.sh 7/7 가 설치). 1분 타이머가 인자 없이 부른다. 시험용 강제: mealboard-kiosk-hdmi.sh on|off
+set -u
+CONF="${HOME}/.config/mealboard-kiosk-hdmi.conf"; STATE="${HOME}/.config/mealboard-kiosk-hdmi.state"
+MODE=cec; OTHER=""
+[ -r "${CONF}" ] && . "${CONF}"
+[ "${MODE}" = off ] && exit 0
+URL="$(head -n1 "${HOME}/.config/mealboard-kiosk.url" 2>/dev/null || echo https://kiosk.kjhs-meal.com)"
+ORIGIN="$(printf '%s' "${URL}" | sed -E 's#^(https?://[^/]+).*#\1#')"
+log() { logger -t mealboard-kiosk-hdmi -- "$*" 2>/dev/null; echo "$*"; }
+
+want="${1:-}"
+if [ -z "${want}" ]; then
+  body="$(curl -fsS --max-time 8 "${ORIGIN}/api/status" 2>/dev/null)" || { log "status 조회 실패 — 상태 유지"; exit 0; }
+  want="$(printf '%s' "${body}" | python3 -c 'import sys,json; f=(json.load(sys.stdin).get("feed") or {}); print("on" if f.get("now") else "off")' 2>/dev/null)" || exit 0
+  have="$(cat "${STATE}" 2>/dev/null || true)"
+  if [ -z "${have}" ]; then printf '%s\n' "${want}" > "${STATE}"; log "초기 상태 기록 ${want} (명령 없음)"; exit 0; fi
+  [ "${want}" = "${have}" ] && exit 0
+fi
+
+# CEC 어댑터 = 두 HDMI 중 물리 주소가 잡힌 쪽(모니터가 꽂힌 포트). 출력: "<dev> <phys>"
+cec_dev() {
+  local d pa
+  for d in /dev/cec0 /dev/cec1; do
+    [ -e "${d}" ] || continue
+    pa="$(cec-ctl -d "${d}" 2>/dev/null | sed -n 's/.*Physical Address *: *\([0-9a-f.]*\).*/\1/p' | head -1)"
+    case "${pa}" in ""|f.f.f.f) ;; *) echo "${d} ${pa}"; return 0 ;; esac
+  done
+  return 1
+}
+cec_send() {        # $1 on|off — Image View On·Inactive Source 는 TV(0)에게, Active Source·Set Stream Path 는 방송(15)
+  local act="$1" dev pa
+  command -v cec-ctl >/dev/null || { log "cec-ctl 없음 — CEC 건너뜀"; return 0; }
+  read -r dev pa < <(cec_dev) || { log "CEC 물리 주소 없음(모니터 미연결 또는 CEC 없는 모니터) — 건너뜀"; return 0; }
+  cec-ctl -d "${dev}" --playback --osd-name Hearim >/dev/null 2>&1 || true   # 재생기기로 등록(멱등)
+  if [ "${act}" = on ]; then
+    cec-ctl -d "${dev}" --to 0 --image-view-on >/dev/null 2>&1
+    sleep 1
+    cec-ctl -d "${dev}" --to 15 --active-source phys-addr="${pa}" >/dev/null 2>&1
+  else
+    cec-ctl -d "${dev}" --to 0 --inactive-source phys-addr="${pa}" >/dev/null 2>&1
+    [ -n "${OTHER}" ] && cec-ctl -d "${dev}" --to 15 --set-stream-path phys-addr="${OTHER}" >/dev/null 2>&1
+  fi
+  log "CEC ${act} (${dev} ${pa}${OTHER:+ → ${OTHER}})"
+}
+hdmi_out() {        # $1 on|off — Pi 의 HDMI 출력(blank 모드, 자동 전환 스위치가 신호 유무로 고른다)
+  export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}"
+  local out; out="$(wlr-randr 2>/dev/null | awk 'NR==1{print $1}')"
+  [ -n "${out}" ] || { log "wlr-randr 출력 없음 — 건너뜀"; return 0; }
+  wlr-randr --output "${out}" "--$1" >/dev/null 2>&1 && log "HDMI 출력 $1 (${out})"
+}
+
+if [ "${want}" = on ]; then
+  [ "${MODE}" = blank ] && hdmi_out on
+  cec_send on
+else
+  cec_send off
+  [ "${MODE}" = blank ] && hdmi_out off
+fi
+printf '%s\n' "${want}" > "${STATE}"
+EOF
+chmod +x "${HDMI_SH}"
+if [ ! -f "${HDMI_CONF}" ]; then
+  cat > "${HDMI_CONF}" <<'EOF'
+# HDMI 입력 자동 전환 설정 — ~/.local/bin/mealboard-kiosk-hdmi.sh 가 읽는다(1분 타이머 mealboard-kiosk-hdmi.timer)
+# MODE: cec(기본, TV 가 CEC 를 알면 급식 창에만 이 Pi 를 보여 준다) | blank(자동 전환 HDMI 스위치용, 창 밖엔 Pi 출력 끔) | off
+MODE=cec
+# OTHER: 창 밖에 보여 줄 TV 입력의 CEC 물리 주소(예: 2.0.0.0 = HDMI 2). 비우면 TV 가 '이전 입력' 으로 돌아가는 데 맡긴다
+OTHER=
+EOF
+fi
+cat > "${UNIT_DIR}/mealboard-kiosk-hdmi.service" <<EOF
+[Unit]
+Description=Hearim kiosk HDMI input switch (meal window → this Pi)
+
+[Service]
+Type=oneshot
+ExecStart=${HDMI_SH}
+EOF
+cat > "${UNIT_DIR}/mealboard-kiosk-hdmi.timer" <<'EOF'
+[Unit]
+Description=Hearim kiosk HDMI input switch — every minute
+
+[Timer]
+OnBootSec=90s
+OnUnitActiveSec=60s
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target
+EOF
+systemctl --user daemon-reload 2>/dev/null || true
+systemctl --user enable --now mealboard-kiosk-hdmi.timer 2>/dev/null || echo "   (user systemd 에 아직 못 붙음 — 다음 로그인부터 타이머가 돈다)"
+echo "   스크립트 ${HDMI_SH} · 설정 ${HDMI_CONF} · 상태 ~/.config/mealboard-kiosk-hdmi.state"
+echo "   시험: ${HDMI_SH} on|off   로그: journalctl --user -t mealboard-kiosk-hdmi -n 20   CEC 점검: cec-ctl -d /dev/cec0 --playback -S"
+
 say "완료 — 전원을 넣으면 자동 로그인 뒤 systemd 유닛이 ${URL} 을 전체화면으로 띄운다 (지금 적용: sudo reboot)"
 echo "   상태: systemctl --user status mealboard-kiosk   재시작: systemctl --user restart mealboard-kiosk   로그: journalctl --user -u mealboard-kiosk -n 50"
 echo "   URL 변경: ~/.config/mealboard-kiosk.url 수정 뒤 restart.  브라우저 확인: pgrep -af chromium | head -1"
+echo "   HDMI 전환: 급식 창에 TV 가 이 Pi 로 안 넘어오면 TV 메뉴의 CEC 를 켠다. CEC 없는 모니터·스위치 사용이면 conf 의 MODE=blank"
