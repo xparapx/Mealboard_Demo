@@ -3,9 +3,12 @@
 #
 #   bash deploy/setup_kiosk_pi.sh [URL]          # 기본 URL https://kiosk.kjhs-meal.com
 #
-# 하는 일: 운영 PC 공개키 등록(deploy/kiosk_authorized_keys) · 데스크톱 자동 로그인 · 화면 꺼짐 금지 · Chromium 설치 · 로그인 직후 전체화면 키오스크로
-# 송출 화면을 열고 꺼지면 다시 여는 감시 루프(XDG autostart) · Wi‑Fi 절전 끄기 · Tailscale(원격 ssh 경로, WITH_TAILSCALE=0 으로 끔).
-# 이 Pi 는 급식실 Pi(카운팅·API)와 별개다 — 코드·DB 없이 브라우저만 돈다.
+# 하는 일: 운영 PC 공개키 등록(deploy/kiosk_authorized_keys) · 데스크톱 자동 로그인 · 화면 꺼짐 금지 · Chromium 설치 ·
+# 전원 인가 → 자동 로그인 → **systemd user 유닛 `mealboard-kiosk.service`(Restart=always)** 가 전체화면 키오스크로 송출 화면을 열고
+# 죽으면 다시 띄운다(세션 시작 훅 = XDG autostart + labwc autostart, 유닛을 못 올리는 세션이면 직접 실행 폴백, 이중 실행은 flock) ·
+# Wi‑Fi 절전 끄기 · Tailscale(원격 ssh 경로, WITH_TAILSCALE=0 으로 끔).
+# 이 Pi 는 급식실 Pi(카운팅·API)와 별개다 — 코드·DB 없이 브라우저만 돈다(42인치 모니터 전용).
+# 관리: systemctl --user status|restart mealboard-kiosk · journalctl --user -u mealboard-kiosk -n 50 · URL 은 ~/.config/mealboard-kiosk.url
 #
 # sudo 가 필요한 단계(초기 1회, 사람 또는 NOPASSWD 등록 뒤 원격):
 #   ① raspi-config 자동 로그인(B4)·화면 꺼짐 금지   ② apt install chromium   ③ nmcli 절전 설정   ④ tailscale 설치·up
@@ -66,6 +69,10 @@ URL="https://kiosk.kjhs-meal.com"
 CHROMIUM="$(command -v chromium || command -v chromium-browser)"
 PROFILE="${HOME}/.config/mealboard-kiosk-profile"
 
+# 한 세션에 하나만(systemd 유닛과 autostart 폴백이 겹쳐도 두 번째는 조용히 끝난다).
+exec 9>"${HOME}/.config/mealboard-kiosk.lock"
+flock -n 9 || exit 0
+
 # 망이 붙을 때까지 기다린다(부팅 직후 Wi‑Fi 가 늦을 수 있다). 최대 2분, 그 뒤엔 그냥 연다 — 화면이 자체 재시도한다.
 for _ in $(seq 1 24); do
   curl -fsS --max-time 4 -o /dev/null "${URL}" && break
@@ -85,15 +92,52 @@ EOF
 chmod +x "${RUNNER}"
 printf '%s\n' "${URL}" > "${HOME_DIR}/.config/mealboard-kiosk.url"
 
-say "4/6 로그인 시 자동 실행 (XDG autostart — wayfire·labwc·X11 공통)"
+say "4/6 systemd user 유닛 mealboard-kiosk.service + 세션 시작 훅 (전원 인가 → 자동 로그인 → 유닛 기동)"
+UNIT_DIR="${HOME_DIR}/.config/systemd/user"
+LAUNCH="${BIN}/mealboard-kiosk-launch.sh"
+mkdir -p "${UNIT_DIR}"
+cat > "${UNIT_DIR}/mealboard-kiosk.service" <<EOF
+[Unit]
+Description=Hearim kiosk (Chromium fullscreen, ${URL})
+# 그래픽 세션(WAYLAND_DISPLAY) 안에서만 뜻이 있다 — 세션 시작 훅(launch.sh)이 환경을 넘겨 주고 start 한다.
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=${RUNNER}
+Restart=always
+RestartSec=5
+# 브라우저가 죽어도 유닛이 5초 뒤 다시 올린다(런너 안의 루프와 겹쳐도 flock 이 한 개만 남긴다).
+
+[Install]
+WantedBy=graphical-session.target
+EOF
+systemctl --user daemon-reload 2>/dev/null || true
+systemctl --user enable mealboard-kiosk.service 2>/dev/null || echo "   (user systemd 에 아직 못 붙음 — 로그인 세션에서 훅이 start 한다)"
+
+# 세션 시작 훅: 데스크톱 환경(WAYLAND_DISPLAY 등)을 user systemd 로 넘기고 유닛을 켠다. 유닛을 못 올리는 세션이면 직접 실행.
+cat > "${LAUNCH}" <<EOF
+#!/usr/bin/env bash
+systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_RUNTIME_DIR XDG_SESSION_TYPE XAUTHORITY 2>/dev/null || true
+systemctl --user start mealboard-kiosk.service 2>/dev/null || exec "${RUNNER}"
+EOF
+chmod +x "${LAUNCH}"
+
+# 훅 ① XDG autostart(lxsession-xdg-autostart·X11·wayfire) ② labwc autostart(Raspberry Pi OS Bookworm/Trixie 기본 세션) — 둘이 겹쳐도 start 는 멱등.
 cat > "${AUTOSTART}/mealboard-kiosk.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=Mealboard kiosk
 Comment=헤아림 통행로 송출 화면
-Exec=${RUNNER}
+Exec=${LAUNCH}
 X-GNOME-Autostart-enabled=true
 EOF
+LABWC="${HOME_DIR}/.config/labwc/autostart"
+mkdir -p "$(dirname "${LABWC}")"
+touch "${LABWC}"
+grep -qF "${LAUNCH}" "${LABWC}" || printf '%s &\n' "${LAUNCH}" >> "${LABWC}"
+echo "   유닛 ${UNIT_DIR}/mealboard-kiosk.service · 훅 ${AUTOSTART}/mealboard-kiosk.desktop, ${LABWC}"
 
 say "5/6 Wi‑Fi 절전 끄기 (2.4G 끊김 방지, sudo)"
 CON="$(nmcli -t -f NAME,TYPE con show --active 2>/dev/null | awk -F: '$2 ~ /wireless/ {print $1; exit}')"
@@ -118,5 +162,6 @@ else
   echo "   WITH_TAILSCALE=0 — 건너뜀"
 fi
 
-say "완료 — 재부팅하면 자동 로그인 뒤 ${URL} 이 전체화면으로 뜬다 (sudo reboot)"
-echo "   URL 변경: ~/.config/mealboard-kiosk.url 수정 뒤 재로그인.  확인: pgrep -af chromium | head -1"
+say "완료 — 전원을 넣으면 자동 로그인 뒤 systemd 유닛이 ${URL} 을 전체화면으로 띄운다 (지금 적용: sudo reboot)"
+echo "   상태: systemctl --user status mealboard-kiosk   재시작: systemctl --user restart mealboard-kiosk   로그: journalctl --user -u mealboard-kiosk -n 50"
+echo "   URL 변경: ~/.config/mealboard-kiosk.url 수정 뒤 restart.  브라우저 확인: pgrep -af chromium | head -1"
