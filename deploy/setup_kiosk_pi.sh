@@ -6,9 +6,9 @@
 # 하는 일: 운영 PC 공개키 등록(deploy/kiosk_authorized_keys) · 데스크톱 자동 로그인 · 화면 꺼짐 금지 · Chromium 설치 ·
 # 전원 인가 → 자동 로그인 → **systemd user 유닛 `mealboard-kiosk.service`(Restart=always)** 가 전체화면 키오스크로 송출 화면을 열고
 # 죽으면 다시 띄운다(세션 시작 훅 = XDG autostart + labwc autostart, 유닛을 못 올리는 세션이면 직접 실행 폴백, 이중 실행은 flock) ·
-# Wi‑Fi 절전 끄기 · Tailscale(원격 ssh 경로, WITH_TAILSCALE=0 으로 끔) · HDMI 입력 자동 전환(급식 창 안에만 이 Pi 를 TV 에 보이게 — CEC, 1분 타이머).
+# Wi‑Fi 절전 끄기 · Tailscale(원격 ssh 경로, WITH_TAILSCALE=0 으로 끔) · 시간표 전환(아침 등교 슬롯엔 교통 키오스크 URL, 급식 창엔 헤아림 — 화면 URL 전환 + HDMI‑CEC 입력 전환, 1분 타이머).
 # 이 Pi 는 급식실 Pi(카운팅·API)와 별개다 — 코드·DB 없이 브라우저만 돈다(42인치 모니터 전용).
-# 관리: systemctl --user status|restart mealboard-kiosk · journalctl --user -u mealboard-kiosk -n 50 · URL 은 ~/.config/mealboard-kiosk.url · HDMI 전환은 ~/.config/mealboard-kiosk-hdmi.conf(MODE cec|blank|off)
+# 관리: systemctl --user status|restart mealboard-kiosk · journalctl --user -u mealboard-kiosk -n 50 · 기본 URL 은 ~/.config/mealboard-kiosk.url · 시간표·HDMI 는 ~/.config/mealboard-kiosk-sched.conf(SLOTS · MODE cec|blank|off) · 판정 확인 mealboard-kiosk-sched.sh dry
 #
 # sudo 가 필요한 단계(초기 1회, 사람 또는 NOPASSWD 등록 뒤 원격):
 #   ① raspi-config 자동 로그인(B4)·화면 꺼짐 금지   ② apt install chromium(+정책 파일·폰트)   ③ nmcli 절전 설정   ④ tailscale 설치·up   ⑤ apt install v4l-utils wlr-randr(CEC — RPi OS 데스크톱엔 보통 이미 있음)
@@ -100,10 +100,11 @@ mkdir -p "${BIN}" "${AUTOSTART}"
 cat > "${RUNNER}" <<'EOF'
 #!/usr/bin/env bash
 # 송출 화면을 전체화면 키오스크로 열고, 브라우저가 죽으면 5초 뒤 다시 연다.
-# URL 은 ~/.config/mealboard-kiosk.url 한 줄(없으면 기본값).
-URL_FILE="${HOME}/.config/mealboard-kiosk.url"
+# URL 은 ~/.config/mealboard-kiosk.url 한 줄(기본). 시간표 스크립트(7/7)가 ~/.config/mealboard-kiosk.current 에 지금 보일 URL 을 적어 두면 그쪽이 우선.
+URL_FILE="${HOME}/.config/mealboard-kiosk.url"; CUR_FILE="${HOME}/.config/mealboard-kiosk.current"
 URL="https://kiosk.kjhs-meal.com"
 [ -r "${URL_FILE}" ] && URL="$(head -n1 "${URL_FILE}")"
+[ -s "${CUR_FILE}" ] && URL="$(head -n1 "${CUR_FILE}")"
 CHROMIUM="$(command -v chromium || command -v chromium-browser)"
 PROFILE="${HOME}/.config/mealboard-kiosk-profile"
 
@@ -115,8 +116,16 @@ exec 9>"${HOME}/.config/mealboard-kiosk.lock"
 flock -n 9 || exit 0
 
 # 망이 붙을 때까지 기다린다(부팅 직후 Wi‑Fi 가 늦을 수 있다). 최대 2분, 그 뒤엔 그냥 연다 — 화면이 자체 재시도한다.
+# 학교 망은 Cloudflare 엣지 IP 하나(104.21.70.130)를 막는다(09-18·11-10 실측) — A 레코드를 하나씩 시도해야 '망 없음' 과 가른다.
+reach() {
+  local host port ip; host="${1#*://}"; host="${host%%/*}"; case "$1" in https://*) port=443 ;; *) port=80 ;; esac
+  for ip in $(getent ahostsv4 "${host}" 2>/dev/null | awk '{print $1}' | sort -u); do
+    curl -4 -fsS --connect-timeout 4 --max-time 8 --resolve "${host}:${port}:${ip}" -o /dev/null "$1" 2>/dev/null && return 0
+  done
+  return 1
+}
 for _ in $(seq 1 24); do
-  curl -fsS --max-time 4 -o /dev/null "${URL}" && break
+  reach "${URL}" && break
   sleep 5
 done
 
@@ -211,39 +220,89 @@ else
   echo "   WITH_TAILSCALE=0 — 건너뜀"
 fi
 
-say "7/7 HDMI 입력 자동 전환 — 급식 창 안에는 이 Pi, 밖에는 다른 입력 (CEC, 1분 타이머)"
-# 42인치를 급식 시간에만 쓰고 그 밖엔 다른 장치의 화면을 내보내려는 요구(11-09 사용자). 판정은 송출 주소의 /api/status feed.now
-# (급식 창 안에서만 값, 급식 없는 날·창 밖은 null) — 시간표·휴일 규칙을 여기에 다시 적지 않는다. 수단은 ~/.config/mealboard-kiosk-hdmi.conf 의 MODE:
-#   cec(기본) TV 에 HDMI‑CEC 로 '나를 보여라'(Image View On + Active Source) / '끝났다'(Inactive Source, OTHER 가 있으면 그 입력으로 Set Stream Path).
-#             TV 가 CEC 를 모르거나 꺼져 있으면 아무 일도 안 일어난다(화면은 그대로 Pi) — 켜 둬도 해롭지 않다. TV 메뉴에서 CEC(Anynet+·Simplink 류)를 켤 것.
-#   blank     자동 전환 HDMI 스위치용 — 창 밖에는 Pi 의 HDMI 출력 자체를 끈다(wlr-randr) + cec. 스위치가 남은 입력으로 넘어간다. 스위치 없이 켜면 창 밖이 '신호 없음'.
-#   off       아무것도 안 함.
-# 전이(off→on, on→off)에만 명령을 보낸다 — 매분 쏘지 않는다(사람이 리모컨으로 돌려 둔 것과 싸우지 않게). 첫 실행은 상태만 기록(TV 를 건드리지 않음). 망 단절 시 상태 유지.
+say "7/7 시간표 전환 — 아침 등교(교통 키오스크) · 급식 창(헤아림) 화면 + HDMI 입력 (1분 타이머)"
+# 한 대의 42인치로 아침 등교 시간엔 교통 키오스크(https://tr-kiosk.kjhs-lab.com/), 급식 시간엔 헤아림 송출을 보여 주고(11-10 사용자 요청),
+# 그 밖엔 TV 를 다른 입력으로 돌려준다(11-09). 판정 두 갈래:
+#   · 급식 창  = 송출 주소의 /api/status feed.now(급식 창 안에서만 값, 급식 없는 날·창 밖은 null) — 시간표·휴일 규칙을 여기에 복제하지 않는다.
+#   · 시간표 슬롯 = conf 의 SLOTS("시작-끝 URL [요일]", 로컬 시계) — 급식 없는 날(feed.meal_day=false, 휴일·방학)은 슬롯도 쉰다.
+# 화면 URL 은 ~/.config/mealboard-kiosk.current 에 적고, 바뀐 순간에만 mealboard-kiosk 유닛을 재시작한다(런너가 그 파일을 읽는다 — 전환 때 5초쯤 검은 화면).
+# HDMI 는 MODE 로: cec(기본) TV 에 '나를 보여라'(Image View On+Active Source) / '끝났다'(Inactive Source, OTHER 가 있으면 그 입력으로 Set Stream Path);
+#   TV 가 CEC 를 모르면 아무 일도 안 일어난다(켜 둬도 해롭지 않다). blank = 자동 전환 HDMI 스위치용(창 밖엔 Pi 출력 자체를 끔). off = HDMI 안 건드림(화면 전환만).
+# 전이에만 명령(매분 쏘지 않는다 — 사람이 리모컨으로 돌려 둔 것과 싸우지 않게). 첫 실행은 상태만 기록. 망 단절 시 급식 판정은 유지, 슬롯은 로컬 시계라 계속 동작.
 if [ "${SUDO_OK}" = 1 ]; then
   command -v cec-ctl >/dev/null || sudo apt-get install -y -qq v4l-utils
   command -v wlr-randr >/dev/null || sudo apt-get install -y -qq wlr-randr
 fi
 command -v cec-ctl >/dev/null || echo "   cec-ctl 없음(v4l-utils) — sudo 가능한 터미널에서 다시 실행하면 설치된다. 그때까지 CEC 전환은 건너뛴다"
-HDMI_SH="${BIN}/mealboard-kiosk-hdmi.sh"
-HDMI_CONF="${HOME_DIR}/.config/mealboard-kiosk-hdmi.conf"
-cat > "${HDMI_SH}" <<'EOF'
+SCHED_SH="${BIN}/mealboard-kiosk-sched.sh"
+SCHED_CONF="${HOME_DIR}/.config/mealboard-kiosk-sched.conf"
+# 11-09 의 옛 이름(mealboard-kiosk-hdmi.*) 정리 — 설정·상태는 새 이름으로 승계
+systemctl --user disable --now mealboard-kiosk-hdmi.timer 2>/dev/null || true
+rm -f "${UNIT_DIR}/mealboard-kiosk-hdmi.service" "${UNIT_DIR}/mealboard-kiosk-hdmi.timer" "${BIN}/mealboard-kiosk-hdmi.sh"
+OLD_CONF="${HOME_DIR}/.config/mealboard-kiosk-hdmi.conf"; OLD_STATE="${HOME_DIR}/.config/mealboard-kiosk-hdmi.state"
+[ -f "${OLD_STATE}" ] && [ ! -f "${HOME_DIR}/.config/mealboard-kiosk-sched.state" ] && mv "${OLD_STATE}" "${HOME_DIR}/.config/mealboard-kiosk-sched.state"
+cat > "${SCHED_SH}" <<'EOF'
 #!/usr/bin/env bash
-# HDMI 입력 자동 전환(setup_kiosk_pi.sh 7/7 가 설치). 1분 타이머가 인자 없이 부른다. 시험용 강제: mealboard-kiosk-hdmi.sh on|off
+# 시간표 전환(setup_kiosk_pi.sh 7/7 이 설치). 1분 타이머가 인자 없이 부른다.
+#   시험: mealboard-kiosk-sched.sh dry      판정만 출력(아무것도 안 바꿈)
+#         mealboard-kiosk-sched.sh on|off   HDMI 만 강제(TV 반응 확인용)
 set -u
-CONF="${HOME}/.config/mealboard-kiosk-hdmi.conf"; STATE="${HOME}/.config/mealboard-kiosk-hdmi.state"
-MODE=cec; OTHER=""
+CONF="${HOME}/.config/mealboard-kiosk-sched.conf"; STATE="${HOME}/.config/mealboard-kiosk-sched.state"
+CUR="${HOME}/.config/mealboard-kiosk.current"
+MODE=cec; OTHER=""; SLOTS=""
 [ -r "${CONF}" ] && . "${CONF}"
-[ "${MODE}" = off ] && exit 0
-URL="$(head -n1 "${HOME}/.config/mealboard-kiosk.url" 2>/dev/null || echo https://kiosk.kjhs-meal.com)"
-ORIGIN="$(printf '%s' "${URL}" | sed -E 's#^(https?://[^/]+).*#\1#')"
-log() { logger -t mealboard-kiosk-hdmi -- "$*" 2>/dev/null; echo "$*"; }
+DEFAULT_URL="$(head -n1 "${HOME}/.config/mealboard-kiosk.url" 2>/dev/null || echo https://kiosk.kjhs-meal.com)"
+ORIGIN="$(printf '%s' "${DEFAULT_URL}" | sed -E 's#^(https?://[^/]+).*#\1#')"
+log() { logger -t mealboard-kiosk-sched -- "$*" 2>/dev/null; echo "$*"; }
+arg="${1:-}"
 
-want="${1:-}"
-if [ -z "${want}" ]; then
-  body="$(curl -fsS --max-time 8 "${ORIGIN}/api/status" 2>/dev/null)" || { log "status 조회 실패 — 상태 유지"; exit 0; }
-  want="$(printf '%s' "${body}" | python3 -c 'import sys,json; f=(json.load(sys.stdin).get("feed") or {}); print("on" if f.get("now") else "off")' 2>/dev/null)" || exit 0
-  have="$(cat "${STATE}" 2>/dev/null || true)"
-  if [ -z "${have}" ]; then printf '%s\n' "${want}" > "${STATE}"; log "초기 상태 기록 ${want} (명령 없음)"; exit 0; fi
+# ① 급식 판정(API) — meal: on|off|unknown, meal_day: yes|no|unknown
+meal=unknown; meal_day=unknown
+fetch_status() {   # 학교 망이 Cloudflare 엣지 IP 하나를 막는다(09-18·11-10 실측) — A 레코드를 하나씩 시도
+  local host port ip; host="${ORIGIN#*://}"; case "${ORIGIN}" in https://*) port=443 ;; *) port=80 ;; esac
+  for ip in $(getent ahostsv4 "${host}" 2>/dev/null | awk '{print $1}' | sort -u); do
+    curl -4 -fsS --connect-timeout 4 --max-time 8 --resolve "${host}:${port}:${ip}" "${ORIGIN}/api/status" 2>/dev/null && return 0
+  done
+  return 1
+}
+if body="$(fetch_status)"; then
+  read -r meal meal_day < <(printf '%s' "${body}" | python3 -c 'import sys,json
+f=(json.load(sys.stdin).get("feed") or {}); print("on" if f.get("now") else "off", "yes" if f.get("meal_day", True) else "no")' 2>/dev/null) || { meal=unknown; meal_day=unknown; }
+fi
+
+# ② 시간표 슬롯(로컬 시계) — SLOTS 한 줄: "HH:MM-HH:MM URL [요일 1~7, 기본 12345=월~금]". 급식 없는 날은 슬롯도 쉰다(휴일·방학).
+slot_url=""; now_hm="$(date +%H:%M)"; dow="$(date +%u)"
+while read -r range url days; do
+  [ -z "${range}" ] && continue; case "${range}" in \#*) continue ;; esac
+  days="${days:-12345}"; case "${days}" in *"${dow}"*) ;; *) continue ;; esac
+  s="${range%-*}"; e="${range#*-}"
+  if [[ "${now_hm}" > "${s}" || "${now_hm}" == "${s}" ]] && [[ "${now_hm}" < "${e}" ]]; then slot_url="${url}"; break; fi
+done <<< "${SLOTS}"
+[ "${meal_day}" = no ] && slot_url=""
+
+# ③ 원하는 화면(url)·TV 전원(want: on|off|keep)
+if   [ -n "${slot_url}" ]; then want=on;   url="${slot_url}"
+elif [ "${meal}" = on ];    then want=on;   url="${DEFAULT_URL}"
+elif [ "${meal}" = off ];   then want=off;  url="${DEFAULT_URL}"
+else                             want=keep; url="${DEFAULT_URL}"; fi      # API 실패 — HDMI 는 유지, 화면은 기본
+have="$(cat "${STATE}" 2>/dev/null || true)"
+cur="$(cat "${CUR}" 2>/dev/null || echo "${DEFAULT_URL}")"
+if [ "${arg}" = dry ]; then
+  echo "now=${now_hm} dow=${dow} meal=${meal} meal_day=${meal_day} slot=${slot_url:--} → url=${url} hdmi=${want} (지금 화면=${cur} hdmi 상태=${have:--})"; exit 0
+fi
+
+# ④ 화면 전환 — URL 이 바뀐 순간에만 유닛 재시작(런너가 .current 를 읽는다)
+if [ "${url}" != "${cur}" ]; then
+  printf '%s\n' "${url}" > "${CUR}"
+  systemctl --user restart mealboard-kiosk 2>/dev/null && log "화면 전환 → ${url}" || log "화면 전환 실패(유닛 재시작 불가) → ${url}"
+fi
+
+# ⑤ HDMI — 강제(on|off)가 아니면 전이에만. 첫 실행은 상태 기록만.
+case "${arg}" in on|off) want="${arg}" ;; esac
+[ "${MODE}" = off ] && exit 0
+if [ -z "${arg}" ]; then
+  [ "${want}" = keep ] && exit 0
+  if [ -z "${have}" ]; then printf '%s\n' "${want}" > "${STATE}"; log "초기 HDMI 상태 기록 ${want} (명령 없음)"; exit 0; fi
   [ "${want}" = "${have}" ] && exit 0
 fi
 
@@ -288,27 +347,35 @@ else
 fi
 printf '%s\n' "${want}" > "${STATE}"
 EOF
-chmod +x "${HDMI_SH}"
-if [ ! -f "${HDMI_CONF}" ]; then
-  cat > "${HDMI_CONF}" <<'EOF'
-# HDMI 입력 자동 전환 설정 — ~/.local/bin/mealboard-kiosk-hdmi.sh 가 읽는다(1분 타이머 mealboard-kiosk-hdmi.timer)
-# MODE: cec(기본, TV 가 CEC 를 알면 급식 창에만 이 Pi 를 보여 준다) | blank(자동 전환 HDMI 스위치용, 창 밖엔 Pi 출력 끔) | off
-MODE=cec
-# OTHER: 창 밖에 보여 줄 TV 입력의 CEC 물리 주소(예: 2.0.0.0 = HDMI 2). 비우면 TV 가 '이전 입력' 으로 돌아가는 데 맡긴다
-OTHER=
+chmod +x "${SCHED_SH}"
+if [ ! -f "${SCHED_CONF}" ]; then
+  OLD_MODE=cec; OLD_OTHER=""
+  if [ -r "${OLD_CONF}" ]; then OLD_MODE="$(sed -n 's/^MODE=//p' "${OLD_CONF}" | tail -1)"; OLD_OTHER="$(sed -n 's/^OTHER=//p' "${OLD_CONF}" | tail -1)"; OLD_MODE="${OLD_MODE:-cec}"; fi
+  cat > "${SCHED_CONF}" <<EOF
+# 시간표 전환 설정 — ~/.local/bin/mealboard-kiosk-sched.sh 가 읽는다(1분 타이머 mealboard-kiosk-sched.timer). 판정 확인: mealboard-kiosk-sched.sh dry
+# MODE: cec(기본, TV 가 CEC 를 알면 급식·등교 시간에만 이 Pi 를 보여 준다) | blank(자동 전환 HDMI 스위치용, 그 밖엔 Pi 출력 끔) | off(HDMI 안 건드림, 화면 전환만)
+MODE=${OLD_MODE}
+# OTHER: 그 밖의 시간에 보여 줄 TV 입력의 CEC 물리 주소(예: 2.0.0.0 = HDMI 2). 비우면 TV 가 '이전 입력' 으로 돌아가는 데 맡긴다
+OTHER=${OLD_OTHER}
+# SLOTS: 한 줄에 하나 — "시작-끝 URL [요일 1~7, 기본 12345=월~금]". 이 시간엔 그 URL 을 띄우고 TV 를 이 Pi 로. 급식 없는 날(휴일·방학)은 슬롯도 쉰다.
+# 급식 시간은 적지 않는다 — 송출 주소의 /api/status 가 급식 창·급식 있는 날을 알려 준다.
+SLOTS="
+07:30-08:30 https://tr-kiosk.kjhs-lab.com/
+"
 EOF
 fi
-cat > "${UNIT_DIR}/mealboard-kiosk-hdmi.service" <<EOF
+rm -f "${OLD_CONF}"
+cat > "${UNIT_DIR}/mealboard-kiosk-sched.service" <<EOF
 [Unit]
-Description=Hearim kiosk HDMI input switch (meal window → this Pi)
+Description=Hearim kiosk schedule (screen URL + HDMI input by time of day)
 
 [Service]
 Type=oneshot
-ExecStart=${HDMI_SH}
+ExecStart=${SCHED_SH}
 EOF
-cat > "${UNIT_DIR}/mealboard-kiosk-hdmi.timer" <<'EOF'
+cat > "${UNIT_DIR}/mealboard-kiosk-sched.timer" <<'EOF'
 [Unit]
-Description=Hearim kiosk HDMI input switch — every minute
+Description=Hearim kiosk schedule — every minute
 
 [Timer]
 OnBootSec=90s
@@ -319,11 +386,11 @@ AccuracySec=10s
 WantedBy=timers.target
 EOF
 systemctl --user daemon-reload 2>/dev/null || true
-systemctl --user enable --now mealboard-kiosk-hdmi.timer 2>/dev/null || echo "   (user systemd 에 아직 못 붙음 — 다음 로그인부터 타이머가 돈다)"
-echo "   스크립트 ${HDMI_SH} · 설정 ${HDMI_CONF} · 상태 ~/.config/mealboard-kiosk-hdmi.state"
-echo "   시험: ${HDMI_SH} on|off   로그: journalctl --user -t mealboard-kiosk-hdmi -n 20   CEC 점검: cec-ctl -d /dev/cec0 --playback -S"
+systemctl --user enable --now mealboard-kiosk-sched.timer 2>/dev/null || echo "   (user systemd 에 아직 못 붙음 — 다음 로그인부터 타이머가 돈다)"
+echo "   스크립트 ${SCHED_SH} · 설정 ${SCHED_CONF} · 지금 화면 ~/.config/mealboard-kiosk.current · HDMI 상태 ~/.config/mealboard-kiosk-sched.state"
+echo "   판정 확인: ${SCHED_SH} dry   HDMI 시험: ${SCHED_SH} on|off   로그: journalctl --user -t mealboard-kiosk-sched -n 20   CEC 점검: cec-ctl -d /dev/cec0 --playback -S"
 
 say "완료 — 전원을 넣으면 자동 로그인 뒤 systemd 유닛이 ${URL} 을 전체화면으로 띄운다 (지금 적용: sudo reboot)"
 echo "   상태: systemctl --user status mealboard-kiosk   재시작: systemctl --user restart mealboard-kiosk   로그: journalctl --user -u mealboard-kiosk -n 50"
 echo "   URL 변경: ~/.config/mealboard-kiosk.url 수정 뒤 restart.  브라우저 확인: pgrep -af chromium | head -1"
-echo "   HDMI 전환: 급식 창에 TV 가 이 Pi 로 안 넘어오면 TV 메뉴의 CEC 를 켠다. CEC 없는 모니터·스위치 사용이면 conf 의 MODE=blank"
+echo "   시간표: 아침 슬롯·급식 창에 TV 가 이 Pi 로 안 넘어오면 TV 메뉴의 CEC 를 켠다. CEC 없는 모니터·스위치 사용이면 sched.conf 의 MODE=blank. 슬롯 추가는 SLOTS 한 줄"
